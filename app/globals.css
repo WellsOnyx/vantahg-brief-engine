@@ -1,0 +1,43 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-navy: #0c2340;
+  --color-navy-light: #1a3a5c;
+  --color-navy-dark: #081829;
+  --color-gold: #c9a227;
+  --color-gold-light: #d4b54a;
+  --color-gold-dark: #a8871e;
+  --color-background: #f8f9fb;
+  --color-foreground: #1a1a2e;
+  --color-surface: #ffffff;
+  --color-border: #e2e8f0;
+  --color-muted: #64748b;
+  --font-sans: "DM Sans", system-ui, sans-serif;
+  --font-display: "DM Serif Display", Georgia, serif;
+}
+
+body {
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+}
+
+/* Status badge colors */
+.status-intake { background: #eff6ff; color: #1e40af; }
+.status-processing { background: #fefce8; color: #854d0e; }
+.status-brief_ready { background: #f0fdf4; color: #166534; }
+.status-in_review { background: #faf5ff; color: #6b21a8; }
+.status-determination_made { background: #ecfeff; color: #155e75; }
+.status-delivered { background: #f0fdf4; color: #14532d; }
+
+/* Priority badge colors */
+.priority-standard { background: #f1f5f9; color: #475569; }
+.priority-urgent { background: #fef2f2; color: #991b1b; }
+.priority-expedited { background: #fff7ed; color: #9a3412; }
+
+/* Print styles for brief */
+@media print {
+  body { background: white; }
+  .no-print { display: none !important; }
+  .print-only { display: block !important; }
+}
