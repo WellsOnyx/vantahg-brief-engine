@@ -6,7 +6,7 @@ const anthropic = new Anthropic({
 
 export async function generateClinicalBrief(prompt: { system: string; user: string }): Promise<string> {
   const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-5-20250514',
+    model: 'claude-opus-4-6',
     max_tokens: 4096,
     system: prompt.system,
     messages: [
