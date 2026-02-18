@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceClient } from '@/lib/supabase';
+import { isDemoMode, getDemoAuditLog } from '@/lib/demo-mode';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,6 +10,18 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
+
+    if (isDemoMode()) {
+      const auditLog = getDemoAuditLog(id);
+      if (auditLog === null) {
+        return NextResponse.json(
+          { error: 'Case not found' },
+          { status: 404 }
+        );
+      }
+      return NextResponse.json(auditLog);
+    }
+
     const supabase = getServiceClient();
 
     // Verify the case exists

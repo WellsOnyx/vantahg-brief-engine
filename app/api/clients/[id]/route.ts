@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceClient } from '@/lib/supabase';
+import { isDemoMode, getDemoClient } from '@/lib/demo-mode';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,6 +10,18 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
+
+    if (isDemoMode()) {
+      const client = getDemoClient(id);
+      if (!client) {
+        return NextResponse.json(
+          { error: 'Client not found' },
+          { status: 404 }
+        );
+      }
+      return NextResponse.json(client);
+    }
+
     const supabase = getServiceClient();
 
     const { data, error } = await supabase

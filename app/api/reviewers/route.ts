@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceClient } from '@/lib/supabase';
+import { isDemoMode, getDemoReviewers } from '@/lib/demo-mode';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
+    if (isDemoMode()) {
+      return NextResponse.json(getDemoReviewers());
+    }
+
     const supabase = getServiceClient();
 
     const { data, error } = await supabase

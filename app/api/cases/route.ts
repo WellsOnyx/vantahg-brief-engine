@@ -2,13 +2,25 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServiceClient } from '@/lib/supabase';
 import { logAuditEvent } from '@/lib/audit';
 import { generateBriefForCase } from '@/lib/generate-brief';
+import { isDemoMode, getDemoCases } from '@/lib/demo-mode';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = getServiceClient();
     const { searchParams } = new URL(request.url);
+
+    if (isDemoMode()) {
+      const cases = getDemoCases({
+        status: searchParams.get('status'),
+        vertical: searchParams.get('vertical'),
+        priority: searchParams.get('priority'),
+        search: searchParams.get('search'),
+      });
+      return NextResponse.json(cases);
+    }
+
+    const supabase = getServiceClient();
 
     const status = searchParams.get('status');
     const vertical = searchParams.get('vertical');

@@ -2,14 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServiceClient } from '@/lib/supabase';
 import { logAuditEvent } from '@/lib/audit';
 import { generateBriefForCase } from '@/lib/generate-brief';
+import { isDemoMode, getDemoBrief } from '@/lib/demo-mode';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = getServiceClient();
     const body = await request.json();
-
     const { case_id } = body;
 
     if (!case_id) {
@@ -18,6 +17,19 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    if (isDemoMode()) {
+      const result = getDemoBrief(case_id);
+      if (!result) {
+        return NextResponse.json(
+          { error: 'Case not found' },
+          { status: 404 }
+        );
+      }
+      return NextResponse.json(result);
+    }
+
+    const supabase = getServiceClient();
 
     // Fetch the case from Supabase
     const { data: caseData, error: fetchError } = await supabase
