@@ -6,14 +6,19 @@ import {
   demoAuditLog,
   DEMO_CASE_IDS,
 } from './demo-data';
+import { hasSupabaseConfig } from './supabase';
 
 /**
  * Returns true when the app is running without a Supabase connection.
  * This enables the full demo data layer so the app works at conferences
  * and in local development without any external dependencies.
+ *
+ * Uses hasSupabaseConfig() which checks both build-time NEXT_PUBLIC_
+ * vars and server-only runtime vars, so API routes correctly detect
+ * live mode even when Vercel build cache didn't inline the vars.
  */
 export function isDemoMode(): boolean {
-  return !process.env.NEXT_PUBLIC_SUPABASE_URL;
+  return !hasSupabaseConfig();
 }
 
 // ============================================================================
