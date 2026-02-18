@@ -14,6 +14,7 @@ export async function GET(request: NextRequest) {
       const cases = getDemoCases({
         status: searchParams.get('status'),
         vertical: searchParams.get('vertical'),
+        service_category: searchParams.get('service_category'),
         priority: searchParams.get('priority'),
         search: searchParams.get('search'),
       });
@@ -24,6 +25,7 @@ export async function GET(request: NextRequest) {
 
     const status = searchParams.get('status');
     const vertical = searchParams.get('vertical');
+    const serviceCategory = searchParams.get('service_category');
     const priority = searchParams.get('priority');
     const search = searchParams.get('search');
 
@@ -36,6 +38,10 @@ export async function GET(request: NextRequest) {
       query = query.eq('status', status);
     }
 
+    if (serviceCategory) {
+      query = query.eq('service_category', serviceCategory);
+    }
+
     if (vertical) {
       query = query.eq('vertical', vertical);
     }
@@ -46,7 +52,7 @@ export async function GET(request: NextRequest) {
 
     if (search) {
       query = query.or(
-        `case_number.ilike.%${search}%,patient_name.ilike.%${search}%,procedure_name.ilike.%${search}%`
+        `case_number.ilike.%${search}%,patient_name.ilike.%${search}%,procedure_description.ilike.%${search}%`
       );
     }
 
@@ -71,9 +77,9 @@ export async function POST(request: NextRequest) {
     const supabase = getServiceClient();
     const body = await request.json();
 
-    // Generate case_number based on vertical
-    const verticalPrefix = (body.vertical || 'GENERAL').toUpperCase().replace(/\s+/g, '-');
-    const prefix = `VHG-${verticalPrefix}`;
+    // Generate case_number based on service_category (or fall back to vertical for backward compat)
+    const categoryPrefix = (body.service_category || body.vertical || 'GENERAL').toUpperCase().replace(/\s+/g, '-');
+    const prefix = `VHG-${categoryPrefix}`;
 
     const { count, error: countError } = await supabase
       .from('cases')
@@ -106,6 +112,7 @@ export async function POST(request: NextRequest) {
     // Log audit event for case creation
     await logAuditEvent(data.id, 'case_created', body.created_by || 'system', {
       case_number: caseNumber,
+      service_category: body.service_category,
       vertical: body.vertical,
     });
 

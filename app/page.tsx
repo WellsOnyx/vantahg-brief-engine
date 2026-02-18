@@ -63,7 +63,7 @@ const steps = [
   {
     number: '01',
     title: 'Submit Clinical Documentation',
-    description: 'Upload patient records, procedure codes, and clinical notes through our secure, HIPAA-compliant portal.',
+    description: 'Upload operative notes, imaging reports, lab results, and procedure codes (CPT/HCPCS) through our secure, HIPAA-compliant portal.',
     icon: (
       <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m6.75 12H9m1.5-12H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
@@ -73,7 +73,7 @@ const steps = [
   {
     number: '02',
     title: 'AI-Powered Analysis',
-    description: 'Our clinical AI engine analyzes documentation against evidence-based criteria, peer-reviewed guidelines, and payer-specific policies.',
+    description: 'Our clinical AI engine analyzes documentation against InterQual, MCG, and NCCN guidelines, evaluating medical necessity for surgeries, imaging, specialty procedures, and more.',
     icon: (
       <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5" />
@@ -95,8 +95,8 @@ const steps = [
 const stats = [
   {
     value: '< 24hr',
-    label: 'Average Turnaround',
-    sublabel: 'From submission to determination',
+    label: 'Prior Auth Reviews',
+    sublabel: 'Average turnaround time',
     icon: (
       <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -105,8 +105,8 @@ const stats = [
   },
   {
     value: '100%',
-    label: 'Physician-Reviewed',
-    sublabel: 'Every case, every time',
+    label: 'Medical Necessity Determinations',
+    sublabel: 'Physician-reviewed, every case',
     icon: (
       <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z" />
@@ -138,7 +138,8 @@ const stats = [
 const verticals = [
   {
     name: 'Medical',
-    description: 'Prior authorization, medical necessity, concurrent and retrospective reviews',
+    description: 'Prior authorization, medical necessity, concurrent and retrospective reviews for imaging, surgeries, specialty procedures, DME, and more',
+    hero: true,
     icon: (
       <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
@@ -148,6 +149,8 @@ const verticals = [
   {
     name: 'Dental',
     description: 'Dental necessity reviews, predeterminations, and coverage assessments',
+    hero: false,
+    comingSoon: true,
     icon: (
       <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.182 15.182a4.5 4.5 0 01-6.364 0M21 12a9 9 0 11-18 0 9 9 0 0118 0zM9.75 9.75c0 .414-.168.75-.375.75S9 10.164 9 9.75 9.168 9 9.375 9s.375.336.375.75zm-.375 0h.008v.015h-.008V9.75zm5.625 0c0 .414-.168.75-.375.75s-.375-.336-.375-.75.168-.75.375-.75.375.336.375.75zm-.375 0h.008v.015h-.008V9.75z" />
@@ -157,6 +160,8 @@ const verticals = [
   {
     name: 'Vision',
     description: 'Vision care reviews, surgical necessity, and optical coverage determinations',
+    hero: false,
+    comingSoon: true,
     icon: (
       <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
@@ -435,7 +440,7 @@ export default function Dashboard() {
               Multi-Specialty Clinical Review
             </h2>
             <p className="mt-4 text-muted text-lg">
-              Comprehensive utilization review across medical, dental, and vision verticals with specialty-matched physician reviewers.
+              Medical utilization review across imaging, surgery, specialty procedures, DME, infusions, behavioral health, and more -- with specialty-matched physician reviewers.
             </p>
           </div>
 
@@ -443,25 +448,49 @@ export default function Dashboard() {
             {verticals.map((vertical) => (
               <div
                 key={vertical.name}
-                className="bg-surface rounded-2xl border border-border p-8 hover:shadow-lg hover:border-gold/20 transition-all duration-300 group"
+                className={`bg-surface rounded-2xl border p-8 transition-all duration-300 group ${
+                  vertical.hero
+                    ? 'border-gold/30 shadow-md hover:shadow-lg ring-2 ring-gold/10'
+                    : 'border-border hover:shadow-lg hover:border-gold/20 opacity-75'
+                }`}
               >
-                <div className="w-14 h-14 bg-navy/5 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-navy/10 transition-colors">
-                  <span className="text-navy">{vertical.icon}</span>
+                <div className="flex items-center gap-3 mb-6">
+                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center group-hover:bg-navy/10 transition-colors ${
+                    vertical.hero ? 'bg-gold/10' : 'bg-navy/5'
+                  }`}>
+                    <span className={vertical.hero ? 'text-gold-dark' : 'text-navy'}>{vertical.icon}</span>
+                  </div>
+                  {vertical.hero && (
+                    <span className="px-2.5 py-0.5 bg-gold/10 text-gold-dark text-xs font-semibold rounded-full border border-gold/20">
+                      Primary
+                    </span>
+                  )}
+                  {'comingSoon' in vertical && vertical.comingSoon && (
+                    <span className="px-2.5 py-0.5 bg-gray-100 text-muted text-xs font-semibold rounded-full border border-border">
+                      Coming Soon
+                    </span>
+                  )}
                 </div>
                 <h3 className="font-[family-name:var(--font-dm-serif)] text-2xl text-navy mb-3">
                   {vertical.name}
                 </h3>
                 <p className="text-muted leading-relaxed">{vertical.description}</p>
                 <div className="mt-6 pt-6 border-t border-border">
-                  <Link
-                    href="/cases/new"
-                    className="inline-flex items-center gap-2 text-sm font-semibold text-gold-dark hover:text-gold transition-colors group/link"
-                  >
-                    Submit {vertical.name} Case
-                    <svg className="w-4 h-4 transition-transform group-hover/link:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                    </svg>
-                  </Link>
+                  {'comingSoon' in vertical && vertical.comingSoon ? (
+                    <span className="inline-flex items-center gap-2 text-sm font-semibold text-muted">
+                      Coming Soon
+                    </span>
+                  ) : (
+                    <Link
+                      href="/cases/new"
+                      className="inline-flex items-center gap-2 text-sm font-semibold text-gold-dark hover:text-gold transition-colors group/link"
+                    >
+                      Submit Medical Case
+                      <svg className="w-4 h-4 transition-transform group-hover/link:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                      </svg>
+                    </Link>
+                  )}
                 </div>
               </div>
             ))}
@@ -506,7 +535,7 @@ export default function Dashboard() {
               <h2 className="font-[family-name:var(--font-dm-serif)] text-3xl text-navy">
                 Clinical Review Dashboard
               </h2>
-              <p className="text-muted mt-1">Utilization review case management and AI brief generation</p>
+              <p className="text-muted mt-1">Medical utilization review case management and AI brief generation</p>
             </div>
             <Link
               href="/cases/new"

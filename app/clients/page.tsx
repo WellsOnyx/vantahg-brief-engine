@@ -7,8 +7,9 @@ const clientTypeLabels: Record<ClientType, string> = {
   tpa: 'TPA',
   health_plan: 'Health Plan',
   self_funded_employer: 'Self-Funded Employer',
-  dental_plan: 'Dental Plan',
-  vision_plan: 'Vision Plan',
+  managed_care_org: 'Managed Care Org',
+  workers_comp: 'Workers\' Comp',
+  auto_med: 'Auto Med',
 };
 
 export default function ClientsPage() {

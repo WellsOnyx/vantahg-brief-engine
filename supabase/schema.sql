@@ -4,15 +4,21 @@
 -- Enable UUID generation
 create extension if not exists "pgcrypto";
 
--- Clients table (TPAs / health plans)
+-- Clients table (TPAs / health plans / managed care orgs)
 create table clients (
   id uuid default gen_random_uuid() primary key,
   created_at timestamptz default now(),
   name text not null,
-  type text check (type in ('tpa', 'health_plan', 'self_funded_employer', 'dental_plan', 'vision_plan')),
+  type text check (type in ('tpa', 'health_plan', 'self_funded_employer', 'managed_care_org', 'workers_comp', 'auto_med')),
   contact_name text,
   contact_email text,
-  contact_phone text
+  contact_phone text,
+  -- Medical UR-specific client fields
+  uses_interqual boolean default false,
+  uses_mcg boolean default false,
+  custom_guidelines_url text,
+  contracted_sla_hours float,
+  contracted_rate_per_case numeric(10,2)
 );
 
 -- Reviewers table
@@ -22,12 +28,18 @@ create table reviewers (
   name text not null,
   credentials text,
   specialty text,
+  subspecialty text,
+  board_certifications text[],
   license_state text[],
+  license_states text[],
+  approved_service_categories text[],
+  max_cases_per_day int,
+  avg_turnaround_hours float,
+  dea_number text,
   email text unique,
   phone text,
   status text default 'active' check (status in ('active', 'inactive', 'pending')),
-  cases_completed int default 0,
-  avg_turnaround_hours float
+  cases_completed int default 0
 );
 
 -- Cases table
@@ -40,16 +52,35 @@ create table cases (
   case_number text unique not null,
   status text default 'intake' check (status in ('intake', 'processing', 'brief_ready', 'in_review', 'determination_made', 'delivered')),
   priority text default 'standard' check (priority in ('standard', 'urgent', 'expedited')),
-  vertical text not null check (vertical in ('dental', 'vision', 'medical')),
+
+  -- Service classification (new medical-focused field)
+  service_category text check (service_category in (
+    'imaging', 'surgery', 'specialty_referral', 'dme', 'infusion',
+    'behavioral_health', 'rehab_therapy', 'home_health', 'skilled_nursing',
+    'transplant', 'genetic_testing', 'pain_management', 'cardiology', 'oncology', 'other'
+  )),
+
+  -- Legacy vertical field (kept for backward compatibility)
+  vertical text,
 
   -- Patient info
   patient_name text,
   patient_dob date,
   patient_member_id text,
+  patient_gender text,
 
-  -- Clinical info
+  -- Requesting provider info
   requesting_provider text,
   requesting_provider_npi text,
+  requesting_provider_specialty text,
+
+  -- Servicing provider / facility info
+  servicing_provider text,
+  servicing_provider_npi text,
+  facility_name text,
+  facility_type text check (facility_type in ('inpatient', 'outpatient', 'asc', 'office', 'home')),
+
+  -- Clinical info
   procedure_codes text[],
   diagnosis_codes text[],
   procedure_description text,
@@ -57,11 +88,15 @@ create table cases (
 
   -- Review info
   assigned_reviewer_id uuid references reviewers(id),
-  review_type text check (review_type in ('prior_auth', 'medical_necessity', 'concurrent', 'retrospective', 'peer_to_peer', 'appeal')),
+  review_type text check (review_type in ('prior_auth', 'medical_necessity', 'concurrent', 'retrospective', 'peer_to_peer', 'appeal', 'second_level_review')),
 
   -- Payer info
   payer_name text,
   plan_type text,
+
+  -- Turnaround / SLA
+  turnaround_deadline timestamptz,
+  sla_hours float,
 
   -- AI Brief
   ai_brief jsonb,
@@ -72,6 +107,11 @@ create table cases (
   determination_rationale text,
   determination_at timestamptz,
   determined_by uuid references reviewers(id),
+
+  -- Denial-specific fields
+  denial_reason text,
+  denial_criteria_cited text,
+  alternative_recommended text,
 
   -- Documents
   submitted_documents text[],
@@ -92,10 +132,13 @@ create table audit_log (
 
 -- Indexes for common queries
 create index idx_cases_status on cases(status);
-create index idx_cases_vertical on cases(vertical);
+create index idx_cases_service_category on cases(service_category);
 create index idx_cases_priority on cases(priority);
 create index idx_cases_case_number on cases(case_number);
 create index idx_cases_assigned_reviewer on cases(assigned_reviewer_id);
+create index idx_cases_review_type on cases(review_type);
+create index idx_cases_payer_name on cases(payer_name);
+create index idx_cases_turnaround_deadline on cases(turnaround_deadline);
 create index idx_audit_log_case_id on audit_log(case_id);
 create index idx_audit_log_created_at on audit_log(created_at);
 

@@ -7,8 +7,10 @@ import type {
   CaseVertical,
   CasePriority,
   ReviewType,
+  ServiceCategory,
+  FacilityType,
 } from '@/lib/types';
-import { commonDentalCodes } from '@/lib/dental-criteria';
+import { commonMedicalCodes } from '@/lib/medical-criteria';
 
 interface CaseFormProps {
   clients: Client[];
@@ -17,9 +19,9 @@ interface CaseFormProps {
 }
 
 const verticalOptions: { value: CaseVertical; label: string }[] = [
+  { value: 'medical', label: 'Medical' },
   { value: 'dental', label: 'Dental' },
   { value: 'vision', label: 'Vision' },
-  { value: 'medical', label: 'Medical' },
 ];
 
 const priorityOptions: { value: CasePriority; label: string; description: string }[] = [
@@ -35,6 +37,33 @@ const reviewTypeOptions: { value: ReviewType; label: string }[] = [
   { value: 'retrospective', label: 'Retrospective Review' },
   { value: 'peer_to_peer', label: 'Peer-to-Peer' },
   { value: 'appeal', label: 'Appeal' },
+  { value: 'second_level_review', label: 'Second Level Review' },
+];
+
+const serviceCategoryOptions: { value: ServiceCategory; label: string }[] = [
+  { value: 'imaging', label: 'Imaging' },
+  { value: 'surgery', label: 'Surgery' },
+  { value: 'specialty_referral', label: 'Specialty Referral' },
+  { value: 'dme', label: 'Durable Medical Equipment (DME)' },
+  { value: 'infusion', label: 'Infusion' },
+  { value: 'behavioral_health', label: 'Behavioral Health' },
+  { value: 'rehab_therapy', label: 'Rehab Therapy' },
+  { value: 'home_health', label: 'Home Health' },
+  { value: 'skilled_nursing', label: 'Skilled Nursing' },
+  { value: 'transplant', label: 'Transplant' },
+  { value: 'genetic_testing', label: 'Genetic Testing' },
+  { value: 'pain_management', label: 'Pain Management' },
+  { value: 'cardiology', label: 'Cardiology' },
+  { value: 'oncology', label: 'Oncology' },
+  { value: 'other', label: 'Other' },
+];
+
+const facilityTypeOptions: { value: FacilityType; label: string }[] = [
+  { value: 'inpatient', label: 'Inpatient' },
+  { value: 'outpatient', label: 'Outpatient' },
+  { value: 'asc', label: 'Ambulatory Surgery Center (ASC)' },
+  { value: 'office', label: 'Office' },
+  { value: 'home', label: 'Home' },
 ];
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
@@ -82,16 +111,16 @@ function InputField({
   );
 }
 
-// Code chip input with CDT code helper
+// Code chip input with CPT/HCPCS code helper
 function CodeInput({
   codes,
   onCodesChange,
-  showCDTHelper,
+  showCodeHelper,
   placeholder,
 }: {
   codes: string[];
   onCodesChange: (codes: string[]) => void;
-  showCDTHelper?: boolean;
+  showCodeHelper?: boolean;
   placeholder: string;
 }) {
   const [inputValue, setInputValue] = useState('');
@@ -100,14 +129,14 @@ function CodeInput({
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const filteredCodes = useMemo(() => {
-    if (!showCDTHelper || !inputValue.trim()) return commonDentalCodes.slice(0, 10);
+    if (!showCodeHelper || !inputValue.trim()) return commonMedicalCodes.slice(0, 10);
     const term = inputValue.toLowerCase();
-    return commonDentalCodes.filter(
+    return commonMedicalCodes.filter(
       (c) =>
         c.code.toLowerCase().includes(term) ||
-        c.name.toLowerCase().includes(term)
+        c.description.toLowerCase().includes(term)
     );
-  }, [inputValue, showCDTHelper]);
+  }, [inputValue, showCodeHelper]);
 
   const addCode = useCallback((code: string) => {
     const trimmed = code.trim().toUpperCase();
@@ -177,10 +206,10 @@ function CodeInput({
           value={inputValue}
           onChange={(e) => {
             setInputValue(e.target.value);
-            if (showCDTHelper) setShowDropdown(true);
+            if (showCodeHelper) setShowDropdown(true);
           }}
           onFocus={() => {
-            if (showCDTHelper) setShowDropdown(true);
+            if (showCodeHelper) setShowDropdown(true);
           }}
           onKeyDown={handleKeyDown}
           placeholder={codes.length === 0 ? placeholder : 'Add code...'}
@@ -188,26 +217,26 @@ function CodeInput({
         />
       </div>
 
-      {/* CDT Code Helper Dropdown */}
-      {showCDTHelper && showDropdown && filteredCodes.length > 0 && (
+      {/* CPT/HCPCS Code Helper Dropdown */}
+      {showCodeHelper && showDropdown && filteredCodes.length > 0 && (
         <div
           ref={dropdownRef}
           className="absolute z-20 left-0 right-0 mt-1 bg-white border border-border rounded-md shadow-lg max-h-52 overflow-y-auto"
         >
-          {filteredCodes.map((cdtCode) => {
-            const alreadyAdded = codes.includes(cdtCode.code);
+          {filteredCodes.map((medCode) => {
+            const alreadyAdded = codes.includes(medCode.code);
             return (
               <button
-                key={cdtCode.code}
+                key={medCode.code}
                 type="button"
                 disabled={alreadyAdded}
-                onClick={() => addCode(cdtCode.code)}
+                onClick={() => addCode(medCode.code)}
                 className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 border-b border-border last:border-b-0 flex items-start gap-2 ${
                   alreadyAdded ? 'opacity-40 cursor-not-allowed' : ''
                 }`}
               >
-                <span className="font-mono font-semibold text-navy shrink-0">{cdtCode.code}</span>
-                <span className="text-muted">{cdtCode.name}</span>
+                <span className="font-mono font-semibold text-navy shrink-0">{medCode.code}</span>
+                <span className="text-muted">{medCode.description}</span>
                 {alreadyAdded && (
                   <span className="ml-auto text-xs text-green-600 shrink-0">Added</span>
                 )}
@@ -222,9 +251,11 @@ function CodeInput({
 
 export function CaseForm({ clients, onSubmit, isSubmitting }: CaseFormProps) {
   // Case information
-  const [vertical, setVertical] = useState<CaseVertical>('dental');
+  const [vertical, setVertical] = useState<CaseVertical>('medical');
+  const [serviceCategory, setServiceCategory] = useState<ServiceCategory>('imaging');
   const [priority, setPriority] = useState<CasePriority>('standard');
   const [reviewType, setReviewType] = useState<ReviewType>('prior_auth');
+  const [facilityType, setFacilityType] = useState<FacilityType>('outpatient');
   const [clientId, setClientId] = useState('');
 
   // Patient information
@@ -235,6 +266,7 @@ export function CaseForm({ clients, onSubmit, isSubmitting }: CaseFormProps) {
   // Provider information
   const [providerName, setProviderName] = useState('');
   const [providerNpi, setProviderNpi] = useState('');
+  const [providerSpecialty, setProviderSpecialty] = useState('');
 
   // Procedure details
   const [procedureCodes, setProcedureCodes] = useState<string[]>([]);
@@ -272,13 +304,20 @@ export function CaseForm({ clients, onSubmit, isSubmitting }: CaseFormProps) {
 
     const data: CaseFormData = {
       vertical,
+      service_category: serviceCategory,
       priority,
       review_type: reviewType,
+      facility_type: facilityType,
       patient_name: patientName,
       patient_dob: patientDob,
       patient_member_id: patientMemberId,
+      patient_gender: '',
       requesting_provider: providerName,
       requesting_provider_npi: providerNpi,
+      requesting_provider_specialty: providerSpecialty,
+      servicing_provider: '',
+      servicing_provider_npi: '',
+      facility_name: '',
       procedure_codes: procedureCodes,
       diagnosis_codes: diagnosisCodes,
       procedure_description: procedureDescription,
@@ -338,6 +377,38 @@ export function CaseForm({ clients, onSubmit, isSubmitting }: CaseFormProps) {
               className="w-full px-3 py-2 text-sm border border-border rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-gold/50 focus:border-gold"
             >
               {reviewTypeOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <Label htmlFor="serviceCategory" required>Service Category</Label>
+            <select
+              id="serviceCategory"
+              value={serviceCategory}
+              onChange={(e) => setServiceCategory(e.target.value as ServiceCategory)}
+              className="w-full px-3 py-2 text-sm border border-border rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-gold/50 focus:border-gold"
+            >
+              {serviceCategoryOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <Label htmlFor="facilityType" required>Facility Type</Label>
+            <select
+              id="facilityType"
+              value={facilityType}
+              onChange={(e) => setFacilityType(e.target.value as FacilityType)}
+              className="w-full px-3 py-2 text-sm border border-border rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-gold/50 focus:border-gold"
+            >
+              {facilityTypeOptions.map((opt) => (
                 <option key={opt.value} value={opt.value}>
                   {opt.label}
                 </option>
@@ -427,6 +498,15 @@ export function CaseForm({ clients, onSubmit, isSubmitting }: CaseFormProps) {
               required
             />
           </div>
+          <div className="sm:col-span-2">
+            <Label htmlFor="providerSpecialty">Provider Specialty</Label>
+            <InputField
+              id="providerSpecialty"
+              value={providerSpecialty}
+              onChange={setProviderSpecialty}
+              placeholder="e.g., Orthopedic Surgery, Neurology, Pain Management"
+            />
+          </div>
         </div>
       </div>
 
@@ -435,17 +515,15 @@ export function CaseForm({ clients, onSubmit, isSubmitting }: CaseFormProps) {
         <SectionTitle>Procedure Details</SectionTitle>
         <div className="space-y-4">
           <div>
-            <Label htmlFor="procedureCodes" required>Procedure Codes (CDT/CPT)</Label>
+            <Label htmlFor="procedureCodes" required>Procedure Codes (CPT/HCPCS)</Label>
             <p className="text-xs text-muted mb-1.5">
-              {vertical === 'dental'
-                ? 'Search or type CDT codes. Press Enter to add a custom code.'
-                : 'Type procedure codes and press Enter to add.'}
+              Search CPT/HCPCS codes or type a code and press Enter to add.
             </p>
             <CodeInput
               codes={procedureCodes}
               onCodesChange={setProcedureCodes}
-              showCDTHelper={vertical === 'dental'}
-              placeholder={vertical === 'dental' ? 'Search CDT codes (e.g., D6010)...' : 'Enter CPT code...'}
+              showCodeHelper
+              placeholder="Search CPT codes (e.g., 72148, 27447)"
             />
           </div>
 
@@ -457,7 +535,7 @@ export function CaseForm({ clients, onSubmit, isSubmitting }: CaseFormProps) {
             <CodeInput
               codes={diagnosisCodes}
               onCodesChange={setDiagnosisCodes}
-              placeholder="Enter ICD-10 code (e.g., K08.1)..."
+              placeholder="Enter ICD-10 code (e.g., M17.11, G47.33)..."
             />
           </div>
 
@@ -469,7 +547,7 @@ export function CaseForm({ clients, onSubmit, isSubmitting }: CaseFormProps) {
               onChange={(e) => setProcedureDescription(e.target.value)}
               rows={3}
               required
-              placeholder="Describe the proposed procedure(s), including specifics such as tooth numbers, location, and clinical justification..."
+              placeholder="Describe the proposed procedure(s), including anatomical site, clinical justification, conservative treatment history, and relevant findings..."
               className="w-full px-3 py-2 text-sm border border-border rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-gold/50 focus:border-gold resize-y"
             />
           </div>
@@ -482,7 +560,7 @@ export function CaseForm({ clients, onSubmit, isSubmitting }: CaseFormProps) {
               onChange={(e) => setClinicalQuestion(e.target.value)}
               rows={2}
               required
-              placeholder="What specific clinical question should the reviewer address? (e.g., 'Is this implant medically necessary given the patient's condition?')"
+              placeholder="What specific clinical question should the reviewer address? (e.g., 'Does this patient meet medical necessity criteria for total knee arthroplasty?')"
               className="w-full px-3 py-2 text-sm border border-border rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-gold/50 focus:border-gold resize-y"
             />
           </div>
@@ -509,7 +587,7 @@ export function CaseForm({ clients, onSubmit, isSubmitting }: CaseFormProps) {
               id="planType"
               value={planType}
               onChange={setPlanType}
-              placeholder="e.g., PPO, HMO, DHMO, Indemnity"
+              placeholder="e.g., PPO, HMO, EPO, POS, Indemnity"
             />
           </div>
         </div>
@@ -519,7 +597,7 @@ export function CaseForm({ clients, onSubmit, isSubmitting }: CaseFormProps) {
       <div className="bg-surface rounded-lg border border-border p-6">
         <SectionTitle>Supporting Documents</SectionTitle>
         <p className="text-xs text-muted mb-3">
-          Upload clinical records, radiographs, treatment plans, and other supporting documentation.
+          Upload clinical notes, imaging reports, lab results, operative notes, and other supporting documentation.
         </p>
 
         <div

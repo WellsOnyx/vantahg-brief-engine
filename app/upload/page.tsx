@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { commonDentalCodes } from '@/lib/dental-criteria';
+import { commonMedicalCodes } from '@/lib/medical-criteria';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -36,11 +36,13 @@ interface StepValidation {
 
 const DOCUMENT_CATEGORIES = [
   { value: 'clinical_notes', label: 'Clinical Notes', icon: 'notes' },
-  { value: 'xrays', label: 'X-rays / Radiographs', icon: 'xray' },
-  { value: 'perio_chart', label: 'Periodontal Charts', icon: 'chart' },
-  { value: 'treatment_plan', label: 'Treatment Plans', icon: 'plan' },
-  { value: 'preauth', label: 'Pre-Authorization Forms', icon: 'form' },
-  { value: 'other', label: 'Other Supporting Documents', icon: 'other' },
+  { value: 'imaging_reports', label: 'Imaging Reports', icon: 'xray' },
+  { value: 'lab_results', label: 'Lab Results', icon: 'chart' },
+  { value: 'operative_notes', label: 'Operative Notes', icon: 'notes' },
+  { value: 'pt_records', label: 'Physical Therapy Records', icon: 'plan' },
+  { value: 'preauth', label: 'Prior Authorization Forms', icon: 'form' },
+  { value: 'pathology', label: 'Pathology Reports', icon: 'chart' },
+  { value: 'other', label: 'Other', icon: 'other' },
 ];
 
 const ACCEPTED_TYPES = '.pdf,.jpg,.jpeg,.png,.dicom,.dcm';
@@ -179,18 +181,18 @@ function ValidationBanner({ errors }: { errors: string[] }) {
   );
 }
 
-// ─── Code Input with CDT helper ──────────────────────────────────────────────
+// ─── Code Input with CPT/HCPCS helper ───────────────────────────────────────
 
 function CodeInput({
   codes,
   onCodesChange,
-  showCDTHelper,
+  showCodeHelper,
   placeholder,
   error,
 }: {
   codes: string[];
   onCodesChange: (codes: string[]) => void;
-  showCDTHelper?: boolean;
+  showCodeHelper?: boolean;
   placeholder: string;
   error?: boolean;
 }) {
@@ -200,14 +202,14 @@ function CodeInput({
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const filteredCodes = useMemo(() => {
-    if (!showCDTHelper || !inputValue.trim()) return commonDentalCodes.slice(0, 10);
+    if (!showCodeHelper || !inputValue.trim()) return commonMedicalCodes.slice(0, 10);
     const term = inputValue.toLowerCase();
-    return commonDentalCodes.filter(
+    return commonMedicalCodes.filter(
       (c) =>
         c.code.toLowerCase().includes(term) ||
-        c.name.toLowerCase().includes(term)
+        c.description.toLowerCase().includes(term)
     );
-  }, [inputValue, showCDTHelper]);
+  }, [inputValue, showCodeHelper]);
 
   const addCode = useCallback((code: string) => {
     const trimmed = code.trim().toUpperCase();
@@ -277,34 +279,34 @@ function CodeInput({
           value={inputValue}
           onChange={(e) => {
             setInputValue(e.target.value);
-            if (showCDTHelper) setShowDropdown(true);
+            if (showCodeHelper) setShowDropdown(true);
           }}
-          onFocus={() => { if (showCDTHelper) setShowDropdown(true); }}
+          onFocus={() => { if (showCodeHelper) setShowDropdown(true); }}
           onKeyDown={handleKeyDown}
           placeholder={codes.length === 0 ? placeholder : 'Add code...'}
           className="flex-1 min-w-[140px] px-1 py-0.5 text-sm bg-transparent focus:outline-none placeholder:text-muted/60"
         />
       </div>
 
-      {showCDTHelper && showDropdown && filteredCodes.length > 0 && (
+      {showCodeHelper && showDropdown && filteredCodes.length > 0 && (
         <div
           ref={dropdownRef}
           className="absolute z-30 left-0 right-0 mt-1.5 bg-white border border-border rounded-lg shadow-xl shadow-navy/5 max-h-56 overflow-y-auto"
         >
-          {filteredCodes.map((cdtCode) => {
-            const alreadyAdded = codes.includes(cdtCode.code);
+          {filteredCodes.map((medCode) => {
+            const alreadyAdded = codes.includes(medCode.code);
             return (
               <button
-                key={cdtCode.code}
+                key={medCode.code}
                 type="button"
                 disabled={alreadyAdded}
-                onClick={() => addCode(cdtCode.code)}
+                onClick={() => addCode(medCode.code)}
                 className={`w-full text-left px-3.5 py-2.5 text-sm hover:bg-gold/5 border-b border-border/50 last:border-b-0 flex items-start gap-2.5 transition-colors ${
                   alreadyAdded ? 'opacity-40 cursor-not-allowed' : ''
                 }`}
               >
-                <span className="font-mono font-bold text-navy shrink-0">{cdtCode.code}</span>
-                <span className="text-muted">{cdtCode.name}</span>
+                <span className="font-mono font-bold text-navy shrink-0">{medCode.code}</span>
+                <span className="text-muted">{medCode.description}</span>
                 {alreadyAdded && (
                   <span className="ml-auto text-xs text-green-600 font-medium shrink-0">Added</span>
                 )}
@@ -954,7 +956,7 @@ export default function UploadPage() {
           Submit a Case for Review
         </h1>
         <p className="text-muted text-base max-w-xl mx-auto leading-relaxed">
-          Upload clinical documentation for AI-powered analysis by our board-certified physician panel. Cases are typically reviewed within 24-48 hours.
+          Upload clinical documentation for AI-powered medical review by our board-certified physician panel. Prior authorization, medical necessity, and concurrent review cases are typically reviewed within 24-48 hours.
         </p>
       </div>
 
@@ -1022,7 +1024,7 @@ export default function UploadPage() {
                       id="insurancePlan"
                       value={patient.insurancePlan}
                       onChange={(v) => updatePatient('insurancePlan', v)}
-                      placeholder="e.g., Delta Dental PPO"
+                      placeholder="e.g., Aetna PPO, UnitedHealthcare HMO"
                       required
                       error={validationErrors.length > 0 && !patient.insurancePlan.trim()}
                     />
@@ -1052,15 +1054,15 @@ export default function UploadPage() {
 
               <div className="space-y-5">
                 <div>
-                  <Label htmlFor="procedureCodes" required>CDT / CPT Procedure Codes</Label>
+                  <Label htmlFor="procedureCodes" required>CPT/HCPCS Procedure Codes</Label>
                   <p className="text-xs text-muted mb-2">
-                    Search for dental CDT codes or type any CPT code and press Enter to add.
+                    Search CPT/HCPCS codes or type a code and press Enter to add.
                   </p>
                   <CodeInput
                     codes={procedure.procedureCodes}
                     onCodesChange={(codes) => updateProcedure('procedureCodes', codes)}
-                    showCDTHelper
-                    placeholder="Search CDT codes (e.g., D6010) or type CPT codes..."
+                    showCodeHelper
+                    placeholder="Search CPT codes (e.g., 72148, 27447)"
                     error={validationErrors.length > 0 && procedure.procedureCodes.length === 0}
                   />
                 </div>
@@ -1072,7 +1074,7 @@ export default function UploadPage() {
                       id="treatingProvider"
                       value={procedure.treatingProvider}
                       onChange={(v) => updateProcedure('treatingProvider', v)}
-                      placeholder="e.g., Dr. Michael Chen, DDS"
+                      placeholder="e.g., Dr. Michael Chen, MD"
                       required
                       error={validationErrors.length > 0 && !procedure.treatingProvider.trim()}
                     />
@@ -1098,7 +1100,7 @@ export default function UploadPage() {
                   <CodeInput
                     codes={procedure.diagnosisCodes}
                     onCodesChange={(codes) => updateProcedure('diagnosisCodes', codes)}
-                    placeholder="Enter ICD-10 code (e.g., K08.1)..."
+                    placeholder="Enter ICD-10 code (e.g., M17.11, G47.33)..."
                   />
                 </div>
 
@@ -1112,7 +1114,7 @@ export default function UploadPage() {
                     value={procedure.procedureDescription}
                     onChange={(e) => updateProcedure('procedureDescription', e.target.value)}
                     rows={4}
-                    placeholder="Describe the proposed procedure(s), including specifics such as tooth numbers, location, clinical justification, and any relevant patient history..."
+                    placeholder="Describe the proposed procedure(s), including clinical justification, anatomical site, relevant findings, conservative treatment history, and any pertinent patient history..."
                     className="w-full px-3.5 py-2.5 text-sm border border-border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-gold/50 focus:border-gold resize-y transition-all duration-200 placeholder:text-muted/60"
                   />
                 </div>
@@ -1143,10 +1145,10 @@ export default function UploadPage() {
                   <div>
                     <p className="text-sm font-medium text-blue-900">Tips for faster review</p>
                     <ul className="mt-1.5 space-y-1 text-xs text-blue-800">
-                      <li>Include complete radiographs with clear tooth numbering</li>
-                      <li>Attach periodontal charting with probing depths if applicable</li>
-                      <li>Provide the full treatment plan with clinical rationale</li>
-                      <li>Include any prior treatment history relevant to this request</li>
+                      <li>Include complete operative notes and procedure reports</li>
+                      <li>Attach relevant imaging reports (MRI, CT, X-ray findings)</li>
+                      <li>Include lab results and pathology reports if applicable</li>
+                      <li>Attach physical therapy or conservative treatment records</li>
                     </ul>
                   </div>
                 </div>

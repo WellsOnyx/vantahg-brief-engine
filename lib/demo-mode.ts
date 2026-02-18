@@ -23,12 +23,13 @@ export function isDemoMode(): boolean {
 export interface GetDemoCasesOptions {
   status?: string | null;
   vertical?: string | null;
+  service_category?: string | null;
   priority?: string | null;
   search?: string | null;
 }
 
 /**
- * Returns all demo cases, optionally filtered by status, vertical, priority, or search term.
+ * Returns all demo cases, optionally filtered by status, service_category/vertical, priority, or search term.
  * Mirrors the Supabase query behavior in the cases GET route.
  */
 export function getDemoCases(options: GetDemoCasesOptions = {}): Case[] {
@@ -36,6 +37,10 @@ export function getDemoCases(options: GetDemoCasesOptions = {}): Case[] {
 
   if (options.status) {
     cases = cases.filter((c) => c.status === options.status);
+  }
+
+  if (options.service_category) {
+    cases = cases.filter((c) => c.service_category === options.service_category);
   }
 
   if (options.vertical) {
@@ -132,8 +137,8 @@ export function getDemoAuditLog(caseId: string): AuditLogEntry[] | null {
 /**
  * Returns a pre-built AI brief for the given case ID.
  * If the case already has a brief, returns that brief.
- * If the case doesn't have a brief (e.g. the extraction case), returns a
- * generic brief appropriate for the procedure codes.
+ * If the case doesn't have a brief (e.g. the CPAP device case in intake),
+ * returns a generated brief appropriate for the procedure codes.
  */
 export function getDemoBrief(caseId: string): { case: Case; brief: AIBrief } | null {
   const caseData = getDemoCase(caseId);
@@ -146,77 +151,97 @@ export function getDemoBrief(caseId: string): { case: Case; brief: AIBrief } | n
     return { case: caseData, brief: caseData.ai_brief };
   }
 
-  // For the extraction case (or any case without a brief), generate one on-the-fly
-  const extractionBrief: AIBrief = {
+  // For the CPAP case (or any case without a brief), generate one on-the-fly
+  const cpapBrief: AIBrief = {
     clinical_question:
-      'Is surgical extraction of completely bony impacted tooth #32 medically necessary given the documented acute pericoronitis and clinical presentation?',
+      'Does this patient meet coverage criteria for a continuous positive airway pressure (CPAP) device (HCPCS E0601) based on the documented sleep study results and face-to-face clinical evaluation?',
     patient_summary:
-      'Angela Thompson is a 35-year-old female presenting with acute pericoronitis associated with a completely bony impacted mandibular right third molar (#32). The patient reports 5 days of worsening pain, swelling, and limited mouth opening (maximum interincisal opening of 22mm). Clinical examination reveals erythematous, edematous soft tissue overlying the distal aspect of #31 with purulent drainage on palpation. Temperature 99.8°F. The patient is otherwise healthy with no significant medical history.',
+      'Robert Garcia is a 50-year-old male (DOB 09/12/1975) presenting with excessive daytime sleepiness, witnessed apneic episodes reported by his spouse, and an elevated BMI of 34. A home sleep apnea test (HSAT) demonstrates an apnea-hypopnea index (AHI) of 22 events per hour, consistent with moderate obstructive sleep apnea. A face-to-face clinical evaluation was completed on 02/01/2026 by the prescribing physician. The patient has comorbid hypertension currently managed with two antihypertensive medications (lisinopril 20mg daily, amlodipine 5mg daily). No prior CPAP trial or sleep center-based titration study has been performed.',
+    diagnosis_analysis: {
+      primary_diagnosis: 'G47.33 - Obstructive sleep apnea',
+      secondary_diagnoses: [],
+      diagnosis_procedure_alignment: 'Diagnosis of obstructive sleep apnea directly supports the need for CPAP therapy. AHI of 22 (moderate OSA) meets the diagnostic threshold for CPAP coverage. Comorbid hypertension on multiple medications further supports the medical necessity of treatment.',
+    },
     procedure_analysis: {
-      codes: ['D7240 - Removal of impacted tooth, completely bony'],
+      codes: ['E0601 - Continuous positive airway pressure (CPAP) device'],
       clinical_rationale:
-        'The requesting oral surgeon documents a completely bony impacted #32 with acute pericoronitis that has not resolved with antibiotic therapy (amoxicillin 500mg TID x 7 days completed). Panoramic radiograph confirms complete bony impaction with close proximity to the inferior alveolar nerve canal. The clinical presentation of acute infection with trismus and purulent drainage supports the need for surgical intervention.',
-      complexity_level: 'moderate',
+        'The prescribing sleep medicine physician documents moderate obstructive sleep apnea (AHI 22) on home sleep testing with symptomatic excessive daytime sleepiness and witnessed apneas. CPAP is the first-line treatment for moderate OSA per AASM guidelines. The patient has comorbid hypertension that may benefit from OSA treatment. A face-to-face evaluation has been completed within 30 days of the order.',
+      complexity_level: 'routine',
+      setting_appropriateness: 'Home use is the appropriate setting for CPAP therapy. Auto-titrating CPAP (APAP) may be prescribed without a laboratory titration study for moderate OSA per current guidelines.',
     },
     criteria_match: {
+      guideline_source: 'InterQual / CMS LCD / AASM',
       applicable_guideline:
-        'AAOMS White Paper on Third Molar Management; Delta Dental Clinical Policy: Surgical Extraction of Impacted Teeth (2024)',
+        'InterQual 2026: DME - CPAP; CMS Local Coverage Determination for CPAP (L33718); AASM Clinical Practice Guideline for PAP Treatment of OSA (2024); Western Employers Trust DME Policy',
       criteria_met: [
-        'Impaction confirmed on panoramic radiograph as completely bony',
-        'Clinical indication present: acute pericoronitis with purulent drainage, pain, and trismus',
-        'Classification of impaction provided: Class II, Position C (completely bony)',
-        'Failed conservative management documented (completed course of antibiotics without resolution)',
+        'AHI of 22 events/hour on HSAT meets the CMS threshold of AHI >= 15 for CPAP coverage',
+        'Face-to-face clinical evaluation completed within 30 days prior to the CPAP order (02/01/2026)',
+        'Symptomatic: excessive daytime sleepiness, witnessed apneas documented',
+        'Sleep testing was performed with a CMS-approved device (Type III HSAT)',
+        'Comorbid cardiovascular disease (hypertension on 2 medications) supports treatment urgency',
       ],
       criteria_not_met: [],
       criteria_unable_to_assess: [
-        'CBCT imaging to evaluate IAN proximity has not been submitted but may be obtained pre-operatively',
+        'Whether the HSAT was interpreted by a board-certified sleep medicine physician (interpreting physician credentials not included in submitted records)',
+        'Whether the patient will receive adequate CPAP education and mask fitting from a qualified DME supplier',
+      ],
+      conservative_alternatives: [
+        'Positional therapy (if OSA is predominantly positional - not assessed)',
+        'Weight loss counseling and management (supportive but not a substitute for CPAP with AHI 22)',
+        'Oral appliance therapy (typically second-line for moderate OSA or for patients intolerant of CPAP)',
       ],
     },
     documentation_review: {
       documents_provided:
-        'Panoramic radiograph and referral letter from general dentist',
+        'Home sleep apnea test report and face-to-face clinical evaluation notes',
       key_findings: [
-        'Panoramic radiograph confirms completely bony impaction of #32 with mesioangular orientation',
-        'Referral letter documents failed antibiotic course and worsening symptoms',
-        'Clinical signs of acute infection are described in the referral documentation',
+        'HSAT report demonstrates AHI of 22 events/hour with lowest oxygen desaturation to 84%',
+        'Face-to-face evaluation notes document history of excessive daytime sleepiness (Epworth Sleepiness Scale score of 14/24), witnessed apneas, and morning headaches',
+        'BMI of 34 documented, consistent with obesity-related OSA risk',
+        'Hypertension managed with lisinopril 20mg and amlodipine 5mg daily - uncontrolled hypertension may improve with OSA treatment',
+        'Face-to-face evaluation date (02/01/2026) is within the required 30-day window prior to CPAP order',
       ],
       missing_documentation: [
-        'Clinical photographs documenting soft tissue swelling and drainage',
-        'CBCT scan for detailed assessment of IAN proximity (may be deferred to surgical planning)',
-        'Full medical history form (only referral letter provided)',
-        'Detailed clinical examination notes from the oral surgeon',
+        'Interpreting physician credentials for the HSAT (should confirm board-certified sleep medicine physician)',
+        'Specific CPAP device prescription (device type, pressure settings or auto-titration parameters)',
+        'DME supplier information and patient education plan',
+        'Documentation of Epworth Sleepiness Scale in the provider notes (referenced but score sheet not submitted)',
       ],
     },
     ai_recommendation: {
       recommendation: 'approve',
       confidence: 'high',
       rationale:
-        'The clinical presentation of acute pericoronitis with failed antibiotic therapy and a completely bony impacted tooth provides strong medical necessity for surgical extraction. The panoramic radiograph confirms the impaction classification. While additional documentation would strengthen the record, the acute clinical presentation supports expedited authorization.',
+        'The patient meets CMS and InterQual coverage criteria for CPAP therapy. AHI of 22 on HSAT exceeds the CMS threshold of >= 15 for CPAP coverage without additional documentation requirements. Face-to-face evaluation has been completed within the required timeframe. The patient is symptomatic with excessive daytime sleepiness and has comorbid hypertension that may benefit from OSA treatment. While some documentation gaps exist (interpreting physician credentials, device prescription details), these are administrative items that do not affect the medical necessity determination.',
       key_considerations: [
-        'This case is marked as urgent due to the acute infection and should be prioritized accordingly',
-        'The proximity to the inferior alveolar nerve should be noted, though this is a surgical planning consideration rather than an authorization concern',
-        'Verify that the provider has appropriate oral surgery credentials for completely bony impaction removal',
+        'CMS requires a compliance check at 31-90 days of CPAP use demonstrating >= 4 hours of use per night for >= 70% of nights for continued coverage',
+        'The patient should be informed of the compliance requirements at the time of CPAP initiation',
+        'Follow-up with the prescribing physician should be scheduled within 90 days to assess treatment response and compliance',
+        'Weight management counseling should be recommended as an adjunct to CPAP therapy given BMI of 34',
       ],
+      if_modify_suggestion: null,
     },
     reviewer_action: {
       decision_required:
-        'Confirm medical necessity for surgical extraction of completely bony impacted #32 in the setting of acute pericoronitis',
+        'Confirm that the HSAT results and face-to-face evaluation meet CMS and plan-specific criteria for CPAP coverage',
       time_sensitivity:
-        'Urgent: Active infection with trismus. Expedited review recommended per plan policy for acute/urgent cases (48-72 hour turnaround).',
+        'Standard turnaround per Western Employers Trust 24-hour SLA. Routine DME authorization - non-emergent but patient has symptomatic moderate OSA with comorbid hypertension.',
       peer_to_peer_suggested: false,
       additional_info_needed: [
-        'Full clinical examination notes from the oral surgeon would be ideal but should not delay authorization given acute presentation',
+        'Interpreting physician credentials for HSAT (administrative requirement - should not delay authorization)',
+        'Specific CPAP device prescription with pressure parameters or auto-titration settings',
       ],
+      state_specific_requirements: [],
     },
   };
 
   // Return the case with the brief applied
   const updatedCase: Case = {
     ...caseData,
-    ai_brief: extractionBrief,
+    ai_brief: cpapBrief,
     ai_brief_generated_at: new Date().toISOString(),
     status: 'brief_ready',
   };
 
-  return { case: updatedCase, brief: extractionBrief };
+  return { case: updatedCase, brief: cpapBrief };
 }

@@ -202,6 +202,41 @@ export function CaseBrief({ brief, caseNumber }: CaseBriefProps) {
 
         <SectionDivider />
 
+        {/* 2b. Diagnosis Analysis */}
+        {brief.diagnosis_analysis && (
+          <>
+            <div>
+              <SectionHeader>Diagnosis Analysis</SectionHeader>
+              <div className="space-y-3">
+                <div>
+                  <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-1">Primary Diagnosis</p>
+                  <p className="text-sm text-foreground">{brief.diagnosis_analysis.primary_diagnosis}</p>
+                </div>
+                {brief.diagnosis_analysis.secondary_diagnoses.length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-1">Secondary Diagnoses</p>
+                    <ul className="space-y-1">
+                      {brief.diagnosis_analysis.secondary_diagnoses.map((dx, idx) => (
+                        <li key={idx} className="flex items-start gap-2 text-sm text-foreground">
+                          <span className="w-1.5 h-1.5 rounded-full bg-navy/40 shrink-0 mt-2" />
+                          {dx}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {brief.diagnosis_analysis.diagnosis_procedure_alignment && (
+                  <div className="p-3 rounded-lg bg-blue-50 border border-blue-100">
+                    <p className="text-xs font-semibold text-blue-800 uppercase tracking-wider mb-1">Diagnosis-Procedure Alignment</p>
+                    <p className="text-sm text-blue-900">{brief.diagnosis_analysis.diagnosis_procedure_alignment}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+            <SectionDivider />
+          </>
+        )}
+
         {/* 3. Procedure Analysis */}
         <div>
           <div className="flex items-center justify-between mb-3">
@@ -225,6 +260,13 @@ export function CaseBrief({ brief, caseNumber }: CaseBriefProps) {
           <p className="text-sm text-foreground leading-relaxed">
             {brief.procedure_analysis.clinical_rationale}
           </p>
+
+          {brief.procedure_analysis.setting_appropriateness && (
+            <div className="mt-3 p-3 rounded-lg bg-navy/[0.04] border border-navy/10">
+              <p className="text-xs font-semibold text-navy uppercase tracking-wider mb-1">Setting Appropriateness</p>
+              <p className="text-sm text-foreground">{brief.procedure_analysis.setting_appropriateness}</p>
+            </div>
+          )}
         </div>
 
         <SectionDivider />
@@ -232,6 +274,11 @@ export function CaseBrief({ brief, caseNumber }: CaseBriefProps) {
         {/* 4. Clinical Criteria Match */}
         <div>
           <SectionHeader>Clinical Criteria Match</SectionHeader>
+          {brief.criteria_match.guideline_source && (
+            <p className="text-xs text-muted mb-1">
+              Source: <span className="font-semibold text-foreground">{brief.criteria_match.guideline_source}</span>
+            </p>
+          )}
           <p className="text-xs text-muted mb-3">
             Guideline: <span className="font-semibold text-foreground">{brief.criteria_match.applicable_guideline}</span>
           </p>
@@ -280,6 +327,22 @@ export function CaseBrief({ brief, caseNumber }: CaseBriefProps) {
               </div>
             )}
           </div>
+
+          {brief.criteria_match.conservative_alternatives && brief.criteria_match.conservative_alternatives.length > 0 && (
+            <div className="mt-3 p-3 rounded-lg bg-indigo-50 border border-indigo-100">
+              <p className="text-xs font-semibold text-indigo-800 uppercase tracking-wider mb-2">Conservative Alternatives</p>
+              <ul className="space-y-1.5">
+                {brief.criteria_match.conservative_alternatives.map((alt, idx) => (
+                  <li key={idx} className="flex items-start gap-2 text-sm text-indigo-900">
+                    <svg className="w-3.5 h-3.5 text-indigo-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                    </svg>
+                    {alt}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {/* Summary counts */}
           <div className="flex flex-wrap gap-4 mt-4 pt-3 border-t border-border">
@@ -379,6 +442,13 @@ export function CaseBrief({ brief, caseNumber }: CaseBriefProps) {
               </ul>
             </div>
           )}
+
+          {brief.ai_recommendation.if_modify_suggestion && (
+            <div className="mt-4 p-3 rounded-lg bg-amber-50 border border-amber-200">
+              <p className="text-xs font-semibold text-amber-800 uppercase tracking-wider mb-1">Modification Suggestion</p>
+              <p className="text-sm text-amber-900">{brief.ai_recommendation.if_modify_suggestion}</p>
+            </div>
+          )}
         </div>
 
         <SectionDivider />
@@ -434,6 +504,24 @@ export function CaseBrief({ brief, caseNumber }: CaseBriefProps) {
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                       </svg>
                       {info}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {brief.reviewer_action.state_specific_requirements && brief.reviewer_action.state_specific_requirements.length > 0 && (
+              <div className="p-3 rounded-lg bg-slate-50 border border-slate-200">
+                <p className="text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
+                  State-Specific Requirements
+                </p>
+                <ul className="space-y-1.5">
+                  {brief.reviewer_action.state_specific_requirements.map((req, idx) => (
+                    <li key={idx} className="flex items-start gap-2 text-sm text-slate-800">
+                      <svg className="w-3.5 h-3.5 text-slate-500 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V10.332A48.36 48.36 0 0012 9.75c-2.551 0-5.056.2-7.5.582V21M3 21h18M12 6.75h.008v.008H12V6.75z" />
+                      </svg>
+                      {req}
                     </li>
                   ))}
                 </ul>
