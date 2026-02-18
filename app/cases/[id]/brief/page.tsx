@@ -78,7 +78,22 @@ export default function PrintableBriefPage() {
           <div><span className="text-muted">Provider:</span> <span className="font-medium">{caseData.requesting_provider || '—'}</span></div>
           <div><span className="text-muted">NPI:</span> <span className="font-medium">{caseData.requesting_provider_npi || '—'}</span></div>
           <div><span className="text-muted">Payer:</span> <span className="font-medium">{caseData.payer_name || '—'}</span></div>
+          <div><span className="text-muted">Plan:</span> <span className="font-medium">{caseData.plan_type ? caseData.plan_type.toUpperCase() : '—'}</span></div>
+          {caseData.facility_name && (
+            <div><span className="text-muted">Facility:</span> <span className="font-medium">{caseData.facility_name}</span></div>
+          )}
+          {caseData.facility_type && (
+            <div><span className="text-muted">Setting:</span> <span className="font-medium capitalize">{caseData.facility_type === 'asc' ? 'ASC' : caseData.facility_type}</span></div>
+          )}
           <div><span className="text-muted">Priority:</span> <span className="font-medium capitalize">{caseData.priority}</span></div>
+          <div>
+            <span className="text-muted">SLA Deadline:</span>{' '}
+            <span className="font-medium">
+              {caseData.turnaround_deadline
+                ? new Date(caseData.turnaround_deadline).toLocaleDateString()
+                : '—'}
+            </span>
+          </div>
         </div>
 
         {/* Clinical Question */}
@@ -91,6 +106,31 @@ export default function PrintableBriefPage() {
         <div className="mb-5">
           <h2 className="font-semibold text-sm text-navy uppercase tracking-wide mb-2">Patient Summary</h2>
           <p className="text-sm">{brief.patient_summary}</p>
+        </div>
+
+        {/* Diagnosis Analysis */}
+        <div className="mb-5">
+          <h2 className="font-semibold text-sm text-navy uppercase tracking-wide mb-2">Diagnosis Analysis</h2>
+          <div className="text-sm space-y-2">
+            <div>
+              <span className="text-muted text-xs">Primary Diagnosis:</span>
+              <p className="font-medium">{brief.diagnosis_analysis.primary_diagnosis}</p>
+            </div>
+            {brief.diagnosis_analysis.secondary_diagnoses.length > 0 && (
+              <div>
+                <span className="text-muted text-xs">Secondary Diagnoses:</span>
+                <ul className="text-xs mt-1 space-y-0.5">
+                  {brief.diagnosis_analysis.secondary_diagnoses.map((dx, i) => (
+                    <li key={i} className="flex items-start gap-1"><span>&#8226;</span><span>{dx}</span></li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            <div>
+              <span className="text-muted text-xs">Diagnosis-Procedure Alignment:</span>
+              <p className="text-xs mt-0.5">{brief.diagnosis_analysis.diagnosis_procedure_alignment}</p>
+            </div>
+          </div>
         </div>
 
         {/* Procedure Analysis */}
@@ -146,6 +186,21 @@ export default function PrintableBriefPage() {
             </div>
           </div>
         </div>
+
+        {/* Conservative Alternatives */}
+        {brief.criteria_match.conservative_alternatives && brief.criteria_match.conservative_alternatives.length > 0 && (
+          <div className="mb-5 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h2 className="font-semibold text-sm text-blue-800 uppercase tracking-wide mb-2">Conservative Alternatives</h2>
+            <ul className="text-xs space-y-1">
+              {brief.criteria_match.conservative_alternatives.map((alt, i) => (
+                <li key={i} className="flex items-start gap-1.5">
+                  <span className="text-blue-600 mt-0.5 shrink-0">&#8594;</span>
+                  <span className="text-blue-900">{alt}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {/* Documentation Review */}
         <div className="mb-5">
@@ -227,6 +282,21 @@ export default function PrintableBriefPage() {
             )}
           </div>
         </div>
+
+        {/* State-Specific Requirements */}
+        {brief.reviewer_action.state_specific_requirements && brief.reviewer_action.state_specific_requirements.length > 0 && (
+          <div className="mb-8 bg-indigo-50 border border-indigo-200 rounded-lg p-4">
+            <h2 className="font-semibold text-sm text-indigo-800 uppercase tracking-wide mb-2">State-Specific Requirements</h2>
+            <ul className="text-xs space-y-1">
+              {brief.reviewer_action.state_specific_requirements.map((req, i) => (
+                <li key={i} className="flex items-start gap-1.5">
+                  <span className="text-indigo-600 mt-0.5 shrink-0">&#9670;</span>
+                  <span className="text-indigo-900">{req}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {/* Signature Line */}
         <div className="border-t-2 border-gray-300 pt-6 mt-8">

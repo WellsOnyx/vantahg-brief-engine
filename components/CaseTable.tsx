@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import type { Case, CaseStatus, CasePriority, CaseVertical } from '@/lib/types';
 import { StatusBadge, PriorityBadge } from './StatusBadge';
+import { SlaTracker } from './SlaTracker';
 
 interface CaseTableProps {
   cases: Case[];
@@ -186,6 +187,7 @@ export function CaseTable({ cases, showFilters = false }: CaseTableProps) {
                 <th className="text-left px-5 py-3.5 font-semibold text-navy text-xs uppercase tracking-wider hidden sm:table-cell">Vertical</th>
                 <th className="text-left px-5 py-3.5 font-semibold text-navy text-xs uppercase tracking-wider">Status</th>
                 <th className="text-left px-5 py-3.5 font-semibold text-navy text-xs uppercase tracking-wider hidden md:table-cell">Priority</th>
+                <th className="text-left px-5 py-3.5 font-semibold text-navy text-xs uppercase tracking-wider hidden md:table-cell">SLA</th>
                 <th className="text-left px-5 py-3.5 font-semibold text-navy text-xs uppercase tracking-wider hidden lg:table-cell">Reviewer</th>
                 <th className="text-left px-5 py-3.5 font-semibold text-navy text-xs uppercase tracking-wider hidden sm:table-cell">Created</th>
               </tr>
@@ -239,6 +241,13 @@ export function CaseTable({ cases, showFilters = false }: CaseTableProps) {
                   </td>
                   <td className="px-5 py-3.5 hidden md:table-cell">
                     <PriorityBadge priority={c.priority} />
+                  </td>
+                  <td className="px-5 py-3.5 hidden md:table-cell">
+                    {c.turnaround_deadline ? (
+                      <SlaTracker deadline={c.turnaround_deadline} compact />
+                    ) : (
+                      <span className="text-muted italic text-xs">No SLA</span>
+                    )}
                   </td>
                   <td className="px-5 py-3.5 hidden lg:table-cell text-foreground">
                     {c.reviewer?.name || (

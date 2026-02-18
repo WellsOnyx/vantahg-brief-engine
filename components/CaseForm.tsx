@@ -262,11 +262,21 @@ export function CaseForm({ clients, onSubmit, isSubmitting }: CaseFormProps) {
   const [patientName, setPatientName] = useState('');
   const [patientDob, setPatientDob] = useState('');
   const [patientMemberId, setPatientMemberId] = useState('');
+  const [patientGender, setPatientGender] = useState('');
 
   // Provider information
   const [providerName, setProviderName] = useState('');
   const [providerNpi, setProviderNpi] = useState('');
   const [providerSpecialty, setProviderSpecialty] = useState('');
+
+  // Servicing provider
+  const [sameAsRequesting, setSameAsRequesting] = useState(false);
+  const [servicingProviderName, setServicingProviderName] = useState('');
+  const [servicingProviderNpi, setServicingProviderNpi] = useState('');
+  const [servicingProviderExpanded, setServicingProviderExpanded] = useState(false);
+
+  // Facility information
+  const [facilityName, setFacilityName] = useState('');
 
   // Procedure details
   const [procedureCodes, setProcedureCodes] = useState<string[]>([]);
@@ -311,13 +321,13 @@ export function CaseForm({ clients, onSubmit, isSubmitting }: CaseFormProps) {
       patient_name: patientName,
       patient_dob: patientDob,
       patient_member_id: patientMemberId,
-      patient_gender: '',
+      patient_gender: patientGender,
       requesting_provider: providerName,
       requesting_provider_npi: providerNpi,
       requesting_provider_specialty: providerSpecialty,
-      servicing_provider: '',
-      servicing_provider_npi: '',
-      facility_name: '',
+      servicing_provider: sameAsRequesting ? providerName : servicingProviderName,
+      servicing_provider_npi: sameAsRequesting ? providerNpi : servicingProviderNpi,
+      facility_name: facilityName,
       procedure_codes: procedureCodes,
       diagnosis_codes: diagnosisCodes,
       procedure_description: procedureDescription,
@@ -401,22 +411,6 @@ export function CaseForm({ clients, onSubmit, isSubmitting }: CaseFormProps) {
           </div>
 
           <div>
-            <Label htmlFor="facilityType" required>Facility Type</Label>
-            <select
-              id="facilityType"
-              value={facilityType}
-              onChange={(e) => setFacilityType(e.target.value as FacilityType)}
-              className="w-full px-3 py-2 text-sm border border-border rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-gold/50 focus:border-gold"
-            >
-              {facilityTypeOptions.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
             <Label htmlFor="clientId" required>Client</Label>
             <select
               id="clientId"
@@ -440,7 +434,7 @@ export function CaseForm({ clients, onSubmit, isSubmitting }: CaseFormProps) {
       {/* Section 2: Patient Information */}
       <div className="bg-surface rounded-lg border border-border p-6">
         <SectionTitle>Patient Information</SectionTitle>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <Label htmlFor="patientName" required>Patient Name</Label>
             <InputField
@@ -462,6 +456,36 @@ export function CaseForm({ clients, onSubmit, isSubmitting }: CaseFormProps) {
             />
           </div>
           <div>
+            <Label htmlFor="patientGender">Gender</Label>
+            <div className="flex flex-wrap gap-3 mt-1">
+              {[
+                { value: 'Male', label: 'Male' },
+                { value: 'Female', label: 'Female' },
+                { value: 'Other', label: 'Other' },
+                { value: 'Prefer not to say', label: 'Prefer not to say' },
+              ].map((opt) => (
+                <label
+                  key={opt.value}
+                  className={`inline-flex items-center gap-2 px-3 py-1.5 text-sm border rounded-md cursor-pointer transition-colors ${
+                    patientGender === opt.value
+                      ? 'border-gold bg-gold/10 text-navy font-medium'
+                      : 'border-border bg-white text-foreground hover:border-gray-300'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="patientGender"
+                    value={opt.value}
+                    checked={patientGender === opt.value}
+                    onChange={(e) => setPatientGender(e.target.value)}
+                    className="sr-only"
+                  />
+                  {opt.label}
+                </label>
+              ))}
+            </div>
+          </div>
+          <div>
             <Label htmlFor="patientMemberId" required>Member ID</Label>
             <InputField
               id="patientMemberId"
@@ -474,9 +498,9 @@ export function CaseForm({ clients, onSubmit, isSubmitting }: CaseFormProps) {
         </div>
       </div>
 
-      {/* Section 3: Provider Information */}
+      {/* Section 3: Requesting Provider Information */}
       <div className="bg-surface rounded-lg border border-border p-6">
-        <SectionTitle>Provider Information</SectionTitle>
+        <SectionTitle>Requesting Provider Information</SectionTitle>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <Label htmlFor="providerName" required>Provider Name</Label>
@@ -506,6 +530,104 @@ export function CaseForm({ clients, onSubmit, isSubmitting }: CaseFormProps) {
               onChange={setProviderSpecialty}
               placeholder="e.g., Orthopedic Surgery, Neurology, Pain Management"
             />
+          </div>
+        </div>
+      </div>
+
+      {/* Section 3b: Servicing Provider */}
+      <div className="bg-surface rounded-lg border border-border p-6">
+        <button
+          type="button"
+          onClick={() => setServicingProviderExpanded(!servicingProviderExpanded)}
+          className="flex items-center justify-between w-full"
+        >
+          <h3 className="font-[family-name:var(--font-dm-serif)] text-base text-navy">
+            Servicing Provider
+          </h3>
+          <svg
+            className={`w-5 h-5 text-muted transition-transform duration-200 ${
+              servicingProviderExpanded ? 'rotate-180' : ''
+            }`}
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+          </svg>
+        </button>
+
+        {servicingProviderExpanded && (
+          <div className="mt-4 pt-4 border-t border-border space-y-4">
+            <label className="inline-flex items-center gap-2 text-sm text-foreground cursor-pointer">
+              <input
+                type="checkbox"
+                checked={sameAsRequesting}
+                onChange={(e) => {
+                  setSameAsRequesting(e.target.checked);
+                  if (e.target.checked) {
+                    setServicingProviderName(providerName);
+                    setServicingProviderNpi(providerNpi);
+                  }
+                }}
+                className="w-4 h-4 rounded border-border text-gold focus:ring-gold/50"
+              />
+              Same as requesting provider
+            </label>
+
+            {!sameAsRequesting && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="servicingProviderName">Servicing Provider Name</Label>
+                  <InputField
+                    id="servicingProviderName"
+                    value={servicingProviderName}
+                    onChange={setServicingProviderName}
+                    placeholder="Servicing provider name"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="servicingProviderNpi">Servicing Provider NPI</Label>
+                  <InputField
+                    id="servicingProviderNpi"
+                    value={servicingProviderNpi}
+                    onChange={setServicingProviderNpi}
+                    placeholder="10-digit NPI"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Section 3c: Facility Information */}
+      <div className="bg-surface rounded-lg border border-border p-6">
+        <SectionTitle>Facility Information</SectionTitle>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="facilityName">Facility Name</Label>
+            <InputField
+              id="facilityName"
+              value={facilityName}
+              onChange={setFacilityName}
+              placeholder="e.g., Valley Imaging Center, Scottsdale Surgical Center"
+            />
+          </div>
+          <div>
+            <Label htmlFor="facilityType" required>Facility Type</Label>
+            <select
+              id="facilityType"
+              value={facilityType}
+              onChange={(e) => setFacilityType(e.target.value as FacilityType)}
+              className="w-full px-3 py-2 text-sm border border-border rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-gold/50 focus:border-gold"
+            >
+              {facilityTypeOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
       </div>

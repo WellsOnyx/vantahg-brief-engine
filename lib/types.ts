@@ -17,8 +17,8 @@ export type ServiceCategory =
   | 'oncology'
   | 'other';
 export type ReviewType = 'prior_auth' | 'medical_necessity' | 'concurrent' | 'retrospective' | 'peer_to_peer' | 'appeal' | 'second_level_review';
-export type Determination = 'approve' | 'deny' | 'partial_approve' | 'pend' | 'peer_to_peer_requested';
-export type ReviewerStatus = 'active' | 'inactive' | 'pending';
+export type Determination = 'approve' | 'deny' | 'partial_approve' | 'modify' | 'pend' | 'peer_to_peer_requested';
+export type ReviewerStatus = 'active' | 'inactive' | 'pending' | 'credentialing';
 export type ClientType = 'tpa' | 'health_plan' | 'self_funded_employer' | 'managed_care_org' | 'workers_comp' | 'auto_med';
 export type FacilityType = 'inpatient' | 'outpatient' | 'asc' | 'office' | 'home';
 

@@ -2,10 +2,31 @@
 
 import { useState } from 'react';
 
+export interface DeterminationFields {
+  determination: string;
+  rationale: string;
+  denial_reason?: string;
+  denial_criteria_cited?: string;
+  alternative_recommended?: string;
+  modification_details?: string;
+  p2p_reason?: string;
+}
+
 interface DeterminationFormProps {
-  onSubmit: (determination: string, rationale: string) => Promise<void>;
+  onSubmit: (fields: DeterminationFields) => Promise<void>;
   isSubmitting: boolean;
 }
+
+const DENIAL_REASONS = [
+  'Does not meet medical necessity criteria',
+  'Insufficient clinical documentation',
+  'Conservative treatment not exhausted',
+  'Service not covered under plan',
+  'Requested setting not appropriate',
+  'Frequency/duration exceeds guidelines',
+  'Experimental/investigational',
+  'Other',
+] as const;
 
 const determinationOptions = [
   {
@@ -48,6 +69,19 @@ const determinationOptions = [
     ),
   },
   {
+    value: 'modify',
+    label: 'Modify',
+    description: 'Approve with modifications to the requested service',
+    color: 'border-teal-300 bg-teal-50 text-teal-800',
+    selectedColor: 'border-teal-400 bg-teal-50 text-teal-800 ring-2 ring-teal-500/30',
+    dot: 'bg-teal-500',
+    icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M11.42 15.17l-5.66-5.66a2 2 0 010-2.83l.94-.94a2 2 0 012.83 0l1.42 1.42 3.13-3.13a2 2 0 012.83 0l.94.94a2 2 0 010 2.83l-5.66 5.66a2 2 0 01-2.83 0zM21.13 2.87a3 3 0 00-4.24 0l-1.06 1.06 4.24 4.24 1.06-1.06a3 3 0 000-4.24z" />
+      </svg>
+    ),
+  },
+  {
     value: 'pend',
     label: 'Pend',
     description: 'Insufficient information, request additional documentation',
@@ -80,7 +114,16 @@ const MAX_CHARS = 2000;
 export function DeterminationForm({ onSubmit, isSubmitting }: DeterminationFormProps) {
   const [determination, setDetermination] = useState('');
   const [rationale, setRationale] = useState('');
+  const [denialReason, setDenialReason] = useState('');
+  const [criteriaCited, setCriteriaCited] = useState('');
+  const [alternativeRecommended, setAlternativeRecommended] = useState('');
+  const [modificationDetails, setModificationDetails] = useState('');
+  const [p2pReason, setP2pReason] = useState('');
   const [error, setError] = useState('');
+
+  const showDenialFields = determination === 'deny' || determination === 'partial_approve';
+  const showModifyFields = determination === 'modify';
+  const showP2pFields = determination === 'peer_to_peer_requested';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -98,8 +141,30 @@ export function DeterminationForm({ onSubmit, isSubmitting }: DeterminationFormP
       setError('Please provide a more detailed rationale (at least 20 characters).');
       return;
     }
+    if (showDenialFields && !denialReason) {
+      setError('Please select a denial reason.');
+      return;
+    }
+    if (showDenialFields && !criteriaCited.trim()) {
+      setError('Please cite the specific criteria that was not met.');
+      return;
+    }
 
-    await onSubmit(determination, rationale.trim());
+    await onSubmit({
+      determination,
+      rationale: rationale.trim(),
+      ...(showDenialFields && {
+        denial_reason: denialReason,
+        denial_criteria_cited: criteriaCited.trim(),
+        alternative_recommended: alternativeRecommended.trim() || undefined,
+      }),
+      ...(showModifyFields && {
+        modification_details: modificationDetails.trim() || undefined,
+      }),
+      ...(showP2pFields && {
+        p2p_reason: p2pReason.trim() || undefined,
+      }),
+    });
   };
 
   const charCount = rationale.trim().length;
@@ -215,6 +280,112 @@ export function DeterminationForm({ onSubmit, isSubmitting }: DeterminationFormP
             </div>
           </div>
         </div>
+
+        {/* Denial-specific fields (deny or partial_approve) */}
+        {showDenialFields && (
+          <div className="space-y-4 overflow-hidden animate-slide-up">
+            <div className="border-l-4 border-red-400 pl-4 space-y-4">
+              <div>
+                <label htmlFor="denial-reason" className="block text-sm font-semibold text-foreground mb-1.5">
+                  Denial Reason <span className="text-red-500">*</span>
+                </label>
+                <select
+                  id="denial-reason"
+                  value={denialReason}
+                  onChange={(e) => setDenialReason(e.target.value)}
+                  className="w-full px-4 py-3 text-sm border border-border rounded-xl bg-white appearance-none cursor-pointer"
+                >
+                  <option value="">Select a denial reason...</option>
+                  {DENIAL_REASONS.map((reason) => (
+                    <option key={reason} value={reason}>{reason}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="criteria-cited" className="block text-sm font-semibold text-foreground mb-1.5">
+                  Criteria Cited <span className="text-red-500">*</span>
+                </label>
+                <p className="text-xs text-muted mb-2">
+                  Cite the specific guideline, criteria section, or clinical standard that was not met.
+                </p>
+                <textarea
+                  id="criteria-cited"
+                  value={criteriaCited}
+                  onChange={(e) => setCriteriaCited(e.target.value)}
+                  rows={3}
+                  placeholder="e.g., InterQual 2024 Imaging: MRI Lumbar Spine — Criterion 3.2a requires documented failure of 6 weeks conservative therapy..."
+                  className="w-full px-4 py-3 text-sm border border-border rounded-xl bg-white resize-y"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="alternative-recommended" className="block text-sm font-semibold text-foreground mb-1.5">
+                  Alternative Recommended <span className="text-xs text-muted font-normal">(optional)</span>
+                </label>
+                <p className="text-xs text-muted mb-2">
+                  Recommend an alternative service, setting, or approach that would be approvable.
+                </p>
+                <textarea
+                  id="alternative-recommended"
+                  value={alternativeRecommended}
+                  onChange={(e) => setAlternativeRecommended(e.target.value)}
+                  rows={2}
+                  placeholder="e.g., Recommend outpatient physical therapy for 6 weeks followed by re-evaluation..."
+                  className="w-full px-4 py-3 text-sm border border-border rounded-xl bg-white resize-y"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modify-specific fields */}
+        {showModifyFields && (
+          <div className="space-y-4 overflow-hidden animate-slide-up">
+            <div className="border-l-4 border-teal-400 pl-4">
+              <div>
+                <label htmlFor="modification-details" className="block text-sm font-semibold text-foreground mb-1.5">
+                  Modification Details <span className="text-red-500">*</span>
+                </label>
+                <p className="text-xs text-muted mb-2">
+                  Describe the approved modification (e.g., approve outpatient instead of inpatient, approve different procedure code).
+                </p>
+                <textarea
+                  id="modification-details"
+                  value={modificationDetails}
+                  onChange={(e) => setModificationDetails(e.target.value)}
+                  rows={3}
+                  placeholder="e.g., Approve CPT 27447 (total knee arthroplasty) in outpatient ASC setting instead of inpatient..."
+                  className="w-full px-4 py-3 text-sm border border-border rounded-xl bg-white resize-y"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Peer-to-peer specific fields */}
+        {showP2pFields && (
+          <div className="space-y-4 overflow-hidden animate-slide-up">
+            <div className="border-l-4 border-purple-400 pl-4">
+              <div>
+                <label htmlFor="p2p-reason" className="block text-sm font-semibold text-foreground mb-1.5">
+                  P2P Discussion Topics <span className="text-xs text-muted font-normal">(recommended)</span>
+                </label>
+                <p className="text-xs text-muted mb-2">
+                  What specific clinical questions should be addressed in the peer-to-peer discussion?
+                </p>
+                <textarea
+                  id="p2p-reason"
+                  value={p2pReason}
+                  onChange={(e) => setP2pReason(e.target.value)}
+                  rows={3}
+                  placeholder="e.g., Requesting clarification on why conservative therapy was not attempted prior to surgical referral..."
+                  className="w-full px-4 py-3 text-sm border border-border rounded-xl bg-white resize-y"
+                />
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Error message */}
         {error && (

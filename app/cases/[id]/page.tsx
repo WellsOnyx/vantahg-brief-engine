@@ -8,7 +8,35 @@ import { StatusBadge, PriorityBadge } from '@/components/StatusBadge';
 import { AuditTimeline } from '@/components/AuditTimeline';
 import { ReviewerPanel } from '@/components/ReviewerPanel';
 import { DeterminationForm } from '@/components/DeterminationForm';
+import type { DeterminationFields } from '@/components/DeterminationForm';
+import { SlaTracker } from '@/components/SlaTracker';
 import type { Case, Reviewer, AuditLogEntry } from '@/lib/types';
+
+const SERVICE_CATEGORY_LABELS: Record<string, string> = {
+  imaging: 'Imaging',
+  surgery: 'Surgery',
+  specialty_referral: 'Specialty Referral',
+  dme: 'Durable Medical Equipment',
+  infusion: 'Infusion Therapy',
+  behavioral_health: 'Behavioral Health',
+  rehab_therapy: 'Rehabilitation Therapy',
+  home_health: 'Home Health',
+  skilled_nursing: 'Skilled Nursing',
+  transplant: 'Transplant',
+  genetic_testing: 'Genetic Testing',
+  pain_management: 'Pain Management',
+  cardiology: 'Cardiology',
+  oncology: 'Oncology',
+  other: 'Other',
+};
+
+const FACILITY_TYPE_LABELS: Record<string, string> = {
+  inpatient: 'Inpatient',
+  outpatient: 'Outpatient',
+  asc: 'Ambulatory Surgery Center',
+  office: 'Office',
+  home: 'Home',
+};
 
 export default function CaseDetailPage() {
   const params = useParams();
@@ -72,18 +100,23 @@ export default function CaseDetailPage() {
     }
   }
 
-  async function handleDetermination(determination: string, rationale: string) {
+  async function handleDetermination(fields: DeterminationFields) {
     setSubmittingDetermination(true);
     try {
       await fetch(`/api/cases/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          determination,
-          determination_rationale: rationale,
+          determination: fields.determination,
+          determination_rationale: fields.rationale,
           determination_at: new Date().toISOString(),
           determined_by: caseData?.assigned_reviewer_id,
           status: 'determination_made',
+          ...(fields.denial_reason && { denial_reason: fields.denial_reason }),
+          ...(fields.denial_criteria_cited && { denial_criteria_cited: fields.denial_criteria_cited }),
+          ...(fields.alternative_recommended && { alternative_recommended: fields.alternative_recommended }),
+          ...(fields.modification_details && { modification_details: fields.modification_details }),
+          ...(fields.p2p_reason && { p2p_reason: fields.p2p_reason }),
         }),
       });
       await fetchCase();
@@ -188,23 +221,102 @@ export default function CaseDetailPage() {
                 <dd className="font-medium">{caseData.patient_dob || '—'}</dd>
               </div>
               <div>
+                <dt className="text-muted">Gender</dt>
+                <dd className="font-medium capitalize">{caseData.patient_gender || '—'}</dd>
+              </div>
+              <div>
                 <dt className="text-muted">Member ID</dt>
-                <dd className="font-medium">{caseData.patient_member_id || '—'}</dd>
+                <dd className="font-medium font-mono text-xs">{caseData.patient_member_id || '—'}</dd>
               </div>
             </dl>
           </div>
 
-          {/* Provider Info */}
+          {/* Provider Information */}
           <div className="bg-surface rounded-lg border border-border p-5">
-            <h3 className="font-semibold text-sm text-muted uppercase tracking-wide mb-3">Requesting Provider</h3>
+            <h3 className="font-semibold text-sm text-muted uppercase tracking-wide mb-3">Provider Information</h3>
+            <dl className="space-y-2 text-sm">
+              <div className="pb-2 border-b border-border">
+                <dt className="text-muted text-xs uppercase tracking-wide mb-1">Requesting Provider</dt>
+                <dd className="font-medium">{caseData.requesting_provider || '—'}</dd>
+                {caseData.requesting_provider_npi && (
+                  <dd className="text-xs text-muted mt-0.5">NPI: <span className="font-mono">{caseData.requesting_provider_npi}</span></dd>
+                )}
+                {caseData.requesting_provider_specialty && (
+                  <dd className="text-xs text-muted mt-0.5">Specialty: <span className="capitalize">{caseData.requesting_provider_specialty}</span></dd>
+                )}
+              </div>
+              {caseData.servicing_provider && caseData.servicing_provider !== caseData.requesting_provider && (
+                <div className="pb-2 border-b border-border">
+                  <dt className="text-muted text-xs uppercase tracking-wide mb-1">Servicing Provider</dt>
+                  <dd className="font-medium">{caseData.servicing_provider}</dd>
+                  {caseData.servicing_provider_npi && (
+                    <dd className="text-xs text-muted mt-0.5">NPI: <span className="font-mono">{caseData.servicing_provider_npi}</span></dd>
+                  )}
+                </div>
+              )}
+              {caseData.facility_name && (
+                <div>
+                  <dt className="text-muted text-xs uppercase tracking-wide mb-1">Facility</dt>
+                  <dd className="font-medium">{caseData.facility_name}</dd>
+                  {caseData.facility_type && (
+                    <dd className="mt-1">
+                      <span className="inline-block bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-xs">
+                        {FACILITY_TYPE_LABELS[caseData.facility_type] || caseData.facility_type}
+                      </span>
+                    </dd>
+                  )}
+                </div>
+              )}
+            </dl>
+          </div>
+
+          {/* Payer & Plan */}
+          <div className="bg-surface rounded-lg border border-border p-5">
+            <h3 className="font-semibold text-sm text-muted uppercase tracking-wide mb-3">Payer &amp; Plan</h3>
             <dl className="space-y-2 text-sm">
               <div>
-                <dt className="text-muted">Provider</dt>
-                <dd className="font-medium">{caseData.requesting_provider || '—'}</dd>
+                <dt className="text-muted">Payer</dt>
+                <dd className="font-medium">{caseData.payer_name || '—'}</dd>
               </div>
               <div>
-                <dt className="text-muted">NPI</dt>
-                <dd className="font-medium">{caseData.requesting_provider_npi || '—'}</dd>
+                <dt className="text-muted">Plan Type</dt>
+                <dd className="font-medium">{caseData.plan_type ? caseData.plan_type.toUpperCase() : '—'}</dd>
+              </div>
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {caseData.review_type && (
+                  <span className="inline-block bg-navy/10 text-navy px-2 py-0.5 rounded text-xs font-medium capitalize">
+                    {caseData.review_type.replace(/_/g, ' ')}
+                  </span>
+                )}
+                {caseData.service_category && (
+                  <span className="inline-block bg-gold/20 text-amber-800 px-2 py-0.5 rounded text-xs font-medium">
+                    {SERVICE_CATEGORY_LABELS[caseData.service_category] || caseData.service_category}
+                  </span>
+                )}
+              </div>
+            </dl>
+          </div>
+
+          {/* SLA / Turnaround */}
+          <div className="bg-surface rounded-lg border border-border p-5">
+            <h3 className="font-semibold text-sm text-muted uppercase tracking-wide mb-3">SLA &amp; Turnaround</h3>
+            {caseData.turnaround_deadline && (
+              <div className="mb-3">
+                <SlaTracker deadline={caseData.turnaround_deadline} />
+              </div>
+            )}
+            <dl className="space-y-2 text-sm">
+              <div>
+                <dt className="text-muted">Deadline</dt>
+                <dd className="font-medium">
+                  {caseData.turnaround_deadline
+                    ? new Date(caseData.turnaround_deadline).toLocaleString()
+                    : '—'}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted">SLA Hours Contracted</dt>
+                <dd className="font-medium">{caseData.sla_hours != null ? `${caseData.sla_hours}h` : '—'}</dd>
               </div>
             </dl>
           </div>
@@ -252,20 +364,52 @@ export default function CaseDetailPage() {
             </dl>
           </div>
 
-          {/* Payer Info */}
-          <div className="bg-surface rounded-lg border border-border p-5">
-            <h3 className="font-semibold text-sm text-muted uppercase tracking-wide mb-3">Payer</h3>
-            <dl className="space-y-2 text-sm">
-              <div>
-                <dt className="text-muted">Payer Name</dt>
-                <dd className="font-medium">{caseData.payer_name || '—'}</dd>
-              </div>
-              <div>
-                <dt className="text-muted">Plan Type</dt>
-                <dd className="font-medium">{caseData.plan_type || '—'}</dd>
-              </div>
-            </dl>
-          </div>
+          {/* Denial Details (only when denied/partial) */}
+          {(caseData.determination === 'deny' || caseData.determination === 'partial_approve') && (
+            <div className="bg-red-50 rounded-lg border border-red-200 p-5">
+              <h3 className="font-semibold text-sm text-red-800 uppercase tracking-wide mb-3 flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                </svg>
+                Denial Details
+              </h3>
+              <dl className="space-y-3 text-sm">
+                {caseData.denial_reason && (
+                  <div>
+                    <dt className="text-red-700 text-xs font-medium uppercase tracking-wide">Reason</dt>
+                    <dd className="font-medium text-red-900 mt-0.5">{caseData.denial_reason}</dd>
+                  </div>
+                )}
+                {caseData.denial_criteria_cited && (
+                  <div>
+                    <dt className="text-red-700 text-xs font-medium uppercase tracking-wide">Criteria Cited</dt>
+                    <dd className="text-red-900 mt-0.5 text-xs leading-relaxed">{caseData.denial_criteria_cited}</dd>
+                  </div>
+                )}
+                {caseData.alternative_recommended && (
+                  <div>
+                    <dt className="text-red-700 text-xs font-medium uppercase tracking-wide">Alternative Recommended</dt>
+                    <dd className="text-red-900 mt-0.5 text-xs leading-relaxed">{caseData.alternative_recommended}</dd>
+                  </div>
+                )}
+              </dl>
+              <button
+                className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-purple-600 text-white text-sm font-medium hover:bg-purple-700 transition-colors"
+                onClick={() => {
+                  // Navigate or trigger P2P request flow
+                  handleDetermination({
+                    determination: 'peer_to_peer_requested',
+                    rationale: `Peer-to-peer requested following ${caseData.determination?.replace(/_/g, ' ')} determination.`,
+                  });
+                }}
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 01-.825-.242m9.345-8.334a2.126 2.126 0 00-.476-.095 48.64 48.64 0 00-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0011.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155" />
+                </svg>
+                Request Peer-to-Peer
+              </button>
+            </div>
+          )}
 
           {/* Reviewer Assignment */}
           <div className="bg-surface rounded-lg border border-border p-5">
@@ -337,6 +481,7 @@ export default function CaseDetailPage() {
                   caseData.determination === 'approve' ? 'bg-green-100 text-green-800' :
                   caseData.determination === 'deny' ? 'bg-red-100 text-red-800' :
                   caseData.determination === 'partial_approve' ? 'bg-yellow-100 text-yellow-800' :
+                  caseData.determination === 'modify' ? 'bg-teal-100 text-teal-800' :
                   caseData.determination === 'pend' ? 'bg-orange-100 text-orange-800' :
                   'bg-purple-100 text-purple-800'
                 }`}>

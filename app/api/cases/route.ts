@@ -16,6 +16,10 @@ export async function GET(request: NextRequest) {
         vertical: searchParams.get('vertical'),
         service_category: searchParams.get('service_category'),
         priority: searchParams.get('priority'),
+        review_type: searchParams.get('review_type'),
+        assigned_reviewer_id: searchParams.get('assigned_reviewer_id'),
+        date_from: searchParams.get('date_from'),
+        date_to: searchParams.get('date_to'),
         search: searchParams.get('search'),
       });
       return NextResponse.json(cases);
@@ -27,6 +31,10 @@ export async function GET(request: NextRequest) {
     const vertical = searchParams.get('vertical');
     const serviceCategory = searchParams.get('service_category');
     const priority = searchParams.get('priority');
+    const reviewType = searchParams.get('review_type');
+    const assignedReviewerId = searchParams.get('assigned_reviewer_id');
+    const dateFrom = searchParams.get('date_from');
+    const dateTo = searchParams.get('date_to');
     const search = searchParams.get('search');
 
     let query = supabase
@@ -50,9 +58,27 @@ export async function GET(request: NextRequest) {
       query = query.eq('priority', priority);
     }
 
+    if (reviewType) {
+      query = query.eq('review_type', reviewType);
+    }
+
+    if (assignedReviewerId) {
+      query = query.eq('assigned_reviewer_id', assignedReviewerId);
+    }
+
+    if (dateFrom) {
+      query = query.gte('created_at', new Date(dateFrom).toISOString());
+    }
+
+    if (dateTo) {
+      const to = new Date(dateTo);
+      to.setHours(23, 59, 59, 999);
+      query = query.lte('created_at', to.toISOString());
+    }
+
     if (search) {
       query = query.or(
-        `case_number.ilike.%${search}%,patient_name.ilike.%${search}%,procedure_description.ilike.%${search}%`
+        `case_number.ilike.%${search}%,patient_name.ilike.%${search}%,patient_member_id.ilike.%${search}%,procedure_description.ilike.%${search}%`
       );
     }
 

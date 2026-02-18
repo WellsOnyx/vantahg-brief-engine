@@ -25,11 +25,16 @@ export interface GetDemoCasesOptions {
   vertical?: string | null;
   service_category?: string | null;
   priority?: string | null;
+  review_type?: string | null;
+  assigned_reviewer_id?: string | null;
+  date_from?: string | null;
+  date_to?: string | null;
   search?: string | null;
 }
 
 /**
- * Returns all demo cases, optionally filtered by status, service_category/vertical, priority, or search term.
+ * Returns all demo cases, optionally filtered by status, service_category/vertical, priority,
+ * review_type, assigned_reviewer_id, date range, or search term.
  * Mirrors the Supabase query behavior in the cases GET route.
  */
 export function getDemoCases(options: GetDemoCasesOptions = {}): Case[] {
@@ -51,12 +56,32 @@ export function getDemoCases(options: GetDemoCasesOptions = {}): Case[] {
     cases = cases.filter((c) => c.priority === options.priority);
   }
 
+  if (options.review_type) {
+    cases = cases.filter((c) => c.review_type === options.review_type);
+  }
+
+  if (options.assigned_reviewer_id) {
+    cases = cases.filter((c) => c.assigned_reviewer_id === options.assigned_reviewer_id);
+  }
+
+  if (options.date_from) {
+    const from = new Date(options.date_from).getTime();
+    cases = cases.filter((c) => new Date(c.created_at).getTime() >= from);
+  }
+
+  if (options.date_to) {
+    const to = new Date(options.date_to);
+    to.setHours(23, 59, 59, 999);
+    cases = cases.filter((c) => new Date(c.created_at).getTime() <= to.getTime());
+  }
+
   if (options.search) {
     const term = options.search.toLowerCase();
     cases = cases.filter(
       (c) =>
         c.case_number.toLowerCase().includes(term) ||
         (c.patient_name && c.patient_name.toLowerCase().includes(term)) ||
+        (c.patient_member_id && c.patient_member_id.toLowerCase().includes(term)) ||
         (c.procedure_description && c.procedure_description.toLowerCase().includes(term))
     );
   }

@@ -3,6 +3,9 @@
 import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { CaseTable } from '@/components/CaseTable';
+import { SlaTracker } from '@/components/SlaTracker';
+import { getTimeRemaining, formatTimeRemaining } from '@/lib/sla-calculator';
+import type { UrgencyLevel } from '@/lib/sla-calculator';
 import type { Case, CaseStatus } from '@/lib/types';
 
 const statusCards: { status: CaseStatus; label: string; color: string; icon: React.ReactNode }[] = [
@@ -170,6 +173,140 @@ const verticals = [
     ),
   },
 ];
+
+// ============================================================================
+// SLA Alerts Component
+// ============================================================================
+
+function SlaAlerts({ cases, loading }: { cases: Case[]; loading: boolean }) {
+  // Only consider active (non-completed) cases with deadlines
+  const activeCasesWithDeadlines = cases.filter(
+    (c) =>
+      c.turnaround_deadline &&
+      c.status !== 'determination_made' &&
+      c.status !== 'delivered'
+  );
+
+  const categorized = activeCasesWithDeadlines.map((c) => ({
+    case_: c,
+    timeRemaining: getTimeRemaining(c.turnaround_deadline!),
+  }));
+
+  const overdueCases = categorized.filter((c) => c.timeRemaining.urgencyLevel === 'overdue');
+  const criticalCases = categorized.filter((c) => c.timeRemaining.urgencyLevel === 'critical');
+  const warningCases = categorized.filter((c) => c.timeRemaining.urgencyLevel === 'warning');
+
+  // Top 5 most urgent: sort by total minutes ascending (most overdue first)
+  const topUrgent = [...categorized]
+    .sort((a, b) => a.timeRemaining.totalMinutes - b.timeRemaining.totalMinutes)
+    .slice(0, 5);
+
+  if (loading) return null;
+  if (activeCasesWithDeadlines.length === 0) return null;
+
+  const serviceCategoryLabels: Record<string, string> = {
+    imaging: 'Imaging',
+    surgery: 'Surgery',
+    specialty_referral: 'Specialty Referral',
+    dme: 'DME',
+    infusion: 'Infusion',
+    behavioral_health: 'Behavioral Health',
+    rehab_therapy: 'Rehab Therapy',
+    home_health: 'Home Health',
+    skilled_nursing: 'Skilled Nursing',
+    transplant: 'Transplant',
+    genetic_testing: 'Genetic Testing',
+    pain_management: 'Pain Management',
+    cardiology: 'Cardiology',
+    oncology: 'Oncology',
+    other: 'Other',
+  };
+
+  return (
+    <div className="mb-8 animate-fade-in">
+      <div className="bg-surface rounded-xl border border-border shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-border bg-gray-50/30">
+          <div className="flex items-center gap-3">
+            <svg className="w-5 h-5 text-navy/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <h3 className="font-semibold text-lg text-navy">SLA Alerts</h3>
+          </div>
+        </div>
+
+        {/* Summary counters */}
+        <div className="grid grid-cols-3 gap-4 p-4 border-b border-border">
+          <div className={`rounded-lg border p-4 text-center ${overdueCases.length > 0 ? 'bg-red-50 border-red-200' : 'bg-gray-50 border-border'}`}>
+            <div className={`text-2xl font-bold ${overdueCases.length > 0 ? 'text-red-700' : 'text-muted'}`}>
+              {overdueCases.length}
+            </div>
+            <div className={`text-xs font-semibold uppercase tracking-wide mt-1 ${overdueCases.length > 0 ? 'text-red-600' : 'text-muted'}`}>
+              Overdue
+            </div>
+          </div>
+          <div className={`rounded-lg border p-4 text-center ${criticalCases.length > 0 ? 'bg-amber-50 border-amber-200' : 'bg-gray-50 border-border'}`}>
+            <div className={`text-2xl font-bold ${criticalCases.length > 0 ? 'text-amber-700' : 'text-muted'}`}>
+              {criticalCases.length}
+            </div>
+            <div className={`text-xs font-semibold uppercase tracking-wide mt-1 ${criticalCases.length > 0 ? 'text-amber-600' : 'text-muted'}`}>
+              Critical (&lt;4hr)
+            </div>
+          </div>
+          <div className={`rounded-lg border p-4 text-center ${warningCases.length > 0 ? 'bg-yellow-50 border-yellow-200' : 'bg-gray-50 border-border'}`}>
+            <div className={`text-2xl font-bold ${warningCases.length > 0 ? 'text-yellow-700' : 'text-muted'}`}>
+              {warningCases.length}
+            </div>
+            <div className={`text-xs font-semibold uppercase tracking-wide mt-1 ${warningCases.length > 0 ? 'text-yellow-600' : 'text-muted'}`}>
+              At Risk (&lt;12hr)
+            </div>
+          </div>
+        </div>
+
+        {/* Top 5 most urgent cases */}
+        {topUrgent.length > 0 && (
+          <div className="divide-y divide-border">
+            {topUrgent.map(({ case_, timeRemaining }) => (
+              <Link
+                key={case_.id}
+                href={`/cases/${case_.id}`}
+                className="flex items-center gap-4 px-6 py-3 hover:bg-gold/[0.04] transition-colors group"
+              >
+                {/* SLA badge */}
+                <div className="flex-shrink-0">
+                  <SlaTracker deadline={case_.turnaround_deadline!} compact />
+                </div>
+
+                {/* Case info */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-navy text-sm group-hover:text-gold-dark transition-colors">
+                      {case_.case_number}
+                    </span>
+                    <span className="text-muted text-xs hidden sm:inline">|</span>
+                    <span className="text-foreground text-sm truncate hidden sm:inline">
+                      {case_.patient_name || 'Unknown Patient'}
+                    </span>
+                  </div>
+                  <div className="text-xs text-muted mt-0.5 truncate">
+                    {case_.service_category ? serviceCategoryLabels[case_.service_category] || case_.service_category : 'Medical'}
+                    {case_.procedure_codes.length > 0 && (
+                      <span className="ml-2 font-mono">{case_.procedure_codes[0]}</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Arrow */}
+                <svg className="w-4 h-4 text-muted group-hover:text-gold-dark transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                </svg>
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function Dashboard() {
   const [cases, setCases] = useState<Case[]>([]);
@@ -560,6 +697,9 @@ export default function Dashboard() {
               </div>
             ))}
           </div>
+
+          {/* SLA Alerts Section */}
+          <SlaAlerts cases={cases} loading={loading} />
 
           {/* Cases Table */}
           <div className="bg-surface rounded-xl border border-border shadow-sm overflow-hidden">

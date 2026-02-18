@@ -36,6 +36,20 @@ function daysAgo(days: number, hours = 0, minutes = 0): string {
   return d.toISOString();
 }
 
+/** Helper: return an ISO date string for N hours from now. */
+function hoursFromNow(hours: number, minutes = 0): string {
+  const d = new Date();
+  d.setTime(d.getTime() + hours * 60 * 60 * 1000 + minutes * 60 * 1000);
+  return d.toISOString();
+}
+
+/** Helper: return an ISO date string for N hours after a given date. */
+function hoursAfter(dateStr: string, hours: number): string {
+  const d = new Date(dateStr);
+  d.setTime(d.getTime() + hours * 60 * 60 * 1000);
+  return d.toISOString();
+}
+
 // ============================================================================
 // REVIEWERS
 // ============================================================================
@@ -596,7 +610,7 @@ export const demoCases: Case[] = [
     review_type: 'prior_auth',
     payer_name: 'Blue Cross Blue Shield',
     plan_type: 'PPO',
-    turnaround_deadline: null,
+    turnaround_deadline: hoursAfter(daysAgo(6, 14), 48),
     sla_hours: 48,
     ai_brief: mriLumbarBrief,
     ai_brief_generated_at: daysAgo(6, 12),
@@ -642,7 +656,7 @@ export const demoCases: Case[] = [
     review_type: 'prior_auth',
     payer_name: 'Pinnacle Health Plan',
     plan_type: 'HMO',
-    turnaround_deadline: null,
+    turnaround_deadline: hoursFromNow(8),
     sla_hours: 72,
     ai_brief: totalKneeBrief,
     ai_brief_generated_at: daysAgo(4, 8),
@@ -688,8 +702,8 @@ export const demoCases: Case[] = [
     review_type: 'prior_auth',
     payer_name: 'Blue Cross Blue Shield',
     plan_type: 'PPO',
-    turnaround_deadline: null,
-    sla_hours: 48,
+    turnaround_deadline: hoursFromNow(3),
+    sla_hours: 24,
     ai_brief: infliximabBrief,
     ai_brief_generated_at: daysAgo(3, 4),
     determination: null,
@@ -734,7 +748,7 @@ export const demoCases: Case[] = [
     review_type: 'prior_auth',
     payer_name: 'Western Employers Trust',
     plan_type: 'Self-funded PPO',
-    turnaround_deadline: null,
+    turnaround_deadline: hoursFromNow(96),
     sla_hours: 24,
     ai_brief: null,
     ai_brief_generated_at: null,
@@ -780,8 +794,8 @@ export const demoCases: Case[] = [
     review_type: 'concurrent',
     payer_name: 'Pinnacle Health Plan',
     plan_type: 'HMO',
-    turnaround_deadline: null,
-    sla_hours: 72,
+    turnaround_deadline: hoursAfter(daysAgo(5, 11), 120),
+    sla_hours: 24,
     ai_brief: psychotherapyBrief,
     ai_brief_generated_at: daysAgo(5, 9),
     determination: 'deny',
@@ -826,7 +840,7 @@ export const demoCases: Case[] = [
     review_type: 'prior_auth',
     payer_name: 'Blue Cross Blue Shield',
     plan_type: 'PPO',
-    turnaround_deadline: null,
+    turnaround_deadline: hoursFromNow(18),
     sla_hours: 48,
     ai_brief: epiduralInjectionBrief,
     ai_brief_generated_at: daysAgo(2, 7),
