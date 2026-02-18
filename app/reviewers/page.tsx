@@ -104,6 +104,7 @@ const emptyForm: FormData = {
 export default function ReviewersPage() {
   const [reviewers, setReviewers] = useState<Reviewer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [editingReviewer, setEditingReviewer] = useState<Reviewer | null>(null);
   const [formData, setFormData] = useState<FormData>({ ...emptyForm });
@@ -128,11 +129,15 @@ export default function ReviewersPage() {
   }, [toast]);
 
   async function fetchReviewers() {
+    setLoading(true);
+    setError(null);
     try {
       const res = await fetch('/api/reviewers');
-      if (res.ok) setReviewers(await res.json());
+      if (!res.ok) throw new Error('Failed to load reviewers');
+      setReviewers(await res.json());
     } catch (err) {
       console.error('Failed to fetch reviewers:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load reviewers');
     } finally {
       setLoading(false);
     }
@@ -328,13 +333,114 @@ export default function ReviewersPage() {
         </div>
       </div>
 
+      {/* Error State */}
+      {error && (
+        <div className="mb-6 animate-fade-in">
+          <div className="bg-surface rounded-xl border border-red-200 shadow-sm p-6">
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-50 flex items-center justify-center">
+                <svg className="w-5 h-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-foreground">Something went wrong</h3>
+                <p className="text-sm text-muted mt-1">{error}</p>
+              </div>
+              <button
+                onClick={fetchReviewers}
+                className="inline-flex items-center gap-2 bg-navy text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-navy-light transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182" />
+                </svg>
+                Retry
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Table */}
       <div className="bg-surface rounded-lg border border-border shadow-sm overflow-hidden">
         {loading ? (
-          <div className="p-12 text-center text-muted">Loading reviewers...</div>
+          <div className="animate-fade-in">
+            {/* Skeleton table header */}
+            <div className="border-b border-border bg-gray-50 px-5 py-3 flex items-center gap-6">
+              <div className="skeleton w-32 h-3 rounded" />
+              <div className="skeleton w-20 h-3 rounded" />
+              <div className="skeleton w-28 h-3 rounded hidden md:block" />
+              <div className="skeleton w-20 h-3 rounded hidden lg:block" />
+              <div className="skeleton w-24 h-3 rounded hidden lg:block" />
+              <div className="skeleton w-14 h-3 rounded" />
+              <div className="flex-1" />
+              <div className="skeleton w-12 h-3 rounded" />
+            </div>
+            {/* Skeleton rows */}
+            <div className="divide-y divide-border">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="px-5 py-3 flex items-center gap-6">
+                  <div>
+                    <div className="skeleton w-36 h-4 rounded mb-1.5" />
+                    <div className="skeleton w-28 h-3 rounded" />
+                  </div>
+                  <div className="skeleton w-24 h-4 rounded" />
+                  <div className="hidden md:flex gap-1">
+                    <div className="skeleton skeleton-badge" />
+                    <div className="skeleton skeleton-badge" />
+                  </div>
+                  <div className="hidden lg:flex gap-1">
+                    <div className="skeleton w-8 h-5 rounded" />
+                    <div className="skeleton w-8 h-5 rounded" />
+                    <div className="skeleton w-8 h-5 rounded" />
+                  </div>
+                  <div className="hidden lg:flex gap-1">
+                    <div className="skeleton skeleton-badge" />
+                    <div className="skeleton skeleton-badge" />
+                  </div>
+                  <div className="skeleton skeleton-badge" />
+                  <div className="flex-1" />
+                  <div className="skeleton w-10 h-4 rounded" />
+                </div>
+              ))}
+            </div>
+          </div>
         ) : filtered.length === 0 ? (
-          <div className="p-12 text-center text-muted">
-            {hasFilters ? 'No reviewers match the current filters.' : 'No reviewers yet. Add your first reviewer.'}
+          <div className="p-12 text-center animate-slide-up">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-navy/5 flex items-center justify-center">
+              <svg className="w-8 h-8 text-navy/30" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 9h3.75M15 12h3.75M15 15h3.75M4.5 19.5h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5zm6-10.125a1.875 1.875 0 11-3.75 0 1.875 1.875 0 013.75 0zm1.294 6.336a6.721 6.721 0 01-3.17.789 6.721 6.721 0 01-3.168-.789 3.376 3.376 0 016.338 0z" />
+              </svg>
+            </div>
+            <h3 className="font-semibold text-base text-foreground font-[family-name:var(--font-dm-serif)]">
+              {hasFilters ? 'No matching reviewers' : 'No reviewers yet'}
+            </h3>
+            <p className="text-sm text-muted mt-2 max-w-sm mx-auto">
+              {hasFilters
+                ? 'No reviewers match the selected filters. Try adjusting your criteria.'
+                : 'Add your first physician reviewer to start managing your review panel.'}
+            </p>
+            {hasFilters ? (
+              <button
+                onClick={() => { setFilterSpecialty(''); setFilterCategory(''); setFilterStatus(''); setFilterState(''); }}
+                className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-gold-dark hover:text-gold transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                Clear all filters
+              </button>
+            ) : (
+              <button
+                onClick={openAdd}
+                className="mt-6 inline-flex items-center gap-2 bg-navy text-white px-5 py-2.5 rounded-lg font-medium text-sm hover:bg-navy-light transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Add Reviewer
+              </button>
+            )}
           </div>
         ) : (
           <div className="overflow-x-auto">

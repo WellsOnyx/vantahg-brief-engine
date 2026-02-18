@@ -311,6 +311,7 @@ function SlaAlerts({ cases, loading }: { cases: Case[]; loading: boolean }) {
 export default function Dashboard() {
   const [cases, setCases] = useState<Case[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const dashboardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -318,14 +319,18 @@ export default function Dashboard() {
   }, []);
 
   async function fetchCases() {
+    setLoading(true);
+    setError(null);
     try {
       const res = await fetch('/api/cases');
-      if (res.ok) {
-        const data = await res.json();
-        setCases(data);
+      if (!res.ok) {
+        throw new Error('Failed to load cases');
       }
+      const data = await res.json();
+      setCases(data);
     } catch (err) {
       console.error('Failed to fetch cases:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load cases');
     } finally {
       setLoading(false);
     }
@@ -685,6 +690,34 @@ export default function Dashboard() {
             </Link>
           </div>
 
+          {/* Error State */}
+          {error && (
+            <div className="mb-8 animate-fade-in">
+              <div className="bg-surface rounded-xl border border-red-200 shadow-sm p-6">
+                <div className="flex items-start gap-4">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-50 flex items-center justify-center">
+                    <svg className="w-5 h-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-foreground">Something went wrong</h3>
+                    <p className="text-sm text-muted mt-1">{error}</p>
+                  </div>
+                  <button
+                    onClick={fetchCases}
+                    className="inline-flex items-center gap-2 bg-navy text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-navy-light transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182" />
+                    </svg>
+                    Retry
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Status Cards */}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 mb-8">
             {statusCards.map(({ status, label, color, icon }) => (
@@ -692,7 +725,9 @@ export default function Dashboard() {
                 <div className="flex items-center justify-between mb-2">
                   <span className="opacity-60">{icon}</span>
                 </div>
-                <div className="text-3xl font-bold tracking-tight">{loading ? '--' : countByStatus(status)}</div>
+                <div className="text-3xl font-bold tracking-tight">
+                  {loading ? <span className="skeleton inline-block w-8 h-8 rounded" /> : countByStatus(status)}
+                </div>
                 <div className="text-sm font-medium mt-1">{label}</div>
               </div>
             ))}
@@ -712,14 +747,18 @@ export default function Dashboard() {
               </div>
             </div>
             {loading ? (
-              <div className="p-16 text-center">
-                <div className="inline-flex items-center gap-3 text-muted">
-                  <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                  Loading cases...
-                </div>
+              <div className="p-6 space-y-4 animate-fade-in">
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="flex items-center gap-4">
+                    <div className="skeleton w-24 h-4 rounded" />
+                    <div className="skeleton w-32 h-4 rounded" />
+                    <div className="skeleton w-20 h-4 rounded hidden md:block" />
+                    <div className="skeleton skeleton-badge hidden sm:block" />
+                    <div className="skeleton skeleton-badge" />
+                    <div className="flex-1" />
+                    <div className="skeleton w-16 h-4 rounded hidden sm:block" />
+                  </div>
+                ))}
               </div>
             ) : (
               <CaseTable cases={cases} showFilters />

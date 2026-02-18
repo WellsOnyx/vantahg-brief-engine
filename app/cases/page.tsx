@@ -424,30 +424,65 @@ export default function CasesListPage() {
 
       {/* Error State */}
       {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-800 text-sm flex items-center gap-2">
-          <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
-          </svg>
-          {error}
-          <button onClick={fetchCases} className="ml-auto text-sm font-medium underline">
-            Retry
-          </button>
+        <div className="mb-6 animate-fade-in">
+          <div className="bg-surface rounded-xl border border-red-200 shadow-sm p-6">
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-50 flex items-center justify-center">
+                <svg className="w-5 h-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-foreground">Something went wrong</h3>
+                <p className="text-sm text-muted mt-1">{error}</p>
+              </div>
+              <button
+                onClick={fetchCases}
+                className="inline-flex items-center gap-2 bg-navy text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-navy-light transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182" />
+                </svg>
+                Retry
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
       {/* Loading State */}
       {loading ? (
-        <div className="bg-surface rounded-xl border border-border shadow-sm p-16 text-center">
-          <div className="inline-flex items-center gap-3 text-muted">
-            <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path
-                className="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-              />
-            </svg>
-            Loading cases...
+        <div className="bg-surface rounded-xl border border-border shadow-sm overflow-hidden animate-fade-in">
+          {/* Skeleton table header */}
+          <div className="border-b border-border bg-gray-50/80 px-4 py-3 flex items-center gap-4">
+            <div className="skeleton w-16 h-3 rounded" />
+            <div className="skeleton w-20 h-3 rounded" />
+            <div className="skeleton w-20 h-3 rounded hidden md:block" />
+            <div className="skeleton w-16 h-3 rounded hidden lg:block" />
+            <div className="skeleton w-16 h-3 rounded hidden sm:block" />
+            <div className="skeleton w-16 h-3 rounded" />
+            <div className="flex-1" />
+            <div className="skeleton w-16 h-3 rounded hidden sm:block" />
+          </div>
+          {/* Skeleton rows */}
+          <div className="divide-y divide-border">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="px-4 py-3 flex items-center gap-4">
+                <div className="skeleton w-24 h-4 rounded" />
+                <div className="skeleton w-28 h-4 rounded" />
+                <div className="skeleton skeleton-badge hidden md:block" />
+                <div className="skeleton w-16 h-4 rounded hidden lg:block font-mono" />
+                <div className="skeleton skeleton-badge hidden sm:block" />
+                <div className="skeleton skeleton-badge" />
+                <div className="flex-1" />
+                <div className="skeleton w-14 h-4 rounded hidden sm:block" />
+                <div className="skeleton w-10 h-4 rounded" />
+              </div>
+            ))}
+          </div>
+          {/* Skeleton footer */}
+          <div className="px-4 py-3 border-t border-border bg-gray-50/40">
+            <div className="skeleton w-32 h-3 rounded" />
           </div>
         </div>
       ) : sortedCases.length === 0 ? (

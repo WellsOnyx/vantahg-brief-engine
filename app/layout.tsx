@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { DM_Sans, DM_Serif_Display } from "next/font/google";
 import "./globals.css";
 import Link from "next/link";
@@ -17,8 +17,22 @@ const dmSerif = DM_Serif_Display({
 });
 
 export const metadata: Metadata = {
-  title: "VantaHG Clinical Brief Engine",
-  description: "AI-powered utilization review platform for clinical brief generation",
+  title: 'VantaHG Clinical Brief Engine',
+  description: 'AI-powered first-level utilization review. Clinical briefs prepared by AI, determinations made by board-certified physicians.',
+  keywords: ['utilization review', 'medical necessity', 'prior authorization', 'clinical brief', 'healthcare compliance'],
+  authors: [{ name: 'VantaHG' }],
+  openGraph: {
+    title: 'VantaHG Clinical Brief Engine',
+    description: 'AI-powered first-level utilization review platform for TPAs, health plans, and self-funded employers.',
+    type: 'website',
+  },
+  icons: {
+    icon: '/favicon.svg',
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: '#0c2340',
 };
 
 const navLinks = [

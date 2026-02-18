@@ -82,10 +82,42 @@ export async function POST(request: NextRequest) {
       case: updatedCase,
       brief,
     });
-  } catch (err) {
+  } catch (err: unknown) {
     console.error('Error generating brief:', err);
+
+    // Provide specific error messages for common failure modes
+    const errorObj = err as { status?: number; message?: string; code?: string };
+
+    if (errorObj?.status === 401 || errorObj?.message?.includes('API key') || errorObj?.message?.includes('authentication')) {
+      return NextResponse.json(
+        { error: 'AI service authentication failed. Please check API key configuration.' },
+        { status: 503 }
+      );
+    }
+
+    if (errorObj?.status === 429 || errorObj?.message?.includes('rate limit') || errorObj?.code === 'rate_limit_exceeded') {
+      return NextResponse.json(
+        { error: 'AI service rate limit reached. Please try again in a few minutes.' },
+        { status: 429 }
+      );
+    }
+
+    if (errorObj?.message?.includes('JSON') || errorObj?.message?.includes('parse') || errorObj?.message?.includes('Unexpected token')) {
+      return NextResponse.json(
+        { error: 'AI response could not be parsed. Please try generating the brief again.' },
+        { status: 502 }
+      );
+    }
+
+    if (errorObj?.status === 500 || errorObj?.status === 503 || errorObj?.message?.includes('overloaded')) {
+      return NextResponse.json(
+        { error: 'AI service is temporarily unavailable. Please try again shortly.' },
+        { status: 503 }
+      );
+    }
+
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Failed to generate clinical brief. Please try again.' },
       { status: 500 }
     );
   }

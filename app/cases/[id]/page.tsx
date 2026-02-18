@@ -52,12 +52,20 @@ export default function CaseDetailPage() {
   const fetchCase = useCallback(async () => {
     try {
       const res = await fetch(`/api/cases/${id}`);
-      if (res.ok) {
-        const data = await res.json();
-        setCaseData(data);
+      if (!res.ok) {
+        if (res.status === 404) {
+          setError('Case not found');
+        } else {
+          setError('Failed to load case details');
+        }
+        return;
       }
+      const data = await res.json();
+      setCaseData(data);
+      setError(null);
     } catch (err) {
       console.error('Failed to fetch case:', err);
+      setError('Failed to load case details. Please check your connection and try again.');
     }
   }, [id]);
 
@@ -144,8 +152,101 @@ export default function CaseDetailPage() {
 
   if (loading) {
     return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in">
+        {/* Header skeleton */}
+        <div className="mb-6">
+          <div className="skeleton w-24 h-4 rounded mb-3" />
+          <div className="skeleton skeleton-heading w-64" />
+          <div className="flex items-center gap-3 mt-2">
+            <div className="skeleton skeleton-badge" />
+            <div className="skeleton skeleton-badge" />
+            <div className="skeleton w-16 h-4 rounded" />
+          </div>
+        </div>
+
+        {/* Content skeleton */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left column skeletons */}
+          <div className="lg:col-span-1 space-y-6">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="bg-surface rounded-lg border border-border p-5">
+                <div className="skeleton w-32 h-3 rounded mb-4" />
+                <div className="space-y-3">
+                  <div className="skeleton skeleton-text w-full" />
+                  <div className="skeleton skeleton-text w-3/4" />
+                  <div className="skeleton skeleton-text w-1/2" />
+                </div>
+              </div>
+            ))}
+          </div>
+          {/* Right column skeleton */}
+          <div className="lg:col-span-2 space-y-6">
+            <div className="bg-surface rounded-lg border border-border p-6">
+              <div className="skeleton skeleton-heading w-48 mb-4" />
+              <div className="space-y-3">
+                <div className="skeleton skeleton-text w-full" />
+                <div className="skeleton skeleton-text w-full" />
+                <div className="skeleton skeleton-text w-5/6" />
+                <div className="skeleton skeleton-text w-2/3" />
+              </div>
+            </div>
+            <div className="bg-surface rounded-lg border border-border p-6">
+              <div className="skeleton skeleton-heading w-40 mb-4" />
+              <div className="space-y-3">
+                <div className="skeleton skeleton-text w-full" />
+                <div className="skeleton skeleton-text w-4/5" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error && !caseData) {
+    return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="text-center text-muted py-20">Loading case...</div>
+        <div className="flex items-center gap-3 mb-6">
+          <Link href="/cases" className="text-muted hover:text-navy text-sm">&larr; Back to Cases</Link>
+        </div>
+        <div className="bg-surface rounded-xl border border-red-200 shadow-sm p-8 text-center animate-slide-up">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-50 flex items-center justify-center">
+            <svg className="w-8 h-8 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+            </svg>
+          </div>
+          <h3 className="font-semibold text-lg text-foreground font-[family-name:var(--font-dm-serif)]">
+            {error === 'Case not found' ? 'Case Not Found' : 'Something went wrong'}
+          </h3>
+          <p className="text-sm text-muted mt-2 max-w-md mx-auto">
+            {error === 'Case not found'
+              ? 'The case you are looking for does not exist or may have been removed.'
+              : error}
+          </p>
+          <div className="flex items-center justify-center gap-3 mt-6">
+            <Link
+              href="/cases"
+              className="inline-flex items-center gap-2 bg-white border border-border px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+            >
+              View All Cases
+            </Link>
+            {error !== 'Case not found' && (
+              <button
+                onClick={() => {
+                  setError(null);
+                  setLoading(true);
+                  Promise.all([fetchCase(), fetchAudit()]).finally(() => setLoading(false));
+                }}
+                className="inline-flex items-center gap-2 bg-navy text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-navy-light transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182" />
+                </svg>
+                Retry
+              </button>
+            )}
+          </div>
+        </div>
       </div>
     );
   }
@@ -153,7 +254,24 @@ export default function CaseDetailPage() {
   if (!caseData) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="text-center text-muted py-20">Case not found</div>
+        <div className="flex items-center gap-3 mb-6">
+          <Link href="/cases" className="text-muted hover:text-navy text-sm">&larr; Back to Cases</Link>
+        </div>
+        <div className="bg-surface rounded-xl border border-border shadow-sm p-8 text-center animate-slide-up">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-navy/5 flex items-center justify-center">
+            <svg className="w-8 h-8 text-navy/30" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m5.231 13.481L15 17.25m-4.5-15H5.625c-.621 0-1.125.504-1.125 1.125v16.5c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9zm3.75 11.625a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+            </svg>
+          </div>
+          <h3 className="font-semibold text-lg text-foreground font-[family-name:var(--font-dm-serif)]">Case Not Found</h3>
+          <p className="text-sm text-muted mt-2">The case you are looking for does not exist or may have been removed.</p>
+          <Link
+            href="/cases"
+            className="inline-flex items-center gap-2 bg-navy text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-navy-light transition-colors mt-6"
+          >
+            View All Cases
+          </Link>
+        </div>
       </div>
     );
   }
