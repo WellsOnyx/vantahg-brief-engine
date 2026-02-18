@@ -38,10 +38,12 @@ export const viewport: Viewport = {
 const navLinks = [
   { href: "/", label: "Dashboard" },
   { href: "/cases/new", label: "Submit Case" },
+  { href: "/batch", label: "Batch Upload" },
   { href: "/cases", label: "Case Portal" },
   { href: "/portal", label: "Client Tracker" },
   { href: "/reviewers", label: "Reviewers" },
   { href: "/clients", label: "Clients" },
+  { href: "/analytics", label: "Analytics" },
 ];
 
 export default function RootLayout({
