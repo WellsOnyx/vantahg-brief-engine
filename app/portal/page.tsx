@@ -228,7 +228,7 @@ function ProgressStepper({
 
         // Determine node styling
         let nodeClasses = '';
-        let labelClasses = 'text-xs mt-1.5 font-medium text-center ';
+        let labelClasses = 'text-[10px] sm:text-xs mt-1.5 font-medium text-center ';
         let lineClasses = 'flex-1 h-0.5 mx-1 ';
 
         if (status === 'completed') {
@@ -264,7 +264,7 @@ function ProgressStepper({
           <div key={stage.key} className="flex items-center flex-1 last:flex-none">
             <div className="flex flex-col items-center min-w-[60px]">
               <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${nodeClasses} transition-all duration-300`}
+                className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs font-bold ${nodeClasses} transition-all duration-300`}
               >
                 {status === 'completed' ? (
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
@@ -278,7 +278,10 @@ function ProgressStepper({
                   i + 1
                 )}
               </div>
-              <span className={labelClasses}>{stage.label}</span>
+              <span className={labelClasses}>
+                <span className="hidden sm:inline">{stage.label}</span>
+                <span className="sm:hidden">{['Submit', 'AI', 'MD', 'Done'][i]}</span>
+              </span>
             </div>
             {!isLast && <div className={lineClasses} />}
           </div>

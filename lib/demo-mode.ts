@@ -1,4 +1,4 @@
-import type { Case, Reviewer, Client, AuditLogEntry, AIBrief } from './types';
+import type { Case, Reviewer, Client, AuditLogEntry, AIBrief, FactCheckResult } from './types';
 import {
   demoCases,
   demoReviewers,
@@ -6,6 +6,7 @@ import {
   demoAuditLog,
   DEMO_CASE_IDS,
 } from './demo-data';
+import { factCheckBrief } from './fact-checker';
 import { hasSupabaseConfig } from './supabase';
 
 /**
@@ -94,14 +95,27 @@ export function getDemoCases(options: GetDemoCasesOptions = {}): Case[] {
   // Sort by created_at descending (newest first), same as the Supabase query
   cases.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
-  return cases;
+  // Enrich cases that have a brief but no fact_check
+  return cases.map((c) => {
+    if (c.ai_brief && !c.fact_check) {
+      const factCheck = factCheckBrief(c.ai_brief, c);
+      return { ...c, fact_check: factCheck, fact_check_at: new Date().toISOString() };
+    }
+    return c;
+  });
 }
 
 /**
  * Returns a single demo case by ID, or null if not found.
+ * Lazy-computes fact_check for cases that have a brief but no existing fact_check.
  */
 export function getDemoCase(id: string): Case | null {
-  return demoCases.find((c) => c.id === id) ?? null;
+  const caseData = demoCases.find((c) => c.id === id) ?? null;
+  if (caseData && caseData.ai_brief && !caseData.fact_check) {
+    const factCheck = factCheckBrief(caseData.ai_brief, caseData);
+    return { ...caseData, fact_check: factCheck, fact_check_at: new Date().toISOString() };
+  }
+  return caseData;
 }
 
 // ============================================================================
@@ -176,9 +190,13 @@ export function getDemoBrief(caseId: string): { case: Case; brief: AIBrief } | n
     return null;
   }
 
-  // If the case already has a brief, return it
+  // If the case already has a brief, return it with fact-check
   if (caseData.ai_brief) {
-    return { case: caseData, brief: caseData.ai_brief };
+    const factCheck = factCheckBrief(caseData.ai_brief, caseData);
+    return {
+      case: { ...caseData, fact_check: factCheck, fact_check_at: new Date().toISOString() },
+      brief: caseData.ai_brief,
+    };
   }
 
   // For the CPAP case (or any case without a brief), generate one on-the-fly
@@ -265,12 +283,18 @@ export function getDemoBrief(caseId: string): { case: Case; brief: AIBrief } | n
     },
   };
 
-  // Return the case with the brief applied
-  const updatedCase: Case = {
+  // Return the case with the brief applied and fact-checked
+  const briefCase: Case = {
     ...caseData,
     ai_brief: cpapBrief,
     ai_brief_generated_at: new Date().toISOString(),
     status: 'brief_ready',
+  };
+  const factCheck = factCheckBrief(cpapBrief, briefCase);
+  const updatedCase: Case = {
+    ...briefCase,
+    fact_check: factCheck,
+    fact_check_at: new Date().toISOString(),
   };
 
   return { case: updatedCase, brief: cpapBrief };

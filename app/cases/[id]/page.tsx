@@ -279,12 +279,12 @@ export default function CaseDetailPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <div className="flex items-center gap-3 mb-1">
             <Link href="/" className="text-muted hover:text-navy text-sm">&larr; Dashboard</Link>
           </div>
-          <h1 className="font-[family-name:var(--font-dm-serif)] text-3xl text-navy">
+          <h1 className="font-[family-name:var(--font-dm-serif)] text-2xl sm:text-3xl text-navy">
             Case {caseData.case_number}
           </h1>
           <div className="flex items-center gap-3 mt-2">
@@ -294,7 +294,7 @@ export default function CaseDetailPage() {
             <span className="text-sm text-muted">{caseData.review_type?.replace(/_/g, ' ')}</span>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
           {caseData.ai_brief && (
             <Link
               href={`/cases/${id}/brief`}
@@ -305,6 +305,28 @@ export default function CaseDetailPage() {
               </svg>
               Print Brief
             </Link>
+          )}
+          {caseData.ai_brief && (
+            <button
+              onClick={async () => {
+                try {
+                  await fetch('/api/fact-check', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ case_id: id }),
+                  });
+                  await fetchCase();
+                } catch {
+                  setError('Failed to re-run fact check');
+                }
+              }}
+              className="inline-flex items-center gap-2 bg-white border border-border px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+              </svg>
+              Re-run Fact Check
+            </button>
           )}
           <button
             onClick={handleRegenerateBrief}
@@ -577,7 +599,7 @@ export default function CaseDetailPage() {
           )}
 
           {caseData.ai_brief && (
-            <CaseBrief brief={caseData.ai_brief} caseNumber={caseData.case_number} />
+            <CaseBrief brief={caseData.ai_brief} caseNumber={caseData.case_number} factCheck={caseData.fact_check} />
           )}
 
           {!caseData.ai_brief && caseData.status === 'intake' && (

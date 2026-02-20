@@ -51,8 +51,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate the brief
-    const brief = await generateBriefForCase(caseData);
+    // Generate the brief and run fact-check
+    const { brief, factCheck } = await generateBriefForCase(caseData);
 
     // Store the result in the database
     const { data: updatedCase, error: updateError } = await supabase
@@ -60,6 +60,8 @@ export async function POST(request: NextRequest) {
       .update({
         ai_brief: brief,
         ai_brief_generated_at: new Date().toISOString(),
+        fact_check: factCheck,
+        fact_check_at: new Date().toISOString(),
         status: 'brief_ready',
       })
       .eq('id', case_id)

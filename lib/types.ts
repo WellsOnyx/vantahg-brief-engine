@@ -78,6 +78,10 @@ export interface Case {
   ai_brief: AIBrief | null;
   ai_brief_generated_at: string | null;
 
+  // Fact-check / verification
+  fact_check: FactCheckResult | null;
+  fact_check_at: string | null;
+
   // Determination
   determination: Determination | null;
   determination_rationale: string | null;
@@ -186,6 +190,42 @@ export interface AIBrief {
     additional_info_needed: string[];
     state_specific_requirements: string[];
   };
+}
+
+// ── Fact-Check / Verification Types ─────────────────────────────────────────
+
+export type VerificationStatus = 'verified' | 'unverified' | 'flagged';
+
+export interface ClaimVerification {
+  claim: string;
+  status: VerificationStatus;
+  source: string | null;
+  explanation: string;
+}
+
+export interface SectionVerification {
+  section: string;
+  claims: ClaimVerification[];
+  flags: string[];
+}
+
+export interface ConsistencyCheck {
+  check: string;
+  passed: boolean;
+  detail: string;
+}
+
+export interface FactCheckResult {
+  overall_score: number; // 0-100
+  overall_status: 'pass' | 'warning' | 'fail';
+  sections: SectionVerification[];
+  summary: {
+    verified: number;
+    unverified: number;
+    flagged: number;
+  };
+  consistency_checks: ConsistencyCheck[];
+  checked_at: string;
 }
 
 export interface CaseFormData {

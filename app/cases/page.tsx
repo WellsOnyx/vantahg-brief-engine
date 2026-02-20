@@ -287,14 +287,14 @@ export default function CasesListPage() {
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by case number, patient name, or member ID..."
+              placeholder="Search cases..."
               className="w-full pl-10 pr-4 py-2.5 text-sm border border-border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-gold/50 focus:border-gold transition-colors"
             />
           </div>
         </div>
 
         {/* Filter Dropdowns */}
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="grid grid-cols-2 sm:flex sm:flex-wrap sm:items-center gap-3">
           <span className="text-sm font-medium text-muted flex items-center gap-1.5">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path
@@ -309,7 +309,7 @@ export default function CasesListPage() {
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value as CaseStatus | '')}
-            className="text-sm border border-border rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-gold/50"
+            className="w-full sm:w-auto text-sm border border-border rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-gold/50"
           >
             <option value="">All Statuses</option>
             {allStatuses.map((s) => (
@@ -322,7 +322,7 @@ export default function CasesListPage() {
           <select
             value={filterCategory}
             onChange={(e) => setFilterCategory(e.target.value as ServiceCategory | '')}
-            className="text-sm border border-border rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-gold/50"
+            className="w-full sm:w-auto text-sm border border-border rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-gold/50"
           >
             <option value="">All Categories</option>
             {allServiceCategories.map((c) => (
@@ -335,7 +335,7 @@ export default function CasesListPage() {
           <select
             value={filterPriority}
             onChange={(e) => setFilterPriority(e.target.value as CasePriority | '')}
-            className="text-sm border border-border rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-gold/50"
+            className="w-full sm:w-auto text-sm border border-border rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-gold/50"
           >
             <option value="">All Priorities</option>
             {allPriorities.map((p) => (
@@ -348,7 +348,7 @@ export default function CasesListPage() {
           <select
             value={filterReviewType}
             onChange={(e) => setFilterReviewType(e.target.value as ReviewType | '')}
-            className="text-sm border border-border rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-gold/50"
+            className="w-full sm:w-auto text-sm border border-border rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-gold/50"
           >
             <option value="">All Review Types</option>
             {allReviewTypes.map((r) => (
@@ -361,7 +361,7 @@ export default function CasesListPage() {
           <select
             value={filterReviewer}
             onChange={(e) => setFilterReviewer(e.target.value)}
-            className="text-sm border border-border rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-gold/50"
+            className="w-full sm:w-auto text-sm border border-border rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-gold/50"
           >
             <option value="">All Reviewers</option>
             {reviewers.map((r) => (
@@ -538,7 +538,7 @@ export default function CasesListPage() {
       ) : (
         /* Results Table */
         <div className="bg-surface rounded-xl border border-border shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
+          <div className="hidden sm:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-gray-50/80">
@@ -679,6 +679,29 @@ export default function CasesListPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+
+          {/* Mobile card view */}
+          <div className="sm:hidden divide-y divide-border">
+            {sortedCases.map((c) => (
+              <Link
+                key={c.id}
+                href={`/cases/${c.id}`}
+                className="block px-4 py-3 hover:bg-gold/[0.04] transition-colors"
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-semibold text-sm text-navy">{c.case_number}</span>
+                  <StatusBadge status={c.status} />
+                </div>
+                <div className="text-sm text-foreground mb-1">
+                  {c.patient_name || <span className="text-muted italic">No patient name</span>}
+                </div>
+                <div className="flex items-center justify-between">
+                  <PriorityBadge priority={c.priority} />
+                  <span className="text-xs text-muted">{formatDate(c.created_at)}</span>
+                </div>
+              </Link>
+            ))}
           </div>
 
           {/* Footer count */}

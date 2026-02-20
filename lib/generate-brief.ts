@@ -1,8 +1,9 @@
 import { generateClinicalBrief } from './claude';
 import { getCriteriaForCodes } from '@/lib/medical-criteria';
-import type { Case, AIBrief } from './types';
+import { factCheckBrief } from './fact-checker';
+import type { Case, AIBrief, FactCheckResult } from './types';
 
-export async function generateBriefForCase(caseData: Case): Promise<AIBrief> {
+export async function generateBriefForCase(caseData: Case): Promise<{ brief: AIBrief; factCheck: FactCheckResult }> {
   const systemPrompt = `You are a clinical review intelligence engine for VantaHG, a first-level utilization review organization that serves TPAs, health plans, and self-funded employers. Your job is to analyze clinical case data and generate a structured one-page clinical brief that a board-certified physician can review in 5-10 minutes to render a medical necessity determination.
 
 You are NOT rendering a determination. You are preparing the brief so the human reviewer can make the clinical judgment efficiently.
@@ -126,5 +127,6 @@ Return ONLY valid JSON. No markdown, no explanation outside the JSON.`;
   }
 
   const brief: AIBrief = JSON.parse(cleanText);
-  return brief;
+  const factCheck = factCheckBrief(brief, caseData);
+  return { brief, factCheck };
 }

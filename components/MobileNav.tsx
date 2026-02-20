@@ -18,6 +18,18 @@ export function MobileNav({ links }: MobileNavProps) {
     setOpen(false);
   }, [pathname]);
 
+  // Scroll lock when menu is open
+  useEffect(() => {
+    if (open) {
+      document.body.classList.add('scroll-locked');
+    } else {
+      document.body.classList.remove('scroll-locked');
+    }
+    return () => {
+      document.body.classList.remove('scroll-locked');
+    };
+  }, [open]);
+
   // Close on click outside
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -35,7 +47,7 @@ export function MobileNav({ links }: MobileNavProps) {
     <div className="md:hidden" ref={menuRef}>
       <button
         onClick={() => setOpen(!open)}
-        className="p-2 rounded-md text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+        className="p-2.5 min-w-[44px] min-h-[44px] rounded-md text-white/70 hover:text-white hover:bg-white/10 transition-colors"
         aria-label="Toggle navigation menu"
       >
         {open ? (
@@ -50,7 +62,11 @@ export function MobileNav({ links }: MobileNavProps) {
       </button>
 
       {open && (
-        <div className="absolute top-16 left-0 right-0 bg-navy border-b border-white/10 shadow-xl animate-slide-up">
+        <div className="fixed inset-0 bg-black/40 z-40" onClick={() => setOpen(false)} />
+      )}
+
+      {open && (
+        <div className="fixed z-50 top-16 left-0 right-0 bg-navy border-b border-white/10 shadow-xl animate-slide-up">
           <nav className="max-w-7xl mx-auto px-4 py-3 space-y-1">
             {links.map((link) => {
               const isActive = pathname === link.href;

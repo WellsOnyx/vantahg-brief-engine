@@ -72,7 +72,7 @@ function StepIndicator({ currentStep, steps }: { currentStep: number; steps: str
             <div key={label} className="flex flex-col items-center" style={{ width: `${100 / steps.length}%` }}>
               <div
                 className={`
-                  w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold
+                  w-7 h-7 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-sm font-semibold
                   transition-all duration-500 mb-1.5
                   ${isComplete
                     ? 'bg-gold text-navy shadow-md shadow-gold/25'
@@ -91,11 +91,12 @@ function StepIndicator({ currentStep, steps }: { currentStep: number; steps: str
                 )}
               </div>
               <span
-                className={`text-xs text-center font-medium transition-colors duration-300 ${
+                className={`text-[10px] sm:text-xs text-center font-medium transition-colors duration-300 ${
                   isCurrent ? 'text-navy' : isComplete ? 'text-gold-dark' : 'text-muted'
                 }`}
               >
-                {label}
+                <span className="hidden sm:inline">{label}</span>
+                <span className="sm:hidden">{['Patient', 'Procedure', 'Docs', 'Review'][i]}</span>
               </span>
             </div>
           );
@@ -399,7 +400,7 @@ function FileUploadZone({
         onDrop={handleDrop}
         onClick={() => inputRef.current?.click()}
         className={`
-          relative cursor-pointer border-2 border-dashed rounded-xl p-10 text-center
+          relative cursor-pointer border-2 border-dashed rounded-xl p-5 sm:p-10 text-center
           transition-all duration-300 group
           ${dragActive
             ? 'border-gold bg-gold/5 scale-[1.01] shadow-lg shadow-gold/10'

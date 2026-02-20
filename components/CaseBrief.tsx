@@ -1,10 +1,12 @@
 'use client';
 
-import type { AIBrief } from '@/lib/types';
+import type { AIBrief, FactCheckResult } from '@/lib/types';
+import { VerificationScore, VerificationSummary } from '@/components/FactCheckBadge';
 
 interface CaseBriefProps {
   brief: AIBrief;
   caseNumber: string;
+  factCheck?: FactCheckResult | null;
 }
 
 function SectionHeader({ children }: { children: React.ReactNode }) {
@@ -17,7 +19,7 @@ function SectionHeader({ children }: { children: React.ReactNode }) {
 
 function SectionDivider() {
   return (
-    <div className="my-6 flex items-center gap-3">
+    <div className="my-4 sm:my-6 flex items-center gap-3">
       <div className="flex-1 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
     </div>
   );
@@ -137,7 +139,7 @@ function RecommendationBadge({
   );
 }
 
-export function CaseBrief({ brief, caseNumber }: CaseBriefProps) {
+export function CaseBrief({ brief, caseNumber, factCheck }: CaseBriefProps) {
   return (
     <div className="bg-surface rounded-xl border border-border shadow-sm animate-slide-up">
       {/* Header */}
@@ -160,7 +162,10 @@ export function CaseBrief({ brief, caseNumber }: CaseBriefProps) {
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2 no-print">
+          <div className="flex items-center gap-3 no-print">
+            {factCheck && (
+              <VerificationScore score={factCheck.overall_score} status={factCheck.overall_status} />
+            )}
             <button
               onClick={() => window.print()}
               className="btn btn-secondary text-xs py-1.5 px-3"
@@ -529,6 +534,14 @@ export function CaseBrief({ brief, caseNumber }: CaseBriefProps) {
             )}
           </div>
         </div>
+
+        {/* Verification Report */}
+        {factCheck && (
+          <>
+            <SectionDivider />
+            <VerificationSummary factCheck={factCheck} />
+          </>
+        )}
 
         {/* Disclaimer */}
         <div className="mt-6 pt-4 border-t border-border">

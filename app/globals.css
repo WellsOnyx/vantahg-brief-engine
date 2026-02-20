@@ -24,6 +24,12 @@ body {
   font-family: var(--font-sans);
 }
 
+body.scroll-locked {
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
+}
+
 /* ── Keyframe Animations ─────────────────────────────────────── */
 
 @keyframes fadeIn {

@@ -102,6 +102,10 @@ create table cases (
   ai_brief jsonb,
   ai_brief_generated_at timestamptz,
 
+  -- Fact-check / verification
+  fact_check jsonb,
+  fact_check_at timestamptz,
+
   -- Determination
   determination text check (determination in ('approve', 'deny', 'partial_approve', 'pend', 'peer_to_peer_requested')),
   determination_rationale text,
