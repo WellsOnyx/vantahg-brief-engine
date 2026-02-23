@@ -1,6 +1,8 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { isDemoMode } from '@/lib/demo-mode';
 import { getServiceClient } from '@/lib/supabase';
+import { requireRole } from '@/lib/auth-guard';
+import { applyRateLimit } from '@/lib/rate-limit-middleware';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,7 +12,11 @@ export const dynamic = 'force-dynamic';
  * Returns aggregate audit-log statistics for the compliance dashboard.
  * No PHI is returned — only counts and security event metadata.
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const authResult = await requireRole(request, ['admin']);
+  if (authResult instanceof NextResponse) return authResult;
+  const rateLimited = await applyRateLimit(request, { maxRequests: 200 });
+  if (rateLimited) return rateLimited;
   if (isDemoMode()) {
     return NextResponse.json(
       { error: 'Audit stats unavailable in demo mode' },

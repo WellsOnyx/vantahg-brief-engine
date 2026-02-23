@@ -3,7 +3,9 @@ import { getServiceClient } from '@/lib/supabase';
 import { logAuditEvent } from '@/lib/audit';
 import { generateBriefForCase } from '@/lib/generate-brief';
 import { isDemoMode } from '@/lib/demo-mode';
-import type { CaseFormData, ServiceCategory, CasePriority, ReviewType, FacilityType } from '@/lib/types';
+import type { ServiceCategory, CasePriority, ReviewType, FacilityType } from '@/lib/types';
+import { requireRole } from '@/lib/auth-guard';
+import { applyRateLimit } from '@/lib/rate-limit-middleware';
 
 export const dynamic = 'force-dynamic';
 
@@ -104,6 +106,11 @@ function normaliseCaseRow(row: Record<string, unknown>): Record<string, unknown>
 
 export async function POST(request: NextRequest) {
   try {
+    const authResult = await requireRole(request, ['admin']);
+    if (authResult instanceof NextResponse) return authResult;
+    const rateLimited = await applyRateLimit(request, { maxRequests: 5 });
+    if (rateLimited) return rateLimited;
+
     const body = await request.json();
 
     if (!body.cases || !Array.isArray(body.cases) || body.cases.length === 0) {

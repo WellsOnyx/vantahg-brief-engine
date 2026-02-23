@@ -3,11 +3,17 @@ import { getServiceClient } from '@/lib/supabase';
 import { logAuditEvent } from '@/lib/audit';
 import { generateBriefForCase } from '@/lib/generate-brief';
 import { isDemoMode, getDemoCases } from '@/lib/demo-mode';
+import { requireAuth } from '@/lib/auth-guard';
+import { applyRateLimit } from '@/lib/rate-limit-middleware';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) return authResult;
+    const rateLimited = await applyRateLimit(request, { maxRequests: 200 });
+    if (rateLimited) return rateLimited;
     const { searchParams } = new URL(request.url);
 
     if (isDemoMode()) {
@@ -100,6 +106,11 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) return authResult;
+    const rateLimited = await applyRateLimit(request, { maxRequests: 30 });
+    if (rateLimited) return rateLimited;
+
     const supabase = getServiceClient();
     const body = await request.json();
 

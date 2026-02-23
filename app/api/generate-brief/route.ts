@@ -3,11 +3,17 @@ import { getServiceClient } from '@/lib/supabase';
 import { logAuditEvent } from '@/lib/audit';
 import { generateBriefForCase } from '@/lib/generate-brief';
 import { isDemoMode, getDemoBrief } from '@/lib/demo-mode';
+import { requireAuth } from '@/lib/auth-guard';
+import { applyRateLimit } from '@/lib/rate-limit-middleware';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) return authResult;
+    const rateLimited = await applyRateLimit(request, { maxRequests: 10 });
+    if (rateLimited) return rateLimited;
     const body = await request.json();
     const { case_id } = body;
 

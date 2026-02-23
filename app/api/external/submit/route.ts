@@ -4,14 +4,9 @@ import { logAuditEvent } from '@/lib/audit';
 import { generateBriefForCase } from '@/lib/generate-brief';
 import { isDemoMode } from '@/lib/demo-mode';
 import type { ServiceCategory, CasePriority, ReviewType, FacilityType } from '@/lib/types';
+import { applyRateLimit } from '@/lib/rate-limit-middleware';
 
 export const dynamic = 'force-dynamic';
-
-// ---------------------------------------------------------------------------
-// Rate limiting: TODO — implement per-key rate limiting with a sliding window.
-// Recommended: use Vercel KV / Upstash Redis for distributed rate limiting.
-// Target: 100 requests per minute per API key.
-// ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------
 // Validation helpers (shared constants with batch route)
@@ -102,6 +97,9 @@ function getEstimatedTurnaround(priority: string): string {
 
 export async function POST(request: NextRequest) {
   try {
+    const rateLimited = await applyRateLimit(request, { maxRequests: 60 });
+    if (rateLimited) return rateLimited;
+
     // ----------------------------------------------------------------
     // API key authentication
     // ----------------------------------------------------------------
