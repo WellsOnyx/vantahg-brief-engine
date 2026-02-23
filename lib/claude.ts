@@ -20,3 +20,22 @@ export async function generateClinicalBrief(prompt: { system: string; user: stri
   }
   return textBlock.text;
 }
+
+/**
+ * Create a streaming chat session with Claude.
+ * Used by the chat API for multi-turn conversation with tool use.
+ */
+export function streamClinicalChat(options: {
+  system: string;
+  messages: { role: 'user' | 'assistant'; content: string }[];
+  tools?: Anthropic.Tool[];
+  maxTokens?: number;
+}) {
+  return anthropic.messages.stream({
+    model: 'claude-opus-4-6',
+    max_tokens: options.maxTokens || 4096,
+    system: options.system,
+    messages: options.messages,
+    tools: options.tools,
+  });
+}

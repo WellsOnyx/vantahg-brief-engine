@@ -113,3 +113,23 @@ export async function logSecurityEvent(
 ) {
   await logAuditEvent(null, `security:${event}`, actor, details, requestContext);
 }
+
+/**
+ * Logs a chat message interaction for the audit trail.
+ * Content is truncated and sanitized before logging.
+ */
+export async function logChatMessage(
+  caseId: string | null,
+  actor: string,
+  messageRole: 'user' | 'assistant',
+  messageContent: string,
+  requestContext?: RequestContext
+) {
+  await logAuditEvent(
+    caseId,
+    `chat:${messageRole}_message`,
+    actor,
+    { message_preview: messageContent.substring(0, 200), role: messageRole },
+    requestContext
+  );
+}

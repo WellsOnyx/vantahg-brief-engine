@@ -10,6 +10,7 @@ import { ReviewerPanel } from '@/components/ReviewerPanel';
 import { DeterminationForm } from '@/components/DeterminationForm';
 import type { DeterminationFields } from '@/components/DeterminationForm';
 import { SlaTracker } from '@/components/SlaTracker';
+import { CopilotSidebar } from '@/components/chat/CopilotSidebar';
 import type { Case, Reviewer, AuditLogEntry } from '@/lib/types';
 
 const SERVICE_CATEGORY_LABELS: Record<string, string> = {
@@ -656,6 +657,9 @@ export default function CaseDetailPage() {
           )}
         </div>
       </div>
+
+      {/* AI Copilot Sidebar */}
+      <CopilotSidebar caseData={caseData} />
     </div>
   );
 }
