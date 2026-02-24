@@ -15,6 +15,12 @@ export default function CommandCenterPage() {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [reviewCaseId, setReviewCaseId] = useState<string | null>(null);
+  const [throughput, setThroughput] = useState<{
+    avg_brief_generation_minutes: number;
+    avg_determination_minutes: number;
+    avg_total_minutes: number;
+    bottleneck_stage: string;
+  } | null>(null);
 
   const mode = reviewCaseId ? 'review' : 'intake';
 
@@ -23,7 +29,7 @@ export default function CommandCenterPage() {
     caseId: reviewCaseId || undefined,
   });
 
-  // Fetch recent cases
+  // Fetch recent cases and throughput metrics
   useEffect(() => {
     fetch('/api/cases')
       .then((res) => res.json())
@@ -31,6 +37,11 @@ export default function CommandCenterPage() {
         if (Array.isArray(data)) setCases(data.slice(0, 10));
       })
       .catch(console.error);
+
+    fetch('/api/analytics/throughput')
+      .then((res) => res.json())
+      .then(setThroughput)
+      .catch(() => {});
   }, []);
 
   const handleSubmit = useCallback(async () => {
@@ -81,6 +92,14 @@ export default function CommandCenterPage() {
             <StatCard label="Pending Review" value={pendingReview} icon="🔍" />
             <StatCard label="SLA Alerts" value={slaAlerts.length} icon="⏰" alert={slaAlerts.length > 0} />
           </div>
+          {throughput && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3 pt-3 border-t border-border/50">
+              <StatCard label="Avg Brief Time" value={Math.round(throughput.avg_brief_generation_minutes)} icon="⚡" suffix="min" />
+              <StatCard label="Avg Review Time" value={Math.round(throughput.avg_determination_minutes)} icon="🩺" suffix="min" />
+              <StatCard label="Avg Total" value={Math.round(throughput.avg_total_minutes)} icon="🔄" suffix="min" />
+              <StatCard label="Bottleneck" value={0} icon="🎯" textOverride={throughput.bottleneck_stage.replace(/_/g, ' ')} />
+            </div>
+          )}
         </div>
       </div>
 
@@ -262,11 +281,15 @@ function StatCard({
   value,
   icon,
   alert,
+  suffix,
+  textOverride,
 }: {
   label: string;
   value: number;
   icon: string;
   alert?: boolean;
+  suffix?: string;
+  textOverride?: string;
 }) {
   return (
     <div className={`rounded-xl px-3 py-2 border ${
@@ -275,7 +298,9 @@ function StatCard({
       <div className="flex items-center gap-2">
         <span className="text-lg">{icon}</span>
         <div>
-          <p className={`text-lg font-bold ${alert ? 'text-red-600' : 'text-foreground'}`}>{value}</p>
+          <p className={`text-lg font-bold ${alert ? 'text-red-600' : 'text-foreground'}`}>
+            {textOverride || value}{suffix && !textOverride ? <span className="text-xs font-normal text-muted ml-0.5">{suffix}</span> : null}
+          </p>
           <p className="text-[10px] text-muted">{label}</p>
         </div>
       </div>

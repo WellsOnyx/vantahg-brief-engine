@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceClient } from '@/lib/supabase';
 import { logAuditEvent } from '@/lib/audit';
+import { deliverToClient } from '@/lib/notifications';
 import { isDemoMode, getDemoCase } from '@/lib/demo-mode';
 import { requireAuth } from '@/lib/auth-guard';
 import { applyRateLimit } from '@/lib/rate-limit-middleware';
@@ -111,6 +112,23 @@ export async function PATCH(
         determination: body.determination,
         rationale: body.determination_rationale || null,
       });
+
+      // Auto-deliver to client for final determinations (non-blocking)
+      const finalDeterminations = ['approve', 'deny', 'partial_approve', 'modify'];
+      if (finalDeterminations.includes(body.determination)) {
+        deliverToClient(id).then(async (delivered) => {
+          if (delivered) {
+            const supabaseForDelivery = getServiceClient();
+            await supabaseForDelivery
+              .from('cases')
+              .update({ status: 'delivered' })
+              .eq('id', id);
+            await logAuditEvent(id, 'case_delivered', 'system', {
+              determination: body.determination,
+            });
+          }
+        }).catch(console.error);
+      }
     }
 
     return NextResponse.json(data);

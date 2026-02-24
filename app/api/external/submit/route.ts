@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServiceClient } from '@/lib/supabase';
 import { logAuditEvent } from '@/lib/audit';
 import { generateBriefForCase } from '@/lib/generate-brief';
+import { autoAssignReviewer } from '@/lib/assignment-engine';
+import { notifyCaseAssigned } from '@/lib/notifications';
 import { isDemoMode } from '@/lib/demo-mode';
 import type { ServiceCategory, CasePriority, ReviewType, FacilityType } from '@/lib/types';
 import { applyRateLimit } from '@/lib/rate-limit-middleware';
@@ -230,6 +232,12 @@ export async function POST(request: NextRequest) {
           generated_automatically: true,
           source: 'external_api',
         });
+
+        // Auto-assign a reviewer
+        const assignment = await autoAssignReviewer(data.id);
+        if (assignment.assigned && assignment.reviewerId) {
+          notifyCaseAssigned(data.id, assignment.reviewerId).catch(console.error);
+        }
       }
     }).catch((err) => {
       console.error(`Background brief generation failed for case ${caseNumber}:`, err);
