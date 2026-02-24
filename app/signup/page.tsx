@@ -53,6 +53,8 @@ export default function SignupPage() {
             </span>
           </div>
 
+          <p className="text-center text-xs text-muted -mt-4 mb-2">First-Level Review Platform</p>
+
           <h1 className="text-xl font-semibold text-center text-foreground mb-6">
             Create your account
           </h1>
@@ -141,14 +143,24 @@ export default function SignupPage() {
             </button>
           </form>
 
-          <div className="mt-6 pt-4 border-t border-border text-center">
+          <div className="mt-6 pt-4 border-t border-border text-center space-y-2">
             <span className="text-sm text-muted">
               Already have an account?{' '}
               <Link href="/login" className="text-gold-dark hover:text-gold font-medium">
                 Sign in
               </Link>
             </span>
+            <p className="text-xs text-muted">
+              <a
+                href="https://www.wellsonyx.com/firstlevelreview"
+                className="hover:text-foreground transition-colors"
+              >
+                Return to wellsonyx.com
+              </a>
+            </p>
           </div>
+
+          <p className="mt-4 text-center text-[10px] text-muted/60">A Wells Onyx Service</p>
         </div>
       </div>
     </div>

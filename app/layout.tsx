@@ -5,6 +5,7 @@ import Link from "next/link";
 import { MobileNav } from "@/components/MobileNav";
 import { AuthProvider } from "@/components/AuthProvider";
 import { HeaderAuth } from "@/components/HeaderAuth";
+import { BridgeBar } from "@/components/BridgeBar";
 
 const dmSans = DM_Sans({
   variable: "--font-dm-sans",
@@ -19,13 +20,13 @@ const dmSerif = DM_Serif_Display({
 });
 
 export const metadata: Metadata = {
-  title: 'VantaHG Clinical Brief Engine',
-  description: 'AI-powered first-level utilization review. Clinical briefs prepared by AI, determinations made by board-certified physicians.',
-  keywords: ['utilization review', 'medical necessity', 'prior authorization', 'clinical brief', 'healthcare compliance'],
-  authors: [{ name: 'VantaHG' }],
+  title: 'FLR by VantaHG | Clinical Brief Engine',
+  description: 'AI-powered first-level utilization review by Wells Onyx. Clinical briefs prepared by AI, determinations made by board-certified physicians.',
+  keywords: ['utilization review', 'medical necessity', 'prior authorization', 'clinical brief', 'healthcare compliance', 'first-level review', 'Wells Onyx'],
+  authors: [{ name: 'VantaHG' }, { name: 'Wells Onyx' }],
   openGraph: {
-    title: 'VantaHG Clinical Brief Engine',
-    description: 'AI-powered first-level utilization review platform for TPAs, health plans, and self-funded employers.',
+    title: 'FLR by VantaHG | Clinical Brief Engine',
+    description: 'AI-powered first-level utilization review platform by Wells Onyx for TPAs, health plans, and self-funded employers.',
     type: 'website',
   },
   icons: {
@@ -59,6 +60,7 @@ export default function RootLayout({
       <body className={`${dmSans.variable} ${dmSerif.variable} antialiased font-[family-name:var(--font-dm-sans)]`}>
         <AuthProvider>
           <div className="min-h-screen flex flex-col">
+            <BridgeBar />
             {/* Sticky header with backdrop blur */}
             <header className="sticky top-0 z-50 bg-navy/95 backdrop-blur-md text-white border-b border-white/10 shadow-lg shadow-navy-dark/20 no-print">
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -109,6 +111,13 @@ export default function RootLayout({
                     </div>
                     <span className="text-sm font-semibold text-foreground">
                       VantaHG Clinical Brief Engine
+                    </span>
+                    <span className="text-xs text-muted ml-2 hidden sm:inline">
+                      — A{' '}
+                      <a href="https://www.wellsonyx.com" className="text-gold-dark hover:text-gold transition-colors">
+                        Wells Onyx
+                      </a>{' '}
+                      service
                     </span>
                   </div>
 
