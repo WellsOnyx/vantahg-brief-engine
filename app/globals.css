@@ -455,6 +455,97 @@ textarea:focus {
   background: var(--color-muted);
 }
 
+/* ── Chat Animations ─────────────────────────────────────────── */
+
+@keyframes chatSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes typingBounce {
+  0%, 60%, 100% { transform: translateY(0); }
+  30% { transform: translateY(-4px); }
+}
+
+@keyframes extractionHighlight {
+  0% {
+    background-color: rgba(201, 162, 39, 0.2);
+    box-shadow: 0 0 0 2px rgba(201, 162, 39, 0.3);
+  }
+  100% {
+    background-color: transparent;
+    box-shadow: 0 0 0 2px transparent;
+  }
+}
+
+@keyframes briefSectionReveal {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    max-height: 2000px;
+  }
+}
+
+@keyframes sidebarSlide {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes streamingCursor {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.animate-chat-slide-in {
+  animation: chatSlideIn 0.3s ease-out both;
+}
+
+.animate-typing-bounce {
+  animation: typingBounce 1.4s ease-in-out infinite;
+}
+
+.animate-typing-bounce:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.animate-typing-bounce:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+.animate-extraction-highlight {
+  animation: extractionHighlight 1.5s ease-out both;
+}
+
+.animate-brief-reveal {
+  animation: briefSectionReveal 0.5s ease-out both;
+}
+
+.animate-sidebar-slide {
+  animation: sidebarSlide 0.3s ease-out both;
+}
+
+.animate-streaming-cursor {
+  animation: streamingCursor 1s step-end infinite;
+}
+
+/* Chat message stagger delays */
+.chat-stagger > *:nth-child(1) { animation-delay: 0ms; }
+.chat-stagger > *:nth-child(2) { animation-delay: 50ms; }
+.chat-stagger > *:nth-child(3) { animation-delay: 100ms; }
+.chat-stagger > *:nth-child(4) { animation-delay: 150ms; }
+.chat-stagger > *:nth-child(5) { animation-delay: 200ms; }
+
 /* ── Print Styles ────────────────────────────────────────────── */
 
 @media print {

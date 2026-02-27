@@ -1,5 +1,9 @@
 -- VantaHG Clinical Brief Engine — Database Schema
 -- Run this in Supabase SQL editor to create all tables
+--
+-- NOTE: For incremental migrations, see supabase/migrations/
+--   000_initial_schema.sql — baseline (this file)
+--   001_auth_rls.sql       — authentication + role-based RLS policies
 
 -- Enable UUID generation
 create extension if not exists "pgcrypto";

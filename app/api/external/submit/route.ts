@@ -2,16 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServiceClient } from '@/lib/supabase';
 import { logAuditEvent } from '@/lib/audit';
 import { generateBriefForCase } from '@/lib/generate-brief';
+import { autoAssignReviewer } from '@/lib/assignment-engine';
+import { notifyCaseAssigned } from '@/lib/notifications';
 import { isDemoMode } from '@/lib/demo-mode';
 import type { ServiceCategory, CasePriority, ReviewType, FacilityType } from '@/lib/types';
+import { applyRateLimit } from '@/lib/rate-limit-middleware';
 
 export const dynamic = 'force-dynamic';
-
-// ---------------------------------------------------------------------------
-// Rate limiting: TODO — implement per-key rate limiting with a sliding window.
-// Recommended: use Vercel KV / Upstash Redis for distributed rate limiting.
-// Target: 100 requests per minute per API key.
-// ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------
 // Validation helpers (shared constants with batch route)
@@ -102,6 +99,9 @@ function getEstimatedTurnaround(priority: string): string {
 
 export async function POST(request: NextRequest) {
   try {
+    const rateLimited = await applyRateLimit(request, { maxRequests: 60 });
+    if (rateLimited) return rateLimited;
+
     // ----------------------------------------------------------------
     // API key authentication
     // ----------------------------------------------------------------
@@ -232,6 +232,12 @@ export async function POST(request: NextRequest) {
           generated_automatically: true,
           source: 'external_api',
         });
+
+        // Auto-assign a reviewer
+        const assignment = await autoAssignReviewer(data.id);
+        if (assignment.assigned && assignment.reviewerId) {
+          notifyCaseAssigned(data.id, assignment.reviewerId).catch(console.error);
+        }
       }
     }).catch((err) => {
       console.error(`Background brief generation failed for case ${caseNumber}:`, err);

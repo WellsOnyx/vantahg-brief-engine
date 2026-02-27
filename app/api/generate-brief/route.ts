@@ -2,12 +2,20 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServiceClient } from '@/lib/supabase';
 import { logAuditEvent } from '@/lib/audit';
 import { generateBriefForCase } from '@/lib/generate-brief';
+import { autoAssignReviewer } from '@/lib/assignment-engine';
+import { notifyCaseAssigned } from '@/lib/notifications';
 import { isDemoMode, getDemoBrief } from '@/lib/demo-mode';
+import { requireAuth } from '@/lib/auth-guard';
+import { applyRateLimit } from '@/lib/rate-limit-middleware';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) return authResult;
+    const rateLimited = await applyRateLimit(request, { maxRequests: 10 });
+    if (rateLimited) return rateLimited;
     const body = await request.json();
     const { case_id } = body;
 
@@ -79,6 +87,13 @@ export async function POST(request: NextRequest) {
     await logAuditEvent(case_id, 'brief_generated', 'system', {
       triggered_manually: true,
     });
+
+    // Auto-assign a reviewer now that brief is ready (non-blocking)
+    autoAssignReviewer(case_id).then(async (assignment) => {
+      if (assignment.assigned && assignment.reviewerId) {
+        notifyCaseAssigned(case_id, assignment.reviewerId).catch(console.error);
+      }
+    }).catch(console.error);
 
     return NextResponse.json({
       case: updatedCase,

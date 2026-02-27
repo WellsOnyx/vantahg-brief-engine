@@ -2,12 +2,20 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServiceClient } from '@/lib/supabase';
 import { logAuditEvent } from '@/lib/audit';
 import { generateBriefForCase } from '@/lib/generate-brief';
+import { autoAssignReviewer } from '@/lib/assignment-engine';
+import { notifyCaseAssigned } from '@/lib/notifications';
 import { isDemoMode, getDemoCases } from '@/lib/demo-mode';
+import { requireAuth } from '@/lib/auth-guard';
+import { applyRateLimit } from '@/lib/rate-limit-middleware';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) return authResult;
+    const rateLimited = await applyRateLimit(request, { maxRequests: 200 });
+    if (rateLimited) return rateLimited;
     const { searchParams } = new URL(request.url);
 
     if (isDemoMode()) {
@@ -33,6 +41,7 @@ export async function GET(request: NextRequest) {
     const priority = searchParams.get('priority');
     const reviewType = searchParams.get('review_type');
     const assignedReviewerId = searchParams.get('assigned_reviewer_id');
+    const clientId = searchParams.get('client_id');
     const dateFrom = searchParams.get('date_from');
     const dateTo = searchParams.get('date_to');
     const search = searchParams.get('search');
@@ -44,6 +53,10 @@ export async function GET(request: NextRequest) {
 
     if (status) {
       query = query.eq('status', status);
+    }
+
+    if (clientId) {
+      query = query.eq('client_id', clientId);
     }
 
     if (serviceCategory) {
@@ -100,6 +113,11 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) return authResult;
+    const rateLimited = await applyRateLimit(request, { maxRequests: 30 });
+    if (rateLimited) return rateLimited;
+
     const supabase = getServiceClient();
     const body = await request.json();
 
@@ -157,6 +175,12 @@ export async function POST(request: NextRequest) {
         await logAuditEvent(data.id, 'brief_generated', 'system', {
           generated_automatically: true,
         });
+
+        // Auto-assign a reviewer now that the brief is ready
+        const assignment = await autoAssignReviewer(data.id);
+        if (assignment.assigned && assignment.reviewerId) {
+          notifyCaseAssigned(data.id, assignment.reviewerId).catch(console.error);
+        }
       }
     }).catch((err) => {
       console.error('Background brief generation failed:', err);

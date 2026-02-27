@@ -228,6 +228,9 @@ export interface FactCheckResult {
   checked_at: string;
 }
 
+// ── Re-export Chat Types ────────────────────────────────────────────────────
+export type { ChatMessage, ChatMode, StreamChunk, ChatRequest } from './chat/types';
+
 export interface CaseFormData {
   service_category: ServiceCategory;
   priority: CasePriority;

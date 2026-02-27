@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceClient } from '@/lib/supabase';
 import { logAuditEvent } from '@/lib/audit';
+import { deliverToClient } from '@/lib/notifications';
 import { isDemoMode, getDemoCase } from '@/lib/demo-mode';
+import { requireAuth } from '@/lib/auth-guard';
+import { applyRateLimit } from '@/lib/rate-limit-middleware';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,6 +13,10 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) return authResult;
+    const rateLimited = await applyRateLimit(request, { maxRequests: 200 });
+    if (rateLimited) return rateLimited;
     const { id } = await params;
 
     if (isDemoMode()) {
@@ -50,6 +57,11 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) return authResult;
+    const rateLimited = await applyRateLimit(request, { maxRequests: 30 });
+    if (rateLimited) return rateLimited;
+
     const { id } = await params;
     const supabase = getServiceClient();
     const body = await request.json();
@@ -100,6 +112,23 @@ export async function PATCH(
         determination: body.determination,
         rationale: body.determination_rationale || null,
       });
+
+      // Auto-deliver to client for final determinations (non-blocking)
+      const finalDeterminations = ['approve', 'deny', 'partial_approve', 'modify'];
+      if (finalDeterminations.includes(body.determination)) {
+        deliverToClient(id).then(async (delivered) => {
+          if (delivered) {
+            const supabaseForDelivery = getServiceClient();
+            await supabaseForDelivery
+              .from('cases')
+              .update({ status: 'delivered' })
+              .eq('id', id);
+            await logAuditEvent(id, 'case_delivered', 'system', {
+              determination: body.determination,
+            });
+          }
+        }).catch(console.error);
+      }
     }
 
     return NextResponse.json(data);

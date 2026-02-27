@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -437,6 +437,21 @@ function CaseCard({ caseData }: { caseData: PortalCase }) {
             </div>
           </div>
 
+          {/* View Determination Letter */}
+          {isComplete && (
+            <a
+              href={`/cases/${caseData.id}/determination`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 bg-navy text-white text-sm font-medium px-4 py-2.5 rounded-lg hover:bg-navy-light transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              View Determination Letter
+            </a>
+          )}
+
           {/* P2P option for denied cases */}
           {caseData.peerToPeerAvailable && (
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">
@@ -578,12 +593,79 @@ function ReviewExplainer() {
 // Portal Page
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Map real API Case to PortalCase
+// ---------------------------------------------------------------------------
+
+function mapCaseToPortal(c: Record<string, unknown>): PortalCase {
+  const status = c.status as string;
+  let currentStage: PortalStage = 'submitted';
+  let determination: DeterminationResult = null;
+
+  if (status === 'intake') currentStage = 'submitted';
+  else if (status === 'processing' || status === 'brief_ready') currentStage = 'ai_analysis';
+  else if (status === 'in_review') currentStage = 'physician_review';
+  else if (status === 'determination_made' || status === 'delivered') {
+    currentStage = 'determination';
+    const det = c.determination as string;
+    if (det === 'deny') {
+      determination = 'denied';
+    } else if (det === 'approve' || det === 'modify' || det === 'partial_approve') {
+      determination = 'approved';
+    }
+  }
+
+  const patientName = (c.patient_name as string) || 'Unknown';
+  const nameParts = patientName.split(' ');
+  const masked = nameParts.length > 1
+    ? `${nameParts[0]} ${nameParts[nameParts.length - 1][0]}.`
+    : patientName;
+
+  return {
+    id: c.id as string,
+    caseRef: (c.case_number as string) || 'N/A',
+    patientName,
+    patientMasked: masked,
+    memberId: (c.patient_member_id as string) || '—',
+    procedureCode: ((c.procedure_codes as string[]) || [])[0] || '—',
+    procedureDescription: (c.procedure_description as string) || '—',
+    dateSubmitted: (c.created_at as string) || new Date().toISOString(),
+    currentStage,
+    determination,
+    estimatedCompletion: (c.turnaround_deadline as string) || '',
+    priority: (c.priority as 'standard' | 'urgent' | 'expedited') || 'standard',
+    reviewType: ((c.review_type as string) || 'prior_auth').replace(/_/g, ' '),
+    peerToPeerAvailable: c.determination === 'deny' || c.determination === 'partial_approve',
+    notes: (c.determination_rationale as string) || `Case is currently in ${status?.replace(/_/g, ' ')} stage.`,
+  };
+}
+
 export default function CaseStatusPortal() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<FilterStatus>('');
+  const [cases, setCases] = useState<PortalCase[]>(DEMO_CASES);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/cases')
+      .then((res) => {
+        if (!res.ok) throw new Error('Failed to fetch');
+        return res.json();
+      })
+      .then((data: Record<string, unknown>[]) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setCases(data.map(mapCaseToPortal));
+        }
+        // If empty or demo mode, keep DEMO_CASES
+      })
+      .catch(() => {
+        // API not available — use demo data
+      })
+      .finally(() => setLoading(false));
+  }, []);
 
   const filteredCases = useMemo(() => {
-    return DEMO_CASES.filter((c) => {
+    return cases.filter((c) => {
       // Status filter
       if (!matchesFilter(c, statusFilter)) return false;
 
@@ -601,14 +683,14 @@ export default function CaseStatusPortal() {
 
       return true;
     });
-  }, [searchQuery, statusFilter]);
+  }, [cases, searchQuery, statusFilter]);
 
   // Summary counts
-  const totalCases = DEMO_CASES.length;
-  const activeCases = DEMO_CASES.filter(
+  const totalCases = cases.length;
+  const activeCases = cases.filter(
     (c) => c.currentStage !== 'determination'
   ).length;
-  const completedCases = DEMO_CASES.filter(
+  const completedCases = cases.filter(
     (c) => c.currentStage === 'determination'
   ).length;
 
@@ -709,7 +791,7 @@ export default function CaseStatusPortal() {
           {/* Results count */}
           {filteredCases.length > 0 && (
             <div className="text-xs text-muted mt-4 text-center">
-              Showing {filteredCases.length} of {DEMO_CASES.length} case{DEMO_CASES.length !== 1 ? 's' : ''}
+              Showing {filteredCases.length} of {cases.length} case{cases.length !== 1 ? 's' : ''}
             </div>
           )}
         </div>

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceClient } from '@/lib/supabase';
 import { isDemoMode, getDemoReviewer } from '@/lib/demo-mode';
+import { requireRole } from '@/lib/auth-guard';
+import { applyRateLimit } from '@/lib/rate-limit-middleware';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,6 +11,10 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const authResult = await requireRole(request, ['admin']);
+    if (authResult instanceof NextResponse) return authResult;
+    const rateLimited = await applyRateLimit(request, { maxRequests: 200 });
+    if (rateLimited) return rateLimited;
     const { id } = await params;
 
     if (isDemoMode()) {
@@ -55,6 +61,11 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const authResult = await requireRole(request, ['admin']);
+    if (authResult instanceof NextResponse) return authResult;
+    const rateLimited = await applyRateLimit(request, { maxRequests: 30 });
+    if (rateLimited) return rateLimited;
+
     const { id } = await params;
     const supabase = getServiceClient();
     const body = await request.json();
