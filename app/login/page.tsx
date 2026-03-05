@@ -23,6 +23,12 @@ function LoginForm() {
 
     const supabase = createBrowserClient();
 
+    if (!supabase) {
+      // Demo mode — redirect straight through
+      window.location.href = redirectTo;
+      return;
+    }
+
     if (useMagicLink) {
       const { error } = await supabase.auth.signInWithOtp({ email });
       if (error) {
