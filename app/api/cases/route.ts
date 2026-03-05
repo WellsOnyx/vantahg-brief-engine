@@ -175,8 +175,8 @@ export async function POST(request: NextRequest) {
       supabase.from('cases').update({ intake_confirmation_sent: true }).eq('id', data.id).then(() => {});
     }
 
-    // Trigger brief generation in the background (non-blocking)
-    generateBriefForCase(data).then(async (brief) => {
+    // Trigger brief generation in the background (non-blocking, with client criteria context)
+    generateBriefForCase(data, { client: data.client ?? null }).then(async (brief) => {
       if (brief) {
         await supabase
           .from('cases')

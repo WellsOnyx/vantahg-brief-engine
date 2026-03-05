@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import type { Client, ClientType } from '@/lib/types';
+import type { Client, ClientType, OnboardingStatus } from '@/lib/types';
 
 const clientTypeLabels: Record<ClientType, string> = {
   tpa: 'TPA',
@@ -10,6 +10,13 @@ const clientTypeLabels: Record<ClientType, string> = {
   managed_care_org: 'Managed Care Org (MCO)',
   workers_comp: "Workers' Comp",
   auto_med: 'Auto Med',
+};
+
+const onboardingLabels: Record<OnboardingStatus, { label: string; color: string; dot: string }> = {
+  pending: { label: 'Pending Setup', color: 'bg-gray-100 text-gray-600', dot: 'bg-gray-400' },
+  credentials_needed: { label: 'Credentials Needed', color: 'bg-amber-100 text-amber-800', dot: 'bg-amber-500' },
+  active: { label: 'Active', color: 'bg-green-100 text-green-800', dot: 'bg-green-500' },
+  suspended: { label: 'Suspended', color: 'bg-red-100 text-red-800', dot: 'bg-red-500' },
 };
 
 interface ClientFormData {
@@ -23,6 +30,13 @@ interface ClientFormData {
   custom_guidelines_url: string;
   contracted_sla_hours: number | '';
   contracted_rate_per_case: number | '';
+  interqual_portal_url: string;
+  interqual_username: string;
+  interqual_api_key: string;
+  mcg_portal_url: string;
+  mcg_username: string;
+  mcg_api_key: string;
+  onboarding_notes: string;
 }
 
 const emptyForm: ClientFormData = {
@@ -36,6 +50,13 @@ const emptyForm: ClientFormData = {
   custom_guidelines_url: '',
   contracted_sla_hours: '',
   contracted_rate_per_case: '',
+  interqual_portal_url: '',
+  interqual_username: '',
+  interqual_api_key: '',
+  mcg_portal_url: '',
+  mcg_username: '',
+  mcg_api_key: '',
+  onboarding_notes: '',
 };
 
 export default function ClientsPage() {
@@ -92,17 +113,46 @@ export default function ClientsPage() {
       custom_guidelines_url: client.custom_guidelines_url || '',
       contracted_sla_hours: client.contracted_sla_hours ?? '',
       contracted_rate_per_case: client.contracted_rate_per_case ?? '',
+      interqual_portal_url: client.interqual_portal_url || '',
+      interqual_username: client.interqual_username || '',
+      interqual_api_key: client.interqual_api_key || '',
+      mcg_portal_url: client.mcg_portal_url || '',
+      mcg_username: client.mcg_username || '',
+      mcg_api_key: client.mcg_api_key || '',
+      onboarding_notes: client.onboarding_notes || '',
     });
     setShowModal(true);
   }
 
+  function computeOnboardingStatus(data: ClientFormData): OnboardingStatus {
+    const needsInterqual = data.uses_interqual;
+    const needsMcg = data.uses_mcg;
+    const hasInterqual = !!(data.interqual_username && data.interqual_api_key);
+    const hasMcg = !!(data.mcg_username && data.mcg_api_key);
+
+    if (!needsInterqual && !needsMcg) return 'active'; // no credentials needed
+    if (needsInterqual && !hasInterqual) return 'credentials_needed';
+    if (needsMcg && !hasMcg) return 'credentials_needed';
+    return 'active';
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    const status = computeOnboardingStatus(formData);
     const payload = {
       ...formData,
       contracted_sla_hours: formData.contracted_sla_hours === '' ? null : Number(formData.contracted_sla_hours),
       contracted_rate_per_case: formData.contracted_rate_per_case === '' ? null : Number(formData.contracted_rate_per_case),
       custom_guidelines_url: formData.custom_guidelines_url || null,
+      interqual_portal_url: formData.interqual_portal_url || null,
+      interqual_username: formData.interqual_username || null,
+      interqual_api_key: formData.interqual_api_key || null,
+      mcg_portal_url: formData.mcg_portal_url || null,
+      mcg_username: formData.mcg_username || null,
+      mcg_api_key: formData.mcg_api_key || null,
+      onboarding_notes: formData.onboarding_notes || null,
+      onboarding_status: status,
+      credentials_configured_at: status === 'active' ? new Date().toISOString() : null,
     };
 
     console.log(`[Demo] ${editingClient ? 'Updating' : 'Creating'} client:`, payload);
@@ -300,21 +350,37 @@ export default function ClientsPage() {
                           <span className="text-muted">---</span>
                         )}
                       </td>
-                      {/* Guidelines */}
+                      {/* Guidelines + Credential Status */}
                       <td className="px-5 py-3">
                         <div className="flex flex-wrap gap-1.5">
                           {c.uses_interqual && (
-                            <span className="inline-flex items-center gap-1 bg-green-100 text-green-800 px-2 py-0.5 rounded-full text-xs font-medium">
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                              c.interqual_username && c.interqual_api_key
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-amber-100 text-amber-800'
+                            }`}>
                               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d={
+                                  c.interqual_username && c.interqual_api_key
+                                    ? "M5 13l4 4L19 7"
+                                    : "M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75"
+                                } />
                               </svg>
                               InterQual
                             </span>
                           )}
                           {c.uses_mcg && (
-                            <span className="inline-flex items-center gap-1 bg-green-100 text-green-800 px-2 py-0.5 rounded-full text-xs font-medium">
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                              c.mcg_username && c.mcg_api_key
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-amber-100 text-amber-800'
+                            }`}>
                               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d={
+                                  c.mcg_username && c.mcg_api_key
+                                    ? "M5 13l4 4L19 7"
+                                    : "M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75"
+                                } />
                               </svg>
                               MCG
                             </span>
@@ -337,14 +403,17 @@ export default function ClientsPage() {
                       <td className="px-5 py-3 text-right tabular-nums font-medium">
                         {formatCurrency(c.contracted_rate_per_case)}
                       </td>
-                      {/* Status - active indicator based on having essential fields */}
+                      {/* Onboarding Status */}
                       <td className="px-5 py-3 text-center">
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                          c.contact_email ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-500'
-                        }`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${c.contact_email ? 'bg-green-500' : 'bg-gray-400'}`} />
-                          {c.contact_email ? 'Active' : 'Incomplete'}
-                        </span>
+                        {(() => {
+                          const s = onboardingLabels[c.onboarding_status || 'pending'];
+                          return (
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold ${s.color}`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
+                              {s.label}
+                            </span>
+                          );
+                        })()}
                       </td>
                       {/* Actions */}
                       <td className="px-5 py-3 text-right">
@@ -506,6 +575,161 @@ export default function ClientsPage() {
                   </div>
                 )}
               </div>
+
+              {/* ── Criteria Credentials ─────────────────────── */}
+              {(formData.uses_interqual || formData.uses_mcg) && (
+                <div className="border-t border-border pt-5">
+                  <div className="text-xs font-semibold text-muted uppercase tracking-wider mb-1">Criteria Credentials</div>
+                  <p className="text-xs text-muted mb-4">Login credentials provided by the client under their license. Stored encrypted at rest.</p>
+
+                  {/* Onboarding Checklist */}
+                  <div className="bg-navy/5 rounded-lg p-4 mb-4">
+                    <div className="text-xs font-semibold text-navy mb-2">Onboarding Checklist</div>
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className={`w-4 h-4 rounded-full flex items-center justify-center text-white text-[10px] ${formData.contact_email ? 'bg-green-500' : 'bg-gray-300'}`}>
+                          {formData.contact_email ? '\u2713' : ''}
+                        </span>
+                        <span className={formData.contact_email ? 'text-foreground' : 'text-muted'}>Contact information provided</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className={`w-4 h-4 rounded-full flex items-center justify-center text-white text-[10px] ${formData.contracted_sla_hours ? 'bg-green-500' : 'bg-gray-300'}`}>
+                          {formData.contracted_sla_hours ? '\u2713' : ''}
+                        </span>
+                        <span className={formData.contracted_sla_hours ? 'text-foreground' : 'text-muted'}>Contract terms configured</span>
+                      </div>
+                      {formData.uses_interqual && (
+                        <div className="flex items-center gap-2 text-xs">
+                          <span className={`w-4 h-4 rounded-full flex items-center justify-center text-white text-[10px] ${formData.interqual_username && formData.interqual_api_key ? 'bg-green-500' : 'bg-amber-500'}`}>
+                            {formData.interqual_username && formData.interqual_api_key ? '\u2713' : '!'}
+                          </span>
+                          <span className={formData.interqual_username && formData.interqual_api_key ? 'text-foreground' : 'text-amber-700 font-medium'}>
+                            InterQual credentials {formData.interqual_username && formData.interqual_api_key ? 'configured' : 'needed'}
+                          </span>
+                        </div>
+                      )}
+                      {formData.uses_mcg && (
+                        <div className="flex items-center gap-2 text-xs">
+                          <span className={`w-4 h-4 rounded-full flex items-center justify-center text-white text-[10px] ${formData.mcg_username && formData.mcg_api_key ? 'bg-green-500' : 'bg-amber-500'}`}>
+                            {formData.mcg_username && formData.mcg_api_key ? '\u2713' : '!'}
+                          </span>
+                          <span className={formData.mcg_username && formData.mcg_api_key ? 'text-foreground' : 'text-amber-700 font-medium'}>
+                            MCG credentials {formData.mcg_username && formData.mcg_api_key ? 'configured' : 'needed'}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* InterQual Credentials */}
+                  {formData.uses_interqual && (
+                    <div className="bg-surface rounded-lg border border-border p-4 mb-3">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="w-6 h-6 rounded bg-navy/10 flex items-center justify-center">
+                          <svg className="w-3.5 h-3.5 text-navy" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+                          </svg>
+                        </div>
+                        <span className="text-sm font-semibold text-navy">InterQual Access</span>
+                      </div>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-xs font-medium text-muted mb-1">Portal URL</label>
+                          <input
+                            type="url"
+                            value={formData.interqual_portal_url}
+                            onChange={(e) => setFormData({ ...formData, interqual_portal_url: e.target.value })}
+                            placeholder="https://interqual.changehealthcare.com"
+                            className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-navy/20 focus:border-navy outline-none"
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs font-medium text-muted mb-1">Username</label>
+                            <input
+                              type="text"
+                              value={formData.interqual_username}
+                              onChange={(e) => setFormData({ ...formData, interqual_username: e.target.value })}
+                              placeholder="client-vhg-reviewer"
+                              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-navy/20 focus:border-navy outline-none"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-muted mb-1">API Key / Password</label>
+                            <input
+                              type="password"
+                              value={formData.interqual_api_key}
+                              onChange={(e) => setFormData({ ...formData, interqual_api_key: e.target.value })}
+                              placeholder="••••••••••••"
+                              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-navy/20 focus:border-navy outline-none"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* MCG Credentials */}
+                  {formData.uses_mcg && (
+                    <div className="bg-surface rounded-lg border border-border p-4 mb-3">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="w-6 h-6 rounded bg-navy/10 flex items-center justify-center">
+                          <svg className="w-3.5 h-3.5 text-navy" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+                          </svg>
+                        </div>
+                        <span className="text-sm font-semibold text-navy">MCG Cite Access</span>
+                      </div>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-xs font-medium text-muted mb-1">Portal URL</label>
+                          <input
+                            type="url"
+                            value={formData.mcg_portal_url}
+                            onChange={(e) => setFormData({ ...formData, mcg_portal_url: e.target.value })}
+                            placeholder="https://cite.mcg.com"
+                            className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-navy/20 focus:border-navy outline-none"
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs font-medium text-muted mb-1">Username</label>
+                            <input
+                              type="text"
+                              value={formData.mcg_username}
+                              onChange={(e) => setFormData({ ...formData, mcg_username: e.target.value })}
+                              placeholder="client-vhg-ops"
+                              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-navy/20 focus:border-navy outline-none"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-muted mb-1">API Key / Password</label>
+                            <input
+                              type="password"
+                              value={formData.mcg_api_key}
+                              onChange={(e) => setFormData({ ...formData, mcg_api_key: e.target.value })}
+                              placeholder="••••••••••••"
+                              className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-navy/20 focus:border-navy outline-none"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Onboarding Notes */}
+                  <div>
+                    <label className="block text-xs font-medium text-muted mb-1">Onboarding Notes</label>
+                    <textarea
+                      value={formData.onboarding_notes}
+                      onChange={(e) => setFormData({ ...formData, onboarding_notes: e.target.value })}
+                      placeholder="Notes on credential setup, license agreements, renewal dates..."
+                      rows={2}
+                      className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-navy/20 focus:border-navy outline-none resize-none"
+                    />
+                  </div>
+                </div>
+              )}
 
               {/* ── Contract Terms ───────────────────────────── */}
               <div className="border-t border-border pt-5">

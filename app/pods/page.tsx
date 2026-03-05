@@ -18,6 +18,10 @@ const SERVICE_CATEGORY_LABELS: Record<ServiceCategory, string> = {
   pain_management: 'Pain Management',
   cardiology: 'Cardiology',
   oncology: 'Oncology',
+  ophthalmology: 'Ophthalmology',
+  workers_comp: 'Workers Comp',
+  emergency_medicine: 'Emergency Medicine',
+  internal_medicine: 'Internal Medicine',
   other: 'Other',
 };
 

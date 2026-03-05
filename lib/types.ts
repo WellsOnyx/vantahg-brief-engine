@@ -15,7 +15,12 @@ export type ServiceCategory =
   | 'pain_management'
   | 'cardiology'
   | 'oncology'
+  | 'ophthalmology'
+  | 'workers_comp'
+  | 'emergency_medicine'
+  | 'internal_medicine'
   | 'other';
+export type PhysicianAgreement = 'agree' | 'disagree' | 'modified';
 export type ReviewType = 'prior_auth' | 'medical_necessity' | 'concurrent' | 'retrospective' | 'peer_to_peer' | 'appeal' | 'second_level_review';
 export type Determination = 'approve' | 'deny' | 'partial_approve' | 'modify' | 'pend' | 'peer_to_peer_requested';
 export type StaffRole = 'lpn' | 'rn' | 'admin_staff';
@@ -140,6 +145,18 @@ export interface Case {
   appeal_of_case_id: string | null;
   appeal_status: AppealStatus | null;
 
+  // Physician feedback on AI recommendation (training signal)
+  physician_ai_agreement: PhysicianAgreement | null;
+  physician_ai_feedback_notes: string | null;
+
+  // Denial strength score (pre-appeal risk assessment)
+  denial_strength_score: number | null;
+  denial_strength_grade: 'strong' | 'moderate' | 'weak' | 'very_weak' | null;
+
+  // Two-Midnight Rule (Medicare)
+  two_midnight_applies: boolean;
+  payer_classification: 'traditional_medicare' | 'medicare_advantage' | 'commercial' | 'unknown' | null;
+
   // Joined fields
   reviewer?: Reviewer;
   client?: Client;
@@ -165,6 +182,8 @@ export interface Reviewer {
   cases_completed: number;
 }
 
+export type OnboardingStatus = 'pending' | 'credentials_needed' | 'active' | 'suspended';
+
 export interface Client {
   id: string;
   created_at: string;
@@ -179,6 +198,17 @@ export interface Client {
   custom_guidelines_url: string | null;
   contracted_sla_hours: number | null;
   contracted_rate_per_case: number | null;
+  // Criteria credential management (stored encrypted at rest via Supabase)
+  interqual_portal_url: string | null;
+  interqual_username: string | null;
+  interqual_api_key: string | null;
+  mcg_portal_url: string | null;
+  mcg_username: string | null;
+  mcg_api_key: string | null;
+  // Onboarding status
+  onboarding_status: OnboardingStatus;
+  credentials_configured_at: string | null;
+  onboarding_notes: string | null;
 }
 
 export interface AuditLogEntry {

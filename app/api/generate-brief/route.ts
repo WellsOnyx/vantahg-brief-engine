@@ -59,8 +59,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate the brief and run fact-check
-    const { brief, factCheck } = await generateBriefForCase(caseData);
+    // Generate the brief and run fact-check (pass client for criteria source context)
+    const { brief, factCheck } = await generateBriefForCase(caseData, { client: caseData.client ?? null });
 
     // Store the result in the database
     const { data: updatedCase, error: updateError } = await supabase

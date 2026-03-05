@@ -1,260 +1,219 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceClient } from '@/lib/supabase';
-import { logAuditEvent } from '@/lib/audit';
-import { generateBriefForCase } from '@/lib/generate-brief';
-import { autoAssignReviewer } from '@/lib/assignment-engine';
-import { notifyCaseAssigned } from '@/lib/notifications';
 import { isDemoMode } from '@/lib/demo-mode';
-import type { ServiceCategory, CasePriority, ReviewType, FacilityType } from '@/lib/types';
+import { logAuditEvent } from '@/lib/audit';
 import { applyRateLimit } from '@/lib/rate-limit-middleware';
+import { generateAuthorizationNumber, logIntakeEvent, hashPatientName, sendReceiptConfirmation } from '@/lib/intake/confirmation';
+import crypto from 'crypto';
 
 export const dynamic = 'force-dynamic';
 
-// ---------------------------------------------------------------------------
-// Validation helpers (shared constants with batch route)
-// ---------------------------------------------------------------------------
-
-const VALID_SERVICE_CATEGORIES: ServiceCategory[] = [
-  'imaging', 'surgery', 'specialty_referral', 'dme', 'infusion',
-  'behavioral_health', 'rehab_therapy', 'home_health', 'skilled_nursing',
-  'transplant', 'genetic_testing', 'pain_management', 'cardiology', 'oncology', 'other',
-];
-
-const VALID_PRIORITIES: CasePriority[] = ['standard', 'urgent', 'expedited'];
-
-const VALID_REVIEW_TYPES: ReviewType[] = [
-  'prior_auth', 'medical_necessity', 'concurrent', 'retrospective',
-  'peer_to_peer', 'appeal', 'second_level_review',
-];
-
-const VALID_FACILITY_TYPES: FacilityType[] = ['inpatient', 'outpatient', 'asc', 'office', 'home'];
-
-interface ValidationResult {
-  valid: boolean;
-  errors: string[];
-}
-
-function validateExternalCase(body: Record<string, unknown>): ValidationResult {
-  const errors: string[] = [];
-
-  // Required fields
-  if (!body.patient_name || typeof body.patient_name !== 'string' || !body.patient_name.trim()) {
-    errors.push('patient_name is required');
-  }
-  if (!body.patient_dob || typeof body.patient_dob !== 'string' || !body.patient_dob.trim()) {
-    errors.push('patient_dob is required');
-  }
-  if (!body.requesting_provider || typeof body.requesting_provider !== 'string' || !body.requesting_provider.trim()) {
-    errors.push('requesting_provider is required');
-  }
-  if (!body.procedure_codes || (Array.isArray(body.procedure_codes) && body.procedure_codes.length === 0)) {
-    errors.push('procedure_codes is required (non-empty array)');
-  }
-  if (!body.diagnosis_codes || (Array.isArray(body.diagnosis_codes) && body.diagnosis_codes.length === 0)) {
-    errors.push('diagnosis_codes is required (non-empty array)');
-  }
-
-  // Enum validation
-  if (body.service_category && !VALID_SERVICE_CATEGORIES.includes(body.service_category as ServiceCategory)) {
-    errors.push(`Invalid service_category "${body.service_category}". Valid values: ${VALID_SERVICE_CATEGORIES.join(', ')}`);
-  }
-  if (body.priority && !VALID_PRIORITIES.includes(body.priority as CasePriority)) {
-    errors.push(`Invalid priority "${body.priority}". Valid values: ${VALID_PRIORITIES.join(', ')}`);
-  }
-  if (body.review_type && !VALID_REVIEW_TYPES.includes(body.review_type as ReviewType)) {
-    errors.push(`Invalid review_type "${body.review_type}". Valid values: ${VALID_REVIEW_TYPES.join(', ')}`);
-  }
-  if (body.facility_type && !VALID_FACILITY_TYPES.includes(body.facility_type as FacilityType)) {
-    errors.push(`Invalid facility_type "${body.facility_type}". Valid values: ${VALID_FACILITY_TYPES.join(', ')}`);
-  }
-
-  // Type-check arrays
-  if (body.procedure_codes && !Array.isArray(body.procedure_codes)) {
-    errors.push('procedure_codes must be an array of strings');
-  }
-  if (body.diagnosis_codes && !Array.isArray(body.diagnosis_codes)) {
-    errors.push('diagnosis_codes must be an array of strings');
-  }
-
-  return { valid: errors.length === 0, errors };
-}
-
 /**
- * Estimate turnaround based on priority.
+ * POST /api/external/submit
+ *
+ * Secure external API endpoint for programmatic case submission.
+ * Used by TPAs, provider EHR systems, and partner integrations.
+ *
+ * Authentication: HMAC-SHA256 signature using shared API key
+ * Header: x-api-key (API key identifier) + x-signature (HMAC of body)
+ *
+ * This endpoint is whitelisted in middleware.ts (no session required).
  */
-function getEstimatedTurnaround(priority: string): string {
-  switch (priority) {
-    case 'expedited':
-      return '4-8 hours';
-    case 'urgent':
-      return '12-24 hours';
-    default:
-      return '24-48 hours';
-  }
-}
-
-// ---------------------------------------------------------------------------
-// POST /api/external/submit
-// ---------------------------------------------------------------------------
-
 export async function POST(request: NextRequest) {
   try {
-    const rateLimited = await applyRateLimit(request, { maxRequests: 60 });
+    const rateLimited = await applyRateLimit(request, { maxRequests: 200 });
     if (rateLimited) return rateLimited;
 
-    // ----------------------------------------------------------------
-    // API key authentication
-    // ----------------------------------------------------------------
+    // Authenticate via API key
     const apiKey = request.headers.get('x-api-key');
-    const expectedKey = process.env.VANTAHG_API_KEY;
+    const signature = request.headers.get('x-signature');
 
-    // In demo mode without an API key configured, skip auth
-    if (!isDemoMode() || expectedKey) {
+    if (!isDemoMode()) {
       if (!apiKey) {
-        return NextResponse.json(
-          { error: 'Missing x-api-key header' },
-          { status: 401 }
-        );
+        await logAuditEvent(null, 'security:external_submit_no_api_key', 'system');
+        return NextResponse.json({ error: 'x-api-key header required' }, { status: 401 });
       }
-      if (!expectedKey) {
-        return NextResponse.json(
-          { error: 'Server misconfiguration: VANTAHG_API_KEY not set' },
-          { status: 500 }
-        );
+
+      // Verify API key against configured keys
+      const validKeys = (process.env.EXTERNAL_API_KEYS || '').split(',').map((k) => k.trim()).filter(Boolean);
+      if (validKeys.length > 0 && !validKeys.includes(apiKey)) {
+        await logAuditEvent(null, 'security:external_submit_invalid_key', 'system', { api_key_prefix: apiKey.substring(0, 8) });
+        return NextResponse.json({ error: 'Invalid API key' }, { status: 401 });
       }
-      if (apiKey !== expectedKey) {
-        return NextResponse.json(
-          { error: 'Invalid API key' },
-          { status: 403 }
-        );
+
+      // Verify HMAC signature if secret is configured
+      const apiSecret = process.env.EXTERNAL_API_SECRET;
+      if (apiSecret && signature) {
+        const rawBody = await request.clone().text();
+        const expectedSig = crypto.createHmac('sha256', apiSecret).update(rawBody).digest('hex');
+        if (signature !== expectedSig) {
+          await logAuditEvent(null, 'security:external_submit_invalid_signature', 'system');
+          return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+        }
       }
     }
 
-    // ----------------------------------------------------------------
-    // Parse and validate request body
-    // ----------------------------------------------------------------
     const body = await request.json();
-    const validation = validateExternalCase(body);
 
-    if (!validation.valid) {
+    // Validate required fields
+    const requiredFields = ['patient_name', 'procedure_codes'];
+    const missing = requiredFields.filter((f) => !body[f]);
+    if (missing.length > 0) {
       return NextResponse.json(
-        { error: 'Validation failed', details: validation.errors },
+        { error: `Missing required fields: ${missing.join(', ')}` },
         { status: 400 }
       );
     }
 
-    // Apply defaults
-    const serviceCategory = body.service_category || 'other';
-    const priority = body.priority || 'standard';
-    const reviewType = body.review_type || 'prior_auth';
+    if (!Array.isArray(body.procedure_codes) || body.procedure_codes.length === 0) {
+      return NextResponse.json(
+        { error: 'procedure_codes must be a non-empty array' },
+        { status: 400 }
+      );
+    }
 
-    // ----------------------------------------------------------------
-    // Demo mode: return mock response
-    // ----------------------------------------------------------------
+    // Validate enums
+    const validPriorities = ['standard', 'urgent', 'expedited'];
+    if (body.priority && !validPriorities.includes(body.priority)) {
+      return NextResponse.json(
+        { error: `priority must be one of: ${validPriorities.join(', ')}` },
+        { status: 400 }
+      );
+    }
+
+    const validReviewTypes = ['prior_auth', 'medical_necessity', 'concurrent', 'retrospective', 'peer_to_peer', 'appeal', 'second_level_review'];
+    if (body.review_type && !validReviewTypes.includes(body.review_type)) {
+      return NextResponse.json(
+        { error: `review_type must be one of: ${validReviewTypes.join(', ')}` },
+        { status: 400 }
+      );
+    }
+
+    // Generate auth number
+    const authNumber = await generateAuthorizationNumber();
+    const caseNumber = `VHG-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
+
+    // Log intake
+    await logIntakeEvent({
+      channel: 'api',
+      source_identifier: apiKey ? `key:${apiKey.substring(0, 8)}...` : 'demo',
+      authorization_number: authNumber,
+      case_id: null,
+      patient_name_hash: hashPatientName(body.patient_name),
+      status: 'processing',
+      rejection_reason: null,
+      metadata: { api_key_prefix: apiKey?.substring(0, 8) },
+      processed_at: null,
+      processed_by: null,
+    });
+
     if (isDemoMode()) {
-      const categoryPrefix = serviceCategory.toUpperCase().replace(/\s+/g, '-');
-      const mockNum = Math.floor(1000 + Math.random() * 9000);
-      const caseNumber = `VHG-${categoryPrefix}-${mockNum}`;
-      const caseId = `demo-ext-${Date.now()}`;
-
-      console.log(`[DEMO AUDIT] external_case_created | case_number=${caseNumber} | patient=${body.patient_name} | source=external_api`);
+      const demoCaseId = `api-${Date.now()}`;
+      const confirmation = await sendReceiptConfirmation({
+        caseId: demoCaseId,
+        authorizationNumber: authNumber,
+        channel: 'api',
+        recipientEmail: body.contact_email,
+      });
 
       return NextResponse.json({
+        success: true,
+        case_id: demoCaseId,
         case_number: caseNumber,
-        case_id: caseId,
+        authorization_number: authNumber,
         status: 'intake',
-        estimated_turnaround: getEstimatedTurnaround(priority),
-        created_at: new Date().toISOString(),
+        confirmation,
+        message: 'Case submitted successfully (demo mode)',
       }, { status: 201 });
     }
 
-    // ----------------------------------------------------------------
-    // Production mode: create case in Supabase
-    // ----------------------------------------------------------------
     const supabase = getServiceClient();
 
-    // Generate case_number
-    const categoryPrefix = serviceCategory.toUpperCase().replace(/\s+/g, '-');
-    const prefix = `VHG-${categoryPrefix}`;
-
-    const { count, error: countError } = await supabase
+    const { data: newCase, error: caseError } = await supabase
       .from('cases')
-      .select('*', { count: 'exact', head: true })
-      .ilike('case_number', `${prefix}-%`);
-
-    if (countError) {
-      return NextResponse.json({ error: countError.message }, { status: 500 });
-    }
-
-    const nextNumber = ((count ?? 0) + 1).toString().padStart(4, '0');
-    const caseNumber = `${prefix}-${nextNumber}`;
-
-    const caseData = {
-      ...body,
-      case_number: caseNumber,
-      service_category: serviceCategory,
-      priority,
-      review_type: reviewType,
-      status: 'intake',
-    };
-
-    const { data, error } = await supabase
-      .from('cases')
-      .insert(caseData)
-      .select('*, reviewer:reviewers(*), client:clients(*)')
+      .insert({
+        case_number: caseNumber,
+        status: 'intake',
+        priority: body.priority || 'standard',
+        service_category: body.service_category || 'other',
+        review_type: body.review_type || 'prior_auth',
+        patient_name: body.patient_name,
+        patient_dob: body.patient_dob || null,
+        patient_member_id: body.patient_member_id || null,
+        patient_gender: body.patient_gender || null,
+        requesting_provider: body.requesting_provider || null,
+        requesting_provider_npi: body.requesting_provider_npi || null,
+        requesting_provider_specialty: body.requesting_provider_specialty || null,
+        procedure_codes: body.procedure_codes,
+        diagnosis_codes: body.diagnosis_codes || [],
+        procedure_description: body.procedure_description || null,
+        clinical_question: body.clinical_question || null,
+        facility_name: body.facility_name || null,
+        facility_type: body.facility_type || null,
+        payer_name: body.payer_name || null,
+        plan_type: body.plan_type || null,
+        client_id: body.client_id || null,
+        intake_channel: 'api',
+        authorization_number: authNumber,
+        intake_confirmation_sent: false,
+        intake_received_at: new Date().toISOString(),
+        submitted_documents: body.document_urls || [],
+        vertical: 'medical',
+      })
+      .select('id, case_number, status')
       .single();
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+    if (caseError) {
+      console.error('Failed to create case via external API:', caseError);
+      return NextResponse.json({ error: 'Failed to create case' }, { status: 500 });
     }
 
-    // Audit log
-    await logAuditEvent(data.id, 'case_created', 'external_api', {
-      case_number: caseNumber,
-      service_category: serviceCategory,
-      source: 'external_api',
-      api_key_prefix: apiKey ? `${apiKey.substring(0, 8)}...` : 'unknown',
+    // Send confirmation
+    const confirmation = await sendReceiptConfirmation({
+      caseId: newCase.id,
+      authorizationNumber: authNumber,
+      channel: 'api',
+      recipientEmail: body.contact_email,
     });
 
-    // Background brief generation (non-blocking)
-    generateBriefForCase(data).then(async (brief) => {
-      if (brief) {
-        await supabase
-          .from('cases')
-          .update({
-            ai_brief: brief,
-            ai_brief_generated_at: new Date().toISOString(),
-            status: 'brief_ready',
-          })
-          .eq('id', data.id);
+    // Update case
+    await supabase
+      .from('cases')
+      .update({
+        intake_confirmation_sent: confirmation.confirmation_sent,
+        intake_processed_at: new Date().toISOString(),
+      })
+      .eq('id', newCase.id);
 
-        await logAuditEvent(data.id, 'brief_generated', 'system', {
-          generated_automatically: true,
-          source: 'external_api',
-        });
+    // Update intake log
+    await logIntakeEvent({
+      channel: 'api',
+      source_identifier: apiKey ? `key:${apiKey.substring(0, 8)}...` : null,
+      authorization_number: authNumber,
+      case_id: newCase.id,
+      patient_name_hash: hashPatientName(body.patient_name),
+      status: 'case_created',
+      rejection_reason: null,
+      metadata: null,
+      processed_at: new Date().toISOString(),
+      processed_by: 'system',
+    });
 
-        // Auto-assign a reviewer
-        const assignment = await autoAssignReviewer(data.id);
-        if (assignment.assigned && assignment.reviewerId) {
-          notifyCaseAssigned(data.id, assignment.reviewerId).catch(console.error);
-        }
-      }
-    }).catch((err) => {
-      console.error(`Background brief generation failed for case ${caseNumber}:`, err);
+    await logAuditEvent(newCase.id, 'case_created_via_api', 'system', {
+      authorization_number: authNumber,
+      api_key_prefix: apiKey?.substring(0, 8),
     });
 
     return NextResponse.json({
-      case_number: caseNumber,
-      case_id: data.id,
-      status: 'intake',
-      estimated_turnaround: getEstimatedTurnaround(priority),
-      created_at: data.created_at,
+      success: true,
+      case_id: newCase.id,
+      case_number: newCase.case_number,
+      authorization_number: authNumber,
+      status: newCase.status,
+      confirmation,
     }, { status: 201 });
   } catch (err) {
-    console.error('Error in external case submission:', err);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    console.error('Error in external submit:', err);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

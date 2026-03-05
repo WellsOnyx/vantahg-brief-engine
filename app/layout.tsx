@@ -49,6 +49,7 @@ const navLinks = [
   { href: "/staff", label: "Staff" },
   { href: "/pods", label: "Pods" },
   { href: "/quality", label: "Quality" },
+  { href: "/intake", label: "Intake" },
   { href: "/clients", label: "Clients" },
   { href: "/analytics", label: "Analytics" },
 ];

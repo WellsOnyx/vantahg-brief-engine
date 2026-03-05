@@ -1,10 +1,46 @@
 import { generateClinicalBrief } from './claude';
 import { getCriteriaForCodes } from '@/lib/medical-criteria';
 import { factCheckBrief } from './fact-checker';
-import type { Case, AIBrief, FactCheckResult } from './types';
+import { analyzeTwoMidnightRule, getTwoMidnightBriefContext } from './two-midnight-rule';
+import type { Case, Client, AIBrief, FactCheckResult } from './types';
 
-export async function generateBriefForCase(caseData: Case): Promise<{ brief: AIBrief; factCheck: FactCheckResult }> {
-  const systemPrompt = `You are a clinical review intelligence engine for VantaHG, a first-level utilization review organization that serves TPAs, health plans, and self-funded employers. Your job is to analyze clinical case data and generate a structured one-page clinical brief that a board-certified physician can review in 5-10 minutes to render a medical necessity determination.
+interface BriefOptions {
+  client?: Client | null;
+  /** When true, uses evidence-based medicine framing instead of commercial criteria matching */
+  mdReviewMode?: boolean;
+}
+
+export async function generateBriefForCase(caseData: Case, options: BriefOptions = {}): Promise<{ brief: AIBrief; factCheck: FactCheckResult }> {
+  const { client } = options;
+
+  // Determine if this is a second-level / MD review (evidence-based, not criteria-based)
+  const isMdReview = options.mdReviewMode ||
+    caseData.status === 'md_review' ||
+    caseData.review_type === 'second_level_review' ||
+    caseData.review_type === 'appeal';
+
+  const systemPrompt = isMdReview
+    ? `You are a clinical review intelligence engine for VantaHG, preparing a second-level physician advisor review brief. This brief is for a board-certified physician advisor who will render a medical necessity determination using EVIDENCE-BASED MEDICINE — NOT commercial criteria like InterQual or MCG.
+
+The physician advisor uses:
+- Published peer-reviewed medical literature
+- Specialty society clinical practice guidelines (AAOS, ACS, AHA, AAN, NCCN, etc.)
+- CMS National Coverage Determinations (NCDs) and Local Coverage Determinations (LCDs)
+- Clinical experience and medical judgment
+- Evidence-based assessment of the patient's individual clinical circumstances
+
+You are NOT rendering a determination. You are preparing a comprehensive evidence-based brief.
+
+Key principles:
+- Cite specific published guidelines and medical literature, not commercial criteria products
+- Assess the clinical evidence supporting or contradicting the requested service
+- Evaluate whether conservative/step therapy has been adequately trialed per published evidence
+- Consider the patient's individual risk factors, comorbidities, and clinical trajectory
+- Note the strength of evidence (systematic review > RCT > cohort > case series > expert opinion)
+- Address level of care determination: inpatient vs. observation vs. outpatient based on clinical acuity
+- If this is an appeal, analyze why the original denial may or may not have been appropriate`
+
+    : `You are a clinical review intelligence engine for VantaHG, a first-level utilization review organization that serves TPAs, health plans, and self-funded employers. Your job is to analyze clinical case data and generate a structured one-page clinical brief that a board-certified physician can review in 5-10 minutes to render a medical necessity determination.
 
 You are NOT rendering a determination. You are preparing the brief so the human reviewer can make the clinical judgment efficiently.
 
@@ -23,6 +59,21 @@ Key principles:
     const matchedCriteria = getCriteriaForCodes(caseData.procedure_codes);
     if (Object.keys(matchedCriteria).length > 0) {
       criteriaContext = `\n\nMEDICAL CRITERIA REFERENCE:\n${JSON.stringify(matchedCriteria, null, 2)}`;
+    }
+  }
+
+  // Client-specific criteria source context
+  let clientCriteriaContext = '';
+  if (client) {
+    const sources: string[] = [];
+    if (client.uses_interqual) sources.push('InterQual (Change Healthcare)');
+    if (client.uses_mcg) sources.push('MCG Health (Cite)');
+    if (client.custom_guidelines_url) sources.push(`Custom guidelines: ${client.custom_guidelines_url}`);
+    if (sources.length > 0) {
+      clientCriteriaContext = `\n\nCLIENT-REQUIRED CRITERIA SOURCES: This client (${client.name}) requires reviews to reference: ${sources.join(', ')}. Prioritize these sources when citing guideline matches.`;
+      if (client.contracted_sla_hours) {
+        clientCriteriaContext += `\nClient SLA: ${client.contracted_sla_hours} hours turnaround.`;
+      }
     }
   }
 
@@ -64,7 +115,10 @@ SLA / TURNAROUND: ${caseData.sla_hours ? `${caseData.sla_hours} hours` : 'Not sp
 TURNAROUND DEADLINE: ${caseData.turnaround_deadline || 'Not specified'}
 
 SUBMITTED DOCUMENTATION: ${caseData.submitted_documents?.length || 0} documents attached
-${criteriaContext}
+${criteriaContext}${clientCriteriaContext}${(() => {
+    const twoMidnight = analyzeTwoMidnightRule(caseData);
+    return getTwoMidnightBriefContext(twoMidnight);
+  })()}${isMdReview ? '\n\nREVIEW LEVEL: SECOND-LEVEL PHYSICIAN ADVISOR REVIEW. Use evidence-based medicine and published clinical guidelines. Do NOT rely on commercial criteria products (InterQual/MCG) as the primary basis — cite peer-reviewed literature and specialty society guidelines instead.' : ''}
 
 ---
 

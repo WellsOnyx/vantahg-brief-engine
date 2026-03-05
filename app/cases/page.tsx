@@ -48,6 +48,10 @@ const serviceCategoryLabels: Record<ServiceCategory, string> = {
   pain_management: 'Pain Management',
   cardiology: 'Cardiology',
   oncology: 'Oncology',
+  ophthalmology: 'Ophthalmology',
+  workers_comp: 'Workers Comp',
+  emergency_medicine: 'Emergency Medicine',
+  internal_medicine: 'Internal Medicine',
   other: 'Other',
 };
 
@@ -66,6 +70,10 @@ const serviceCategoryColors: Record<ServiceCategory, string> = {
   pain_management: 'bg-orange-50 text-orange-700 border-orange-200',
   cardiology: 'bg-pink-50 text-pink-700 border-pink-200',
   oncology: 'bg-yellow-50 text-yellow-800 border-yellow-200',
+  ophthalmology: 'bg-sky-50 text-sky-700 border-sky-200',
+  workers_comp: 'bg-stone-50 text-stone-700 border-stone-200',
+  emergency_medicine: 'bg-red-50 text-red-800 border-red-300',
+  internal_medicine: 'bg-emerald-50 text-emerald-700 border-emerald-200',
   other: 'bg-gray-50 text-gray-700 border-gray-200',
 };
 
@@ -108,6 +116,10 @@ const allServiceCategories: ServiceCategory[] = [
   'pain_management',
   'cardiology',
   'oncology',
+  'ophthalmology',
+  'workers_comp',
+  'emergency_medicine',
+  'internal_medicine',
   'other',
 ];
 

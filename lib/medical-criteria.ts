@@ -283,6 +283,106 @@ export const medicalCriteria: Record<string, MedicalCriteria> = {
     ]
   },
 
+  // ── OPHTHALMOLOGY ─────────────────────────────────────────────────────────
+
+  "66984": {
+    name: "Cataract Surgery with IOL Insertion (Phacoemulsification)",
+    category: "ophthalmology",
+    typical_criteria: [
+      "Best-corrected visual acuity (BCVA) of 20/50 or worse in the affected eye",
+      "Visual impairment interferes with daily activities (driving, reading, work)",
+      "Glare testing demonstrating functional limitation",
+      "Cataract is the primary cause of visual impairment (not retinal or optic nerve disease)",
+      "Second eye surgery: first eye must be healed and stable"
+    ],
+    common_denial_reasons: [
+      "BCVA better than 20/50 without documented functional limitation",
+      "Visual impairment primarily from non-cataract etiology (AMD, diabetic retinopathy)",
+      "Refraction not optimized before considering surgery",
+      "Bilateral same-day surgery without clinical justification",
+      "Femtosecond laser-assisted without additional medical necessity beyond standard phaco"
+    ],
+    guideline_references: [
+      "AAO Preferred Practice Pattern - Cataract in the Adult Eye",
+      "CMS NCD for Cataract Surgery",
+      "InterQual Ophthalmology Procedures"
+    ]
+  },
+
+  "67028": {
+    name: "Intravitreal Injection (Anti-VEGF: Avastin, Lucentis, Eylea)",
+    category: "ophthalmology",
+    typical_criteria: [
+      "Diagnosed with wet age-related macular degeneration (AMD), diabetic macular edema (DME), or retinal vein occlusion (RVO)",
+      "OCT imaging confirming intraretinal/subretinal fluid",
+      "Visual acuity documented pre-injection",
+      "Treatment frequency consistent with approved labeling or published treat-and-extend protocols",
+      "Step therapy met (biosimilar trial where plan requires)"
+    ],
+    common_denial_reasons: [
+      "Exceeds recommended injection frequency without clinical justification",
+      "No recent OCT imaging documenting active disease",
+      "Dry AMD (non-exudative) — anti-VEGF not indicated",
+      "Biosimilar step therapy not completed when required by plan",
+      "No documented visual acuity baseline"
+    ],
+    guideline_references: [
+      "AAO Preferred Practice Pattern - AMD",
+      "ASRS Clinical Guidelines for Retinal Diseases",
+      "CMS LCD for Anti-VEGF Injections"
+    ]
+  },
+
+  // ── WORKERS' COMP COMMON PROCEDURES ──────────────────────────────────────
+
+  "65222": {
+    name: "Removal of Foreign Body, Corneal (Slit Lamp)",
+    category: "ophthalmology",
+    typical_criteria: [
+      "Documented corneal foreign body on slit lamp examination",
+      "Work-related injury mechanism documented (grinding, welding, construction, industrial)",
+      "Visual acuity documented pre and post removal",
+      "Tetanus status addressed if metallic foreign body",
+      "Follow-up plan documented (rust ring removal if needed)"
+    ],
+    common_denial_reasons: [
+      "No slit lamp examination documented",
+      "Foreign body location inconsistent with stated mechanism",
+      "Pre-existing corneal pathology not distinguished from acute injury",
+      "Billing for bilateral when only unilateral documented"
+    ],
+    guideline_references: [
+      "AAO Clinical Statement - Corneal Foreign Body",
+      "ACOEM Practice Guidelines - Eye Injuries",
+      "State Workers' Compensation Medical Fee Schedule"
+    ]
+  },
+
+  "99213": {
+    name: "Office Visit, Established Patient (Moderate Complexity) - Workers' Comp",
+    category: "workers_comp",
+    typical_criteria: [
+      "Work-related injury or illness documented with date of injury",
+      "Causal relationship between employment and condition established",
+      "Examination findings documented with objective measurements",
+      "Treatment plan with return-to-work timeline documented",
+      "Maximum Medical Improvement (MMI) assessment if applicable",
+      "Functional capacity addressed (work restrictions, modified duty)"
+    ],
+    common_denial_reasons: [
+      "Treatment unrelated to the work injury (pre-existing condition)",
+      "Exceeds state fee schedule for the CPT code",
+      "Treatment beyond maximum period allowed without extension approval",
+      "Missing employer/carrier authorization for visit",
+      "Impairment rating documentation insufficient"
+    ],
+    guideline_references: [
+      "ACOEM Occupational Medicine Practice Guidelines",
+      "ODG (Official Disability Guidelines)",
+      "State-specific Workers' Compensation Treatment Guidelines"
+    ]
+  },
+
   // ── REHAB THERAPY ──────────────────────────────────────────────────────────
 
   "97110": {
@@ -433,6 +533,29 @@ export const commonMedicalCodes: { code: string; description: string; category: 
 
   // Skilled nursing / home health
   { code: "99495", description: "Transitional Care Management (moderate complexity)", category: "skilled_nursing" },
+
+  // Ophthalmology codes
+  { code: "66984", description: "Cataract Surgery with IOL (Phacoemulsification)", category: "ophthalmology" },
+  { code: "67028", description: "Intravitreal Anti-VEGF Injection", category: "ophthalmology" },
+  { code: "65222", description: "Corneal Foreign Body Removal (Slit Lamp)", category: "ophthalmology" },
+  { code: "67210", description: "Retinal Laser Photocoagulation", category: "ophthalmology" },
+  { code: "92004", description: "Comprehensive Eye Exam (New Patient)", category: "ophthalmology" },
+
+  // Workers' Comp common codes
+  { code: "99213", description: "Office Visit - Moderate Complexity (Workers' Comp)", category: "workers_comp" },
+  { code: "99214", description: "Office Visit - Moderate-High Complexity (Workers' Comp)", category: "workers_comp" },
+  { code: "29125", description: "Short Arm Splint Application", category: "workers_comp" },
+  { code: "29515", description: "Short Leg Splint Application", category: "workers_comp" },
+
+  // Emergency Medicine codes
+  { code: "99285", description: "ED Visit - High Severity", category: "emergency_medicine" },
+  { code: "99284", description: "ED Visit - Moderate-High Severity", category: "emergency_medicine" },
+  { code: "99283", description: "ED Visit - Moderate Severity", category: "emergency_medicine" },
+
+  // Internal Medicine codes
+  { code: "99223", description: "Hospital Admission - High Complexity", category: "internal_medicine" },
+  { code: "99222", description: "Hospital Admission - Moderate Complexity", category: "internal_medicine" },
+  { code: "99232", description: "Subsequent Hospital Care - Moderate Complexity", category: "internal_medicine" },
 ];
 
 // ── Utility Functions ────────────────────────────────────────────────────────
@@ -470,6 +593,10 @@ export function getServiceCategories(): string[] {
     "pain_management",
     "cardiology",
     "oncology",
+    "ophthalmology",
+    "workers_comp",
+    "emergency_medicine",
+    "internal_medicine",
     "other",
   ];
 }
