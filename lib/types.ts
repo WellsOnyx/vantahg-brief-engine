@@ -1,4 +1,4 @@
-export type CaseStatus = 'intake' | 'processing' | 'brief_ready' | 'in_review' | 'determination_made' | 'delivered';
+export type CaseStatus = 'intake' | 'processing' | 'brief_ready' | 'lpn_review' | 'rn_review' | 'md_review' | 'pend_missing_info' | 'determination_made' | 'delivered';
 export type CasePriority = 'standard' | 'urgent' | 'expedited';
 export type ServiceCategory =
   | 'imaging'
@@ -18,6 +18,12 @@ export type ServiceCategory =
   | 'other';
 export type ReviewType = 'prior_auth' | 'medical_necessity' | 'concurrent' | 'retrospective' | 'peer_to_peer' | 'appeal' | 'second_level_review';
 export type Determination = 'approve' | 'deny' | 'partial_approve' | 'modify' | 'pend' | 'peer_to_peer_requested';
+export type StaffRole = 'lpn' | 'rn' | 'admin_staff';
+export type IntakeChannel = 'portal' | 'efax' | 'email' | 'phone' | 'api' | 'batch_upload';
+export type LpnDetermination = 'criteria_met' | 'criteria_not_met' | 'unclear' | 'escalate_to_rn';
+export type RnDetermination = 'approve' | 'escalate_to_md';
+export type AppealStatus = 'pending' | 'in_review' | 'determined' | 'withdrawn';
+export type PeerToPeerStatus = 'requested' | 'scheduled' | 'completed' | 'declined' | 'no_response';
 export type ReviewerStatus = 'active' | 'inactive' | 'pending' | 'credentialing';
 export type ClientType = 'tpa' | 'health_plan' | 'self_funded_employer' | 'managed_care_org' | 'workers_comp' | 'auto_med';
 export type FacilityType = 'inpatient' | 'outpatient' | 'asc' | 'office' | 'home';
@@ -98,6 +104,41 @@ export interface Case {
 
   // Client
   client_id: string | null;
+
+  // Pod & nursing tier assignment
+  assigned_pod_id: string | null;
+  assigned_lpn_id: string | null;
+  assigned_rn_id: string | null;
+
+  // LPN review
+  lpn_review_notes: string | null;
+  lpn_review_at: string | null;
+  lpn_determination: LpnDetermination | null;
+
+  // RN review
+  rn_review_notes: string | null;
+  rn_review_at: string | null;
+  rn_determination: RnDetermination | null;
+
+  // SLA pause/resume
+  sla_paused_at: string | null;
+  sla_resumed_at: string | null;
+  sla_pause_total_hours: number;
+
+  // Intake tracking
+  intake_channel: IntakeChannel | null;
+  intake_confirmation_sent: boolean;
+  authorization_number: string | null;
+
+  // Peer-to-peer
+  peer_to_peer_status: PeerToPeerStatus | null;
+  peer_to_peer_scheduled_at: string | null;
+  peer_to_peer_completed_at: string | null;
+  peer_to_peer_notes: string | null;
+
+  // Appeal link
+  appeal_of_case_id: string | null;
+  appeal_status: AppealStatus | null;
 
   // Joined fields
   reviewer?: Reviewer;
@@ -228,6 +269,108 @@ export interface FactCheckResult {
   checked_at: string;
 }
 
+// ── Staff & Pod Types ────────────────────────────────────────────────────────
+
+export interface Staff {
+  id: string;
+  created_at: string;
+  name: string;
+  role: StaffRole;
+  email: string | null;
+  phone: string | null;
+  license_number: string | null;
+  license_state: string | null;
+  certifications: string[];
+  max_cases_per_day: number | null;
+  avg_turnaround_hours: number | null;
+  status: 'active' | 'inactive' | 'on_leave';
+  cases_completed: number;
+  quality_score: number | null; // 0-100, from QA audits
+}
+
+export interface Pod {
+  id: string;
+  created_at: string;
+  name: string;
+  description: string | null;
+  service_categories: ServiceCategory[];
+  client_ids: string[]; // clients assigned to this pod
+  lpn_ids: string[];
+  rn_id: string | null; // supervising RN
+  admin_staff_id: string | null;
+  is_active: boolean;
+  capacity_per_day: number | null;
+}
+
+export interface QualityAudit {
+  id: string;
+  created_at: string;
+  case_id: string;
+  auditor_id: string; // RN who performed the audit
+  audited_staff_id: string; // LPN whose work was audited
+  criteria_accuracy: number; // 0-100
+  documentation_quality: number; // 0-100
+  sla_compliance: boolean;
+  determination_appropriate: boolean;
+  notes: string | null;
+  overall_score: number; // 0-100
+  status: 'pending' | 'completed';
+}
+
+export interface MissingInfoRequest {
+  id: string;
+  created_at: string;
+  case_id: string;
+  requested_by: string; // staff ID
+  requested_items: string[];
+  sent_to: string | null; // provider contact
+  sent_via: 'efax' | 'email' | 'portal' | 'phone';
+  received_at: string | null;
+  received_items: string[];
+  status: 'pending' | 'received' | 'expired';
+  deadline: string | null;
+}
+
+export interface DeterminationTemplate {
+  id: string;
+  created_at: string;
+  client_id: string | null; // null = default template
+  template_type: 'approval' | 'denial' | 'partial_approval' | 'pend' | 'modification';
+  name: string;
+  body_template: string; // Handlebars-style template
+  appeal_instructions: string | null;
+  is_active: boolean;
+}
+
+export interface Appeal {
+  id: string;
+  created_at: string;
+  original_case_id: string;
+  appeal_case_id: string; // new case created for the appeal
+  reason: string;
+  filed_by: string | null;
+  filed_at: string;
+  status: AppealStatus;
+  original_denying_reviewer_id: string | null;
+  assigned_reviewer_id: string | null; // must be different from original
+  determination: Determination | null;
+  determination_at: string | null;
+  determination_rationale: string | null;
+}
+
+export interface PeerToPeerRecord {
+  id: string;
+  created_at: string;
+  case_id: string;
+  requesting_provider: string | null;
+  reviewing_physician_id: string | null;
+  scheduled_at: string | null;
+  completed_at: string | null;
+  outcome: 'upheld' | 'overturned' | 'modified' | null;
+  notes: string | null;
+  status: PeerToPeerStatus;
+}
+
 // ── Re-export Chat Types ────────────────────────────────────────────────────
 export type { ChatMessage, ChatMode, StreamChunk, ChatRequest } from './chat/types';
 
@@ -253,6 +396,7 @@ export interface CaseFormData {
   payer_name: string;
   plan_type: string;
   client_id: string;
+  intake_channel?: IntakeChannel;
   /** @deprecated Use service_category instead. Kept for backward compatibility. */
   vertical?: CaseVertical;
 }

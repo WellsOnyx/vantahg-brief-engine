@@ -22,7 +22,7 @@ export async function checkAndEscalateSlaBreach(): Promise<EscalationResult> {
   if (isDemoMode()) {
     const cases = getDemoCases();
     const activeCases = cases.filter(
-      (c) => ['brief_ready', 'in_review'].includes(c.status) && c.turnaround_deadline
+      (c) => ['brief_ready', 'lpn_review', 'rn_review', 'md_review'].includes(c.status) && c.turnaround_deadline
     );
     result.checked = activeCases.length;
 
@@ -43,7 +43,7 @@ export async function checkAndEscalateSlaBreach(): Promise<EscalationResult> {
   const { data: cases, error } = await supabase
     .from('cases')
     .select('id, case_number, turnaround_deadline, status, assigned_reviewer_id')
-    .in('status', ['brief_ready', 'in_review'])
+    .in('status', ['brief_ready', 'lpn_review', 'rn_review', 'md_review'])
     .not('turnaround_deadline', 'is', null);
 
   if (error || !cases) {

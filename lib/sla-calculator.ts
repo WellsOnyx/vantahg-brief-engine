@@ -201,3 +201,78 @@ export function getDefaultSlaHours(
   }
   return 120; // fallback
 }
+
+// ============================================================================
+// URAC SLA Defaults (per Santana's whiteboard)
+// ============================================================================
+
+/**
+ * URAC-compliant SLA defaults per Santana:
+ * - Standard: 15 calendar days (360 hours)
+ * - Urgent: 72 hours
+ * These are the regulatory maximums. Client contracts may be shorter.
+ */
+export const URAC_SLA_DEFAULTS: Record<CasePriority, number> = {
+  standard: 360, // 15 calendar days
+  urgent: 72,
+  expedited: 168, // 7 calendar days
+};
+
+// ============================================================================
+// SLA Pause/Resume (clock stops when missing info requested)
+// ============================================================================
+
+/**
+ * Calculate the effective deadline accounting for SLA clock pauses.
+ * Per Santana: "If we're missing info, we pend the case and stop the clock.
+ * Once we get the info back, the clock starts again."
+ *
+ * @param originalDeadline - The original calculated deadline
+ * @param totalPauseHours - Total hours the clock has been paused
+ * @returns New deadline shifted forward by pause hours
+ */
+export function calculateEffectiveDeadline(
+  originalDeadline: string | Date,
+  totalPauseHours: number,
+): Date {
+  const deadline = new Date(originalDeadline);
+  if (totalPauseHours <= 0) return deadline;
+
+  return new Date(deadline.getTime() + totalPauseHours * 60 * 60 * 1000);
+}
+
+/**
+ * Calculate the duration of a pause in hours.
+ * @param pausedAt - When the clock was paused (ISO string)
+ * @param resumedAt - When the clock was resumed (ISO string, or null if still paused)
+ */
+export function calculatePauseDuration(
+  pausedAt: string | Date,
+  resumedAt?: string | Date | null,
+): number {
+  const start = new Date(pausedAt);
+  const end = resumedAt ? new Date(resumedAt) : new Date();
+  return Math.max(0, (end.getTime() - start.getTime()) / (1000 * 60 * 60));
+}
+
+/**
+ * Get time remaining with pause adjustment.
+ * Combines the original getTimeRemaining with pause-adjusted deadline.
+ */
+export function getEffectiveTimeRemaining(
+  deadline: string | Date,
+  totalPauseHours: number,
+  isPaused: boolean,
+): TimeRemaining & { isPaused: boolean; effectiveDeadline: Date } {
+  const effectiveDeadline = calculateEffectiveDeadline(deadline, totalPauseHours);
+  const base = getTimeRemaining(effectiveDeadline);
+
+  return {
+    ...base,
+    // If paused, override urgency — clock is stopped, no urgency
+    urgencyLevel: isPaused ? 'ok' : base.urgencyLevel,
+    isAtRisk: isPaused ? false : base.isAtRisk,
+    isPaused,
+    effectiveDeadline,
+  };
+}

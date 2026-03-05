@@ -102,7 +102,7 @@ export async function autoAssignReviewer(caseId: string): Promise<AssignmentResu
     .from('cases')
     .update({
       assigned_reviewer_id: selected.id,
-      status: 'in_review',
+      status: 'md_review',
     })
     .eq('id', caseId);
 

@@ -15,7 +15,10 @@ const allStatuses: CaseStatus[] = [
   'intake',
   'processing',
   'brief_ready',
-  'in_review',
+  'lpn_review',
+  'rn_review',
+  'md_review',
+  'pend_missing_info',
   'determination_made',
   'delivered',
 ];
@@ -33,7 +36,10 @@ const statusLabels: Record<CaseStatus, string> = {
   intake: 'Intake',
   processing: 'Processing',
   brief_ready: 'Brief Ready',
-  in_review: 'In Review',
+  lpn_review: 'LPN Review',
+  rn_review: 'RN Review',
+  md_review: 'MD Review',
+  pend_missing_info: 'Pending Info',
   determination_made: 'Determination Made',
   delivered: 'Delivered',
 };

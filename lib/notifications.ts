@@ -12,7 +12,16 @@ export type NotificationType =
   | 'sla_warning'
   | 'sla_critical'
   | 'sla_overdue'
-  | 'case_delivered';
+  | 'case_delivered'
+  | 'lpn_case_assigned'
+  | 'escalated_to_rn'
+  | 'escalated_to_md'
+  | 'missing_info_requested'
+  | 'missing_info_received'
+  | 'p2p_scheduled'
+  | 'appeal_created'
+  | 'intake_confirmation'
+  | 'quality_audit_assigned';
 
 export interface NotificationPayload {
   type: NotificationType;
@@ -281,4 +290,134 @@ export async function deliverToClient(caseId: string): Promise<boolean> {
     console.error(`Failed to deliver case ${caseId}:`, err);
     return false;
   }
+}
+
+// ============================================================================
+// Nursing Tier Notification Helpers
+// ============================================================================
+
+/**
+ * Notify an LPN that a case has been assigned to their pod.
+ */
+export async function notifyLpnCaseAssigned(
+  caseId: string,
+  lpnId: string,
+  caseNumber: string,
+  podName: string,
+): Promise<void> {
+  if (isDemoMode()) {
+    console.log(`[NOTIFICATION] lpn_case_assigned | Case: ${caseNumber} → LPN: ${lpnId} (Pod: ${podName})`);
+    return;
+  }
+
+  const supabase = getServiceClient();
+  const { data: staff } = await supabase
+    .from('staff')
+    .select('name, email, phone')
+    .eq('id', lpnId)
+    .single();
+
+  if (!staff) return;
+
+  const baseUrl = process.env.NEXTAUTH_URL || process.env.VERCEL_URL || 'http://localhost:3000';
+
+  await sendNotification({
+    type: 'lpn_case_assigned',
+    recipient_email: staff.email,
+    recipient_phone: staff.phone,
+    recipient_name: staff.name,
+    case_number: caseNumber,
+    case_id: caseId,
+    subject: `New case assigned: ${caseNumber}`,
+    body: `Case ${caseNumber} has been assigned to you in ${podName}. Please review the AI clinical brief and submit your criteria assessment at ${baseUrl}/cases/${caseId}`,
+  });
+}
+
+/**
+ * Notify that a case has been escalated to RN review.
+ */
+export async function notifyEscalatedToRn(
+  caseId: string,
+  rnId: string,
+  caseNumber: string,
+): Promise<void> {
+  if (isDemoMode()) {
+    console.log(`[NOTIFICATION] escalated_to_rn | Case: ${caseNumber} → RN: ${rnId}`);
+    return;
+  }
+
+  const supabase = getServiceClient();
+  const { data: staff } = await supabase
+    .from('staff')
+    .select('name, email, phone')
+    .eq('id', rnId)
+    .single();
+
+  if (!staff) return;
+
+  const baseUrl = process.env.NEXTAUTH_URL || process.env.VERCEL_URL || 'http://localhost:3000';
+
+  await sendNotification({
+    type: 'escalated_to_rn',
+    recipient_email: staff.email,
+    recipient_phone: staff.phone,
+    recipient_name: staff.name,
+    case_number: caseNumber,
+    case_id: caseId,
+    subject: `Case escalated for RN review: ${caseNumber}`,
+    body: `Case ${caseNumber} has been escalated from LPN review and requires your assessment. Review at ${baseUrl}/cases/${caseId}`,
+  });
+}
+
+/**
+ * Notify that a case has been escalated to physician (MD) review.
+ */
+export async function notifyEscalatedToMd(
+  caseId: string,
+  caseNumber: string,
+): Promise<void> {
+  if (isDemoMode()) {
+    console.log(`[NOTIFICATION] escalated_to_md | Case: ${caseNumber}`);
+    return;
+  }
+
+  const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL;
+  if (adminEmail) {
+    const baseUrl = process.env.NEXTAUTH_URL || process.env.VERCEL_URL || 'http://localhost:3000';
+    await sendNotification({
+      type: 'escalated_to_md',
+      recipient_email: adminEmail,
+      case_number: caseNumber,
+      case_id: caseId,
+      subject: `Case escalated to MD review: ${caseNumber}`,
+      body: `Case ${caseNumber} has been escalated from nursing review to physician review. A reviewer will be auto-assigned. Track at ${baseUrl}/cases/${caseId}`,
+    });
+  }
+}
+
+/**
+ * Send intake confirmation to the requesting provider.
+ * Per Santana: "We auto-confirm receipt so the provider knows we got it."
+ */
+export async function notifyIntakeConfirmation(
+  caseId: string,
+  caseNumber: string,
+  authorizationNumber: string,
+  providerName: string,
+): Promise<void> {
+  if (isDemoMode()) {
+    console.log(`[NOTIFICATION] intake_confirmation | Case: ${caseNumber} | Auth#: ${authorizationNumber} → ${providerName}`);
+    return;
+  }
+
+  const baseUrl = process.env.NEXTAUTH_URL || process.env.VERCEL_URL || 'http://localhost:3000';
+
+  await sendNotification({
+    type: 'intake_confirmation',
+    recipient_name: providerName,
+    case_number: caseNumber,
+    case_id: caseId,
+    subject: `Authorization Request Received: ${authorizationNumber}`,
+    body: `This confirms receipt of your authorization request.\n\nAuthorization Number: ${authorizationNumber}\nCase Reference: ${caseNumber}\n\nYour request is being processed. You may check the status at ${baseUrl}/portal\n\nIf you have questions, contact us at (602) 555-0100.`,
+  });
 }

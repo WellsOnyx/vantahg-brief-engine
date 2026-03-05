@@ -72,8 +72,8 @@ export default function CommandCenterPage() {
   const casesToday = cases.filter(
     (c) => new Date(c.created_at).toDateString() === new Date().toDateString()
   ).length;
-  const briefsReady = cases.filter((c) => c.status === 'brief_ready' || c.status === 'in_review').length;
-  const pendingReview = cases.filter((c) => c.status === 'in_review').length;
+  const briefsReady = cases.filter((c) => c.status === 'brief_ready' || c.status === 'lpn_review' || c.status === 'rn_review' || c.status === 'md_review').length;
+  const pendingReview = cases.filter((c) => c.status === 'lpn_review' || c.status === 'rn_review' || c.status === 'md_review').length;
   const slaAlerts = cases.filter((c) => {
     if (!c.turnaround_deadline) return false;
     const deadline = new Date(c.turnaround_deadline);

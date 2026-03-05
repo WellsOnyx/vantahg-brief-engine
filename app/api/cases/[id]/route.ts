@@ -73,9 +73,9 @@ export async function PATCH(
       updates.determination_at = new Date().toISOString();
     }
 
-    // When a reviewer is assigned, move status to in_review
+    // When a reviewer is assigned, move status to md_review
     if (body.assigned_reviewer_id) {
-      updates.status = 'in_review';
+      updates.status = 'md_review';
     }
 
     const { data, error } = await supabase

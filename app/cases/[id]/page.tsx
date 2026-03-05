@@ -100,7 +100,7 @@ export default function CaseDetailPage() {
       await fetch(`/api/cases/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ assigned_reviewer_id: reviewerId, status: 'in_review' }),
+        body: JSON.stringify({ assigned_reviewer_id: reviewerId, status: 'md_review' }),
       });
       await fetchCase();
       await fetchAudit();
@@ -472,6 +472,133 @@ export default function CaseDetailPage() {
               </div>
             </dl>
           </div>
+
+          {/* Nursing Review Pipeline */}
+          {(caseData.assigned_pod_id || caseData.assigned_lpn_id || caseData.assigned_rn_id || caseData.lpn_determination || caseData.rn_determination) && (
+            <div className="bg-surface rounded-lg border border-border p-5">
+              <h3 className="font-semibold text-sm text-muted uppercase tracking-wide mb-3">Nursing Review Pipeline</h3>
+
+              {/* Authorization Number */}
+              {caseData.authorization_number && (
+                <div className="mb-3 pb-3 border-b border-border">
+                  <dt className="text-xs text-muted uppercase tracking-wide">Auth Number</dt>
+                  <dd className="font-mono text-sm font-medium text-navy">{caseData.authorization_number}</dd>
+                </div>
+              )}
+
+              {/* Pod Assignment */}
+              {caseData.assigned_pod_id && (
+                <div className="mb-3 pb-3 border-b border-border text-sm">
+                  <dt className="text-muted text-xs uppercase tracking-wide mb-1">Assigned Pod</dt>
+                  <dd className="font-medium">{caseData.assigned_pod_id.slice(0, 8)}</dd>
+                </div>
+              )}
+
+              {/* Pipeline steps */}
+              <div className="space-y-3">
+                {/* LPN Review */}
+                <div className={`rounded-lg p-3 ${caseData.lpn_determination ? 'bg-teal-50 border border-teal-200' : caseData.status === 'lpn_review' ? 'bg-teal-50/50 border border-teal-100' : 'bg-gray-50 border border-border'}`}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-semibold text-teal-700 uppercase tracking-wider">LPN Review</span>
+                    {caseData.lpn_determination && (
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                        caseData.lpn_determination === 'criteria_met' ? 'bg-green-100 text-green-700' :
+                        caseData.lpn_determination === 'criteria_not_met' ? 'bg-red-100 text-red-700' :
+                        'bg-yellow-100 text-yellow-700'
+                      }`}>
+                        {caseData.lpn_determination.replace(/_/g, ' ')}
+                      </span>
+                    )}
+                  </div>
+                  {caseData.lpn_review_notes && <p className="text-xs text-gray-700 mt-1">{caseData.lpn_review_notes}</p>}
+                  {caseData.lpn_review_at && <p className="text-xs text-muted mt-1">{new Date(caseData.lpn_review_at).toLocaleString()}</p>}
+                  {!caseData.lpn_determination && caseData.status !== 'lpn_review' && <p className="text-xs text-muted italic">Pending</p>}
+                </div>
+
+                {/* RN Review */}
+                <div className={`rounded-lg p-3 ${caseData.rn_determination ? 'bg-blue-50 border border-blue-200' : caseData.status === 'rn_review' ? 'bg-blue-50/50 border border-blue-100' : 'bg-gray-50 border border-border'}`}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-semibold text-blue-700 uppercase tracking-wider">RN Review</span>
+                    {caseData.rn_determination && (
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                        caseData.rn_determination === 'approve' ? 'bg-green-100 text-green-700' : 'bg-purple-100 text-purple-700'
+                      }`}>
+                        {caseData.rn_determination === 'approve' ? 'Approved' : 'Escalated to MD'}
+                      </span>
+                    )}
+                  </div>
+                  {caseData.rn_review_notes && <p className="text-xs text-gray-700 mt-1">{caseData.rn_review_notes}</p>}
+                  {caseData.rn_review_at && <p className="text-xs text-muted mt-1">{new Date(caseData.rn_review_at).toLocaleString()}</p>}
+                  {!caseData.rn_determination && caseData.status !== 'rn_review' && <p className="text-xs text-muted italic">Pending</p>}
+                </div>
+
+                {/* MD Review (only if escalated) */}
+                {(caseData.status === 'md_review' || caseData.rn_determination === 'escalate_to_md' || caseData.assigned_reviewer_id) && (
+                  <div className={`rounded-lg p-3 ${caseData.determination ? 'bg-purple-50 border border-purple-200' : caseData.status === 'md_review' ? 'bg-purple-50/50 border border-purple-100' : 'bg-gray-50 border border-border'}`}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-semibold text-purple-700 uppercase tracking-wider">MD Review</span>
+                      {caseData.determination && (
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                          caseData.determination === 'approve' ? 'bg-green-100 text-green-700' :
+                          caseData.determination === 'deny' ? 'bg-red-100 text-red-700' :
+                          'bg-yellow-100 text-yellow-700'
+                        }`}>
+                          {caseData.determination.replace(/_/g, ' ')}
+                        </span>
+                      )}
+                    </div>
+                    {caseData.determination_at && <p className="text-xs text-muted mt-1">{new Date(caseData.determination_at).toLocaleString()}</p>}
+                    {!caseData.determination && caseData.status !== 'md_review' && <p className="text-xs text-muted italic">Pending</p>}
+                  </div>
+                )}
+              </div>
+
+              {/* SLA Pause Banner */}
+              {caseData.status === 'pend_missing_info' && (
+                <div className="mt-3 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                  <div className="flex items-center gap-2">
+                    <svg className="w-4 h-4 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                    </svg>
+                    <span className="text-xs font-semibold text-amber-800">SLA Clock Paused</span>
+                  </div>
+                  <p className="text-xs text-amber-700 mt-1">Waiting for missing information from provider. Clock paused{caseData.sla_paused_at ? ` since ${new Date(caseData.sla_paused_at).toLocaleString()}` : ''}.</p>
+                  {caseData.sla_pause_total_hours > 0 && (
+                    <p className="text-xs text-amber-600 mt-0.5">Total pause time: {caseData.sla_pause_total_hours.toFixed(1)}h</p>
+                  )}
+                </div>
+              )}
+
+              {/* P2P Status */}
+              {caseData.peer_to_peer_status && (
+                <div className="mt-3 bg-purple-50 border border-purple-200 rounded-lg p-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-purple-700 uppercase tracking-wider">Peer-to-Peer</span>
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full capitalize ${
+                      caseData.peer_to_peer_status === 'completed' ? 'bg-green-100 text-green-700' :
+                      caseData.peer_to_peer_status === 'scheduled' ? 'bg-blue-100 text-blue-700' :
+                      caseData.peer_to_peer_status === 'declined' || caseData.peer_to_peer_status === 'no_response' ? 'bg-red-100 text-red-700' :
+                      'bg-yellow-100 text-yellow-700'
+                    }`}>
+                      {caseData.peer_to_peer_status.replace(/_/g, ' ')}
+                    </span>
+                  </div>
+                  {caseData.peer_to_peer_scheduled_at && (
+                    <p className="text-xs text-purple-600 mt-1">Scheduled: {new Date(caseData.peer_to_peer_scheduled_at).toLocaleString()}</p>
+                  )}
+                </div>
+              )}
+
+              {/* Intake Channel */}
+              {caseData.intake_channel && (
+                <div className="mt-3 text-xs text-muted flex items-center gap-2">
+                  <span>Intake:</span>
+                  <span className="bg-gray-100 px-2 py-0.5 rounded text-xs font-medium capitalize">{caseData.intake_channel.replace(/_/g, ' ')}</span>
+                  {caseData.intake_confirmation_sent && <span className="text-green-600 text-[10px]">(confirmed)</span>}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Procedure Info */}
           <div className="bg-surface rounded-lg border border-border p-5">

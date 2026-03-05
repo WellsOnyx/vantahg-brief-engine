@@ -368,7 +368,10 @@ textarea:focus {
 .status-intake { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
 .status-processing { background: #fefce8; color: #854d0e; border: 1px solid #fde68a; }
 .status-brief_ready { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
-.status-in_review { background: #faf5ff; color: #6b21a8; border: 1px solid #e9d5ff; }
+.status-lpn_review { background: #f0fdfa; color: #0f766e; border: 1px solid #99f6e4; }
+.status-rn_review { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+.status-md_review { background: #faf5ff; color: #6b21a8; border: 1px solid #e9d5ff; }
+.status-pend_missing_info { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
 .status-determination_made { background: #ecfeff; color: #155e75; border: 1px solid #a5f3fc; }
 .status-delivered { background: #f0fdf4; color: #14532d; border: 1px solid #86efac; }
 

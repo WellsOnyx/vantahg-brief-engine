@@ -4,6 +4,8 @@ import { logAuditEvent } from '@/lib/audit';
 import { generateBriefForCase } from '@/lib/generate-brief';
 import { autoAssignReviewer } from '@/lib/assignment-engine';
 import { notifyCaseAssigned } from '@/lib/notifications';
+import { assignToPod } from '@/lib/pod-assignment-engine';
+import { notifyLpnCaseAssigned, notifyIntakeConfirmation } from '@/lib/notifications';
 import { isDemoMode, getDemoCases } from '@/lib/demo-mode';
 import { requireAuth } from '@/lib/auth-guard';
 import { applyRateLimit } from '@/lib/rate-limit-middleware';
@@ -137,10 +139,16 @@ export async function POST(request: NextRequest) {
     const nextNumber = ((count ?? 0) + 1).toString().padStart(4, '0');
     const caseNumber = `${prefix}-${nextNumber}`;
 
+    // Generate authorization number
+    const authNumber = `AUTH-${new Date().getFullYear()}-${nextNumber}`;
+
     const caseData = {
       ...body,
       case_number: caseNumber,
       status: body.status || 'intake',
+      authorization_number: authNumber,
+      intake_channel: body.intake_channel || 'portal',
+      intake_confirmation_sent: false,
     };
 
     const { data, error } = await supabase
@@ -160,6 +168,13 @@ export async function POST(request: NextRequest) {
       vertical: body.vertical,
     });
 
+    // Send intake confirmation to provider
+    if (body.requesting_provider) {
+      notifyIntakeConfirmation(data.id, caseNumber, authNumber, body.requesting_provider).catch(console.error);
+      // Mark confirmation sent
+      supabase.from('cases').update({ intake_confirmation_sent: true }).eq('id', data.id).then(() => {});
+    }
+
     // Trigger brief generation in the background (non-blocking)
     generateBriefForCase(data).then(async (brief) => {
       if (brief) {
@@ -176,10 +191,16 @@ export async function POST(request: NextRequest) {
           generated_automatically: true,
         });
 
-        // Auto-assign a reviewer now that the brief is ready
-        const assignment = await autoAssignReviewer(data.id);
-        if (assignment.assigned && assignment.reviewerId) {
-          notifyCaseAssigned(data.id, assignment.reviewerId).catch(console.error);
+        // Assign to pod (LPN → RN → MD nursing tier workflow)
+        const podResult = await assignToPod(data.id);
+        if (podResult.assigned && podResult.lpnId && podResult.podName) {
+          notifyLpnCaseAssigned(data.id, podResult.lpnId, caseNumber, podResult.podName).catch(console.error);
+        } else {
+          // Fallback: if no pod available, assign directly to physician
+          const assignment = await autoAssignReviewer(data.id);
+          if (assignment.assigned && assignment.reviewerId) {
+            notifyCaseAssigned(data.id, assignment.reviewerId).catch(console.error);
+          }
         }
       }
     }).catch((err) => {

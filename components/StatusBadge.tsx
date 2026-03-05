@@ -6,7 +6,10 @@ const statusConfig: Record<CaseStatus, { label: string; icon: string }> = {
   intake: { label: 'Intake', icon: '\u25CF' },
   processing: { label: 'Processing', icon: '\u231B' },
   brief_ready: { label: 'Brief Ready', icon: '\u2713' },
-  in_review: { label: 'In Review', icon: '\u25CF' },
+  lpn_review: { label: 'LPN Review', icon: '\u25CF' },
+  rn_review: { label: 'RN Review', icon: '\u25CF' },
+  md_review: { label: 'MD Review', icon: '\u25CF' },
+  pend_missing_info: { label: 'Pending Info', icon: '\u25CF' },
   determination_made: { label: 'Determination Made', icon: '\u2713' },
   delivered: { label: 'Delivered', icon: '\u2713' },
 };

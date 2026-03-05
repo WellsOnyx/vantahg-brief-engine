@@ -1,4 +1,4 @@
-import type { Case, Reviewer, Client, AuditLogEntry, AIBrief } from './types';
+import type { Case, Reviewer, Client, AuditLogEntry, AIBrief, Staff, Pod, QualityAudit, MissingInfoRequest, DeterminationTemplate, PeerToPeerRecord } from './types';
 
 // ============================================================================
 // DEMO IDs - Stable UUIDs for cross-referencing
@@ -23,6 +23,20 @@ export const DEMO_CASE_IDS = {
   cpap: 'case-004-cpap-e0601',
   psychotherapy: 'case-005-psychotherapy-90837',
   epiduralInjection: 'case-006-esi-64483',
+} as const;
+
+export const DEMO_STAFF_IDS = {
+  martinezLpn: 'staff-001-rosa-martinez-lpn',
+  jonesLpn: 'staff-002-tamika-jones-lpn',
+  nguyenLpn: 'staff-003-david-nguyen-lpn',
+  carterRn: 'staff-004-michelle-carter-rn',
+  brownRn: 'staff-005-patricia-brown-rn',
+  lopezAdmin: 'staff-006-carlos-lopez-admin',
+} as const;
+
+export const DEMO_POD_IDS = {
+  alphaGeneral: 'pod-001-alpha-general',
+  betaBehavioral: 'pod-002-beta-behavioral',
 } as const;
 
 // ============================================================================
@@ -160,6 +174,270 @@ export const demoClients: Client[] = [
     custom_guidelines_url: null,
     contracted_sla_hours: 24,
     contracted_rate_per_case: 110.00,
+  },
+];
+
+// ============================================================================
+// STAFF (LPNs, RNs, Admin — the nursing tier that handles 90% of cases)
+// ============================================================================
+
+export const demoStaff: Staff[] = [
+  {
+    id: DEMO_STAFF_IDS.martinezLpn,
+    created_at: '2025-06-01T08:00:00.000Z',
+    name: 'Rosa Martinez, LPN',
+    role: 'lpn',
+    email: 'r.martinez@vantahg.com',
+    phone: '(602) 555-0301',
+    license_number: 'LPN-AZ-44892',
+    license_state: 'AZ',
+    certifications: ['Licensed Practical Nurse', 'BLS'],
+    max_cases_per_day: 15,
+    avg_turnaround_hours: 1.2,
+    status: 'active',
+    cases_completed: 892,
+    quality_score: 94,
+  },
+  {
+    id: DEMO_STAFF_IDS.jonesLpn,
+    created_at: '2025-07-15T08:00:00.000Z',
+    name: 'Tamika Jones, LPN',
+    role: 'lpn',
+    email: 't.jones@vantahg.com',
+    phone: '(480) 555-0312',
+    license_number: 'LPN-AZ-51203',
+    license_state: 'AZ',
+    certifications: ['Licensed Practical Nurse', 'BLS', 'InterQual Certified'],
+    max_cases_per_day: 18,
+    avg_turnaround_hours: 0.9,
+    status: 'active',
+    cases_completed: 1105,
+    quality_score: 97,
+  },
+  {
+    id: DEMO_STAFF_IDS.nguyenLpn,
+    created_at: '2025-09-01T08:00:00.000Z',
+    name: 'David Nguyen, LPN',
+    role: 'lpn',
+    email: 'd.nguyen@vantahg.com',
+    phone: '(520) 555-0323',
+    license_number: 'LPN-AZ-58341',
+    license_state: 'AZ',
+    certifications: ['Licensed Practical Nurse', 'BLS'],
+    max_cases_per_day: 12,
+    avg_turnaround_hours: 1.5,
+    status: 'active',
+    cases_completed: 421,
+    quality_score: 88,
+  },
+  {
+    id: DEMO_STAFF_IDS.carterRn,
+    created_at: '2025-05-15T08:00:00.000Z',
+    name: 'Michelle Carter, RN, BSN',
+    role: 'rn',
+    email: 'm.carter@vantahg.com',
+    phone: '(602) 555-0334',
+    license_number: 'RN-AZ-33201',
+    license_state: 'AZ',
+    certifications: ['Registered Nurse', 'BSN', 'CCM', 'URAC UM Certified'],
+    max_cases_per_day: null,
+    avg_turnaround_hours: 2.0,
+    status: 'active',
+    cases_completed: 2341,
+    quality_score: 98,
+  },
+  {
+    id: DEMO_STAFF_IDS.brownRn,
+    created_at: '2025-08-01T08:00:00.000Z',
+    name: 'Patricia Brown, RN',
+    role: 'rn',
+    email: 'p.brown@vantahg.com',
+    phone: '(480) 555-0345',
+    license_number: 'RN-AZ-37892',
+    license_state: 'AZ',
+    certifications: ['Registered Nurse', 'BSN', 'InterQual Certified'],
+    max_cases_per_day: null,
+    avg_turnaround_hours: 2.3,
+    status: 'active',
+    cases_completed: 1567,
+    quality_score: 95,
+  },
+  {
+    id: DEMO_STAFF_IDS.lopezAdmin,
+    created_at: '2025-06-15T08:00:00.000Z',
+    name: 'Carlos Lopez',
+    role: 'admin_staff',
+    email: 'c.lopez@vantahg.com',
+    phone: '(602) 555-0356',
+    license_number: null,
+    license_state: null,
+    certifications: ['HIPAA Certified', 'Medical Terminology'],
+    max_cases_per_day: null,
+    avg_turnaround_hours: null,
+    status: 'active',
+    cases_completed: 0,
+    quality_score: null,
+  },
+];
+
+// ============================================================================
+// PODS (operational units: LPNs + supervising RN + admin)
+// ============================================================================
+
+export const demoPods: Pod[] = [
+  {
+    id: DEMO_POD_IDS.alphaGeneral,
+    created_at: '2025-06-01T08:00:00.000Z',
+    name: 'Alpha Pod — General Medical',
+    description: 'Handles imaging, surgery, DME, pain management, infusion, and other general medical UR cases',
+    service_categories: ['imaging', 'surgery', 'dme', 'infusion', 'pain_management', 'cardiology', 'oncology', 'other'],
+    client_ids: ['cli-001-southwest-administrators', 'cli-003-western-employers-trust'],
+    lpn_ids: [DEMO_STAFF_IDS.martinezLpn, DEMO_STAFF_IDS.jonesLpn],
+    rn_id: DEMO_STAFF_IDS.carterRn,
+    admin_staff_id: DEMO_STAFF_IDS.lopezAdmin,
+    is_active: true,
+    capacity_per_day: 30,
+  },
+  {
+    id: DEMO_POD_IDS.betaBehavioral,
+    created_at: '2025-08-01T08:00:00.000Z',
+    name: 'Beta Pod — Behavioral Health & Specialty',
+    description: 'Handles behavioral health, rehab therapy, home health, skilled nursing, and specialty referrals',
+    service_categories: ['behavioral_health', 'rehab_therapy', 'home_health', 'skilled_nursing', 'specialty_referral', 'transplant', 'genetic_testing'],
+    client_ids: ['cli-002-pinnacle-health-plan'],
+    lpn_ids: [DEMO_STAFF_IDS.nguyenLpn],
+    rn_id: DEMO_STAFF_IDS.brownRn,
+    admin_staff_id: DEMO_STAFF_IDS.lopezAdmin,
+    is_active: true,
+    capacity_per_day: 15,
+  },
+];
+
+// ============================================================================
+// QUALITY AUDITS (RN reviews random sample of LPN work for URAC compliance)
+// ============================================================================
+
+export const demoQualityAudits: QualityAudit[] = [
+  {
+    id: 'qa-001',
+    created_at: daysAgo(3, 6),
+    case_id: DEMO_CASE_IDS.mriLumbar,
+    auditor_id: DEMO_STAFF_IDS.carterRn,
+    audited_staff_id: DEMO_STAFF_IDS.martinezLpn,
+    criteria_accuracy: 96,
+    documentation_quality: 92,
+    sla_compliance: true,
+    determination_appropriate: true,
+    notes: 'Excellent criteria matching. Minor note: could have documented the PT compliance assessment more explicitly.',
+    overall_score: 94,
+    status: 'completed',
+  },
+  {
+    id: 'qa-002',
+    created_at: daysAgo(1, 4),
+    case_id: DEMO_CASE_IDS.epiduralInjection,
+    auditor_id: DEMO_STAFF_IDS.carterRn,
+    audited_staff_id: DEMO_STAFF_IDS.jonesLpn,
+    criteria_accuracy: 98,
+    documentation_quality: 95,
+    sla_compliance: true,
+    determination_appropriate: true,
+    notes: 'Thorough criteria review. Correctly identified prior injection response as supporting evidence.',
+    overall_score: 97,
+    status: 'completed',
+  },
+  {
+    id: 'qa-003',
+    created_at: daysAgo(0, 2),
+    case_id: DEMO_CASE_IDS.totalKnee,
+    auditor_id: DEMO_STAFF_IDS.brownRn,
+    audited_staff_id: DEMO_STAFF_IDS.nguyenLpn,
+    criteria_accuracy: 85,
+    documentation_quality: 82,
+    sla_compliance: true,
+    determination_appropriate: true,
+    notes: 'Criteria met determination is correct. Recommendation: add viscosupplementation assessment note even though not required for KL4.',
+    overall_score: 84,
+    status: 'completed',
+  },
+];
+
+// ============================================================================
+// MISSING INFO REQUESTS
+// ============================================================================
+
+export const demoMissingInfoRequests: MissingInfoRequest[] = [
+  {
+    id: 'mir-001',
+    created_at: daysAgo(3, 4),
+    case_id: DEMO_CASE_IDS.infliximab,
+    requested_by: DEMO_STAFF_IDS.martinezLpn,
+    requested_items: [
+      'Clinical rationale for reference infliximab (Remicade) versus plan-preferred biosimilar (Inflectra/infliximab-dyyb)',
+      'Prior biosimilar trial documentation if applicable',
+    ],
+    sent_to: 'Dr. David Kim — (602) 555-0400',
+    sent_via: 'efax',
+    received_at: null,
+    received_items: [],
+    status: 'pending',
+    deadline: hoursFromNow(24),
+  },
+];
+
+// ============================================================================
+// DETERMINATION TEMPLATES
+// ============================================================================
+
+export const demoDeterminationTemplates: DeterminationTemplate[] = [
+  {
+    id: 'dt-001-default-approval',
+    created_at: '2025-06-01T08:00:00.000Z',
+    client_id: null,
+    template_type: 'approval',
+    name: 'Standard Approval Letter',
+    body_template: 'Dear {{provider_name}},\n\nThis letter confirms that the following request has been approved:\n\nPatient: {{patient_name}} (Member ID: {{member_id}})\nAuthorization Number: {{authorization_number}}\nService: {{procedure_description}}\nApproved Dates: {{effective_date}} through {{expiration_date}}\n\nThis authorization is valid for the specific service(s) listed above. Please retain this letter for your records.\n\nIf you have questions, please contact us at (602) 555-0100.\n\nSincerely,\nVantaHG Utilization Review',
+    appeal_instructions: null,
+    is_active: true,
+  },
+  {
+    id: 'dt-002-default-denial',
+    created_at: '2025-06-01T08:00:00.000Z',
+    client_id: null,
+    template_type: 'denial',
+    name: 'Standard Denial Letter',
+    body_template: 'Dear {{provider_name}},\n\nAfter careful review, the following request has been denied:\n\nPatient: {{patient_name}} (Member ID: {{member_id}})\nAuthorization Number: {{authorization_number}}\nService: {{procedure_description}}\nDenial Reason: {{denial_reason}}\nCriteria Cited: {{denial_criteria_cited}}\nAlternative Recommended: {{alternative_recommended}}\n\nThis determination was made by {{reviewer_name}}, {{reviewer_credentials}}.\n\n{{appeal_instructions}}\n\nIf you have questions, please contact us at (602) 555-0100.\n\nSincerely,\nVantaHG Utilization Review',
+    appeal_instructions: 'You have the right to appeal this decision. To file an appeal, submit a written request within 60 days of this notice along with any additional clinical documentation supporting medical necessity. Appeals should be sent to: VantaHG Appeals Department, PO Box 55000, Phoenix, AZ 85072, or faxed to (602) 555-0199. A physician reviewer who was not involved in the original determination will review the appeal. You may also request a peer-to-peer review by calling (602) 555-0150.',
+    is_active: true,
+  },
+  {
+    id: 'dt-003-pinnacle-denial',
+    created_at: '2025-06-01T08:00:00.000Z',
+    client_id: 'cli-002-pinnacle-health-plan',
+    template_type: 'denial',
+    name: 'Pinnacle Health Plan — Denial Letter',
+    body_template: 'Dear {{provider_name}},\n\nPinnacle Health Plan has completed a utilization review of the following request:\n\nPatient: {{patient_name}} (Member ID: {{member_id}})\nAuthorization Number: {{authorization_number}}\nService: {{procedure_description}}\n\nDetermination: DENIED\nReason: {{denial_reason}}\nCriteria: {{denial_criteria_cited}}\nRecommended Alternative: {{alternative_recommended}}\n\nReviewing Physician: {{reviewer_name}}, {{reviewer_credentials}}\n\n{{appeal_instructions}}\n\nPinnacle Health Plan Member Services: 1-800-555-0200\nProvider Services: 1-800-555-0201\n\nSincerely,\nPinnacle Health Plan Utilization Management',
+    appeal_instructions: 'APPEAL RIGHTS: Members and providers may appeal this decision within 180 days by submitting a written request to Pinnacle Health Plan Appeals, PO Box 66000, Phoenix, AZ 85076. Expedited appeals for urgent services are available by calling 1-800-555-0200. An independent external review is available after exhausting the internal appeal process. The reviewing physician for any appeal will not be the same physician who made the original determination.',
+    is_active: true,
+  },
+];
+
+// ============================================================================
+// PEER-TO-PEER RECORDS
+// ============================================================================
+
+export const demoPeerToPeerRecords: PeerToPeerRecord[] = [
+  {
+    id: 'p2p-001',
+    created_at: daysAgo(2, 5),
+    case_id: DEMO_CASE_IDS.psychotherapy,
+    requesting_provider: 'Dr. Jennifer Walsh',
+    reviewing_physician_id: DEMO_REVIEWER_IDS.torres,
+    scheduled_at: null,
+    completed_at: null,
+    outcome: null,
+    notes: 'P2P offered after denial of continued weekly extended sessions. Provider has not yet responded to scheduling request.',
+    status: 'requested',
   },
 ];
 
@@ -625,17 +903,39 @@ export const demoCases: Case[] = [
     alternative_recommended: null,
     submitted_documents: ['clinical_notes.pdf', 'lumbar_xray_report.pdf', 'pt_summary.pdf', 'medication_history.pdf', 'provider_narrative.pdf'],
     client_id: DEMO_CLIENT_IDS.southwestAdmin,
+    // Pod & nursing tier
+    assigned_pod_id: DEMO_POD_IDS.alphaGeneral,
+    assigned_lpn_id: DEMO_STAFF_IDS.martinezLpn,
+    assigned_rn_id: null,
+    lpn_review_notes: 'All InterQual imaging criteria met. Patient has progressive L5 radiculopathy with positive SLR, failed 6 weeks conservative management including PT and NSAIDs. Criteria clearly met — recommending approval.',
+    lpn_review_at: daysAgo(5, 10),
+    lpn_determination: 'criteria_met',
+    rn_review_notes: null,
+    rn_review_at: null,
+    rn_determination: null,
+    sla_paused_at: null,
+    sla_resumed_at: null,
+    sla_pause_total_hours: 0,
+    intake_channel: 'portal',
+    intake_confirmation_sent: true,
+    authorization_number: 'AUTH-2026-00201',
+    peer_to_peer_status: null,
+    peer_to_peer_scheduled_at: null,
+    peer_to_peer_completed_at: null,
+    peer_to_peer_notes: null,
+    appeal_of_case_id: null,
+    appeal_status: null,
     reviewer: demoReviewers[0],
     client: demoClients[0],
   },
 
-  // CASE 2: Total Knee Arthroplasty - In Review
+  // CASE 2: Total Knee Arthroplasty - MD Review
   {
     id: DEMO_CASE_IDS.totalKnee,
     created_at: daysAgo(4, 10),
     updated_at: daysAgo(1, 3),
     case_number: 'VHG-MED-0202',
-    status: 'in_review',
+    status: 'md_review',
     priority: 'standard',
     service_category: 'surgery',
     vertical: 'medical',
@@ -673,17 +973,39 @@ export const demoCases: Case[] = [
     alternative_recommended: null,
     submitted_documents: ['knee_xrays_weightbearing.dcm', 'orthopedic_evaluation.pdf', 'pt_progress_notes.pdf', 'injection_records.pdf', 'pcp_clearance_letter.pdf', 'lab_results.pdf', 'surgical_consent.pdf'],
     client_id: DEMO_CLIENT_IDS.pinnacleHealth,
+    // Pod & nursing tier
+    assigned_pod_id: DEMO_POD_IDS.alphaGeneral,
+    assigned_lpn_id: DEMO_STAFF_IDS.jonesLpn,
+    assigned_rn_id: DEMO_STAFF_IDS.carterRn,
+    lpn_review_notes: 'MCG criteria for TKA met. KL grade 4, failed 4 months conservative management. However, viscosupplementation assessment gap noted. Escalating for RN oversight.',
+    lpn_review_at: daysAgo(3, 8),
+    lpn_determination: 'escalate_to_rn',
+    rn_review_notes: 'Reviewed LPN assessment. Concur that MCG criteria are met. Viscosupplementation is not required per MCG for KL grade 4. However, BMI of 31.2 is borderline — escalating to physician reviewer for final determination.',
+    rn_review_at: daysAgo(1, 5),
+    rn_determination: 'escalate_to_md',
+    sla_paused_at: null,
+    sla_resumed_at: null,
+    sla_pause_total_hours: 0,
+    intake_channel: 'portal',
+    intake_confirmation_sent: true,
+    authorization_number: 'AUTH-2026-00202',
+    peer_to_peer_status: null,
+    peer_to_peer_scheduled_at: null,
+    peer_to_peer_completed_at: null,
+    peer_to_peer_notes: null,
+    appeal_of_case_id: null,
+    appeal_status: null,
     reviewer: demoReviewers[1],
     client: demoClients[1],
   },
 
-  // CASE 3: Infliximab Infusion - Brief Ready
+  // CASE 3: Infliximab Infusion - LPN Review
   {
     id: DEMO_CASE_IDS.infliximab,
     created_at: daysAgo(3, 6),
     updated_at: daysAgo(0, 12),
     case_number: 'VHG-MED-0203',
-    status: 'brief_ready',
+    status: 'lpn_review',
     priority: 'urgent',
     service_category: 'infusion',
     vertical: 'medical',
@@ -721,6 +1043,28 @@ export const demoCases: Case[] = [
     alternative_recommended: null,
     submitted_documents: ['gi_clinical_notes.pdf', 'colonoscopy_report.pdf', 'pathology_report.pdf', 'medication_history.pdf', 'lab_results_screening.pdf', 'prior_auth_request.pdf'],
     client_id: DEMO_CLIENT_IDS.southwestAdmin,
+    // Pod & nursing tier
+    assigned_pod_id: DEMO_POD_IDS.alphaGeneral,
+    assigned_lpn_id: DEMO_STAFF_IDS.martinezLpn,
+    assigned_rn_id: null,
+    lpn_review_notes: null,
+    lpn_review_at: null,
+    lpn_determination: null,
+    rn_review_notes: null,
+    rn_review_at: null,
+    rn_determination: null,
+    sla_paused_at: null,
+    sla_resumed_at: null,
+    sla_pause_total_hours: 0,
+    intake_channel: 'portal',
+    intake_confirmation_sent: true,
+    authorization_number: 'AUTH-2026-00203',
+    peer_to_peer_status: null,
+    peer_to_peer_scheduled_at: null,
+    peer_to_peer_completed_at: null,
+    peer_to_peer_notes: null,
+    appeal_of_case_id: null,
+    appeal_status: null,
     reviewer: undefined,
     client: demoClients[0],
   },
@@ -769,6 +1113,28 @@ export const demoCases: Case[] = [
     alternative_recommended: null,
     submitted_documents: ['sleep_study_report.pdf', 'clinical_notes_f2f.pdf'],
     client_id: DEMO_CLIENT_IDS.westernEmployers,
+    // Pod & nursing tier
+    assigned_pod_id: null,
+    assigned_lpn_id: null,
+    assigned_rn_id: null,
+    lpn_review_notes: null,
+    lpn_review_at: null,
+    lpn_determination: null,
+    rn_review_notes: null,
+    rn_review_at: null,
+    rn_determination: null,
+    sla_paused_at: null,
+    sla_resumed_at: null,
+    sla_pause_total_hours: 0,
+    intake_channel: 'portal',
+    intake_confirmation_sent: true,
+    authorization_number: 'AUTH-2026-00204',
+    peer_to_peer_status: null,
+    peer_to_peer_scheduled_at: null,
+    peer_to_peer_completed_at: null,
+    peer_to_peer_notes: null,
+    appeal_of_case_id: null,
+    appeal_status: null,
     reviewer: undefined,
     client: demoClients[2],
   },
@@ -817,17 +1183,39 @@ export const demoCases: Case[] = [
     alternative_recommended: 'Standard psychotherapy sessions (90834) at biweekly frequency for relapse prevention',
     submitted_documents: ['psychiatrist_clinical_notes.pdf', 'treatment_plan_update.pdf', 'phq9_gad7_scores.pdf', 'medication_management_notes.pdf', 'csa_request_form.pdf'],
     client_id: DEMO_CLIENT_IDS.pinnacleHealth,
+    // Pod & nursing tier
+    assigned_pod_id: DEMO_POD_IDS.betaBehavioral,
+    assigned_lpn_id: DEMO_STAFF_IDS.nguyenLpn,
+    assigned_rn_id: DEMO_STAFF_IDS.brownRn,
+    lpn_review_notes: 'PHQ-9 improved from 19 to 8 (mild). Treatment plateau evident for 4+ months. Weekly extended sessions not supported at current severity per MCG. Criteria not met for continued 90837 at weekly frequency.',
+    lpn_review_at: daysAgo(4, 9),
+    lpn_determination: 'criteria_not_met',
+    rn_review_notes: 'Concur with LPN assessment. Step-down to 90834 biweekly is appropriate. Escalating to physician for formal denial determination.',
+    rn_review_at: daysAgo(3, 7),
+    rn_determination: 'escalate_to_md',
+    sla_paused_at: null,
+    sla_resumed_at: null,
+    sla_pause_total_hours: 0,
+    intake_channel: 'portal',
+    intake_confirmation_sent: true,
+    authorization_number: 'AUTH-2026-00199',
+    peer_to_peer_status: 'requested',
+    peer_to_peer_scheduled_at: null,
+    peer_to_peer_completed_at: null,
+    peer_to_peer_notes: 'P2P offered to requesting provider after denial. Awaiting response.',
+    appeal_of_case_id: null,
+    appeal_status: null,
     reviewer: demoReviewers[2],
     client: demoClients[1],
   },
 
-  // CASE 6: Lumbar Epidural Steroid Injection - In Review
+  // CASE 6: Lumbar Epidural Steroid Injection - MD Review
   {
     id: DEMO_CASE_IDS.epiduralInjection,
     created_at: daysAgo(2, 9),
     updated_at: daysAgo(0, 6),
     case_number: 'VHG-MED-0200',
-    status: 'in_review',
+    status: 'md_review',
     priority: 'expedited',
     service_category: 'pain_management',
     vertical: 'medical',
@@ -865,6 +1253,28 @@ export const demoCases: Case[] = [
     alternative_recommended: null,
     submitted_documents: ['pain_management_notes.pdf', 'lumbar_mri_report.pdf', 'pt_discharge_summary.pdf', 'medication_history.pdf', 'first_injection_procedure_note.pdf', 'first_injection_followup.pdf', 'prior_auth_request.pdf'],
     client_id: DEMO_CLIENT_IDS.southwestAdmin,
+    // Pod & nursing tier
+    assigned_pod_id: DEMO_POD_IDS.alphaGeneral,
+    assigned_lpn_id: DEMO_STAFF_IDS.jonesLpn,
+    assigned_rn_id: DEMO_STAFF_IDS.carterRn,
+    lpn_review_notes: 'InterQual criteria met for repeat ESI. Positive response to first injection (60% relief x 3 months). MRI-confirmed disc herniation with L5 radiculopathy. 2nd injection this year, within plan limits. Criteria met — recommending approval.',
+    lpn_review_at: daysAgo(1, 8),
+    lpn_determination: 'criteria_met',
+    rn_review_notes: 'Reviewed LPN criteria match. All InterQual criteria met. However, expedited priority and pain management category warrant physician sign-off per protocol.',
+    rn_review_at: daysAgo(0, 7),
+    rn_determination: 'escalate_to_md',
+    sla_paused_at: null,
+    sla_resumed_at: null,
+    sla_pause_total_hours: 0,
+    intake_channel: 'portal',
+    intake_confirmation_sent: true,
+    authorization_number: 'AUTH-2026-00200',
+    peer_to_peer_status: null,
+    peer_to_peer_scheduled_at: null,
+    peer_to_peer_completed_at: null,
+    peer_to_peer_notes: null,
+    appeal_of_case_id: null,
+    appeal_status: null,
     reviewer: demoReviewers[0],
     client: demoClients[0],
   },
@@ -922,7 +1332,7 @@ export const demoAuditLog: AuditLogEntry[] = [
     case_id: DEMO_CASE_IDS.mriLumbar,
     action: 'status_changed',
     actor: 'admin@vantahg.com',
-    details: { new_status: 'in_review', previous_status: 'brief_ready' },
+    details: { new_status: 'md_review', previous_status: 'brief_ready' },
   },
   {
     id: 'audit-001-07',
@@ -938,7 +1348,7 @@ export const demoAuditLog: AuditLogEntry[] = [
     case_id: DEMO_CASE_IDS.mriLumbar,
     action: 'status_changed',
     actor: DEMO_REVIEWER_IDS.richardson,
-    details: { new_status: 'determination_made', previous_status: 'in_review' },
+    details: { new_status: 'determination_made', previous_status: 'md_review' },
   },
 
   // --- Case 2: Total Knee Arthroplasty (in review) ---
@@ -988,7 +1398,7 @@ export const demoAuditLog: AuditLogEntry[] = [
     case_id: DEMO_CASE_IDS.totalKnee,
     action: 'status_changed',
     actor: 'admin@vantahg.com',
-    details: { new_status: 'in_review', previous_status: 'brief_ready' },
+    details: { new_status: 'md_review', previous_status: 'brief_ready' },
   },
 
   // --- Case 3: Infliximab Infusion (brief ready, not yet assigned) ---
@@ -1082,7 +1492,7 @@ export const demoAuditLog: AuditLogEntry[] = [
     case_id: DEMO_CASE_IDS.psychotherapy,
     action: 'status_changed',
     actor: 'admin@vantahg.com',
-    details: { new_status: 'in_review', previous_status: 'brief_ready' },
+    details: { new_status: 'md_review', previous_status: 'brief_ready' },
   },
   {
     id: 'audit-005-07',
@@ -1098,7 +1508,7 @@ export const demoAuditLog: AuditLogEntry[] = [
     case_id: DEMO_CASE_IDS.psychotherapy,
     action: 'status_changed',
     actor: DEMO_REVIEWER_IDS.torres,
-    details: { new_status: 'determination_made', previous_status: 'in_review' },
+    details: { new_status: 'determination_made', previous_status: 'md_review' },
   },
   {
     id: 'audit-005-09',
@@ -1156,6 +1566,6 @@ export const demoAuditLog: AuditLogEntry[] = [
     case_id: DEMO_CASE_IDS.epiduralInjection,
     action: 'status_changed',
     actor: 'admin@vantahg.com',
-    details: { new_status: 'in_review', previous_status: 'brief_ready' },
+    details: { new_status: 'md_review', previous_status: 'brief_ready' },
   },
 ];

@@ -604,7 +604,7 @@ function mapCaseToPortal(c: Record<string, unknown>): PortalCase {
 
   if (status === 'intake') currentStage = 'submitted';
   else if (status === 'processing' || status === 'brief_ready') currentStage = 'ai_analysis';
-  else if (status === 'in_review') currentStage = 'physician_review';
+  else if (status === 'lpn_review' || status === 'rn_review' || status === 'md_review' || status === 'pend_missing_info') currentStage = 'physician_review';
   else if (status === 'determination_made' || status === 'delivered') {
     currentStage = 'determination';
     const det = c.determination as string;

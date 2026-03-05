@@ -40,8 +40,8 @@ const statusCards: { status: CaseStatus; label: string; color: string; icon: Rea
     ),
   },
   {
-    status: 'in_review',
-    label: 'In Review',
+    status: 'md_review',
+    label: 'MD Review',
     color: 'bg-purple-50 text-purple-800 border-purple-200',
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

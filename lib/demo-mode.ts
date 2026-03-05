@@ -1,10 +1,18 @@
-import type { Case, Reviewer, Client, AuditLogEntry, AIBrief, FactCheckResult } from './types';
+import type { Case, Reviewer, Client, AuditLogEntry, AIBrief, FactCheckResult, Staff, Pod, QualityAudit, MissingInfoRequest, DeterminationTemplate, PeerToPeerRecord } from './types';
 import {
   demoCases,
   demoReviewers,
   demoClients,
   demoAuditLog,
+  demoStaff,
+  demoPods,
+  demoQualityAudits,
+  demoMissingInfoRequests,
+  demoDeterminationTemplates,
+  demoPeerToPeerRecords,
   DEMO_CASE_IDS,
+  DEMO_STAFF_IDS,
+  DEMO_POD_IDS,
 } from './demo-data';
 import { factCheckBrief } from './fact-checker';
 import { hasSupabaseConfig } from './supabase';
@@ -298,4 +306,84 @@ export function getDemoBrief(caseId: string): { case: Case; brief: AIBrief } | n
   };
 
   return { case: updatedCase, brief: cpapBrief };
+}
+
+// ============================================================================
+// Staff
+// ============================================================================
+
+export function getDemoStaff(role?: string): Staff[] {
+  let staff = [...demoStaff];
+  if (role) {
+    staff = staff.filter((s) => s.role === role);
+  }
+  return staff.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export function getDemoStaffMember(id: string): Staff | null {
+  return demoStaff.find((s) => s.id === id) ?? null;
+}
+
+// ============================================================================
+// Pods
+// ============================================================================
+
+export function getDemoPods(): Pod[] {
+  return [...demoPods].sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export function getDemoPod(id: string): Pod | null {
+  return demoPods.find((p) => p.id === id) ?? null;
+}
+
+// ============================================================================
+// Quality Audits
+// ============================================================================
+
+export function getDemoQualityAudits(caseId?: string, staffId?: string): QualityAudit[] {
+  let audits = [...demoQualityAudits];
+  if (caseId) {
+    audits = audits.filter((a) => a.case_id === caseId);
+  }
+  if (staffId) {
+    audits = audits.filter((a) => a.audited_staff_id === staffId);
+  }
+  return audits.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+}
+
+// ============================================================================
+// Missing Info Requests
+// ============================================================================
+
+export function getDemoMissingInfoRequests(caseId?: string): MissingInfoRequest[] {
+  let requests = [...demoMissingInfoRequests];
+  if (caseId) {
+    requests = requests.filter((r) => r.case_id === caseId);
+  }
+  return requests.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+}
+
+// ============================================================================
+// Determination Templates
+// ============================================================================
+
+export function getDemoDeterminationTemplates(clientId?: string): DeterminationTemplate[] {
+  let templates = [...demoDeterminationTemplates].filter((t) => t.is_active);
+  if (clientId) {
+    // Return client-specific templates, falling back to defaults (client_id === null)
+    templates = templates.filter((t) => t.client_id === clientId || t.client_id === null);
+  }
+  return templates;
+}
+
+// ============================================================================
+// Peer-to-Peer Records
+// ============================================================================
+
+export function getDemoPeerToPeerRecords(caseId?: string): PeerToPeerRecord[] {
+  let records = [...demoPeerToPeerRecords];
+  if (caseId) {
+    records = records.filter((r) => r.case_id === caseId);
+  }
+  return records.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 }

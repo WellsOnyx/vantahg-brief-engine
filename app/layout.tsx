@@ -46,6 +46,9 @@ const navLinks = [
   { href: "/cases", label: "Case Portal" },
   { href: "/portal", label: "Client Tracker" },
   { href: "/reviewers", label: "Reviewers" },
+  { href: "/staff", label: "Staff" },
+  { href: "/pods", label: "Pods" },
+  { href: "/quality", label: "Quality" },
   { href: "/clients", label: "Clients" },
   { href: "/analytics", label: "Analytics" },
 ];
