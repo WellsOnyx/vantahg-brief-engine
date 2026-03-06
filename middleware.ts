@@ -2,13 +2,13 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 
 // Routes that don't require authentication
-const PUBLIC_ROUTES = ['/login', '/signup', '/welcome', '/api/health', '/api/external/submit', '/api/intake/efax'];
+const PUBLIC_ROUTES = ['/', '/login', '/signup', '/welcome', '/api/health', '/api/external/submit', '/api/intake/efax'];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Allow public routes
-  if (PUBLIC_ROUTES.some((route) => pathname.startsWith(route))) {
+  // Allow public routes (exact match for '/', prefix match for others)
+  if (PUBLIC_ROUTES.some((route) => route === '/' ? pathname === '/' : pathname.startsWith(route))) {
     return NextResponse.next();
   }
 
