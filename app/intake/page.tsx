@@ -99,7 +99,26 @@ const efaxStatusLabels: Record<string, string> = {
   duplicate: 'Duplicate',
 };
 
-type ActiveTab = 'overview' | 'efax' | 'log';
+interface EmailQueueEntry {
+  id: string;
+  created_at: string;
+  email_id: string;
+  from_address: string;
+  from_name: string | null;
+  subject: string;
+  status: string;
+  needs_manual_review: boolean;
+  manual_review_reasons: string[];
+  confidence_score: number;
+  attachment_count: number;
+  attachment_types: string[];
+  case_id: string | null;
+  authorization_number: string | null;
+  email_type: string;
+  processed_at: string | null;
+}
+
+type ActiveTab = 'overview' | 'efax' | 'email' | 'log';
 
 function formatDate(dateStr: string): string {
   const date = new Date(dateStr);
@@ -121,6 +140,7 @@ export default function IntakePage() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('overview');
   const [intakeLog, setIntakeLog] = useState<IntakeLogEntry[]>([]);
   const [efaxQueue, setEfaxQueue] = useState<EfaxQueueEntry[]>([]);
+  const [emailQueue, setEmailQueue] = useState<EmailQueueEntry[]>([]);
   const [summary, setSummary] = useState<IntakeSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -138,9 +158,10 @@ export default function IntakePage() {
       if (filterChannel) params.set('channel', filterChannel);
       if (filterStatus) params.set('status', filterStatus);
 
-      const [logRes, efaxRes] = await Promise.all([
+      const [logRes, efaxRes, emailRes] = await Promise.all([
         fetch(`/api/intake/log?${params.toString()}`),
         fetch('/api/intake/efax'),
+        fetch('/api/intake/email'),
       ]);
 
       if (logRes.ok) {
@@ -151,6 +172,10 @@ export default function IntakePage() {
       if (efaxRes.ok) {
         const efaxData = await efaxRes.json();
         setEfaxQueue(efaxData);
+      }
+      if (emailRes.ok) {
+        const emailData = await emailRes.json();
+        setEmailQueue(emailData);
       }
     } catch {
       setError('Failed to load intake data');
@@ -169,7 +194,9 @@ export default function IntakePage() {
     return entryDate.toDateString() === today.toDateString();
   }).length;
 
-  const pendingReview = efaxQueue.filter((f) => f.needs_manual_review && f.status !== 'case_created').length;
+  const efaxPendingReview = efaxQueue.filter((f) => f.needs_manual_review && f.status !== 'case_created').length;
+  const emailPendingReview = emailQueue.filter((e) => e.needs_manual_review && e.status !== 'case_created').length;
+  const pendingReview = efaxPendingReview + emailPendingReview;
   const casesCreated = intakeLog.filter((l) => l.status === 'case_created').length;
   const rejections = intakeLog.filter((l) => l.status === 'rejected' || l.status === 'duplicate').length;
 
@@ -275,7 +302,8 @@ export default function IntakePage() {
         <nav className="flex gap-6">
           {[
             { key: 'overview' as const, label: 'Overview' },
-            { key: 'efax' as const, label: `E-Fax Queue${pendingReview > 0 ? ` (${pendingReview})` : ''}` },
+            { key: 'email' as const, label: `Email Queue${emailPendingReview > 0 ? ` (${emailPendingReview})` : ''}` },
+            { key: 'efax' as const, label: `E-Fax Queue${efaxPendingReview > 0 ? ` (${efaxPendingReview})` : ''}` },
             { key: 'log' as const, label: 'Intake Log' },
           ].map((tab) => (
             <button
@@ -358,9 +386,9 @@ export default function IntakePage() {
                     {
                       channel: 'email',
                       title: 'Email Intake',
-                      desc: 'Monitored inbox for email submissions. Attachments parsed and routed to intake queue.',
-                      status: 'Coming Soon',
-                      color: 'amber',
+                      desc: 'Monitored inbox for email submissions. Call center, e-fax forwarding, and provider emails parsed with AI-powered extraction.',
+                      status: 'Active',
+                      color: 'green',
                     },
                     {
                       channel: 'phone',
@@ -454,6 +482,129 @@ export default function IntakePage() {
                     </div>
                   )}
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Email Queue Tab */}
+          {activeTab === 'email' && (
+            <div className="space-y-4">
+              <div className="bg-surface rounded-xl border border-border shadow-sm overflow-hidden">
+                <div className="px-5 py-4 border-b border-border flex items-center justify-between">
+                  <div>
+                    <h2 className="font-semibold text-navy">Email Intake Queue</h2>
+                    <p className="text-xs text-muted mt-0.5">
+                      Inbound emails from call center, providers, and forwarded e-faxes
+                    </p>
+                  </div>
+                  <div className="text-xs text-muted bg-navy/5 px-3 py-1 rounded-full font-medium">
+                    {emailQueue.length} email{emailQueue.length !== 1 ? 's' : ''}
+                  </div>
+                </div>
+
+                {emailQueue.length === 0 ? (
+                  <div className="p-8 text-center">
+                    <svg className="w-10 h-10 text-muted/30 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+                    </svg>
+                    <p className="text-sm text-muted">No emails in queue</p>
+                    <p className="text-xs text-muted/70 mt-1">Emails sent to intake@vantaum.com will appear here</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="bg-gray-50/50">
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-muted uppercase tracking-wider">Sender</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-muted uppercase tracking-wider">Subject</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-muted uppercase tracking-wider hidden sm:table-cell">Attachments</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-muted uppercase tracking-wider">Confidence</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-muted uppercase tracking-wider">Status</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-muted uppercase tracking-wider hidden md:table-cell">Auth #</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-muted uppercase tracking-wider hidden lg:table-cell">Received</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {emailQueue.map((entry) => (
+                          <tr key={entry.id} className="hover:bg-gold/[0.03] transition-colors">
+                            <td className="px-4 py-3">
+                              <div className="font-medium text-foreground truncate max-w-[180px]">
+                                {entry.from_name || entry.from_address}
+                              </div>
+                              <div className="text-xs text-muted truncate max-w-[180px]">
+                                {entry.from_address}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="text-foreground truncate max-w-[250px]">
+                                {entry.case_id ? (
+                                  <Link href={`/cases/${entry.case_id}`} className="text-gold-dark hover:text-gold font-medium">
+                                    {entry.subject}
+                                  </Link>
+                                ) : (
+                                  entry.subject
+                                )}
+                              </div>
+                              {entry.needs_manual_review && entry.manual_review_reasons.length > 0 && (
+                                <div className="text-[10px] text-orange-600 mt-0.5 truncate">
+                                  {entry.manual_review_reasons[0]}
+                                </div>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 hidden sm:table-cell">
+                              {entry.attachment_count > 0 ? (
+                                <div className="flex items-center gap-1.5">
+                                  <svg className="w-3.5 h-3.5 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13" />
+                                  </svg>
+                                  <span className="text-xs text-muted">
+                                    {entry.attachment_count} ({entry.attachment_types.join(', ')})
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-xs text-muted/50">None</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-2">
+                                <div className="w-16 bg-gray-100 rounded-full h-1.5">
+                                  <div
+                                    className={`h-1.5 rounded-full ${
+                                      entry.confidence_score >= 80
+                                        ? 'bg-green-500'
+                                        : entry.confidence_score >= 60
+                                        ? 'bg-amber-500'
+                                        : 'bg-red-500'
+                                    }`}
+                                    style={{ width: `${entry.confidence_score}%` }}
+                                  />
+                                </div>
+                                <span className="text-xs font-mono text-muted">{entry.confidence_score}%</span>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+                                efaxStatusColors[entry.status] || 'bg-gray-50 text-gray-600 border-gray-200'
+                              }`}>
+                                {efaxStatusLabels[entry.status] || entry.status}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 hidden md:table-cell">
+                              {entry.authorization_number ? (
+                                <span className="font-mono text-xs text-navy">{entry.authorization_number}</span>
+                              ) : (
+                                <span className="text-xs text-muted/50">--</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 hidden lg:table-cell">
+                              <span className="text-xs text-muted">{formatDate(entry.created_at)}</span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             </div>
           )}
