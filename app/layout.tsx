@@ -17,12 +17,12 @@ const dmSerif = DM_Serif_Display({
 });
 
 export const metadata: Metadata = {
-  title: 'FLR by VantaHG | Clinical Brief Engine',
+  title: 'FLR by VantaUM | Clinical Brief Engine',
   description: 'AI-powered first-level utilization review by Wells Onyx. Clinical briefs prepared by AI, determinations made by board-certified physicians.',
   keywords: ['utilization review', 'medical necessity', 'prior authorization', 'clinical brief', 'healthcare compliance', 'first-level review', 'Wells Onyx'],
-  authors: [{ name: 'VantaHG' }, { name: 'Wells Onyx' }],
+  authors: [{ name: 'VantaUM' }, { name: 'Wells Onyx' }],
   openGraph: {
-    title: 'FLR by VantaHG | Clinical Brief Engine',
+    title: 'FLR by VantaUM | Clinical Brief Engine',
     description: 'AI-powered first-level utilization review platform by Wells Onyx for TPAs, health plans, and self-funded employers.',
     type: 'website',
   },

@@ -53,7 +53,7 @@ function makeCase(overrides: Partial<Case> = {}): Case {
     id: 'test-1',
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
-    case_number: 'VHG-IMAGING-0001',
+    case_number: 'VUM-IMAGING-0001',
     status: 'brief_ready',
     priority: 'standard',
     service_category: 'imaging',

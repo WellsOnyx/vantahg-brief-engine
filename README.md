@@ -1,4 +1,4 @@
-# VantaHG Clinical Brief Engine
+# VantaUM Clinical Brief Engine
 
 **AI-powered first-level utilization review for healthcare compliance.**
 
@@ -9,11 +9,11 @@
 
 ---
 
-## What is VantaHG?
+## What is VantaUM?
 
-VantaHG is an AI-powered utilization review platform built for health plans, TPAs, IROs, and managed care organizations. It transforms clinical documentation into structured, evidence-based briefs that assist board-certified physicians in making coverage determinations. The platform handles the entire first-level review workflow -- from case intake through AI analysis, physician review, and determination delivery -- with full audit trails and compliance controls.
+VantaUM is an AI-powered utilization review platform built for health plans, TPAs, IROs, and managed care organizations. It transforms clinical documentation into structured, evidence-based briefs that assist board-certified physicians in making coverage determinations. The platform handles the entire first-level review workflow -- from case intake through AI analysis, physician review, and determination delivery -- with full audit trails and compliance controls.
 
-The core principle is simple: **AI analyzes, physicians decide.** VantaHG uses Anthropic Claude to generate clinical briefs that summarize patient documentation, match procedure codes against evidence-based criteria, and surface relevant guidelines. A deterministic fact-checking engine then verifies every AI-generated claim against known medical databases. All clinical determinations are made by licensed, board-certified physicians -- the AI never makes coverage decisions.
+The core principle is simple: **AI analyzes, physicians decide.** VantaUM uses Anthropic Claude to generate clinical briefs that summarize patient documentation, match procedure codes against evidence-based criteria, and surface relevant guidelines. A deterministic fact-checking engine then verifies every AI-generated claim against known medical databases. All clinical determinations are made by licensed, board-certified physicians -- the AI never makes coverage decisions.
 
 ---
 
@@ -86,10 +86,10 @@ The core principle is simple: **AI analyzes, physicians decide.** VantaHG uses A
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/WellsOnyx/vantahg-brief-engine.git
+git clone https://github.com/WellsOnyx/vantaum-brief-engine.git
 
 # 2. Navigate to the project directory
-cd vantahg-brief-engine
+cd vantaum-brief-engine
 
 # 3. Install dependencies
 npm install
@@ -176,7 +176,7 @@ In Supabase Dashboard > Authentication > Providers:
 
 ### 1. Import Repository
 
-In the Vercel dashboard, import the `WellsOnyx/vantahg-brief-engine` GitHub repository.
+In the Vercel dashboard, import the `WellsOnyx/vantaum-brief-engine` GitHub repository.
 
 ### 2. Set Environment Variables
 
@@ -291,7 +291,7 @@ The fact-checking engine (`lib/fact-checker.ts`) runs **deterministically** -- n
 
 ### Section Verifiers (4)
 
-1. **Clinical Criteria Match** -- Cross-references cited criteria against the VantaHG medical criteria database. Verifies guideline sources against 24 known clinical guideline organizations. Detects potentially fabricated guidelines.
+1. **Clinical Criteria Match** -- Cross-references cited criteria against the VantaUM medical criteria database. Verifies guideline sources against 24 known clinical guideline organizations. Detects potentially fabricated guidelines.
 2. **Procedure & Diagnosis Codes** -- Validates CPT, HCPCS, and ICD-10 code formats. Cross-checks that brief codes match the case's submitted procedure codes.
 3. **Documentation Review** -- Verifies that missing documentation items are also referenced in the additional info needed section for internal consistency.
 4. **Recommendation & Reviewer Action** -- Checks state-specific requirement citations against recognized regulatory patterns (CMS NCD/LCD, CFR references, known organization abbreviations).
@@ -450,7 +450,7 @@ Test ──┘
 ## Project Structure
 
 ```
-vantahg-brief-engine/
+vantaum-brief-engine/
   .github/
     workflows/
       ci.yml                    # GitHub Actions CI pipeline

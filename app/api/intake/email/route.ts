@@ -244,7 +244,7 @@ export async function POST(request: NextRequest) {
     // Auto-create case if confidence is high enough
     let caseId: string | null = null;
     if (!parsed.needs_manual_review && parsed.patient_name && parsed.procedure_codes.length > 0) {
-      const caseNumber = `VHG-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
+      const caseNumber = `VUM-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
 
       const { data: newCase, error: caseError } = await supabase
         .from('cases')

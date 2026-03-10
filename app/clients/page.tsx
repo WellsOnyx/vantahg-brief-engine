@@ -650,7 +650,7 @@ export default function ClientsPage() {
                               type="text"
                               value={formData.interqual_username}
                               onChange={(e) => setFormData({ ...formData, interqual_username: e.target.value })}
-                              placeholder="client-vhg-reviewer"
+                              placeholder="client-vum-reviewer"
                               className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-navy/20 focus:border-navy outline-none"
                             />
                           </div>
@@ -698,7 +698,7 @@ export default function ClientsPage() {
                               type="text"
                               value={formData.mcg_username}
                               onChange={(e) => setFormData({ ...formData, mcg_username: e.target.value })}
-                              placeholder="client-vhg-ops"
+                              placeholder="client-vum-ops"
                               className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-navy/20 focus:border-navy outline-none"
                             />
                           </div>

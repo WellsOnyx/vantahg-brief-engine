@@ -38,7 +38,7 @@ export function AppShell({
                 V
               </div>
               <span className="font-[family-name:var(--font-dm-serif)] text-xl tracking-tight text-white">
-                Vanta<span className="text-gold">HG</span>
+                Vanta<span className="text-gold">UM</span>
               </span>
             </Link>
 
@@ -77,7 +77,7 @@ export function AppShell({
                 V
               </div>
               <span className="text-sm font-semibold text-foreground">
-                VantaHG Clinical Brief Engine
+                VantaUM Clinical Brief Engine
               </span>
               <span className="text-xs text-muted ml-2 hidden sm:inline">
                 — A{' '}

@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
 
     // Generate auth number
     const authNumber = await generateAuthorizationNumber();
-    const caseNumber = `VHG-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
+    const caseNumber = `VUM-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
 
     // Log intake
     await logIntakeEvent({

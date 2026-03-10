@@ -1,4 +1,4 @@
--- VantaHG Clinical Brief Engine — Database Schema
+-- VantaUM Clinical Brief Engine — Database Schema
 -- Run this in Supabase SQL editor to create all tables
 
 -- Enable UUID generation

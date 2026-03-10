@@ -351,7 +351,7 @@ export default function IntakePage() {
               <div className="bg-surface rounded-xl border border-border shadow-sm overflow-hidden">
                 <div className="px-5 py-4 border-b border-border">
                   <h2 className="font-semibold text-navy">Active Intake Channels</h2>
-                  <p className="text-xs text-muted mt-0.5">How cases enter the VantaHG system</p>
+                  <p className="text-xs text-muted mt-0.5">How cases enter the VantaUM system</p>
                 </div>
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-px bg-border">
                   {[

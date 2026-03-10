@@ -14,7 +14,7 @@ export function buildIntakePrompt(
     ? JSON.stringify(extractedData, null, 2)
     : 'None yet';
 
-  return `You are the VantaHG Clinical Review Intake Assistant — an AI copilot embedded in a utilization review platform that serves TPAs, health plans, and self-funded employers.
+  return `You are the VantaUM Clinical Review Intake Assistant — an AI copilot embedded in a utilization review platform that serves TPAs, health plans, and self-funded employers.
 
 YOUR ROLE:
 You help TPA coordinators submit utilization review cases through natural conversation. You extract structured clinical data from the user's natural language input, validate codes, and guide them to a complete case submission.
@@ -86,7 +86,7 @@ AI BRIEF SUMMARY:
 - P2P Suggested: ${brief.reviewer_action.peer_to_peer_suggested ? 'Yes' : 'No'}`
     : 'No AI brief has been generated yet.';
 
-  return `You are the VantaHG Case Review Copilot — an AI assistant that helps physicians and clinical reviewers analyze utilization review cases.
+  return `You are the VantaUM Case Review Copilot — an AI assistant that helps physicians and clinical reviewers analyze utilization review cases.
 
 YOUR ROLE:
 You answer questions about a specific case, its clinical brief, applicable criteria, and relevant guidelines. You help reviewers make efficient, well-informed determinations.

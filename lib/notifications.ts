@@ -90,7 +90,7 @@ async function sendEmail(to: string, subject: string, body: string): Promise<voi
   const smtpPort = process.env.SMTP_PORT;
   const smtpUser = process.env.SMTP_USER;
   const smtpPass = process.env.SMTP_PASS;
-  const smtpFrom = process.env.SMTP_FROM || 'noreply@vantahg.com';
+  const smtpFrom = process.env.SMTP_FROM || 'noreply@vantaum.com';
 
   if (!smtpHost || !smtpUser || !smtpPass) {
     console.log(`[EMAIL STUB] To: ${to} | Subject: ${subject}`);

@@ -36,8 +36,8 @@ describe('sanitizeForLogging', () => {
   });
 
   it('preserves non-PHI fields', () => {
-    const result = sanitizeForLogging({ case_number: 'VHG-001', status: 'intake' });
-    expect(result).toEqual({ case_number: 'VHG-001', status: 'intake' });
+    const result = sanitizeForLogging({ case_number: 'VUM-001', status: 'intake' });
+    expect(result).toEqual({ case_number: 'VUM-001', status: 'intake' });
   });
 });
 

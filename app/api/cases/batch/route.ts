@@ -151,7 +151,7 @@ export async function POST(request: NextRequest) {
         }
 
         const categoryPrefix = ((raw.service_category as string) || 'OTHER').toUpperCase().replace(/\s+/g, '-');
-        const caseNumber = `VHG-${categoryPrefix}-${(i + 1).toString().padStart(4, '0')}`;
+        const caseNumber = `VUM-${categoryPrefix}-${(i + 1).toString().padStart(4, '0')}`;
         results.case_numbers.push(caseNumber);
         results.created++;
 
@@ -182,7 +182,7 @@ export async function POST(request: NextRequest) {
       try {
         // Generate case_number
         const categoryPrefix = ((raw.service_category as string) || 'OTHER').toUpperCase().replace(/\s+/g, '-');
-        const prefix = `VHG-${categoryPrefix}`;
+        const prefix = `VUM-${categoryPrefix}`;
 
         const { count, error: countError } = await supabase
           .from('cases')

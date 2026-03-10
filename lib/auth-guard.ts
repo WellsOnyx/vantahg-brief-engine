@@ -24,7 +24,7 @@ export async function requireAuth(
   // Demo mode bypass — return mock admin
   if (isDemoMode()) {
     return {
-      user: { id: 'demo-user', email: 'demo@vantahg.com', role: 'admin' },
+      user: { id: 'demo-user', email: 'demo@vantaum.com', role: 'admin' },
     };
   }
 

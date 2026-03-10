@@ -125,7 +125,7 @@ export async function POST(request: NextRequest) {
 
     // Generate case_number based on service_category (or fall back to vertical for backward compat)
     const categoryPrefix = (body.service_category || body.vertical || 'GENERAL').toUpperCase().replace(/\s+/g, '-');
-    const prefix = `VHG-${categoryPrefix}`;
+    const prefix = `VUM-${categoryPrefix}`;
 
     const { count, error: countError } = await supabase
       .from('cases')

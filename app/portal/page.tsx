@@ -58,7 +58,7 @@ function stageStatus(stage: PortalStage, currentStage: PortalStage): PortalStatu
 const DEMO_CASES: PortalCase[] = [
   {
     id: '1',
-    caseRef: 'VHG-2026-00412',
+    caseRef: 'VUM-2026-00412',
     patientName: 'Robert Garcia',
     patientMasked: 'Robert G.',
     memberId: 'MBR-88431',
@@ -75,7 +75,7 @@ const DEMO_CASES: PortalCase[] = [
   },
   {
     id: '2',
-    caseRef: 'VHG-2026-00409',
+    caseRef: 'VUM-2026-00409',
     patientName: 'Maria Santos',
     patientMasked: 'Maria S.',
     memberId: 'MBR-72104',
@@ -92,7 +92,7 @@ const DEMO_CASES: PortalCase[] = [
   },
   {
     id: '3',
-    caseRef: 'VHG-2026-00401',
+    caseRef: 'VUM-2026-00401',
     patientName: 'James Wilson',
     patientMasked: 'James W.',
     memberId: 'MBR-55923',
@@ -109,7 +109,7 @@ const DEMO_CASES: PortalCase[] = [
   },
   {
     id: '4',
-    caseRef: 'VHG-2026-00398',
+    caseRef: 'VUM-2026-00398',
     patientName: 'Sarah Mitchell',
     patientMasked: 'Sarah M.',
     memberId: 'MBR-44810',
@@ -126,7 +126,7 @@ const DEMO_CASES: PortalCase[] = [
   },
   {
     id: '5',
-    caseRef: 'VHG-2026-00385',
+    caseRef: 'VUM-2026-00385',
     patientName: 'Angela Thompson',
     patientMasked: 'Angela T.',
     memberId: 'MBR-33201',
@@ -143,7 +143,7 @@ const DEMO_CASES: PortalCase[] = [
   },
   {
     id: '6',
-    caseRef: 'VHG-2026-00379',
+    caseRef: 'VUM-2026-00379',
     patientName: 'David Park',
     patientMasked: 'David P.',
     memberId: 'MBR-29087',
@@ -809,13 +809,13 @@ export default function CaseStatusPortal() {
               </p>
               <div className="mt-4 space-y-2">
                 <a
-                  href="mailto:support@vantahg.com"
+                  href="mailto:support@vantaum.com"
                   className="flex items-center gap-2 text-sm text-navy hover:text-gold-dark transition-colors"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                   </svg>
-                  support@vantahg.com
+                  support@vantaum.com
                 </a>
                 <a
                   href="tel:+18005551234"

@@ -105,7 +105,7 @@ export default function DeterminationLetterPage() {
               V
             </div>
             <div>
-              <h1 className="font-[family-name:var(--font-dm-serif)] text-xl text-navy">VantaHG</h1>
+              <h1 className="font-[family-name:var(--font-dm-serif)] text-xl text-navy">VantaUM</h1>
               <p className="text-xs text-muted">Clinical Brief Engine</p>
             </div>
           </div>
@@ -268,7 +268,7 @@ export default function DeterminationLetterPage() {
             </h3>
             <p className="text-blue-900">
               You have the right to appeal this determination. To initiate an appeal or request a
-              peer-to-peer review with the reviewing physician, please contact VantaHG within 30 days
+              peer-to-peer review with the reviewing physician, please contact VantaUM within 30 days
               of this notice. Peer-to-peer reviews are available for all denied or partially approved cases.
             </p>
           </div>
@@ -310,7 +310,7 @@ export default function DeterminationLetterPage() {
             All determinations are made by licensed physicians. AI-generated clinical briefs assist
             in preparation but do not render medical determinations.
           </p>
-          <p className="mt-2 font-medium">VantaHG Clinical Brief Engine</p>
+          <p className="mt-2 font-medium">VantaUM Clinical Brief Engine</p>
         </div>
       </div>
     </div>

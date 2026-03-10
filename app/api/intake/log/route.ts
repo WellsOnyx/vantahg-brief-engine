@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
           id: 'intake-log-003',
           created_at: '2026-02-19T14:45:00Z',
           channel: 'api',
-          source_identifier: 'key:vhg_live...',
+          source_identifier: 'key:vum_live...',
           authorization_number: 'AUTH-2026-000003',
           case_id: 'case-003-cardiac-cath',
           patient_name_hash: 'PHI-C2D8A1',

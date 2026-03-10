@@ -195,7 +195,7 @@ export default function Home() {
                 </div>
                 <div>
                   <div className="text-white/90 font-semibold text-sm">AI Brief Generated</div>
-                  <div className="text-white/40 text-xs">Case #VHG-2026-0847</div>
+                  <div className="text-white/40 text-xs">Case #VUM-2026-0847</div>
                 </div>
               </div>
               <div className="space-y-3">
@@ -453,7 +453,7 @@ export default function Home() {
             <div className="md:w-1/3">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 bg-gold rounded-lg flex items-center justify-center font-bold text-navy text-sm">V</div>
-                <span className="font-[family-name:var(--font-dm-serif)] text-xl text-navy tracking-tight">VantaHG</span>
+                <span className="font-[family-name:var(--font-dm-serif)] text-xl text-navy tracking-tight">VantaUM</span>
               </div>
               <p className="text-muted text-sm leading-relaxed">
                 Clinical Brief Engine for utilization review. AI-powered analysis with physician-led determinations.
@@ -496,11 +496,11 @@ export default function Home() {
             <p className="text-xs text-muted leading-relaxed max-w-4xl">
               All clinical determinations are made by licensed, board-certified physicians. AI technology
               is used solely to assist in clinical documentation analysis and does not make coverage decisions.
-              VantaHG complies with all applicable state and federal regulations governing utilization review,
+              VantaUM complies with all applicable state and federal regulations governing utilization review,
               including URAC and NCQA standards where applicable.
             </p>
             <p className="text-xs text-muted/60 mt-4">
-              &copy; {new Date().getFullYear()} VantaHG. All rights reserved.
+              &copy; {new Date().getFullYear()} VantaUM. All rights reserved.
             </p>
           </div>
         </div>

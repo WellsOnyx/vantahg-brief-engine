@@ -1,5 +1,5 @@
 /**
- * VantaHG Fact-Checker Engine
+ * VantaUM Fact-Checker Engine
  *
  * Runs DETERMINISTICALLY (no AI calls) to verify AI-generated clinical briefs.
  * Cross-references cited criteria, guidelines, and codes against known databases.
@@ -87,7 +87,7 @@ function verifyCriteriaMatch(
       claims.push({
         claim: criterion,
         status: 'verified',
-        source: 'VantaHG Medical Criteria Database',
+        source: 'VantaUM Medical Criteria Database',
         explanation: 'Matches known clinical criteria for this procedure',
       });
     } else {
@@ -106,7 +106,7 @@ function verifyCriteriaMatch(
       claims.push({
         claim: criterion,
         status: 'verified',
-        source: 'VantaHG Medical Criteria Database',
+        source: 'VantaUM Medical Criteria Database',
         explanation: 'Recognized criterion correctly identified as not met',
       });
     } else if (allKnownCriteria.length > 0) {

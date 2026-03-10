@@ -2,7 +2,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Welcome | FLR by VantaHG',
+  title: 'Welcome | FLR by VantaUM',
   description:
     'AI-powered first-level utilization review. Clinical briefs prepared by AI, determinations made by board-certified physicians in 24-48 hours.',
 };
@@ -18,7 +18,7 @@ export default function WelcomePage() {
               V
             </div>
             <span className="font-[family-name:var(--font-dm-serif)] text-3xl tracking-tight">
-              Vanta<span className="text-gold">HG</span>
+              Vanta<span className="text-gold">UM</span>
             </span>
           </div>
 

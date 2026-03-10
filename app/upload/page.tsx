@@ -772,7 +772,7 @@ function SubmissionSuccess({ caseRef }: { caseRef: string }) {
 const STEPS = ['Patient Info', 'Procedure', 'Documents', 'Review'];
 
 function generateCaseRef(): string {
-  const prefix = 'VHG';
+  const prefix = 'VUM';
   const year = new Date().getFullYear();
   const num = Math.floor(100000 + Math.random() * 900000);
   return `${prefix}-${year}-${num}`;
@@ -936,7 +936,7 @@ export default function UploadPage() {
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
           </svg>
           <p className="text-xs text-muted leading-relaxed">
-            All uploaded documents are encrypted in transit and at rest. Clinical information is handled in accordance with HIPAA regulations. VantaHG maintains SOC 2 Type II compliance for all data processing operations.
+            All uploaded documents are encrypted in transit and at rest. Clinical information is handled in accordance with HIPAA regulations. VantaUM maintains SOC 2 Type II compliance for all data processing operations.
           </p>
         </div>
       </div>
@@ -1256,7 +1256,7 @@ export default function UploadPage() {
           <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
         </svg>
         <p className="text-xs text-muted leading-relaxed">
-          All uploaded documents are encrypted in transit and at rest. Clinical information is handled in accordance with HIPAA regulations. VantaHG maintains SOC 2 Type II compliance for all data processing operations.
+          All uploaded documents are encrypted in transit and at rest. Clinical information is handled in accordance with HIPAA regulations. VantaUM maintains SOC 2 Type II compliance for all data processing operations.
         </p>
       </div>
     </div>

@@ -1,7 +1,7 @@
 import type Anthropic from '@anthropic-ai/sdk';
 
 /**
- * Claude tool definitions for the VantaHG chat interface.
+ * Claude tool definitions for the VantaUM chat interface.
  * These let Claude extract structured data and look up medical codes
  * during conversation.
  */
@@ -62,7 +62,7 @@ export const chatTools: Anthropic.Tool[] = [
   },
   {
     name: 'lookup_cpt_code',
-    description: 'Search for a CPT or HCPCS procedure code by code number or description. Returns matching codes from the VantaHG medical criteria database.',
+    description: 'Search for a CPT or HCPCS procedure code by code number or description. Returns matching codes from the VantaUM medical criteria database.',
     input_schema: {
       type: 'object' as const,
       properties: {
