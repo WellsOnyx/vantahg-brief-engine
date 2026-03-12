@@ -3,8 +3,8 @@ import Link from 'next/link';
 const steps = [
   {
     number: '01',
-    title: 'Submit Clinical Documentation',
-    description: 'Upload operative notes, imaging reports, lab results, and procedure codes (CPT/HCPCS) through our secure, HIPAA-compliant portal.',
+    title: 'You Submit. We Handle the Rest.',
+    description: 'Upload clinical documentation through our secure portal, chat, batch upload, or API. Our team takes it from there — no back-and-forth, no chasing paperwork.',
     icon: (
       <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m6.75 12H9m1.5-12H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
@@ -13,8 +13,8 @@ const steps = [
   },
   {
     number: '02',
-    title: 'AI-Powered Analysis',
-    description: 'Our clinical AI engine analyzes documentation against InterQual, MCG, and NCCN guidelines, evaluating medical necessity for surgeries, imaging, specialty procedures, and more.',
+    title: 'Intelligence That Gives Physicians More Time',
+    description: 'Our clinical intelligence surfaces the right criteria, flags gaps, and prepares a comprehensive brief — so the reviewing physician spends their time on judgment, not paperwork.',
     icon: (
       <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5" />
@@ -23,8 +23,8 @@ const steps = [
   },
   {
     number: '03',
-    title: 'Physician Determination',
-    description: 'Board-certified physicians review every case and make the final clinical determination, informed by AI-generated insights.',
+    title: 'A Real Physician on Every Case',
+    description: 'A board-certified, specialty-matched physician reviews the full picture and makes the determination. Every single time. No exceptions.',
     icon: (
       <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
@@ -36,8 +36,8 @@ const steps = [
 const stats = [
   {
     value: '< 24hr',
-    label: 'Prior Auth Reviews',
-    sublabel: 'Average turnaround time',
+    label: 'Concierge Turnaround',
+    sublabel: 'Most cases reviewed same day',
     icon: (
       <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -46,8 +46,8 @@ const stats = [
   },
   {
     value: '100%',
-    label: 'Medical Necessity Determinations',
-    sublabel: 'Physician-reviewed, every case',
+    label: 'Physician-Reviewed',
+    sublabel: 'Every case, every time',
     icon: (
       <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z" />
@@ -56,8 +56,8 @@ const stats = [
   },
   {
     value: 'Board-Certified',
-    label: 'Physician Panel',
-    sublabel: 'Multi-specialty coverage',
+    label: 'Specialty-Matched Physicians',
+    sublabel: 'The right doctor on every case',
     icon: (
       <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 9h3.75M15 12h3.75M15 15h3.75M4.5 19.5h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5zm6-10.125a1.875 1.875 0 11-3.75 0 1.875 1.875 0 013.75 0zm1.294 6.336a6.721 6.721 0 01-3.17.789 6.721 6.721 0 01-3.168-.789 3.376 3.376 0 016.338 0z" />
@@ -67,7 +67,7 @@ const stats = [
   {
     value: 'HIPAA',
     label: 'Compliant Infrastructure',
-    sublabel: 'SOC 2 Type II certified',
+    sublabel: 'Built for trust from day one',
     icon: (
       <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
@@ -79,7 +79,7 @@ const stats = [
 const verticals = [
   {
     name: 'Medical',
-    description: 'Prior authorization, medical necessity, concurrent and retrospective reviews for imaging, surgeries, specialty procedures, DME, and more',
+    description: 'Prior authorization, medical necessity, concurrent and retrospective reviews — with a physician who has the time to actually understand each case',
     hero: true,
     icon: (
       <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -89,7 +89,7 @@ const verticals = [
   },
   {
     name: 'Dental',
-    description: 'Dental necessity reviews, predeterminations, and coverage assessments',
+    description: 'Dental necessity reviews, predeterminations, and coverage assessments — licensed dentist reviewers who know the codes',
     hero: false,
     comingSoon: true,
     icon: (
@@ -100,7 +100,7 @@ const verticals = [
   },
   {
     name: 'Vision',
-    description: 'Vision care reviews, surgical necessity, and optical coverage determinations',
+    description: 'Vision care reviews, surgical necessity, and optical coverage determinations — optometrists and ophthalmologists on your team',
     hero: false,
     comingSoon: true,
     icon: (
@@ -147,19 +147,18 @@ export default function Home() {
             {/* Badge */}
             <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/10 rounded-full px-4 py-1.5 mb-8">
               <span className="w-2 h-2 bg-gold rounded-full animate-pulse" />
-              <span className="text-sm text-white/80 font-medium tracking-wide">Utilization Review Platform</span>
+              <span className="text-sm text-white/80 font-medium tracking-wide">Concierge Member Advocacy</span>
             </div>
 
             <h1 className="font-[family-name:var(--font-dm-serif)] text-4xl sm:text-5xl md:text-6xl lg:text-7xl text-white leading-[1.1] tracking-tight">
-              AI-Powered Clinical Review.{' '}
-              <span className="text-gold">Physician-Led</span>{' '}
-              Determinations.
+              More Human,{' '}
+              <span className="text-gold">Not Less.</span>
             </h1>
 
             <p className="mt-6 md:mt-8 text-lg md:text-xl text-white/70 max-w-2xl leading-relaxed">
-              Our AI engine augments -- never replaces -- board-certified physicians.
-              Every clinical determination is made by a licensed specialist, informed
-              by evidence-based AI analysis.
+              We built clinical intelligence into our DNA so physicians have more time
+              with every case — and members get the thoughtful, human review they deserve.
+              Not an AI product. A concierge service, powered by it.
             </p>
 
             <div className="mt-10 flex flex-col sm:flex-row items-start gap-4">
@@ -194,7 +193,7 @@ export default function Home() {
                   </svg>
                 </div>
                 <div>
-                  <div className="text-white/90 font-semibold text-sm">AI Brief Generated</div>
+                  <div className="text-white/90 font-semibold text-sm">Clinical Brief Ready</div>
                   <div className="text-white/40 text-xs">Case #VUM-2026-0847</div>
                 </div>
               </div>
@@ -211,11 +210,11 @@ export default function Home() {
                   <span className="text-xs font-medium text-gold bg-gold/10 px-2 py-0.5 rounded-full">Complete</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-white/50 text-xs">AI Confidence</span>
+                  <span className="text-white/50 text-xs">Confidence</span>
                   <span className="text-xs font-medium text-white/80">High</span>
                 </div>
                 <div className="pt-3 border-t border-white/10">
-                  <div className="text-xs text-white/40 mb-1">AI Recommendation</div>
+                  <div className="text-xs text-white/40 mb-1">Physician Recommendation</div>
                   <div className="text-sm text-white/90 font-medium">Approve -- Meets clinical necessity criteria per InterQual guidelines</div>
                 </div>
               </div>
@@ -244,11 +243,11 @@ export default function Home() {
               <span className="w-8 h-px bg-gold" />
             </div>
             <h2 className="font-[family-name:var(--font-dm-serif)] text-3xl md:text-4xl text-navy">
-              Clinical Review in Three Steps
+              Concierge Review in Three Steps
             </h2>
             <p className="mt-4 text-muted text-lg">
-              Our streamlined workflow combines AI efficiency with physician expertise
-              to deliver faster, more accurate clinical determinations.
+              We handle the complexity so your physicians can focus on what matters —
+              giving every member&apos;s case the attention it deserves.
             </p>
           </div>
 
@@ -312,14 +311,14 @@ export default function Home() {
           <div className="text-center max-w-2xl mx-auto mb-16">
             <div className="inline-flex items-center gap-2 text-gold font-semibold text-sm tracking-widest uppercase mb-4">
               <span className="w-8 h-px bg-gold/50" />
-              Trust &amp; Performance
+              Our Commitment
               <span className="w-8 h-px bg-gold/50" />
             </div>
             <h2 className="font-[family-name:var(--font-dm-serif)] text-3xl md:text-4xl text-white">
-              Built for Clinical Accuracy and Speed
+              Every Member Deserves a Real Review
             </h2>
             <p className="mt-4 text-white/50 text-lg">
-              Designed to meet the rigorous demands of health plans, TPAs, and self-funded employers.
+              We give physicians the time and tools to do what they do best — so members and plans get clinical decisions they can trust.
             </p>
           </div>
 
@@ -356,10 +355,10 @@ export default function Home() {
               <span className="w-8 h-px bg-gold" />
             </div>
             <h2 className="font-[family-name:var(--font-dm-serif)] text-3xl md:text-4xl text-navy">
-              Multi-Specialty Clinical Review
+              The Right Specialist on Every Case
             </h2>
             <p className="mt-4 text-muted text-lg">
-              Medical utilization review across imaging, surgery, specialty procedures, DME, infusions, behavioral health, and more -- with specialty-matched physician reviewers.
+              Imaging, surgery, specialty procedures, DME, behavioral health, and more — each case is matched to a physician who understands the clinical context firsthand.
             </p>
           </div>
 
@@ -426,9 +425,9 @@ export default function Home() {
           <div className="flex flex-col md:flex-row items-center justify-between gap-8">
             <div>
               <h2 className="font-[family-name:var(--font-dm-serif)] text-2xl md:text-3xl text-white">
-                Ready to streamline your clinical review process?
+                Give your members the review process they deserve.
               </h2>
-              <p className="mt-2 text-white/60 text-lg">Submit your first case in minutes. No setup required.</p>
+              <p className="mt-2 text-white/60 text-lg">Submit your first case in minutes. See the difference a concierge approach makes.</p>
             </div>
             <Link
               href="/login"
@@ -456,7 +455,7 @@ export default function Home() {
                 <span className="font-[family-name:var(--font-dm-serif)] text-xl text-navy tracking-tight">VantaUM</span>
               </div>
               <p className="text-muted text-sm leading-relaxed">
-                Clinical Brief Engine for utilization review. AI-powered analysis with physician-led determinations.
+                Concierge utilization management. Clinical intelligence that gives physicians more time — so members get the care they deserve.
               </p>
             </div>
 
@@ -494,10 +493,10 @@ export default function Home() {
           {/* Compliance disclosure */}
           <div className="mt-10 pt-8 border-t border-border">
             <p className="text-xs text-muted leading-relaxed max-w-4xl">
-              All clinical determinations are made by licensed, board-certified physicians. AI technology
-              is used solely to assist in clinical documentation analysis and does not make coverage decisions.
-              VantaUM complies with all applicable state and federal regulations governing utilization review,
-              including URAC and NCQA standards where applicable.
+              All clinical determinations are made by licensed, board-certified physicians. Our clinical
+              intelligence assists with documentation analysis and brief preparation — it never makes coverage
+              decisions. VantaUM complies with all applicable state and federal regulations governing utilization
+              review, including URAC and NCQA standards where applicable.
             </p>
             <p className="text-xs text-muted/60 mt-4">
               &copy; {new Date().getFullYear()} VantaUM. All rights reserved.

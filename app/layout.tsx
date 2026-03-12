@@ -17,13 +17,13 @@ const dmSerif = DM_Serif_Display({
 });
 
 export const metadata: Metadata = {
-  title: 'FLR by VantaUM | Clinical Brief Engine',
-  description: 'AI-powered first-level utilization review by Wells Onyx. Clinical briefs prepared by AI, determinations made by board-certified physicians.',
-  keywords: ['utilization review', 'medical necessity', 'prior authorization', 'clinical brief', 'healthcare compliance', 'first-level review', 'Wells Onyx'],
+  title: 'VantaUM | Concierge Utilization Management',
+  description: 'Concierge member advocacy meets clinical intelligence. VantaUM gives physicians more time with every case so members get the care they deserve.',
+  keywords: ['utilization management', 'member advocacy', 'concierge clinical review', 'prior authorization', 'physician review', 'healthcare compliance', 'Wells Onyx'],
   authors: [{ name: 'VantaUM' }, { name: 'Wells Onyx' }],
   openGraph: {
-    title: 'FLR by VantaUM | Clinical Brief Engine',
-    description: 'AI-powered first-level utilization review platform by Wells Onyx for TPAs, health plans, and self-funded employers.',
+    title: 'VantaUM | Concierge Utilization Management',
+    description: 'Concierge member advocacy powered by clinical intelligence. More human, not less. A Wells Onyx service for TPAs, health plans, and self-funded employers.',
     type: 'website',
   },
   icons: {

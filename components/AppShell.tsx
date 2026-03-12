@@ -77,7 +77,7 @@ export function AppShell({
                 V
               </div>
               <span className="text-sm font-semibold text-foreground">
-                VantaUM Clinical Brief Engine
+                VantaUM Concierge Review
               </span>
               <span className="text-xs text-muted ml-2 hidden sm:inline">
                 — A{' '}

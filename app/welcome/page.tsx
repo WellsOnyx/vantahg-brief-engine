@@ -2,9 +2,9 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Welcome | FLR by VantaUM',
+  title: 'Welcome | VantaUM',
   description:
-    'AI-powered first-level utilization review. Clinical briefs prepared by AI, determinations made by board-certified physicians in 24-48 hours.',
+    'Concierge utilization management. Clinical intelligence that gives physicians more time with every case — so members get the care they deserve.',
 };
 
 export default function WelcomePage() {
@@ -23,14 +23,14 @@ export default function WelcomePage() {
           </div>
 
           <h1 className="font-[family-name:var(--font-dm-serif)] text-3xl sm:text-5xl leading-tight mb-6">
-            First-Level Physician Review.
+            Concierge Member Advocacy.
             <br />
-            <span className="text-gold">AI-Powered. Physician-Signed.</span>
+            <span className="text-gold">More Human, Not Less.</span>
           </h1>
 
           <p className="text-lg sm:text-xl text-white/70 max-w-2xl mx-auto mb-10">
             Prior authorization, medical necessity, concurrent review, and peer-to-peer — with
-            AI-assisted clinical briefs and board-certified physician sign-off in 24–48 hours.
+            clinical intelligence that gives your physicians more time on every case, delivered in 24–48 hours.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -77,13 +77,13 @@ export default function WelcomePage() {
             />
             <StepCard
               step={2}
-              title="AI Clinical Brief"
-              description="Our AI extracts clinical data, matches criteria, and generates a comprehensive brief."
+              title="Clinical Brief Preparation"
+              description="Our intelligence engine extracts clinical data, matches criteria, and prepares a comprehensive brief for the physician."
             />
             <StepCard
               step={3}
               title="Physician Review"
-              description="Auto-routed to a specialty-matched, board-certified physician for determination."
+              description="Routed to a specialty-matched, board-certified physician who has the time to give each case the attention it deserves."
             />
             <StepCard
               step={4}
@@ -98,21 +98,21 @@ export default function WelcomePage() {
       <section className="py-16 bg-surface border-y border-border">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="font-[family-name:var(--font-dm-serif)] text-2xl sm:text-3xl text-center text-foreground mb-12">
-            Built for TPAs, Health Plans & Self-Funded Employers
+            Concierge Review for TPAs, Health Plans & Self-Funded Employers
           </h2>
 
           <div className="grid sm:grid-cols-3 gap-8">
             <ValueCard
               title="Medical"
-              description="First-level reviews across EM, radiology, ortho, internal medicine, cardiology, and oncology — the specialties that drive the highest authorization volume."
+              description="Concierge reviews across EM, radiology, ortho, internal medicine, cardiology, and oncology — each case matched to a physician who understands the clinical context."
             />
             <ValueCard
               title="Dental"
-              description="Licensed dentist reviewers for implants, orthodontics, scaling, extractions, and sedation — the procedures that generate the most friction."
+              description="Licensed dentist reviewers for implants, orthodontics, scaling, extractions, and sedation — specialists who know the codes and the clinical context."
             />
             <ValueCard
               title="Vision"
-              description="Optometrist and ophthalmologist reviewers for the coverage questions that create the most plan-provider disputes."
+              description="Optometrist and ophthalmologist reviewers who bring clarity to the coverage questions that create the most plan-provider friction."
             />
           </div>
         </div>
@@ -148,10 +148,10 @@ export default function WelcomePage() {
       <section className="py-16 bg-navy text-white">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="font-[family-name:var(--font-dm-serif)] text-2xl sm:text-3xl mb-4">
-            Ready to streamline your review process?
+            Ready to give your members a better experience?
           </h2>
           <p className="text-white/60 mb-8">
-            Create an account to submit your first case, or contact us to learn more.
+            Create an account to submit your first case, or reach out to see the concierge difference.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link

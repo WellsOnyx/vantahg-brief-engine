@@ -6,11 +6,11 @@ export function BridgeBar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-9 flex items-center justify-between">
         {/* Left: branding */}
         <span className="hidden sm:inline">
-          <span className="font-semibold text-white/90">FLR</span> by VantaUM
+          <span className="font-semibold text-white/90">VantaUM</span> Concierge Review
           <span className="text-white/40 mx-1.5">—</span>
           A Wells Onyx Service
         </span>
-        <span className="sm:hidden text-white/90 font-medium">FLR by VantaUM</span>
+        <span className="sm:hidden text-white/90 font-medium">VantaUM</span>
 
         {/* Right: links */}
         <div className="flex items-center gap-4">
