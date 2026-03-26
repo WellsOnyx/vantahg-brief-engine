@@ -1,509 +1,424 @@
-import Link from 'next/link';
+'use client';
 
-const steps = [
-  {
-    number: '01',
-    title: 'You Submit. We Handle the Rest.',
-    description: 'Upload clinical documentation through our secure portal, chat, batch upload, or API. Our team takes it from there — no back-and-forth, no chasing paperwork.',
-    icon: (
-      <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m6.75 12H9m1.5-12H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-      </svg>
-    ),
-  },
-  {
-    number: '02',
-    title: 'Intelligence That Gives Physicians More Time',
-    description: 'Our clinical intelligence surfaces the right criteria, flags gaps, and prepares a comprehensive brief — so the reviewing physician spends their time on judgment, not paperwork.',
-    icon: (
-      <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5" />
-      </svg>
-    ),
-  },
-  {
-    number: '03',
-    title: 'A Real Physician on Every Case',
-    description: 'A board-certified, specialty-matched physician reviews the full picture and makes the determination. Every single time. No exceptions.',
-    icon: (
-      <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
-      </svg>
-    ),
-  },
-];
+import DemoWalkthrough from '@/components/demo/DemoWalkthrough';
 
-const stats = [
-  {
-    value: '< 24hr',
-    label: 'Concierge Turnaround',
-    sublabel: 'Most cases reviewed same day',
-    icon: (
-      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    ),
-  },
-  {
-    value: '100%',
-    label: 'Physician-Reviewed',
-    sublabel: 'Every case, every time',
-    icon: (
-      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z" />
-      </svg>
-    ),
-  },
-  {
-    value: 'Board-Certified',
-    label: 'Specialty-Matched Physicians',
-    sublabel: 'The right doctor on every case',
-    icon: (
-      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 9h3.75M15 12h3.75M15 15h3.75M4.5 19.5h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5zm6-10.125a1.875 1.875 0 11-3.75 0 1.875 1.875 0 013.75 0zm1.294 6.336a6.721 6.721 0 01-3.17.789 6.721 6.721 0 01-3.168-.789 3.376 3.376 0 016.338 0z" />
-      </svg>
-    ),
-  },
-  {
-    value: 'HIPAA',
-    label: 'Compliant Infrastructure',
-    sublabel: 'Built for trust from day one',
-    icon: (
-      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
-      </svg>
-    ),
-  },
-];
+/* ─── CSS-in-JS style object for the marketing page ─── */
+/* Uses the Wells Onyx dark palette with Cormorant Garamond + DM Sans */
 
-const verticals = [
-  {
-    name: 'Medical',
-    description: 'Prior authorization, medical necessity, concurrent and retrospective reviews — with a physician who has the time to actually understand each case',
-    hero: true,
-    icon: (
-      <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
-      </svg>
-    ),
-  },
-  {
-    name: 'Dental',
-    description: 'Dental necessity reviews, predeterminations, and coverage assessments — licensed dentist reviewers who know the codes',
-    hero: false,
-    comingSoon: true,
-    icon: (
-      <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.182 15.182a4.5 4.5 0 01-6.364 0M21 12a9 9 0 11-18 0 9 9 0 0118 0zM9.75 9.75c0 .414-.168.75-.375.75S9 10.164 9 9.75 9.168 9 9.375 9s.375.336.375.75zm-.375 0h.008v.015h-.008V9.75zm5.625 0c0 .414-.168.75-.375.75s-.375-.336-.375-.75.168-.75.375-.75.375.336.375.75zm-.375 0h.008v.015h-.008V9.75z" />
-      </svg>
-    ),
-  },
-  {
-    name: 'Vision',
-    description: 'Vision care reviews, surgical necessity, and optical coverage determinations — optometrists and ophthalmologists on your team',
-    hero: false,
-    comingSoon: true,
-    icon: (
-      <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-      </svg>
-    ),
-  },
-];
+const EA_EMAIL = 'mailto:hello@wellsonyx.com?subject=VantaUM%20Early%20Access%20Demo';
 
-export default function Home() {
+export default function SitePage() {
   return (
-    <div className="scroll-smooth">
-      {/* ================================================================ */}
-      {/* HERO SECTION                                                     */}
-      {/* ================================================================ */}
-      <section className="relative bg-navy overflow-hidden">
-        {/* Subtle geometric pattern overlay */}
-        <div className="absolute inset-0 opacity-[0.04]">
-          <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <pattern id="heroGrid" width="60" height="60" patternUnits="userSpaceOnUse">
-                <path d="M 60 0 L 0 0 0 60" fill="none" stroke="white" strokeWidth="0.5" />
-              </pattern>
-            </defs>
-            <rect width="100%" height="100%" fill="url(#heroGrid)" />
-          </svg>
+    <>
+      {/* Google Fonts for the marketing page */}
+      {/* eslint-disable-next-line @next/next/no-page-custom-font */}
+      <link
+        href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap"
+        rel="stylesheet"
+      />
+
+      <style>{`
+        .vum-site *, .vum-site *::before, .vum-site *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        .vum-site {
+          --black: #000000; --near-black: #080808; --surface: #0f0f0f; --surface-2: #141414;
+          --border: rgba(255,255,255,0.07); --border-strong: rgba(255,255,255,0.14);
+          --white: #f8f7f4; --white-muted: rgba(248,247,244,0.52); --white-dim: rgba(248,247,244,0.28);
+          --teal: #5b8af5; --teal-dim: rgba(91,138,245,0.12); --teal-mid: rgba(91,138,245,0.38);
+          --gold: #c9a96e; --gold-dim: rgba(201,169,110,0.12);
+          --serif: 'Cormorant Garamond', Georgia, serif;
+          --sans: 'DM Sans', system-ui, sans-serif;
+          background: var(--black); color: var(--white); font-family: var(--sans); font-size: 16px; line-height: 1.6;
+          -webkit-font-smoothing: antialiased;
+        }
+        .vum-site a { color: inherit; }
+
+        /* ── Early Access Bar ── */
+        .ea-bar { position:fixed;top:0;left:0;right:0;z-index:101;background:var(--teal);color:#fff;padding:10px 56px;display:flex;align-items:center;justify-content:center;gap:16px;font-size:13px;font-weight:400;letter-spacing:0.02em; }
+        .ea-bar-pill { background:rgba(255,255,255,0.18);color:#fff;font-size:10px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;padding:3px 10px;border-radius:20px;white-space:nowrap; }
+        .ea-bar-text { color:rgba(255,255,255,0.82); }
+        .ea-bar-link { color:#fff;font-weight:500;text-decoration:underline;text-underline-offset:2px;white-space:nowrap; }
+
+        /* ── Nav ── */
+        .vum-nav { position:fixed;top:40px;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:18px 56px;border-bottom:1px solid var(--border);background:rgba(7,8,10,0.9);backdrop-filter:blur(16px); }
+        .nav-left { display:flex;align-items:baseline;gap:0; }
+        .nav-wordmark { font-family:var(--sans);font-size:15px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--white);text-decoration:none; }
+        .nav-wordmark span { color:var(--teal); }
+        .nav-sub { font-size:11px;font-weight:300;letter-spacing:0.08em;text-transform:uppercase;color:var(--white-dim);margin-left:12px; }
+        .nav-links { display:flex;gap:36px;list-style:none; }
+        .nav-links a { font-size:13px;font-weight:300;color:var(--white-muted);text-decoration:none;transition:color 0.2s; }
+        .nav-links a:hover { color:var(--white); }
+        .nav-cta { border:1px solid var(--border-strong);color:var(--white);background:transparent;padding:9px 22px;border-radius:4px;font-size:13px;font-weight:400;text-decoration:none;transition:border-color 0.2s,color 0.2s; }
+        .nav-cta:hover { border-color:var(--teal);color:var(--teal); }
+
+        /* ── Hero ── */
+        .vum-hero { min-height:100vh;display:grid;grid-template-columns:1fr 1fr;align-items:center;padding:170px 56px 80px;gap:80px;position:relative;overflow:hidden; }
+        .vum-hero::before { content:'';position:absolute;top:0;right:0;width:55%;height:100%;background:radial-gradient(ellipse 80% 70% at 70% 40%,rgba(91,138,245,0.04) 0%,transparent 70%);pointer-events:none; }
+        .hero-vline { position:absolute;top:0;bottom:0;left:50%;width:1px;background:var(--border); }
+        .eyebrow { display:flex;align-items:center;gap:12px;font-size:11px;font-weight:500;letter-spacing:0.14em;text-transform:uppercase;color:var(--teal);margin-bottom:32px; }
+        .eyebrow::before { content:'';display:block;width:32px;height:1px;background:var(--teal);flex-shrink:0; }
+        .vum-hero h1 { font-family:var(--serif);font-size:clamp(48px,5.5vw,80px);font-weight:300;line-height:1.08;letter-spacing:-0.5px;color:var(--white);margin-bottom:32px; }
+        .vum-hero h1 em { font-style:italic;color:var(--teal); }
+        .hero-body { font-size:17px;font-weight:300;line-height:1.7;color:var(--white-muted);max-width:480px;margin-bottom:48px; }
+        .hero-actions { display:flex;gap:20px;align-items:center; }
+        .btn-primary { background:var(--teal);color:#fff;padding:13px 30px;border-radius:4px;font-family:var(--sans);font-size:14px;font-weight:500;text-decoration:none;transition:opacity 0.2s,transform 0.15s;display:inline-block; }
+        .btn-primary:hover { opacity:0.88;transform:translateY(-1px); }
+        .btn-ghost { font-size:14px;font-weight:300;color:var(--white-muted);text-decoration:none;display:flex;align-items:center;gap:8px;transition:color 0.2s; }
+        .btn-ghost:hover { color:var(--white); }
+        .hero-right { position:relative;z-index:1;display:flex;flex-direction:column;gap:2px; }
+        .hero-stat { border:1px solid var(--border);border-radius:6px;padding:28px 32px;background:var(--surface);transition:border-color 0.2s; }
+        .hero-stat:hover { border-color:var(--border-strong); }
+        .stat-val { font-family:var(--serif);font-size:38px;font-weight:300;line-height:1;margin-bottom:8px; }
+        .stat-label { font-size:13px;font-weight:300;color:var(--white-muted);line-height:1.4; }
+
+        /* ── Shared section styles ── */
+        hr.divider { border:none;border-top:1px solid var(--border);margin:0; }
+        .vum-section { padding:100px 56px; }
+        .kicker { font-size:11px;font-weight:500;letter-spacing:0.14em;text-transform:uppercase;color:var(--teal);margin-bottom:20px;display:block; }
+        h2.sh { font-family:var(--serif);font-weight:300;font-size:clamp(34px,4vw,56px);line-height:1.1;letter-spacing:-0.3px;color:var(--white);margin-bottom:20px; }
+        h2.sh em { font-style:italic;color:var(--teal); }
+        p.sb { font-size:16px;font-weight:300;line-height:1.75;color:var(--white-muted); }
+
+        /* ── Demo Section ── */
+        .demo-frame-label { display:inline-flex;align-items:center;gap:10px;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--teal);padding:10px 20px;background:var(--surface);border:1px solid rgba(91,138,245,0.25);border-bottom:none;border-radius:8px 8px 0 0;width:fit-content; }
+        .demo-live-dot { width:7px;height:7px;border-radius:50%;background:var(--teal);animation:pulse 2s ease-in-out infinite; }
+        .demo-cta-row { margin-top:32px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;padding:28px 32px;background:var(--surface);border:1px solid var(--border);border-radius:8px; }
+        .demo-cta-text { font-size:15px;font-weight:300;color:var(--white-muted);max-width:480px; }
+
+        /* ── Early Access Section ── */
+        .ea-section { background:var(--surface);border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:72px 56px; }
+        .ea-inner { max-width:1200px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:center; }
+        .ea-perks { display:flex;flex-direction:column;gap:3px; }
+        .ea-perk { display:flex;align-items:flex-start;gap:16px;padding:20px 24px;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;transition:border-color 0.2s; }
+        .ea-perk:hover { border-color:var(--border-strong); }
+        .ea-perk-num { font-family:var(--serif);font-size:22px;font-weight:300;color:var(--gold);flex-shrink:0;line-height:1;margin-top:2px; }
+        .ea-perk-title { font-size:14px;font-weight:500;color:var(--white);margin-bottom:4px; }
+        .ea-perk-body { font-size:13px;font-weight:300;color:var(--white-muted);line-height:1.55; }
+        .ea-spots { margin-top:28px;padding:20px 24px;background:rgba(201,169,110,0.08);border:1px solid rgba(201,169,110,0.2);border-radius:6px;display:flex;align-items:center;gap:14px; }
+        .ea-spots-dot { width:10px;height:10px;border-radius:50%;background:var(--gold);flex-shrink:0;animation:pulse 2s ease-in-out infinite; }
+        .ea-spots-text { font-size:13px;font-weight:300;color:var(--gold);line-height:1.4; }
+        .ea-spots-text strong { font-weight:500; }
+        @keyframes pulse { 0%,100%{opacity:1;transform:scale(1);} 50%{opacity:0.6;transform:scale(0.85);} }
+
+        /* ── Philosophy ── */
+        .philosophy { background:var(--near-black); }
+        .phil-inner { max-width:1200px;margin:0 auto;display:grid;grid-template-columns:1fr 1.1fr;gap:100px;align-items:center; }
+        .flow { display:flex;flex-direction:column;gap:3px; }
+        .flow-row { display:flex;gap:3px; }
+        .flow-cell { border-radius:6px;padding:22px 24px;display:flex;flex-direction:column;gap:6px; }
+        .flow-cell.human { background:var(--surface-2);border:1px solid var(--border);flex:0 0 40%; }
+        .flow-cell.machine { background:rgba(91,138,245,0.07);border:1px solid rgba(91,138,245,0.18);flex:1; }
+        .flow-cell.clinical { background:rgba(201,169,110,0.08);border:1px solid rgba(201,169,110,0.2);flex:0 0 40%; }
+        .fl { font-size:10px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;opacity:0.55; }
+        .flow-cell.machine .fl { color:var(--teal);opacity:0.8; }
+        .flow-cell.human .fl { color:var(--white-muted); }
+        .flow-cell.clinical .fl { color:var(--gold); }
+        .ft { font-size:13px;font-weight:400;line-height:1.4; }
+        .flow-cell.machine .ft { color:#a8c0fa; }
+        .flow-cell.human .ft { color:var(--white); }
+        .flow-cell.clinical .ft { color:var(--gold); }
+        .flow-bridge { text-align:center;padding:10px 0;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--white-dim);display:flex;align-items:center; }
+        .flow-bridge::before,.flow-bridge::after { content:'';flex:1;height:1px;background:var(--border);margin:0 14px; }
+
+        /* ── Pillars ── */
+        .pillars-grid { display:grid;grid-template-columns:repeat(3,1fr);gap:2px; }
+        .pillar { padding:48px 40px;background:var(--surface);border:1px solid var(--border);transition:border-color 0.25s; }
+        .pillars-grid>.pillar:first-child { border-radius:8px 0 0 8px; }
+        .pillars-grid>.pillar:last-child { border-radius:0 8px 8px 0; }
+        .pillar:hover { border-color:var(--border-strong); }
+        .pnum { font-family:var(--serif);font-size:52px;font-weight:300;line-height:1;margin-bottom:24px;display:block; }
+        .pname { font-family:var(--serif);font-size:24px;font-weight:300;color:var(--white);margin-bottom:14px;line-height:1.2; }
+        .pbody { font-size:14px;font-weight:300;line-height:1.7;color:var(--white-muted); }
+        .ptag { display:inline-block;margin-top:24px;font-size:11px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;padding:4px 12px;border-radius:3px; }
+
+        /* ── Manifesto ── */
+        .manifesto { background:var(--surface);border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:80px 56px;display:flex;align-items:center;justify-content:center;text-align:center; }
+        .qmark { font-family:var(--serif);font-size:72px;font-weight:300;line-height:0.6;color:var(--teal);opacity:0.4;display:block;margin-bottom:36px; }
+        .qtext { font-family:var(--serif);font-size:clamp(26px,3.5vw,44px);font-weight:300;line-height:1.25;letter-spacing:-0.3px;color:var(--white); }
+        .qtext em { font-style:italic;color:var(--teal); }
+        .qattr { margin-top:32px;font-size:12px;font-weight:300;letter-spacing:0.1em;text-transform:uppercase;color:var(--white-dim); }
+
+        /* ── Compare Table ── */
+        table.ctable { width:100%;border-collapse:collapse; }
+        table.ctable thead tr { border-bottom:1px solid var(--border); }
+        table.ctable th { padding:14px 24px;text-align:left;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase; }
+        table.ctable th:nth-child(1) { color:var(--white-dim);width:22%; }
+        table.ctable th:nth-child(2) { color:var(--white-dim);width:39%; }
+        table.ctable th:nth-child(3) { color:var(--teal);width:39%; }
+        table.ctable td { padding:22px 24px;vertical-align:top;font-size:14px;line-height:1.6;font-weight:300;border-bottom:1px solid var(--border); }
+        table.ctable td:nth-child(1) { color:var(--white-muted);font-style:italic; }
+        table.ctable td:nth-child(2) { color:var(--white-dim); }
+        table.ctable td:nth-child(3) { color:var(--white); }
+        .tgood { display:inline-block;padding:1px 8px;border-radius:3px;background:var(--teal-dim);color:var(--teal);font-size:11px;font-weight:500;letter-spacing:0.06em;margin-left:8px; }
+
+        /* ── URAC ── */
+        .urac-inner { max-width:1200px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:100px;align-items:center; }
+        .urac-list { display:flex;flex-direction:column;gap:3px; }
+        .urac-item { display:flex;align-items:flex-start;gap:20px;padding:28px;background:var(--surface);border:1px solid var(--border);border-radius:6px;transition:border-color 0.2s; }
+        .urac-item:hover { border-color:var(--border-strong); }
+        .udot { width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:6px; }
+        .utitle { font-size:15px;font-weight:400;color:var(--white);margin-bottom:6px; }
+        .ubody { font-size:13px;font-weight:300;color:var(--white-muted);line-height:1.55; }
+
+        /* ── Family Banner ── */
+        .fam-banner { padding:28px 56px;background:var(--surface);border-top:1px solid var(--border);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:24px; }
+        .fam-label { font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--white-dim);white-space:nowrap; }
+        .fam-pipe { width:1px;height:24px;background:var(--border); }
+        .fam-text { font-size:13px;font-weight:300;color:var(--white-muted); }
+        .fam-text a { color:var(--teal);text-decoration:none; }
+        .fam-text a:hover { text-decoration:underline; }
+
+        /* ── CTA ── */
+        .cta-section { background:var(--near-black);text-align:center;padding:120px 56px; }
+        .cta-actions { display:flex;gap:20px;justify-content:center;flex-wrap:wrap; }
+
+        /* ── Footer ── */
+        .vum-footer { background:var(--black);border-top:1px solid var(--border);padding:40px 56px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px; }
+        .footer-logo { font-family:var(--sans);font-size:13px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--white); }
+        .footer-logo span { color:var(--teal); }
+        .vum-footer p { font-size:12px;color:var(--white-dim); }
+
+        /* ── Animations ── */
+        @keyframes fadeUp { from{opacity:0;transform:translateY(20px);} to{opacity:1;transform:translateY(0);} }
+        .hero-left .eyebrow { animation:fadeUp 0.6s ease both; }
+        .hero-left h1 { animation:fadeUp 0.7s 0.1s ease both; }
+        .hero-left .hero-body { animation:fadeUp 0.7s 0.2s ease both; }
+        .hero-left .hero-actions { animation:fadeUp 0.7s 0.3s ease both; }
+        .hero-right { animation:fadeUp 0.8s 0.25s ease both; }
+
+        /* ── Responsive ── */
+        @media (max-width:960px) {
+          .vum-nav { padding:18px 24px; }
+          .nav-links { display:none; }
+          .vum-hero { grid-template-columns:1fr;padding:100px 24px 60px;gap:48px; }
+          .hero-vline { display:none; }
+          .hero-right { display:none; }
+          .vum-section { padding:72px 24px; }
+          .phil-inner,.urac-inner { grid-template-columns:1fr;gap:48px; }
+          .pillars-grid { grid-template-columns:1fr; }
+          .pillar,.pillars-grid>.pillar:first-child,.pillars-grid>.pillar:last-child { border-radius:6px; }
+          .ea-bar { padding:10px 16px;flex-wrap:wrap;gap:8px; }
+          .ea-inner { grid-template-columns:1fr;gap:48px; }
+          .fam-banner { padding:20px 24px;flex-wrap:wrap; }
+          .manifesto { padding:60px 24px; }
+          .vum-footer { padding:32px 24px;flex-direction:column;text-align:center; }
+          .demo-cta-row { flex-direction:column;align-items:flex-start; }
+          .cta-section { padding:72px 24px; }
+        }
+      `}</style>
+
+      <div className="vum-site">
+        {/* Early Access Bar */}
+        <div className="ea-bar">
+          <span className="ea-bar-pill">Early Access</span>
+          <span className="ea-bar-text">VantaUM is now accepting founding TPA partners — limited spots available.</span>
+          <a href={EA_EMAIL} className="ea-bar-link">Apply now →</a>
         </div>
 
-        {/* Gold accent line at top */}
-        <div className="h-1 bg-gradient-to-r from-gold/0 via-gold to-gold/0" />
+        {/* Nav */}
+        <nav className="vum-nav">
+          <div className="nav-left">
+            <a className="nav-wordmark" href="#"><span>Vanta</span>UM</a>
+            <span className="nav-sub">A Wells Onyx Company</span>
+          </div>
+          <ul className="nav-links">
+            <li><a href="#philosophy">Philosophy</a></li>
+            <li><a href="#model">Our Model</a></li>
+            <li><a href="#compare">Why VantaUM</a></li>
+            <li><a href="#demo">Live Demo</a></li>
+            <li><a href="#urac">Accreditation</a></li>
+          </ul>
+          <a className="nav-cta" href="#contact">Request Early Access</a>
+        </nav>
 
-        {/* Client Login link - top right */}
-        <Link
-          href="/login"
-          className="absolute top-6 right-6 sm:right-8 z-10 text-sm text-white/50 hover:text-white/90 transition-colors font-medium"
-        >
-          Client Login
-        </Link>
-
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28 lg:py-32">
-          <div className="max-w-4xl">
-            {/* Badge */}
-            <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/10 rounded-full px-4 py-1.5 mb-8">
-              <span className="w-2 h-2 bg-gold rounded-full animate-pulse" />
-              <span className="text-sm text-white/80 font-medium tracking-wide">Concierge Member Advocacy</span>
-            </div>
-
-            <h1 className="font-[family-name:var(--font-dm-serif)] text-4xl sm:text-5xl md:text-6xl lg:text-7xl text-white leading-[1.1] tracking-tight">
-              More Human,{' '}
-              <span className="text-gold">Not Less.</span>
-            </h1>
-
-            <p className="mt-6 md:mt-8 text-lg md:text-xl text-white/70 max-w-2xl leading-relaxed">
-              We built clinical intelligence into our DNA so physicians have more time
-              with every case — and members get the thoughtful, human review they deserve.
-              Not an AI product. A concierge service, powered by it.
-            </p>
-
-            <div className="mt-10 flex flex-col sm:flex-row items-start gap-4">
-              <Link
-                href="/login"
-                className="group inline-flex items-center gap-3 bg-gold text-navy px-8 py-4 rounded-lg font-semibold text-lg hover:bg-gold-light transition-all duration-200 shadow-lg shadow-gold/20 hover:shadow-xl hover:shadow-gold/30"
-              >
-                Submit a Case
-                <svg className="w-5 h-5 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                </svg>
-              </Link>
-              <a
-                href="https://www.wellsonyx.com/firstlevelreview"
-                className="inline-flex items-center gap-2 text-white/70 hover:text-white px-6 py-4 rounded-lg font-medium transition-colors border border-white/10 hover:border-white/25 hover:bg-white/5"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
-                </svg>
-                Request a Demo
-              </a>
+        {/* Hero */}
+        <section className="vum-hero">
+          <div className="hero-vline" />
+          <div className="hero-left" style={{ position: 'relative', zIndex: 1 }}>
+            <div className="eyebrow">Now Accepting Founding TPA Partners</div>
+            <h1>AI that makes UM<br /><em>more</em> human,<br />not less.</h1>
+            <p className="hero-body">VantaUM pairs a world-class concierge team and elite same-specialty physicians with AI engineered to eliminate friction in the middle — so every human in the process can stay focused on what only humans can do.</p>
+            <div className="hero-actions">
+              <a href="#contact" className="btn-primary">Request Early Access</a>
+              <a href="#compare" className="btn-ghost">Compare to legacy UM →</a>
             </div>
           </div>
+          <div className="hero-right">
+            <div className="hero-stat"><div className="stat-val" style={{ color: 'var(--gold)' }}>Founding</div><div className="stat-label">Limited founding partner slots open now. Early access means preferred pricing, roadmap input, and white-glove onboarding.</div></div>
+            <div className="hero-stat"><div className="stat-val">~$12 PEPM</div><div className="stat-label">Market-validated pricing locked in for founding partners. No volume thresholds.</div></div>
+            <div className="hero-stat"><div className="stat-val">URAC</div><div className="stat-label">Accreditation in progress. Founding partners go live with a fully accredited UM operation.</div></div>
+          </div>
+        </section>
 
-          {/* Decorative element - floating card preview */}
-          <div className="hidden lg:block absolute right-8 xl:right-16 top-1/2 -translate-y-1/2 w-80 xl:w-96">
-            <div className="bg-white/[0.06] backdrop-blur-md border border-white/10 rounded-2xl p-6 shadow-2xl">
-              <div className="flex items-center gap-3 mb-5">
-                <div className="w-10 h-10 bg-gold/20 rounded-lg flex items-center justify-center">
-                  <svg className="w-5 h-5 text-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5" />
-                  </svg>
-                </div>
-                <div>
-                  <div className="text-white/90 font-semibold text-sm">Clinical Brief Ready</div>
-                  <div className="text-white/40 text-xs">Case #VUM-2026-0847</div>
-                </div>
+        <hr className="divider" />
+
+        {/* Early Access */}
+        <section className="ea-section" id="early-access">
+          <div className="ea-inner">
+            <div className="ea-left">
+              <span className="kicker" style={{ color: 'var(--gold)' }}>Founding Partner Program</span>
+              <h2 className="sh">We are new.<br />That is the <em style={{ color: 'var(--gold)' }}>point.</em></h2>
+              <p className="sb">The legacy players built their platforms in a different era — before AI could compress physician review time, before concierge coordination was operationally viable at scale. We built VantaUM from a blank page with those tools available from day one.</p>
+              <p className="sb" style={{ marginTop: 16 }}>The TPAs that partner with us now don&apos;t inherit someone else&apos;s technical debt. They help shape a platform designed around how UM should actually work.</p>
+              <div className="ea-spots">
+                <div className="ea-spots-dot" />
+                <div className="ea-spots-text"><strong>Founding partner slots are limited.</strong> Early access includes preferred pricing, direct access to the founding team, and input on product roadmap.</div>
               </div>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-white/50 text-xs">Clinical Criteria</span>
-                  <span className="text-xs font-medium text-green-400 bg-green-400/10 px-2 py-0.5 rounded-full">4/4 Met</span>
+            </div>
+            <div className="ea-perks">
+              {[
+                { num: '01', title: 'Preferred Founding Pricing', body: 'Early partners lock in rates that reflect the relationship, not a vendor transaction. Pricing is validated at ~$12 PEPM — and founding partners negotiate directly with leadership.' },
+                { num: '02', title: 'Roadmap Input', body: 'Your operational reality shapes what we build next. Founding partners have a direct line to the product team — not a support ticket and a quarterly roadmap review.' },
+                { num: '03', title: 'Reference Account Status', body: 'Be among the first TPAs in the market to operate a concierge UM model. Reference status positions your organization as a clinical quality leader to your plan sponsors.' },
+                { num: '04', title: 'White-Glove Onboarding', body: 'Founding partners get hands-on implementation directly with the Wells Onyx operating team — not a third-party integrator who read the manual last week.' },
+              ].map((p) => (
+                <div key={p.num} className="ea-perk">
+                  <div className="ea-perk-num">{p.num}</div>
+                  <div><div className="ea-perk-title">{p.title}</div><div className="ea-perk-body">{p.body}</div></div>
                 </div>
-                <div className="w-full bg-white/10 rounded-full h-1.5">
-                  <div className="bg-gradient-to-r from-gold to-green-400 h-1.5 rounded-full w-full" />
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-white/50 text-xs">Documentation</span>
-                  <span className="text-xs font-medium text-gold bg-gold/10 px-2 py-0.5 rounded-full">Complete</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-white/50 text-xs">Confidence</span>
-                  <span className="text-xs font-medium text-white/80">High</span>
-                </div>
-                <div className="pt-3 border-t border-white/10">
-                  <div className="text-xs text-white/40 mb-1">Physician Recommendation</div>
-                  <div className="text-sm text-white/90 font-medium">Approve -- Meets clinical necessity criteria per InterQual guidelines</div>
-                </div>
-              </div>
+              ))}
             </div>
           </div>
-        </div>
+        </section>
 
-        {/* Bottom curve transition */}
-        <div className="absolute bottom-0 left-0 right-0">
-          <svg viewBox="0 0 1440 56" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full" preserveAspectRatio="none">
-            <path d="M0 56h1440V28C1440 28 1140 0 720 0S0 28 0 28v28z" fill="#f8f9fb" />
-          </svg>
-        </div>
-      </section>
-
-      {/* ================================================================ */}
-      {/* HOW IT WORKS                                                     */}
-      {/* ================================================================ */}
-      <section className="py-20 md:py-28 bg-background">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Section header */}
-          <div className="text-center max-w-2xl mx-auto mb-16 md:mb-20">
-            <div className="inline-flex items-center gap-2 text-gold-dark font-semibold text-sm tracking-widest uppercase mb-4">
-              <span className="w-8 h-px bg-gold" />
-              How It Works
-              <span className="w-8 h-px bg-gold" />
-            </div>
-            <h2 className="font-[family-name:var(--font-dm-serif)] text-3xl md:text-4xl text-navy">
-              Concierge Review in Three Steps
-            </h2>
-            <p className="mt-4 text-muted text-lg">
-              We handle the complexity so your physicians can focus on what matters —
-              giving every member&apos;s case the attention it deserves.
-            </p>
-          </div>
-
-          {/* Steps */}
-          <div className="grid md:grid-cols-3 gap-8 lg:gap-12 relative">
-            {/* Connector line (desktop) */}
-            <div className="hidden md:block absolute top-16 left-[20%] right-[20%] h-px bg-gradient-to-r from-border via-gold/30 to-border" />
-
-            {steps.map((step, index) => (
-              <div key={step.number} className="relative group">
-                <div className="bg-surface rounded-2xl border border-border p-8 md:p-10 shadow-sm hover:shadow-md hover:border-gold/30 transition-all duration-300 h-full">
-                  {/* Step number circle */}
-                  <div className="relative z-10 w-14 h-14 bg-navy rounded-2xl flex items-center justify-center mb-6 group-hover:bg-navy-light transition-colors shadow-lg shadow-navy/20">
-                    <span className="text-gold">{step.icon}</span>
-                  </div>
-
-                  {/* Step number label */}
-                  <div className="text-xs font-bold text-gold tracking-widest uppercase mb-2">Step {step.number}</div>
-
-                  <h3 className="font-[family-name:var(--font-dm-serif)] text-xl md:text-2xl text-navy mb-3">
-                    {step.title}
-                  </h3>
-
-                  <p className="text-muted leading-relaxed">
-                    {step.description}
-                  </p>
-                </div>
-
-                {/* Arrow connector (mobile) */}
-                {index < steps.length - 1 && (
-                  <div className="md:hidden flex justify-center py-4">
-                    <svg className="w-6 h-6 text-gold/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-                    </svg>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ================================================================ */}
-      {/* STATS / TRUST SECTION                                            */}
-      {/* ================================================================ */}
-      <section className="py-20 md:py-28 bg-navy relative overflow-hidden">
-        {/* Background subtle pattern */}
-        <div className="absolute inset-0 opacity-[0.03]">
-          <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <pattern id="statsGrid" width="40" height="40" patternUnits="userSpaceOnUse">
-                <circle cx="20" cy="20" r="1" fill="white" />
-              </pattern>
-            </defs>
-            <rect width="100%" height="100%" fill="url(#statsGrid)" />
-          </svg>
-        </div>
-
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Section header */}
-          <div className="text-center max-w-2xl mx-auto mb-16">
-            <div className="inline-flex items-center gap-2 text-gold font-semibold text-sm tracking-widest uppercase mb-4">
-              <span className="w-8 h-px bg-gold/50" />
-              Our Commitment
-              <span className="w-8 h-px bg-gold/50" />
-            </div>
-            <h2 className="font-[family-name:var(--font-dm-serif)] text-3xl md:text-4xl text-white">
-              Every Member Deserves a Real Review
-            </h2>
-            <p className="mt-4 text-white/50 text-lg">
-              We give physicians the time and tools to do what they do best — so members and plans get clinical decisions they can trust.
-            </p>
-          </div>
-
-          {/* Stats grid */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
-            {stats.map((stat) => (
-              <div
-                key={stat.label}
-                className="relative bg-white/[0.06] backdrop-blur-sm border border-white/10 rounded-2xl p-6 md:p-8 text-center hover:bg-white/[0.1] transition-all duration-300 group"
-              >
-                <div className="inline-flex items-center justify-center w-12 h-12 bg-gold/10 rounded-xl mb-5 group-hover:bg-gold/20 transition-colors">
-                  <span className="text-gold">{stat.icon}</span>
-                </div>
-                <div className="font-[family-name:var(--font-dm-serif)] text-2xl md:text-3xl text-white mb-1">
-                  {stat.value}
-                </div>
-                <div className="text-white/80 font-semibold text-sm">{stat.label}</div>
-                <div className="text-white/40 text-xs mt-1">{stat.sublabel}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ================================================================ */}
-      {/* VERTICALS SECTION                                                */}
-      {/* ================================================================ */}
-      <section className="py-20 md:py-28 bg-background">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-2xl mx-auto mb-16">
-            <div className="inline-flex items-center gap-2 text-gold-dark font-semibold text-sm tracking-widest uppercase mb-4">
-              <span className="w-8 h-px bg-gold" />
-              Coverage Areas
-              <span className="w-8 h-px bg-gold" />
-            </div>
-            <h2 className="font-[family-name:var(--font-dm-serif)] text-3xl md:text-4xl text-navy">
-              The Right Specialist on Every Case
-            </h2>
-            <p className="mt-4 text-muted text-lg">
-              Imaging, surgery, specialty procedures, DME, behavioral health, and more — each case is matched to a physician who understands the clinical context firsthand.
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            {verticals.map((vertical) => (
-              <div
-                key={vertical.name}
-                className={`bg-surface rounded-2xl border p-8 transition-all duration-300 group ${
-                  vertical.hero
-                    ? 'border-gold/30 shadow-md hover:shadow-lg ring-2 ring-gold/10'
-                    : 'border-border hover:shadow-lg hover:border-gold/20 opacity-75'
-                }`}
-              >
-                <div className="flex items-center gap-3 mb-6">
-                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center group-hover:bg-navy/10 transition-colors ${
-                    vertical.hero ? 'bg-gold/10' : 'bg-navy/5'
-                  }`}>
-                    <span className={vertical.hero ? 'text-gold-dark' : 'text-navy'}>{vertical.icon}</span>
-                  </div>
-                  {vertical.hero && (
-                    <span className="px-2.5 py-0.5 bg-gold/10 text-gold-dark text-xs font-semibold rounded-full border border-gold/20">
-                      Primary
-                    </span>
-                  )}
-                  {'comingSoon' in vertical && vertical.comingSoon && (
-                    <span className="px-2.5 py-0.5 bg-gray-100 text-muted text-xs font-semibold rounded-full border border-border">
-                      Coming Soon
-                    </span>
-                  )}
-                </div>
-                <h3 className="font-[family-name:var(--font-dm-serif)] text-2xl text-navy mb-3">
-                  {vertical.name}
-                </h3>
-                <p className="text-muted leading-relaxed">{vertical.description}</p>
-                <div className="mt-6 pt-6 border-t border-border">
-                  {'comingSoon' in vertical && vertical.comingSoon ? (
-                    <span className="inline-flex items-center gap-2 text-sm font-semibold text-muted">
-                      Coming Soon
-                    </span>
-                  ) : (
-                    <Link
-                      href="/login"
-                      className="inline-flex items-center gap-2 text-sm font-semibold text-gold-dark hover:text-gold transition-colors group/link"
-                    >
-                      Submit Medical Case
-                      <svg className="w-4 h-4 transition-transform group-hover/link:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                      </svg>
-                    </Link>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ================================================================ */}
-      {/* CTA BANNER                                                       */}
-      {/* ================================================================ */}
-      <section className="bg-gradient-to-r from-navy via-navy-light to-navy relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-gold/5 via-transparent to-gold/5" />
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-20">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-8">
+        {/* Philosophy */}
+        <section className="vum-section philosophy" id="philosophy">
+          <div className="phil-inner">
             <div>
-              <h2 className="font-[family-name:var(--font-dm-serif)] text-2xl md:text-3xl text-white">
-                Give your members the review process they deserve.
-              </h2>
-              <p className="mt-2 text-white/60 text-lg">Submit your first case in minutes. See the difference a concierge approach makes.</p>
+              <span className="kicker">Our Philosophy</span>
+              <h2 className="sh">The middle should be<br /><em>invisible.</em></h2>
+              <p className="sb" style={{ maxWidth: 440 }}>Every other UM platform automated the easy parts and declared victory. They left physicians staring at intake queues, coordinators managing software tickets, and members waiting for a human who never comes.</p>
+              <p className="sb" style={{ maxWidth: 440, marginTop: 18 }}>We built differently. AI handles intake, evidence matching, routing, and documentation — invisibly, instantly. So the clinician opens a pre-briefed case ready for judgment. The coordinator is free to actually take care of people.</p>
             </div>
-            <Link
-              href="/login"
-              className="group inline-flex items-center gap-3 bg-gold text-navy px-8 py-4 rounded-lg font-semibold text-lg hover:bg-gold-light transition-all duration-200 shadow-lg shadow-gold/20 hover:shadow-xl hover:shadow-gold/30 whitespace-nowrap"
-            >
-              Get Started
-              <svg className="w-5 h-5 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-              </svg>
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* ================================================================ */}
-      {/* COMPLIANCE FOOTER                                                */}
-      {/* ================================================================ */}
-      <section className="bg-surface border-t border-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
-          <div className="flex flex-col md:flex-row items-start gap-10 md:gap-16">
-            {/* Brand column */}
-            <div className="md:w-1/3">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 bg-gold rounded-lg flex items-center justify-center font-bold text-navy text-sm">V</div>
-                <span className="font-[family-name:var(--font-dm-serif)] text-xl text-navy tracking-tight">VantaUM</span>
-              </div>
-              <p className="text-muted text-sm leading-relaxed">
-                Concierge utilization management. Clinical intelligence that gives physicians more time — so members get the care they deserve.
-              </p>
-            </div>
-
-            {/* Links column */}
-            <div className="md:w-1/3">
-              <h4 className="font-semibold text-navy text-sm uppercase tracking-wider mb-4">Platform</h4>
-              <div className="grid grid-cols-2 gap-2">
-                <Link href="/login" className="text-sm text-muted hover:text-navy transition-colors">Submit Case</Link>
-                <Link href="/reviewers" className="text-sm text-muted hover:text-navy transition-colors">Reviewers</Link>
-                <Link href="/clients" className="text-sm text-muted hover:text-navy transition-colors">Clients</Link>
-                <Link href="/login" className="text-sm text-muted hover:text-navy transition-colors">Dashboard</Link>
-              </div>
-            </div>
-
-            {/* Compliance column */}
-            <div className="md:w-1/3">
-              <h4 className="font-semibold text-navy text-sm uppercase tracking-wider mb-4">Compliance</h4>
-              <div className="flex items-center gap-4 mb-4">
-                <div className="flex items-center gap-1.5 text-xs font-medium text-muted bg-gray-100 px-3 py-1.5 rounded-full">
-                  <svg className="w-3.5 h-3.5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  HIPAA Compliant
+            <div>
+              <div className="flow">
+                <div className="flow-row">
+                  <div className="flow-cell human" style={{ flex: '0 0 42%' }}><div className="fl">Concierge Layer</div><div className="ft">Named coordinator owns every case from intake to decision</div></div>
+                  <div className="flow-cell machine"><div className="fl">AI Intake</div><div className="ft">Document ingestion, completeness check &amp; triage in seconds</div></div>
                 </div>
-                <div className="flex items-center gap-1.5 text-xs font-medium text-muted bg-gray-100 px-3 py-1.5 rounded-full">
-                  <svg className="w-3.5 h-3.5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  SOC 2
+                <div className="flow-bridge">workflow</div>
+                <div className="flow-row">
+                  <div className="flow-cell machine"><div className="fl">AI Routing</div><div className="ft">Evidence matching, policy alignment, auto-approval for clear-cut cases</div></div>
+                  <div className="flow-cell clinical" style={{ flex: '0 0 42%' }}><div className="fl">Clinical Review</div><div className="ft">Complex cases → same-specialty physician, pre-briefed. No queue.</div></div>
+                </div>
+                <div className="flow-bridge">workflow</div>
+                <div className="flow-row">
+                  <div className="flow-cell human" style={{ flex: 1 }}><div className="fl">Decision &amp; Communication</div><div className="ft">Clear rationale delivered to provider and member. Human available immediately.</div></div>
+                  <div className="flow-cell machine" style={{ flex: '0 0 38%' }}><div className="fl">AI Documentation</div><div className="ft">Full URAC-compliant audit trail generated automatically</div></div>
                 </div>
               </div>
             </div>
           </div>
+        </section>
 
-          {/* Compliance disclosure */}
-          <div className="mt-10 pt-8 border-t border-border">
-            <p className="text-xs text-muted leading-relaxed max-w-4xl">
-              All clinical determinations are made by licensed, board-certified physicians. Our clinical
-              intelligence assists with documentation analysis and brief preparation — it never makes coverage
-              decisions. VantaUM complies with all applicable state and federal regulations governing utilization
-              review, including URAC and NCQA standards where applicable.
-            </p>
-            <p className="text-xs text-muted/60 mt-4">
-              &copy; {new Date().getFullYear()} VantaUM. All rights reserved.
-            </p>
+        {/* Pillars */}
+        <section className="vum-section" id="model" style={{ background: 'var(--black)' }}>
+          <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+            <div style={{ maxWidth: 580, marginBottom: 64 }}>
+              <span className="kicker">The VantaUM Model</span>
+              <h2 className="sh">Three layers.<br />Each doing what it does <em>best.</em></h2>
+            </div>
+            <div className="pillars-grid">
+              <div className="pillar"><span className="pnum" style={{ color: 'var(--white-dim)' }}>01</span><div className="pname">Concierge Team</div><p className="pbody">A dedicated, named coordinator assigned to each plan. They know the plan&apos;s policies, the provider relationships, and the member population. Available. Accountable. Never a call center rotation.</p><span className="ptag" style={{ background: 'rgba(255,255,255,0.07)', color: 'var(--white-muted)' }}>Human-first</span></div>
+              <div className="pillar"><span className="pnum" style={{ color: 'rgba(91,138,245,0.45)' }}>02</span><div className="pname">AI Intelligence Layer</div><p className="pbody">Our ingestion engine extracts and classifies clinical documentation, cross-references evidence-based guidelines, and prepares the full case brief before a physician ever opens the file. Review time compressed dramatically — judgment preserved entirely.</p><span className="ptag" style={{ background: 'rgba(91,138,245,0.1)', color: 'var(--teal)' }}>AI-powered</span></div>
+              <div className="pillar"><span className="pnum" style={{ color: 'rgba(201,169,110,0.4)' }}>03</span><div className="pname">Elite Physician Panel</div><p className="pbody">Board-certified specialists in active practice. Not generalists in a queue — same-specialty physicians who understand the clinical picture. When a cardiology case arrives, a cardiologist reviews it.</p><span className="ptag" style={{ background: 'var(--gold-dim)', color: 'var(--gold)' }}>Clinical excellence</span></div>
+            </div>
+          </div>
+        </section>
+
+        {/* Manifesto */}
+        <div className="manifesto">
+          <div style={{ maxWidth: 860 }}>
+            <span className="qmark">&ldquo;</span>
+            <p className="qtext">Every platform that replaced a clinician with an algorithm made the care <em>cheaper.</em> Very few made it better. We built VantaUM to do both — and we refused to sacrifice one for the other.</p>
+            <p className="qattr">VantaUM &middot; A Wells Onyx Company</p>
           </div>
         </div>
-      </section>
-    </div>
+
+        {/* Compare */}
+        <section className="vum-section" id="compare" style={{ background: 'var(--near-black)' }}>
+          <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+            <div style={{ maxWidth: 560, marginBottom: 56 }}>
+              <span className="kicker">Why VantaUM</span>
+              <h2 className="sh">What legacy UM<br />won&apos;t tell you.</h2>
+              <p className="sb">Legacy platforms were built to process volume. VantaUM was built to serve members, protect providers, and give plans a UM partner they can actually stand behind.</p>
+            </div>
+            <table className="ctable">
+              <thead><tr><th>The Question</th><th>Legacy UM</th><th>VantaUM</th></tr></thead>
+              <tbody>
+                <tr><td>Who reviews complex cases?</td><td>Nurses working a volume queue. Physician involvement is the exception.</td><td>Same-specialty, board-certified physicians in active practice.<span className="tgood">Always</span></td></tr>
+                <tr><td>How do I reach someone?</td><td>Call center. Ticket submitted. Wait for a callback.</td><td>Named concierge coordinator. Direct line. Same day response.</td></tr>
+                <tr><td>What role does AI play?</td><td>AI auto-approves and auto-denies. The human is an exception handler.</td><td>AI handles intake, routing, and documentation. Every consequential clinical call is human.</td></tr>
+                <tr><td>What if I disagree?</td><td>Submit an appeal. Wait. Navigate a process designed to discourage escalation.</td><td>Peer-to-peer with a same-specialty physician available immediately. Clear, fast escalation.</td></tr>
+                <tr><td>How is compliance managed?</td><td>Separate compliance team. Documentation created after the fact.</td><td>AI generates URAC-compliant documentation in real time. Audit-ready from day one.</td></tr>
+                <tr><td>What channels does this unlock?</td><td>Commercial configurations only in most cases.</td><td>URAC accreditation unlocks Medicaid, VA, and self-insured employer channels.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        {/* Live Demo — inlined, no iframe */}
+        <section className="vum-section" id="demo" style={{ background: 'var(--black)' }}>
+          <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+            <div style={{ maxWidth: 600, marginBottom: 48 }}>
+              <span className="kicker">See It Live</span>
+              <h2 className="sh">Watch the AI work.<br /><em>Then meet the humans behind it.</em></h2>
+              <p className="sb">This is a live demo of the VantaUM intake and clinical routing engine. Submit a case and see how AI compresses the middle — so the clinician receives a fully pre-briefed file, not a raw document stack.</p>
+            </div>
+            <div>
+              <div className="demo-frame-label"><span className="demo-live-dot" /> Live Demo Environment</div>
+              <div style={{ borderRadius: '0 12px 12px 12px', overflow: 'hidden', border: '1px solid var(--border-strong)' }}>
+                <DemoWalkthrough />
+              </div>
+              <div className="demo-cta-row">
+                <p className="demo-cta-text">Ready to see how this runs on your actual member population?</p>
+                <a href={EA_EMAIL} className="btn-primary">Apply for Early Access</a>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* URAC */}
+        <section className="vum-section" id="urac" style={{ background: 'var(--black)' }}>
+          <div className="urac-inner">
+            <div>
+              <span className="kicker">Accreditation</span>
+              <h2 className="sh">URAC is the key<br />that opens the<br /><em>right rooms.</em></h2>
+              <p className="sb" style={{ maxWidth: 420 }}>Most UM vendors serve the commercial market and stop there. URAC accreditation positions VantaUM as a credentialed partner for the most regulated, highest-value programs in American healthcare.</p>
+            </div>
+            <div className="urac-list">
+              <div className="urac-item"><div className="udot" style={{ background: 'var(--teal)' }} /><div><div className="utitle">Medicaid Programs</div><div className="ubody">State Medicaid contracts require URAC or equivalent UM accreditation. Accreditation is the entry ticket — it&apos;s the floor, not the ceiling.</div></div></div>
+              <div className="urac-item"><div className="udot" style={{ background: 'var(--gold)' }} /><div><div className="utitle">VA &amp; Federal Health Programs</div><div className="ubody">Department of Veterans Affairs programs require certified UM oversight from accredited organizations. A critical channel for a company with federal relationships in development.</div></div></div>
+              <div className="urac-item"><div className="udot" style={{ background: 'rgba(255,255,255,0.35)' }} /><div><div className="utitle">Self-Insured Employers</div><div className="ubody">Large self-funded employers increasingly require URAC-accredited UM partners. Accreditation signals clinical rigor before a single conversation begins.</div></div></div>
+            </div>
+          </div>
+        </section>
+
+        {/* Family Banner */}
+        <div className="fam-banner">
+          <span className="fam-label">Wells Onyx Portfolio</span>
+          <div className="fam-pipe" />
+          <p className="fam-text">VantaUM is part of the <a href="https://www.wellsonyx.com" target="_blank" rel="noopener noreferrer">Wells Onyx</a> constellation — alongside VantaHG, Onyx Semiconductor, Grain &amp; Vault, WellsAI, and Codebeacons. Trust + Outcomes.</p>
+        </div>
+
+        {/* CTA */}
+        <section className="cta-section" id="contact">
+          <span className="kicker" style={{ display: 'block' }}>Founding Partner Program</span>
+          <h2 className="sh" style={{ maxWidth: 700, margin: '0 auto 20px' }}>A few spots remain.<br /><em>Will you be one<br />of the first?</em></h2>
+          <p className="sb" style={{ maxWidth: 500, margin: '0 auto 16px' }}>We are selectively onboarding founding TPA partners who want to shape what great UM looks like — and be positioned as a clinical quality leader before anyone else gets there.</p>
+          <p className="sb" style={{ maxWidth: 500, margin: '0 auto 48px' }}>Email us directly. No form. No sales queue. You&apos;ll hear back from someone who can actually make a decision.</p>
+          <div className="cta-actions">
+            <a href={EA_EMAIL} className="btn-primary">Apply for Early Access</a>
+            <a href="#model" className="btn-ghost">Explore the model →</a>
+          </div>
+        </section>
+
+        {/* Footer */}
+        <footer className="vum-footer">
+          <div className="footer-logo"><span>Vanta</span>UM</div>
+          <p>A Wells Onyx Company &middot; Houston &middot; Miami &middot; Tallahassee</p>
+          <p>&copy; 2026 VantaUM. All rights reserved.</p>
+        </footer>
+      </div>
+    </>
   );
 }
