@@ -19,7 +19,7 @@ export function AppShell({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const isChromeless = pathname === '/' || pathname === '/demo' || pathname === '/site' || pathname === '/fab';
+  const isChromeless = pathname === '/' || pathname === '/demo' || pathname === '/site';
 
   if (isChromeless) {
     return <>{children}</>;
