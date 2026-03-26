@@ -14,11 +14,23 @@ const securityHeaders = [
   },
 ];
 
+const demoHeaders = securityHeaders
+  .filter((h) => h.key !== 'X-Frame-Options')
+  .map((h) =>
+    h.key === 'Content-Security-Policy'
+      ? { ...h, value: h.value.replace("default-src 'self'", "default-src 'self'; frame-ancestors *") }
+      : h,
+  );
+
 const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        source: '/(.*)',
+        source: '/demo',
+        headers: demoHeaders,
+      },
+      {
+        source: '/((?!demo).*)',
         headers: securityHeaders,
       },
     ];
