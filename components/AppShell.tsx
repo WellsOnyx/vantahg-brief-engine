@@ -19,9 +19,9 @@ export function AppShell({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const isLandingPage = pathname === '/';
+  const isChromeless = pathname === '/' || pathname === '/demo';
 
-  if (isLandingPage) {
+  if (isChromeless) {
     return <>{children}</>;
   }
 
