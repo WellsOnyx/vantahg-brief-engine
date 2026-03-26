@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 
 // Routes that don't require authentication
-const PUBLIC_ROUTES = ['/', '/login', '/signup', '/welcome', '/demo', '/site', '/api/health', '/api/external/submit', '/api/intake/efax', '/api/intake/email'];
+const PUBLIC_ROUTES = ['/', '/login', '/signup', '/welcome', '/demo', '/site', '/fab', '/api/health', '/api/external/submit', '/api/intake/efax', '/api/intake/email'];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
