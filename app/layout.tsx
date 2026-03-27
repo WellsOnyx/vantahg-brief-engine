@@ -36,6 +36,7 @@ export const viewport: Viewport = {
 };
 
 const navLinks = [
+  { href: "/queue", label: "My Queue" },
   { href: "/command-center", label: "Command Center" },
   { href: "/dashboard", label: "Dashboard" },
   { href: "/cases/new", label: "Submit Case" },
