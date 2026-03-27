@@ -23,6 +23,7 @@ export const DEMO_CASE_IDS = {
   cpap: 'case-004-cpap-e0601',
   psychotherapy: 'case-005-psychotherapy-90837',
   epiduralInjection: 'case-006-esi-64483',
+  hipReplacement: 'case-007-hip-27130',
 } as const;
 
 export const DEMO_STAFF_IDS = {
@@ -881,6 +882,72 @@ const epiduralInjectionBrief: AIBrief = {
   },
 };
 
+const hipReplacementBrief: AIBrief = {
+  clinical_question:
+    'Is total hip arthroplasty (CPT 27130) medically necessary for this patient with severe osteoarthritis of the right hip who has failed conservative management?',
+  patient_summary:
+    'James Wilson is a 68-year-old male presenting with severe right hip osteoarthritis (Kellgren-Lawrence Grade IV) causing significant functional limitation. He has exhausted conservative treatments including PT (12 weeks), NSAIDs, corticosteroid injections (3 over 18 months), and activity modification. Harris Hip Score is 38/100 (poor). Current pain VAS 8/10 with walking limited to <1 block.',
+  diagnosis_analysis: {
+    primary_diagnosis: 'M16.11 - Primary osteoarthritis, right hip',
+    secondary_diagnoses: ['M25.551 - Pain in right hip', 'Z96.641 - History of right knee replacement'],
+    diagnosis_procedure_alignment: 'Diagnosis codes directly support total hip arthroplasty. Grade IV osteoarthritis with bone-on-bone changes and severe functional limitation establishes clear surgical indication.',
+  },
+  procedure_analysis: {
+    codes: ['27130 - Total hip arthroplasty'],
+    clinical_rationale:
+      'Patient has failed 18+ months of conservative management with progressive functional decline. Radiographic findings show Grade IV changes with complete joint space loss. Harris Hip Score of 38 is well below the surgical threshold.',
+    complexity_level: 'complex',
+    setting_appropriateness: 'Inpatient hospital is the appropriate setting for total hip arthroplasty in a 68-year-old patient. Meets Two-Midnight Rule criteria.',
+  },
+  criteria_match: {
+    guideline_source: 'MCG / AAOS',
+    applicable_guideline: 'MCG 2026: Total Hip Arthroplasty; AAOS Clinical Practice Guidelines for Hip Osteoarthritis',
+    criteria_met: [
+      'Radiographic evidence of Grade IV osteoarthritis with complete joint space loss',
+      'Documented failure of conservative management over 18+ months',
+      'Significant functional limitation: Harris Hip Score 38/100',
+      'Failed corticosteroid injections (3 total with diminishing returns)',
+      'Pain severity requiring daily analgesics',
+    ],
+    criteria_not_met: [],
+    criteria_unable_to_assess: [
+      'Pre-operative cardiac clearance documentation not yet submitted',
+    ],
+    conservative_alternatives: [],
+  },
+  documentation_review: {
+    documents_provided: 'Orthopedic surgical consultation, hip X-rays, PT records, injection records, medication history, pre-op labs',
+    key_findings: [
+      'X-rays confirm Grade IV osteoarthritis with complete joint space loss, subchondral sclerosis, and osteophyte formation',
+      'Three corticosteroid injections over 18 months with progressively shorter duration of relief',
+      'Physical therapy discharge after 12 weeks with no meaningful improvement in function',
+      'Harris Hip Score 38/100 documented at surgical consultation',
+    ],
+    missing_documentation: [
+      'Pre-operative cardiac clearance (patient has history of hypertension)',
+    ],
+  },
+  ai_recommendation: {
+    recommendation: 'approve',
+    confidence: 'high',
+    rationale:
+      'All MCG and AAOS criteria for total hip arthroplasty are met. The patient has exhausted conservative options with documented failure and progressive functional decline. Pre-operative cardiac clearance should be obtained but does not affect the medical necessity determination.',
+    key_considerations: [
+      'Patient has prior right knee replacement — consider bilateral joint disease pattern',
+      'Pre-operative cardiac clearance should be confirmed prior to scheduling',
+      'Inpatient setting appropriate — meets Two-Midnight Rule',
+    ],
+    if_modify_suggestion: null,
+  },
+  reviewer_action: {
+    decision_required: 'Confirm medical necessity for total hip arthroplasty based on failed conservative management and severe osteoarthritis',
+    time_sensitivity: 'Standard review: 5-day SLA. LPN criteria match completed, RN review in progress.',
+    peer_to_peer_suggested: false,
+    additional_info_needed: ['Pre-operative cardiac clearance documentation'],
+    state_specific_requirements: [],
+  },
+};
+
 // ============================================================================
 // CASES - Fully populated with joined reviewer/client data and AI briefs
 // ============================================================================
@@ -1085,7 +1152,7 @@ export const demoCases: Case[] = [
     // Pod & nursing tier
     assigned_pod_id: DEMO_POD_IDS.alphaGeneral,
     assigned_lpn_id: DEMO_STAFF_IDS.martinezLpn,
-    assigned_rn_id: null,
+    assigned_rn_id: DEMO_STAFF_IDS.carterRn,
     lpn_review_notes: null,
     lpn_review_at: null,
     lpn_determination: null,
@@ -1340,6 +1407,82 @@ export const demoCases: Case[] = [
     payer_classification: 'commercial',
     reviewer: demoReviewers[0],
     client: demoClients[0],
+  },
+
+  // CASE 7: Total Hip Arthroplasty - RN Review (LPN completed, awaiting RN sign-off)
+  {
+    id: DEMO_CASE_IDS.hipReplacement,
+    created_at: daysAgo(4, 10),
+    updated_at: daysAgo(0, 3),
+    case_number: 'VUM-MED-0207',
+    status: 'rn_review',
+    priority: 'standard',
+    service_category: 'surgery',
+    vertical: 'medical',
+    patient_name: 'James Wilson',
+    patient_dob: '1957-11-30',
+    patient_member_id: 'PHP-2026-78901',
+    patient_gender: 'Male',
+    requesting_provider: 'Dr. Amanda Foster',
+    requesting_provider_npi: '7890123456',
+    requesting_provider_specialty: 'Orthopedic Surgery',
+    servicing_provider: null,
+    servicing_provider_npi: null,
+    facility_name: 'Scottsdale Orthopedic Hospital',
+    facility_type: 'inpatient',
+    procedure_codes: ['27130'],
+    diagnosis_codes: ['M16.11', 'M25.551'],
+    procedure_description: 'Total hip arthroplasty, right - severe osteoarthritis Grade IV, failed conservative management 18+ months',
+    clinical_question: 'Is total hip arthroplasty medically necessary given Grade IV osteoarthritis with failed conservative management including PT, injections, and medications?',
+    assigned_reviewer_id: null,
+    review_type: 'prior_auth',
+    payer_name: 'Pinnacle Health Plan',
+    plan_type: 'HMO',
+    turnaround_deadline: hoursFromNow(36),
+    sla_hours: 120,
+    ai_brief: hipReplacementBrief,
+    ai_brief_generated_at: daysAgo(4, 8),
+    fact_check: null,
+    fact_check_at: null,
+    determination: null,
+    determination_rationale: null,
+    determination_at: null,
+    determined_by: null,
+    denial_reason: null,
+    denial_criteria_cited: null,
+    alternative_recommended: null,
+    submitted_documents: ['orthopedic_consultation.pdf', 'hip_xrays.pdf', 'pt_records.pdf', 'injection_records.pdf', 'medication_history.pdf', 'pre_op_labs.pdf'],
+    client_id: DEMO_CLIENT_IDS.pinnacleHealth,
+    // Pod & nursing tier
+    assigned_pod_id: DEMO_POD_IDS.alphaGeneral,
+    assigned_lpn_id: DEMO_STAFF_IDS.jonesLpn,
+    assigned_rn_id: DEMO_STAFF_IDS.carterRn,
+    lpn_review_notes: 'MCG criteria met for total hip arthroplasty. Grade IV OA confirmed on X-ray. Failed PT, NSAIDs, and 3 corticosteroid injections over 18 months. Harris Hip Score 38/100. All criteria satisfied — recommending approval.',
+    lpn_review_at: daysAgo(0, 8),
+    lpn_determination: 'criteria_met',
+    rn_review_notes: null,
+    rn_review_at: null,
+    rn_determination: null,
+    sla_paused_at: null,
+    sla_resumed_at: null,
+    sla_pause_total_hours: 0,
+    intake_channel: 'email',
+    intake_confirmation_sent: true,
+    authorization_number: 'AUTH-2026-00207',
+    peer_to_peer_status: null,
+    peer_to_peer_scheduled_at: null,
+    peer_to_peer_completed_at: null,
+    peer_to_peer_notes: null,
+    appeal_of_case_id: null,
+    appeal_status: null,
+    physician_ai_agreement: null,
+    physician_ai_feedback_notes: null,
+    denial_strength_score: null,
+    denial_strength_grade: null,
+    two_midnight_applies: true,
+    payer_classification: 'commercial',
+    reviewer: undefined,
+    client: demoClients[1],
   },
 ];
 

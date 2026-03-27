@@ -84,13 +84,14 @@ export async function sendNotification(payload: NotificationPayload): Promise<vo
 
 /**
  * Send an email via SMTP. Falls back to console logging if SMTP not configured.
+ * Supports any SMTP provider (SendGrid, Resend, SES, Mailgun, etc.)
  */
 async function sendEmail(to: string, subject: string, body: string): Promise<void> {
   const smtpHost = process.env.SMTP_HOST;
   const smtpPort = process.env.SMTP_PORT;
   const smtpUser = process.env.SMTP_USER;
   const smtpPass = process.env.SMTP_PASS;
-  const smtpFrom = process.env.SMTP_FROM || 'noreply@vantaum.com';
+  const smtpFrom = process.env.SMTP_FROM || 'VantaUM <noreply@vantaum.com>';
 
   if (!smtpHost || !smtpUser || !smtpPass) {
     console.log(`[EMAIL STUB] To: ${to} | Subject: ${subject}`);
@@ -98,15 +99,45 @@ async function sendEmail(to: string, subject: string, body: string): Promise<voi
     return;
   }
 
-  // TODO: Install nodemailer (`npm i nodemailer @types/nodemailer`) and uncomment:
-  // const nodemailer = await import('nodemailer');
-  // const transporter = nodemailer.createTransport({
-  //   host: smtpHost, port: parseInt(smtpPort || '587', 10),
-  //   secure: (smtpPort || '587') === '465',
-  //   auth: { user: smtpUser, pass: smtpPass },
-  // });
-  // await transporter.sendMail({ from: smtpFrom, to, subject, text: body });
-  console.log(`[EMAIL] SMTP configured but nodemailer not installed. To: ${to} | Subject: ${subject}`);
+  const nodemailer = await import('nodemailer');
+  const transporter = nodemailer.createTransport({
+    host: smtpHost,
+    port: parseInt(smtpPort || '587', 10),
+    secure: (smtpPort || '587') === '465',
+    auth: { user: smtpUser, pass: smtpPass },
+  });
+  await transporter.sendMail({
+    from: smtpFrom,
+    to,
+    subject,
+    text: body,
+    html: formatEmailHtml(subject, body),
+  });
+}
+
+/**
+ * Wrap plain-text email body in a simple branded HTML template.
+ */
+function formatEmailHtml(subject: string, body: string): string {
+  const bodyHtml = body.replace(/\n/g, '<br>');
+  return `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f5f5f5">
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;background:#fff">
+  <tr><td style="background:#0c2340;padding:24px 32px">
+    <span style="color:#c9a227;font-size:24px;font-weight:700">V</span>
+    <span style="color:#fff;font-size:18px;font-weight:600;margin-left:8px">VantaUM</span>
+  </td></tr>
+  <tr><td style="padding:32px">
+    <h2 style="color:#0c2340;margin:0 0 16px;font-size:18px">${subject}</h2>
+    <div style="color:#333;font-size:14px;line-height:1.6">${bodyHtml}</div>
+  </td></tr>
+  <tr><td style="padding:16px 32px;border-top:1px solid #e5e7eb;color:#9ca3af;font-size:12px;text-align:center">
+    VantaUM Clinical Brief Engine &middot; A Wells Onyx Service<br>
+    This is an automated notification. Do not reply to this email.
+  </td></tr>
+</table>
+</body></html>`;
 }
 
 /**

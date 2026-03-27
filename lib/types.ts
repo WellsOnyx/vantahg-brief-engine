@@ -401,6 +401,17 @@ export interface PeerToPeerRecord {
   status: PeerToPeerStatus;
 }
 
+// ── Queue Types ─────────────────────────────────────────────────────────────
+
+export type QueueRole = 'lpn' | 'rn' | 'md' | 'admin';
+
+export interface QueueMeta {
+  total: number;
+  overdue_count: number;
+  critical_count: number;
+  completed_today: number;
+}
+
 // ── Re-export Chat Types ────────────────────────────────────────────────────
 export type { ChatMessage, ChatMode, StreamChunk, ChatRequest } from './chat/types';
 
