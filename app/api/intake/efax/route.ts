@@ -1,10 +1,26 @@
+/**
+ * /api/intake/efax
+ *
+ * Generic, provider-agnostic eFax webhook endpoint.
+ *
+ * Async contract: the POST handler is strictly store-and-return-200. It
+ * accepts a pre-normalized `EfaxPayload` (JSON), verifies an optional HMAC
+ * signature, writes an `efax_queue` row with status `'received'`, and
+ * returns 200. No OCR, no AI extraction, no case creation, no receipt
+ * confirmation — the cron worker does all of that. Provider-specific
+ * normalizers (e.g. Phaxio) live in their own routes under
+ * `/api/intake/efax/<provider>/route.ts`.
+ *
+ * The GET handler remains the admin queue lookup and is unchanged.
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceClient } from '@/lib/supabase';
 import { isDemoMode } from '@/lib/demo-mode';
 import { logAuditEvent } from '@/lib/audit';
 import { applyRateLimit } from '@/lib/rate-limit-middleware';
-import { parseEfaxPayload, type EfaxPayload } from '@/lib/intake/efax-parser';
-import { generateAuthorizationNumber, logIntakeEvent, hashPatientName, sendReceiptConfirmation } from '@/lib/intake/confirmation';
+import { type EfaxPayload } from '@/lib/intake/efax-parser';
+import { generateAuthorizationNumber, logIntakeEvent } from '@/lib/intake/confirmation';
 import crypto from 'crypto';
 
 export const dynamic = 'force-dynamic';
@@ -12,23 +28,16 @@ export const dynamic = 'force-dynamic';
 /**
  * POST /api/intake/efax
  *
- * Webhook endpoint for receiving e-fax transmissions.
- * Called by the e-fax provider (eFax, RingCentral, Phaxio) when a fax is received.
+ * Generic webhook for direct JSON submissions of a normalized `EfaxPayload`
+ * (internal tools, load tests, future providers that ship a native JSON
+ * format). The caller is expected to send an already-normalized payload;
+ * this endpoint does not parse provider-specific shapes.
  *
  * Security:
- * - HMAC signature verification (EFAX_WEBHOOK_SECRET)
+ * - Optional HMAC signature verification (EFAX_WEBHOOK_SECRET)
  * - Rate limiting
  * - Full audit trail
  * - No raw PHI in logs
- *
- * Flow:
- * 1. Verify webhook signature
- * 2. Parse fax payload
- * 3. Extract clinical data via OCR/parsing
- * 4. Generate authorization number
- * 5. Create case (or queue for manual review)
- * 6. Send receipt confirmation
- * 7. Log to intake_log
  */
 export async function POST(request: NextRequest) {
   try {
@@ -38,85 +47,92 @@ export async function POST(request: NextRequest) {
     // Verify webhook signature if configured
     const webhookSecret = process.env.EFAX_WEBHOOK_SECRET;
     if (webhookSecret) {
-      const signature = request.headers.get('x-webhook-signature') || request.headers.get('x-efax-signature') || '';
+      const signature =
+        request.headers.get('x-webhook-signature') ||
+        request.headers.get('x-efax-signature') ||
+        '';
       const rawBody = await request.clone().text();
       const expectedSignature = crypto
         .createHmac('sha256', webhookSecret)
         .update(rawBody)
         .digest('hex');
 
-      if (signature !== expectedSignature && signature !== `sha256=${expectedSignature}`) {
+      if (
+        signature !== expectedSignature &&
+        signature !== `sha256=${expectedSignature}`
+      ) {
         await logAuditEvent(null, 'security:efax_webhook_invalid_signature', 'system', {
           from_number: 'unknown',
         });
-        return NextResponse.json({ error: 'Invalid webhook signature' }, { status: 401 });
+        return NextResponse.json(
+          { error: 'Invalid webhook signature' },
+          { status: 401 },
+        );
       }
     }
 
-    const body = await request.json() as EfaxPayload;
+    let body: EfaxPayload;
+    try {
+      body = (await request.json()) as EfaxPayload;
+    } catch (err) {
+      await logAuditEvent(null, 'efax_webhook_parse_error', 'system', {
+        error: err instanceof Error ? err.message : String(err),
+      });
+      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+    }
 
-    // Validate required fields
+    // Validate required fields: fax_id is mandatory, and we need *something*
+    // the worker can actually process — either a downloadable document URL
+    // or already-extracted OCR text.
     if (!body.fax_id) {
       return NextResponse.json({ error: 'fax_id is required' }, { status: 400 });
     }
+    if (!body.document_url && !body.ocr_text) {
+      return NextResponse.json(
+        { error: 'Either document_url or ocr_text is required' },
+        { status: 400 },
+      );
+    }
 
-    // Parse the fax content
-    const parsed = parseEfaxPayload(body);
-
-    // Generate authorization number
     const authNumber = await generateAuthorizationNumber();
 
-    // Log intake event
+    // Log intake event (no PHI — worker fills in the patient hash later).
     await logIntakeEvent({
       channel: 'efax',
       source_identifier: body.from_number || null,
       authorization_number: authNumber,
       case_id: null,
-      patient_name_hash: parsed.patient_name ? hashPatientName(parsed.patient_name) : null,
-      status: parsed.needs_manual_review ? 'processing' : 'processing',
+      patient_name_hash: null,
+      status: 'processing',
       rejection_reason: null,
       metadata: {
         fax_id: body.fax_id,
         page_count: body.page_count,
-        ocr_confidence: parsed.confidence,
-        provider: body.provider || 'unknown',
+        provider: body.provider || 'generic',
       },
       processed_at: null,
       processed_by: null,
     });
 
     await logAuditEvent(null, 'efax_received', 'system', {
+      provider: body.provider || 'generic',
       fax_id: body.fax_id,
       from_number: body.from_number,
       page_count: body.page_count,
       authorization_number: authNumber,
-      needs_manual_review: parsed.needs_manual_review,
-      manual_review_reasons: parsed.manual_review_reasons,
     });
 
     if (isDemoMode()) {
-      // In demo mode, simulate case creation
-      const demoCaseId = `efax-${Date.now()}`;
       return NextResponse.json({
         success: true,
+        status: 'queued',
+        demo: true,
         authorization_number: authNumber,
-        case_id: demoCaseId,
-        status: parsed.needs_manual_review ? 'queued_for_review' : 'case_created',
-        parsed_data: {
-          patient_name: parsed.patient_name,
-          procedure_codes: parsed.procedure_codes,
-          diagnosis_codes: parsed.diagnosis_codes,
-          service_category: parsed.service_category,
-          confidence: parsed.confidence,
-        },
-        needs_manual_review: parsed.needs_manual_review,
-        manual_review_reasons: parsed.manual_review_reasons,
       });
     }
 
     const supabase = getServiceClient();
 
-    // Store in e-fax queue
     const { data: efaxEntry, error: efaxError } = await supabase
       .from('efax_queue')
       .insert({
@@ -128,117 +144,48 @@ export async function POST(request: NextRequest) {
         content_type: body.content_type || 'application/pdf',
         ocr_text: body.ocr_text || null,
         ocr_confidence: body.ocr_confidence || null,
-        parsed_data: parsed,
-        status: parsed.needs_manual_review ? 'manual_review' : 'parsed',
-        needs_manual_review: parsed.needs_manual_review,
-        manual_review_reasons: parsed.manual_review_reasons,
-        provider: body.provider || null,
+        status: 'received',
+        provider: body.provider || 'generic',
         provider_metadata: body.metadata || null,
+        attempts: 0,
+        needs_manual_review: false,
+        parsed_data: null,
+        authorization_number: authNumber,
       })
       .select('id')
       .single();
 
-    if (efaxError) {
+    if (efaxError || !efaxEntry) {
       console.error('Failed to store e-fax:', efaxError);
-      return NextResponse.json({ error: 'Failed to process fax' }, { status: 500 });
-    }
-
-    // If high confidence, auto-create the case
-    let caseId: string | null = null;
-    if (!parsed.needs_manual_review && parsed.patient_name) {
-      const caseNumber = `VUM-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
-
-      const { data: newCase, error: caseError } = await supabase
-        .from('cases')
-        .insert({
-          case_number: caseNumber,
-          status: 'intake',
-          priority: parsed.priority,
-          service_category: parsed.service_category || 'other',
-          review_type: parsed.review_type || 'prior_auth',
-          patient_name: parsed.patient_name,
-          patient_dob: parsed.patient_dob,
-          patient_member_id: parsed.patient_member_id,
-          patient_gender: parsed.patient_gender,
-          requesting_provider: parsed.requesting_provider,
-          requesting_provider_npi: parsed.requesting_provider_npi,
-          requesting_provider_specialty: parsed.requesting_provider_specialty,
-          procedure_codes: parsed.procedure_codes,
-          diagnosis_codes: parsed.diagnosis_codes,
-          procedure_description: parsed.procedure_description,
-          facility_name: parsed.facility_name,
-          facility_type: parsed.facility_type,
-          payer_name: parsed.payer_name,
-          plan_type: parsed.plan_type,
-          intake_channel: 'efax',
-          authorization_number: authNumber,
-          intake_confirmation_sent: false,
-          intake_received_at: new Date().toISOString(),
-          submitted_documents: body.document_url ? [body.document_url] : [],
-          vertical: 'medical',
-        })
-        .select('id')
-        .single();
-
-      if (!caseError && newCase) {
-        caseId = newCase.id;
-
-        // Update e-fax queue with case reference
-        await supabase
-          .from('efax_queue')
-          .update({ case_id: caseId, status: 'case_created' })
-          .eq('id', efaxEntry.id);
-
-        // Send receipt confirmation
-        const confirmation = await sendReceiptConfirmation({
-          caseId: newCase.id,
-          authorizationNumber: authNumber,
-          channel: 'efax',
-          recipientFax: body.from_number,
-        });
-
-        // Update case with confirmation status
-        await supabase
-          .from('cases')
-          .update({
-            intake_confirmation_sent: confirmation.confirmation_sent,
-            intake_processed_at: new Date().toISOString(),
-          })
-          .eq('id', caseId);
-
-        // Update intake log
-        await logIntakeEvent({
-          channel: 'efax',
-          source_identifier: body.from_number || null,
-          authorization_number: authNumber,
-          case_id: caseId,
-          patient_name_hash: hashPatientName(parsed.patient_name),
-          status: 'case_created',
-          rejection_reason: null,
-          metadata: { fax_id: body.fax_id },
-          processed_at: new Date().toISOString(),
-          processed_by: 'system',
-        });
-
-        await logAuditEvent(caseId, 'case_created_from_efax', 'system', {
-          authorization_number: authNumber,
-          fax_id: body.fax_id,
-          auto_created: true,
-        });
-      }
+      await logAuditEvent(null, 'efax_webhook_db_error', 'system', {
+        fax_id: body.fax_id,
+        error: efaxError?.message || 'unknown',
+        authorization_number: authNumber,
+      });
+      // Return 200 so the caller doesn't retry and duplicate rows.
+      return NextResponse.json({
+        success: false,
+        status: 'error',
+        error: 'Failed to persist fax — logged for manual recovery',
+        authorization_number: authNumber,
+      });
     }
 
     return NextResponse.json({
       success: true,
-      authorization_number: authNumber,
-      case_id: caseId,
+      status: 'queued',
       efax_queue_id: efaxEntry.id,
-      status: caseId ? 'case_created' : 'queued_for_review',
-      needs_manual_review: parsed.needs_manual_review,
-      manual_review_reasons: parsed.manual_review_reasons,
+      authorization_number: authNumber,
     });
   } catch (err) {
     console.error('Error processing e-fax:', err);
+    try {
+      await logAuditEvent(null, 'efax_webhook_unexpected_error', 'system', {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    } catch {
+      // Audit logging itself failed — nothing more we can do.
+    }
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
