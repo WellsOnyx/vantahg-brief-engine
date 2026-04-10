@@ -397,7 +397,7 @@ export default function SitePage() {
         <div className="fam-banner">
           <span className="fam-label">Wells Onyx Portfolio</span>
           <div className="fam-pipe" />
-          <p className="fam-text">VantaUM is part of the <a href="https://www.wellsonyx.com" target="_blank" rel="noopener noreferrer">Wells Onyx</a> constellation — alongside VantaHG, Onyx Semiconductor, Grain &amp; Vault, WellsAI, and Codebeacons. Trust + Outcomes.</p>
+          <p className="fam-text">VantaUM is part of the <a href="https://www.wellsonyx.com" target="_blank" rel="noopener noreferrer">Wells Onyx</a> constellation — alongside VantaHG, Onyx Semiconductor, Grain &amp; Vault, and WellsAI. Trust + Outcomes.</p>
         </div>
 
         {/* CTA */}
