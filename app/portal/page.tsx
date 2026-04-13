@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -26,6 +26,11 @@ interface PortalCase {
   reviewType: string;
   peerToPeerAvailable: boolean;
   notes: string;
+  authorizationNumber: string | null;
+  serviceCategory: string | null;
+  requestingProvider: string | null;
+  payerName: string | null;
+  determinationAt: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -72,6 +77,11 @@ const DEMO_CASES: PortalCase[] = [
     reviewType: 'Prior Authorization',
     peerToPeerAvailable: false,
     notes: 'Case has been received and is queued for clinical analysis. Sleep study results and face-to-face evaluation documentation have been verified.',
+    authorizationNumber: null,
+    serviceCategory: 'dme',
+    requestingProvider: 'Dr. Patricia Reyes',
+    payerName: 'Western Employers Trust',
+    determinationAt: null,
   },
   {
     id: '2',
@@ -89,6 +99,11 @@ const DEMO_CASES: PortalCase[] = [
     reviewType: 'Medical Necessity',
     peerToPeerAvailable: false,
     notes: 'AI clinical analysis is actively evaluating submitted clinical notes and conservative treatment records against ACR Appropriateness Criteria and InterQual imaging guidelines.',
+    authorizationNumber: null,
+    serviceCategory: 'imaging',
+    requestingProvider: 'Dr. Michael Chen',
+    payerName: 'Western Employers Trust',
+    determinationAt: null,
   },
   {
     id: '3',
@@ -106,6 +121,11 @@ const DEMO_CASES: PortalCase[] = [
     reviewType: 'Prior Authorization',
     peerToPeerAvailable: false,
     notes: 'A board-certified orthopedic reviewer is evaluating the AI-generated clinical brief, radiographic imaging, physical therapy records, and conservative treatment documentation.',
+    authorizationNumber: null,
+    serviceCategory: 'surgery',
+    requestingProvider: 'Dr. Linda Park',
+    payerName: 'CareFirst Blue Cross',
+    determinationAt: null,
   },
   {
     id: '4',
@@ -123,6 +143,11 @@ const DEMO_CASES: PortalCase[] = [
     reviewType: 'Prior Authorization',
     peerToPeerAvailable: false,
     notes: 'Expedited review in progress. Physician is evaluating MRI findings, documented radiculopathy, and prior conservative treatment history including physical therapy and oral medications.',
+    authorizationNumber: null,
+    serviceCategory: 'pain_management',
+    requestingProvider: 'Dr. Robert Kim',
+    payerName: 'Western Employers Trust',
+    determinationAt: null,
   },
   {
     id: '5',
@@ -140,6 +165,11 @@ const DEMO_CASES: PortalCase[] = [
     reviewType: 'Medical Necessity',
     peerToPeerAvailable: false,
     notes: 'Determination: Approved. Clinical documentation supports medical necessity per ACR Guidelines for RA management. Step therapy with conventional DMARDs documented. TB and Hepatitis B screening completed. Authorization valid for 6 months.',
+    authorizationNumber: 'AUTH-2026-08841',
+    serviceCategory: 'infusion',
+    requestingProvider: 'Dr. Amanda Foster',
+    payerName: 'Western Employers Trust',
+    determinationAt: '2026-02-14T08:30:00Z',
   },
   {
     id: '6',
@@ -157,6 +187,11 @@ const DEMO_CASES: PortalCase[] = [
     reviewType: 'Concurrent Review',
     peerToPeerAvailable: true,
     notes: 'Determination: Denied. Documentation does not support medical necessity for extended 53+ minute sessions at this time. No individualized treatment plan with measurable goals provided. Standard 38-52 minute sessions (90834) would be appropriate. A peer-to-peer review is available upon request.',
+    authorizationNumber: null,
+    serviceCategory: 'behavioral_health',
+    requestingProvider: 'Dr. Karen Liu',
+    payerName: 'CareFirst Blue Cross',
+    determinationAt: '2026-02-13T14:20:00Z',
   },
 ];
 
@@ -207,6 +242,71 @@ function formatShortDate(dateStr: string): string {
     month: 'short',
     day: 'numeric',
   });
+}
+
+function formatServiceCategory(cat: string | null): string {
+  if (!cat) return '';
+  return cat
+    .split('_')
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
+}
+
+// ---------------------------------------------------------------------------
+// Map real API Case to PortalCase
+// ---------------------------------------------------------------------------
+
+function mapCaseToPortal(c: Record<string, unknown>): PortalCase {
+  const status = c.status as string;
+  let currentStage: PortalStage = 'submitted';
+  let determination: DeterminationResult = null;
+
+  if (status === 'intake') currentStage = 'submitted';
+  else if (status === 'processing' || status === 'brief_ready') currentStage = 'ai_analysis';
+  else if (status === 'lpn_review' || status === 'rn_review' || status === 'md_review' || status === 'pend_missing_info') currentStage = 'physician_review';
+  else if (status === 'determination_made' || status === 'delivered') {
+    currentStage = 'determination';
+    const det = c.determination as string;
+    if (det === 'deny') {
+      determination = 'denied';
+    } else if (det === 'approve' || det === 'modify' || det === 'partial_approve') {
+      determination = 'approved';
+    }
+  }
+
+  const patientName = (c.patient_name as string) || 'Unknown';
+  const nameParts = patientName.split(' ');
+  const masked = nameParts.length > 1
+    ? `${nameParts[0]} ${nameParts[nameParts.length - 1][0]}.`
+    : patientName;
+
+  const reviewType = ((c.review_type as string) || 'prior_auth')
+    .split('_')
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
+
+  return {
+    id: c.id as string,
+    caseRef: (c.case_number as string) || 'N/A',
+    patientName,
+    patientMasked: masked,
+    memberId: (c.patient_member_id as string) || '',
+    procedureCode: ((c.procedure_codes as string[]) || [])[0] || '',
+    procedureDescription: (c.procedure_description as string) || '',
+    dateSubmitted: (c.created_at as string) || new Date().toISOString(),
+    currentStage,
+    determination,
+    estimatedCompletion: (c.turnaround_deadline as string) || '',
+    priority: (c.priority as 'standard' | 'urgent' | 'expedited') || 'standard',
+    reviewType,
+    peerToPeerAvailable: c.determination === 'deny' || c.determination === 'partial_approve',
+    notes: (c.determination_rationale as string) || `Case is currently in ${status?.replace(/_/g, ' ')} stage.`,
+    authorizationNumber: (c.authorization_number as string) || null,
+    serviceCategory: (c.service_category as string) || null,
+    requestingProvider: (c.requesting_provider as string) || null,
+    payerName: (c.payer_name as string) || null,
+    determinationAt: (c.determination_at as string) || null,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -358,7 +458,9 @@ function CaseCard({ caseData }: { caseData: PortalCase }) {
               <span className="text-foreground font-medium">{caseData.patientMasked}</span>
               <span className="text-muted hidden sm:inline">|</span>
               <span className="text-muted">
-                <span className="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded mr-1.5">{caseData.procedureCode}</span>
+                {caseData.procedureCode && (
+                  <span className="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded mr-1.5">{caseData.procedureCode}</span>
+                )}
                 {caseData.procedureDescription}
               </span>
             </div>
@@ -367,7 +469,7 @@ function CaseCard({ caseData }: { caseData: PortalCase }) {
             <span className="text-xs text-muted whitespace-nowrap">
               Submitted {formatShortDate(caseData.dateSubmitted)}
             </span>
-            {!isComplete && (
+            {!isComplete && caseData.estimatedCompletion && (
               <span className="text-xs text-muted whitespace-nowrap">
                 Est. {formatShortDate(caseData.estimatedCompletion)}
               </span>
@@ -393,12 +495,21 @@ function CaseCard({ caseData }: { caseData: PortalCase }) {
         <div className="border-t border-border px-5 py-4 sm:px-6 sm:py-5 space-y-4 bg-gray-50/40">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <DetailField label="Case Reference" value={caseData.caseRef} />
-            <DetailField label="Member ID" value={caseData.memberId} />
+            <DetailField label="Member ID" value={caseData.memberId || '\u2014'} />
             <DetailField label="Patient" value={caseData.patientMasked} />
-            <DetailField label="Procedure Code" value={caseData.procedureCode} mono />
+            <DetailField label="Procedure Code" value={caseData.procedureCode || '\u2014'} mono />
             <DetailField label="Review Type" value={caseData.reviewType} />
             <DetailField label="Date Submitted" value={formatDate(caseData.dateSubmitted)} />
-            {!isComplete && (
+            {caseData.requestingProvider && (
+              <DetailField label="Requesting Provider" value={caseData.requestingProvider} />
+            )}
+            {caseData.payerName && (
+              <DetailField label="Payer" value={caseData.payerName} />
+            )}
+            {caseData.serviceCategory && (
+              <DetailField label="Service Category" value={formatServiceCategory(caseData.serviceCategory)} />
+            )}
+            {!isComplete && caseData.estimatedCompletion && (
               <DetailField label="Estimated Completion" value={formatDate(caseData.estimatedCompletion)} />
             )}
             {isComplete && (
@@ -407,6 +518,12 @@ function CaseCard({ caseData }: { caseData: PortalCase }) {
                 value={caseData.determination === 'approved' ? 'Approved' : 'Denied'}
                 highlight={caseData.determination === 'approved' ? 'green' : 'red'}
               />
+            )}
+            {caseData.authorizationNumber && (
+              <DetailField label="Authorization Number" value={caseData.authorizationNumber} mono />
+            )}
+            {caseData.determinationAt && (
+              <DetailField label="Determination Date" value={formatDate(caseData.determinationAt)} />
             )}
           </div>
 
@@ -590,102 +707,128 @@ function ReviewExplainer() {
 }
 
 // ---------------------------------------------------------------------------
+// Loading skeleton
+// ---------------------------------------------------------------------------
+
+function CaseCardSkeleton() {
+  return (
+    <div className="bg-surface rounded-xl border border-border shadow-sm p-5 sm:p-6 animate-pulse">
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="h-4 w-32 bg-gray-200 rounded" />
+            <div className="h-5 w-20 bg-gray-200 rounded-full" />
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="h-4 w-24 bg-gray-200 rounded" />
+            <div className="h-4 w-48 bg-gray-200 rounded" />
+          </div>
+        </div>
+        <div className="flex flex-col items-end gap-1">
+          <div className="h-3 w-20 bg-gray-200 rounded" />
+          <div className="h-3 w-16 bg-gray-200 rounded" />
+        </div>
+      </div>
+      <div className="flex items-center w-full mt-4 gap-2">
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className="flex items-center flex-1">
+            <div className="flex flex-col items-center min-w-[60px]">
+              <div className="w-8 h-8 rounded-full bg-gray-200" />
+              <div className="h-3 w-12 bg-gray-200 rounded mt-1.5" />
+            </div>
+            {i < 3 && <div className="flex-1 h-0.5 mx-1 bg-gray-200" />}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Portal Page
 // ---------------------------------------------------------------------------
 
-// ---------------------------------------------------------------------------
-// Map real API Case to PortalCase
-// ---------------------------------------------------------------------------
-
-function mapCaseToPortal(c: Record<string, unknown>): PortalCase {
-  const status = c.status as string;
-  let currentStage: PortalStage = 'submitted';
-  let determination: DeterminationResult = null;
-
-  if (status === 'intake') currentStage = 'submitted';
-  else if (status === 'processing' || status === 'brief_ready') currentStage = 'ai_analysis';
-  else if (status === 'lpn_review' || status === 'rn_review' || status === 'md_review' || status === 'pend_missing_info') currentStage = 'physician_review';
-  else if (status === 'determination_made' || status === 'delivered') {
-    currentStage = 'determination';
-    const det = c.determination as string;
-    if (det === 'deny') {
-      determination = 'denied';
-    } else if (det === 'approve' || det === 'modify' || det === 'partial_approve') {
-      determination = 'approved';
-    }
-  }
-
-  const patientName = (c.patient_name as string) || 'Unknown';
-  const nameParts = patientName.split(' ');
-  const masked = nameParts.length > 1
-    ? `${nameParts[0]} ${nameParts[nameParts.length - 1][0]}.`
-    : patientName;
-
-  return {
-    id: c.id as string,
-    caseRef: (c.case_number as string) || 'N/A',
-    patientName,
-    patientMasked: masked,
-    memberId: (c.patient_member_id as string) || '—',
-    procedureCode: ((c.procedure_codes as string[]) || [])[0] || '—',
-    procedureDescription: (c.procedure_description as string) || '—',
-    dateSubmitted: (c.created_at as string) || new Date().toISOString(),
-    currentStage,
-    determination,
-    estimatedCompletion: (c.turnaround_deadline as string) || '',
-    priority: (c.priority as 'standard' | 'urgent' | 'expedited') || 'standard',
-    reviewType: ((c.review_type as string) || 'prior_auth').replace(/_/g, ' '),
-    peerToPeerAvailable: c.determination === 'deny' || c.determination === 'partial_approve',
-    notes: (c.determination_rationale as string) || `Case is currently in ${status?.replace(/_/g, ' ')} stage.`,
-  };
-}
-
 export default function CaseStatusPortal() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<FilterStatus>('');
-  const [cases, setCases] = useState<PortalCase[]>(DEMO_CASES);
+  const [cases, setCases] = useState<PortalCase[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isDemo, setIsDemo] = useState(false);
+  const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
 
+  // Debounce search input for API calls
   useEffect(() => {
-    fetch('/api/cases')
-      .then((res) => {
-        if (!res.ok) throw new Error('Failed to fetch');
-        return res.json();
-      })
-      .then((data: Record<string, unknown>[]) => {
-        if (Array.isArray(data) && data.length > 0) {
-          setCases(data.map(mapCaseToPortal));
-        }
-        // If empty or demo mode, keep DEMO_CASES
-      })
-      .catch(() => {
-        // API not available — use demo data
-      })
-      .finally(() => setLoading(false));
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const fetchCases = useCallback(async (search?: string) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const params = new URLSearchParams();
+      if (search) params.set('search', search);
+
+      const res = await fetch(`/api/portal/cases${params.toString() ? `?${params}` : ''}`);
+      if (!res.ok) throw new Error(`Server responded with ${res.status}`);
+
+      const data: Record<string, unknown>[] = await res.json();
+      if (Array.isArray(data) && data.length > 0) {
+        setCases(data.map(mapCaseToPortal));
+        setIsDemo(false);
+      } else if (Array.isArray(data) && data.length === 0 && !search) {
+        // Empty database, fall back to demo
+        setCases(DEMO_CASES);
+        setIsDemo(true);
+      } else {
+        // Empty search result
+        setCases([]);
+        setIsDemo(false);
+      }
+    } catch {
+      // API not available or errored -- fall back to demo data
+      setCases(DEMO_CASES);
+      setIsDemo(true);
+    } finally {
+      setLoading(false);
+      setLastRefreshed(new Date());
+    }
   }, []);
 
+  // Initial fetch and refetch when debounced search changes
+  useEffect(() => {
+    fetchCases(debouncedSearch || undefined);
+  }, [debouncedSearch, fetchCases]);
+
+  // Client-side filter (status filter applied after fetch)
   const filteredCases = useMemo(() => {
     return cases.filter((c) => {
-      // Status filter
       if (!matchesFilter(c, statusFilter)) return false;
 
-      // Search filter
-      if (searchQuery.trim()) {
+      // If we're in demo mode, also apply client-side search
+      // (since demo data isn't filtered server-side via this component's search)
+      if (isDemo && searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
         return (
           c.caseRef.toLowerCase().includes(q) ||
           c.patientMasked.toLowerCase().includes(q) ||
           c.patientName.toLowerCase().includes(q) ||
           c.memberId.toLowerCase().includes(q) ||
-          c.procedureCode.toLowerCase().includes(q)
+          c.procedureCode.toLowerCase().includes(q) ||
+          (c.authorizationNumber && c.authorizationNumber.toLowerCase().includes(q))
         );
       }
 
       return true;
     });
-  }, [cases, searchQuery, statusFilter]);
+  }, [cases, searchQuery, statusFilter, isDemo]);
 
-  // Summary counts
+  // Summary counts (from full case set, not filtered)
   const totalCases = cases.length;
   const activeCases = cases.filter(
     (c) => c.currentStage !== 'determination'
@@ -693,21 +836,57 @@ export default function CaseStatusPortal() {
   const completedCases = cases.filter(
     (c) => c.currentStage === 'determination'
   ).length;
+  const approvedCases = cases.filter(
+    (c) => c.determination === 'approved'
+  ).length;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="font-[family-name:var(--font-dm-serif)] text-3xl sm:text-4xl text-navy">
-          Case Status Portal
-        </h1>
-        <p className="text-muted mt-2 text-base sm:text-lg">
-          Track your utilization review cases in real-time
-        </p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <h1 className="font-[family-name:var(--font-dm-serif)] text-3xl sm:text-4xl text-navy">
+              Authorization Status Portal
+            </h1>
+            <p className="text-muted mt-2 text-base sm:text-lg">
+              Track your utilization review cases in real-time
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            {isDemo && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                <span className="w-1.5 h-1.5 bg-amber-500 rounded-full" />
+                Demo Mode
+              </span>
+            )}
+            <button
+              onClick={() => fetchCases(debouncedSearch || undefined)}
+              disabled={loading}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-navy bg-navy/5 hover:bg-navy/10 border border-navy/10 transition-colors disabled:opacity-50"
+            >
+              <svg
+                className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Refresh
+            </button>
+          </div>
+        </div>
+        {lastRefreshed && (
+          <p className="text-xs text-muted mt-2">
+            Last updated: {lastRefreshed.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+          </p>
+        )}
       </div>
 
       {/* Summary Stats */}
-      <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6">
         <div className="bg-surface rounded-xl border border-border p-4 sm:p-5 shadow-sm">
           <div className="text-2xl sm:text-3xl font-bold text-navy">{totalCases}</div>
           <div className="text-xs sm:text-sm font-medium text-muted mt-0.5">Total Cases</div>
@@ -717,7 +896,11 @@ export default function CaseStatusPortal() {
           <div className="text-xs sm:text-sm font-medium text-muted mt-0.5">In Progress</div>
         </div>
         <div className="bg-surface rounded-xl border border-border p-4 sm:p-5 shadow-sm">
-          <div className="text-2xl sm:text-3xl font-bold text-green-700">{completedCases}</div>
+          <div className="text-2xl sm:text-3xl font-bold text-green-700">{approvedCases}</div>
+          <div className="text-xs sm:text-sm font-medium text-muted mt-0.5">Approved</div>
+        </div>
+        <div className="bg-surface rounded-xl border border-border p-4 sm:p-5 shadow-sm">
+          <div className="text-2xl sm:text-3xl font-bold text-foreground">{completedCases}</div>
           <div className="text-xs sm:text-sm font-medium text-muted mt-0.5">Completed</div>
         </div>
       </div>
@@ -740,11 +923,21 @@ export default function CaseStatusPortal() {
               </svg>
               <input
                 type="text"
-                placeholder="Search by case reference, patient name, or member ID..."
+                placeholder="Search by case number, auth number, patient name, or member ID..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-10 pr-4 py-2.5 text-sm border border-border rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-gold/50 focus:border-gold placeholder:text-muted/60"
               />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-foreground"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
             </div>
             <select
               value={statusFilter}
@@ -759,39 +952,74 @@ export default function CaseStatusPortal() {
             </select>
           </div>
 
-          {/* Case Cards */}
-          <div className="space-y-4">
-            {filteredCases.length === 0 ? (
-              <div className="text-center py-16 bg-surface rounded-xl border border-border">
-                <svg
-                  className="mx-auto h-12 w-12 text-muted/40"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={1.5}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m5.231 13.481L15 17.25m-4.5-15H5.625c-.621 0-1.125.504-1.125 1.125v16.5c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9zm3.75 11.625a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"
-                  />
-                </svg>
-                <h3 className="mt-3 text-sm font-semibold text-foreground">No cases found</h3>
-                <p className="mt-1 text-sm text-muted">
-                  No cases match your search or filter criteria. Try adjusting your search.
-                </p>
+          {/* Error State */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-5 flex items-start gap-3">
+              <svg className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+              <div>
+                <p className="text-sm font-semibold text-red-800">Unable to load cases</p>
+                <p className="text-sm text-red-700 mt-0.5">{error}</p>
               </div>
-            ) : (
-              filteredCases.map((caseData) => (
-                <CaseCard key={caseData.id} caseData={caseData} />
-              ))
-            )}
-          </div>
+            </div>
+          )}
+
+          {/* Loading State */}
+          {loading && cases.length === 0 && (
+            <div className="space-y-4">
+              <CaseCardSkeleton />
+              <CaseCardSkeleton />
+              <CaseCardSkeleton />
+            </div>
+          )}
+
+          {/* Case Cards */}
+          {!loading && filteredCases.length === 0 ? (
+            <div className="text-center py-16 bg-surface rounded-xl border border-border">
+              <svg
+                className="mx-auto h-12 w-12 text-muted/40"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={1.5}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m5.231 13.481L15 17.25m-4.5-15H5.625c-.621 0-1.125.504-1.125 1.125v16.5c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9zm3.75 11.625a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"
+                />
+              </svg>
+              <h3 className="mt-3 text-sm font-semibold text-foreground">No cases found</h3>
+              <p className="mt-1 text-sm text-muted">
+                {searchQuery
+                  ? 'No cases match your search. Try a different case number, authorization number, or patient name.'
+                  : 'No cases match your filter criteria. Try adjusting your filters.'}
+              </p>
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="mt-3 text-sm font-medium text-navy hover:text-gold-dark transition-colors"
+                >
+                  Clear search
+                </button>
+              )}
+            </div>
+          ) : (
+            !loading && (
+              <div className="space-y-4">
+                {filteredCases.map((caseData) => (
+                  <CaseCard key={caseData.id} caseData={caseData} />
+                ))}
+              </div>
+            )
+          )}
 
           {/* Results count */}
-          {filteredCases.length > 0 && (
+          {!loading && filteredCases.length > 0 && (
             <div className="text-xs text-muted mt-4 text-center">
               Showing {filteredCases.length} of {cases.length} case{cases.length !== 1 ? 's' : ''}
+              {statusFilter && ` (filtered by ${FILTER_OPTIONS.find((o) => o.value === statusFilter)?.label})`}
             </div>
           )}
         </div>
@@ -799,6 +1027,46 @@ export default function CaseStatusPortal() {
         {/* Sidebar */}
         <div className="lg:w-[360px] flex-shrink-0">
           <div className="lg:sticky lg:top-8 space-y-6">
+            {/* Quick Lookup */}
+            <div className="bg-surface rounded-xl border border-border shadow-sm overflow-hidden">
+              <div className="bg-navy px-5 py-4 sm:px-6">
+                <h2 className="font-[family-name:var(--font-dm-serif)] text-lg text-white">
+                  Quick Lookup
+                </h2>
+                <p className="text-white/70 text-sm mt-1">Find a case by authorization number</p>
+              </div>
+              <div className="p-5 sm:p-6">
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const form = e.target as HTMLFormElement;
+                    const input = form.elements.namedItem('authLookup') as HTMLInputElement;
+                    if (input.value.trim()) {
+                      setSearchQuery(input.value.trim());
+                      setStatusFilter('');
+                    }
+                  }}
+                  className="flex gap-2"
+                >
+                  <input
+                    name="authLookup"
+                    type="text"
+                    placeholder="AUTH-2026-XXXXX"
+                    className="flex-1 px-3 py-2 text-sm border border-border rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-gold/50 focus:border-gold placeholder:text-muted/60 font-mono"
+                  />
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-navy text-white text-sm font-medium rounded-lg hover:bg-navy-light transition-colors"
+                  >
+                    Look Up
+                  </button>
+                </form>
+                <p className="text-xs text-muted mt-2">
+                  Enter your authorization number, case number, or member ID
+                </p>
+              </div>
+            </div>
+
             <ReviewExplainer />
 
             {/* Contact Support */}
