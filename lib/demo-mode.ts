@@ -1,4 +1,4 @@
-import type { Case, Reviewer, Client, AuditLogEntry, AIBrief, FactCheckResult, Staff, Pod, QualityAudit, MissingInfoRequest, DeterminationTemplate, PeerToPeerRecord } from './types';
+import type { Case, Reviewer, Client, AuditLogEntry, AIBrief, FactCheckResult, Staff, Pod, QualityAudit, MissingInfoRequest, DeterminationTemplate, PeerToPeerRecord, QueueRole, QueueMeta } from './types';
 import {
   demoCases,
   demoReviewers,
@@ -15,6 +15,7 @@ import {
   DEMO_POD_IDS,
 } from './demo-data';
 import { factCheckBrief } from './fact-checker';
+import { getTimeRemaining } from './sla-calculator';
 import { hasSupabaseConfig } from './supabase';
 
 /**
@@ -386,4 +387,107 @@ export function getDemoPeerToPeerRecords(caseId?: string): PeerToPeerRecord[] {
     records = records.filter((r) => r.case_id === caseId);
   }
   return records.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+}
+
+// ============================================================================
+// Queue (role-aware worklist)
+// ============================================================================
+
+const ACTIVE_REVIEW_STATUSES = ['lpn_review', 'rn_review', 'md_review', 'pend_missing_info'];
+
+export interface GetDemoQueueOptions {
+  role: QueueRole;
+  staff_id?: string;
+  reviewer_id?: string;
+}
+
+/**
+ * Returns demo cases filtered for a role-aware worklist.
+ * - LPN: cases assigned to them in lpn_review or pend_missing_info
+ * - RN: cases assigned to them in rn_review, plus LPN cases in pods they supervise (oversight)
+ * - MD: cases assigned to them in md_review
+ * - Admin: all cases in active review statuses
+ */
+export function getDemoQueueCases(options: GetDemoQueueOptions): { cases: Case[]; meta: QueueMeta } {
+  let cases: Case[];
+
+  switch (options.role) {
+    case 'lpn': {
+      cases = demoCases.filter(
+        (c) => c.assigned_lpn_id === options.staff_id &&
+          (c.status === 'lpn_review' || c.status === 'pend_missing_info')
+      );
+      break;
+    }
+    case 'rn': {
+      // Direct RN review cases
+      const rnDirect = demoCases.filter(
+        (c) => c.assigned_rn_id === options.staff_id && c.status === 'rn_review'
+      );
+      // Oversight: LPN cases in pods this RN supervises
+      const supervisedPodIds = demoPods
+        .filter((p) => p.rn_id === options.staff_id)
+        .map((p) => p.id);
+      const oversight = demoCases.filter(
+        (c) => c.assigned_pod_id && supervisedPodIds.includes(c.assigned_pod_id) &&
+          (c.status === 'lpn_review' || c.status === 'pend_missing_info')
+      );
+      // Deduplicate (a case could appear in both if RN is also assigned directly)
+      const seen = new Set<string>();
+      cases = [...rnDirect, ...oversight].filter((c) => {
+        if (seen.has(c.id)) return false;
+        seen.add(c.id);
+        return true;
+      });
+      break;
+    }
+    case 'md': {
+      cases = demoCases.filter(
+        (c) => c.assigned_reviewer_id === options.reviewer_id && c.status === 'md_review'
+      );
+      break;
+    }
+    case 'admin':
+    default: {
+      cases = demoCases.filter((c) => ACTIVE_REVIEW_STATUSES.includes(c.status));
+      break;
+    }
+  }
+
+  // Enrich with fact-check
+  cases = cases.map((c) => {
+    if (c.ai_brief && !c.fact_check) {
+      const factCheck = factCheckBrief(c.ai_brief, c);
+      return { ...c, fact_check: factCheck, fact_check_at: new Date().toISOString() };
+    }
+    return c;
+  });
+
+  // Count completed today
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const completedToday = demoCases.filter(
+    (c) => c.determination_at && new Date(c.determination_at).getTime() >= todayStart.getTime()
+  ).length;
+
+  // Compute meta
+  let overdueCount = 0;
+  let criticalCount = 0;
+  for (const c of cases) {
+    if (c.turnaround_deadline) {
+      const tr = getTimeRemaining(c.turnaround_deadline);
+      if (tr.urgencyLevel === 'overdue') overdueCount++;
+      else if (tr.urgencyLevel === 'critical') criticalCount++;
+    }
+  }
+
+  return {
+    cases,
+    meta: {
+      total: cases.length,
+      overdue_count: overdueCount,
+      critical_count: criticalCount,
+      completed_today: completedToday,
+    },
+  };
 }
