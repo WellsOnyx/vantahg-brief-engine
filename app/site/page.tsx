@@ -311,7 +311,7 @@ export default function SitePage() {
             <div className="ea-left">
               <span className="kicker" style={{ color: 'var(--gold)' }}>Founding Partner Program</span>
               <h2 className="sh">We are new.<br />That is the <em style={{ color: 'var(--gold)' }}>point.</em></h2>
-              <p className="sb">The legacy players built their platforms in a different era — before AI could compress physician review time, before concierge coordination was operationally viable at scale. We built VantaUM from a blank page with those tools available from day one.</p>
+              <p className="sb">Most UM platforms were built in a different era — before AI could compress physician review time, before concierge coordination was operationally viable at scale. We built VantaUM from a blank page with those tools available from day one.</p>
               <p className="sb" style={{ marginTop: 16 }}>The TPAs that partner with us now don&apos;t inherit someone else&apos;s technical debt. They help shape a platform designed around how UM should actually work.</p>
               <div className="ea-spots">
                 <div className="ea-spots-dot" />
@@ -383,7 +383,7 @@ export default function SitePage() {
                 <span className="kicker" style={{ color: 'var(--gold)' }}>For Brokers</span>
                 <h2 className="sh">You Win<br /><em>the Business.</em><br />We help you keep it.</h2>
                 <p className="sb" style={{ marginBottom: '24px' }}>Your producers are selling self-funded accounts against carriers who've been in the market for decades. The question on every plan sponsor's mind: what do I get from you that I can't get elsewhere?</p>
-                <p className="sb" style={{ marginBottom: '40px' }}>VantaUM is the answer. Partner with us and bring your clients a modern, URAC-accredited utilization management layer that the legacy players can't match — faster decisions, better member experience, and clinical compliance that holds up under scrutiny.</p>
+                <p className="sb" style={{ marginBottom: '40px' }}>VantaUM is the answer. Partner with us and bring your clients a modern, URAC-accredited utilization management layer that holds up under scrutiny — faster decisions, better member experience, and clinical compliance that actually protects the plan.</p>
                 <a href={EA_EMAIL} className="btn-primary" style={{ background: 'transparent', border: '1px solid var(--gold)', color: 'var(--gold)' }}>Become a broker partner →</a>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
@@ -523,7 +523,7 @@ export default function SitePage() {
               <p className="sb">This is a live demo of the VantaUM intake and clinical routing engine. Submit a case and see how AI compresses the middle — so the clinician receives a fully pre-briefed file, not a raw document stack.</p>
             </div>
             <div>
-              <div className="demo-frame-label"><span className="demo-live-dot" /> Live Demo Environment</div>
+              <div className="demo-frame-label"><span className="demo-live-dot" /> Live Demo Environment <span style={{ fontWeight: 300, opacity: 0.5, fontSize: '11px', marginLeft: '8px' }}>All patients, cases, and organizations shown are fictional and for illustrative purposes only.</span></div>
               <div style={{ borderRadius: '0 12px 12px 12px', overflow: 'hidden', border: '1px solid var(--border-strong)' }}>
                 <DemoWalkthrough />
               </div>
