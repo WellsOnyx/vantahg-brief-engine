@@ -177,8 +177,42 @@ export default function SitePage() {
         .footer-logo span { color:var(--teal); }
         .vum-footer p { font-size:12px;color:var(--white-dim); }
 
+        /* ── Role Selector ── */
+        .role-hero { min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:170px 56px 80px;position:relative;overflow:hidden; }
+        .role-hero::before { content:'';position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 50% 40%,rgba(91,138,245,0.04) 0%,transparent 70%);pointer-events:none; }
+        .role-headline { font-family:var(--serif);font-size:clamp(38px,5vw,68px);font-weight:300;line-height:1.08;letter-spacing:-0.5px;color:var(--white);text-align:center;margin-bottom:16px; }
+        .role-sub { font-size:16px;font-weight:300;color:var(--white-muted);text-align:center;margin-bottom:64px;max-width:520px; }
+        .role-cards { display:grid;grid-template-columns:repeat(3,1fr);gap:2px;width:100%;max-width:1100px; }
+        .role-card { background:var(--surface);border:1px solid var(--border);padding:48px 40px;border-radius:0;position:relative;overflow:hidden;text-decoration:none;display:flex;flex-direction:column;gap:0;transition:border-color 0.25s,background 0.25s;cursor:pointer; }
+        .role-cards>.role-card:first-child { border-radius:8px 0 0 8px; }
+        .role-cards>.role-card:last-child { border-radius:0 8px 8px 0; }
+        .role-card::before { content:'';position:absolute;inset:0;opacity:0;transition:opacity 0.3s; }
+        .role-card.tpa::before { background:radial-gradient(ellipse 80% 60% at 50% 0%,rgba(91,138,245,0.07) 0%,transparent 70%); }
+        .role-card.broker::before { background:radial-gradient(ellipse 80% 60% at 50% 0%,rgba(201,169,110,0.07) 0%,transparent 70%); }
+        .role-card.chro::before { background:radial-gradient(ellipse 80% 60% at 50% 0%,rgba(91,138,245,0.05) 0%,transparent 70%); }
+        .role-card:hover { border-color:var(--border-strong); }
+        .role-card:hover::before { opacity:1; }
+        .role-card-eyebrow { font-size:10px;font-weight:500;letter-spacing:0.14em;text-transform:uppercase;margin-bottom:28px;display:flex;align-items:center;gap:10px; }
+        .role-card.tpa .role-card-eyebrow { color:var(--teal); }
+        .role-card.broker .role-card-eyebrow { color:var(--gold); }
+        .role-card.chro .role-card-eyebrow { color:var(--teal); }
+        .role-card-eyebrow::before { content:'';display:block;width:24px;height:1px;flex-shrink:0; }
+        .role-card.tpa .role-card-eyebrow::before { background:var(--teal); }
+        .role-card.broker .role-card-eyebrow::before { background:var(--gold); }
+        .role-card.chro .role-card-eyebrow::before { background:var(--teal); }
+        .role-card-title { font-family:var(--serif);font-size:clamp(26px,2.5vw,36px);font-weight:300;line-height:1.1;color:var(--white);margin-bottom:20px; }
+        .role-card-body { font-size:14px;font-weight:300;line-height:1.7;color:var(--white-muted);flex:1;margin-bottom:36px; }
+        .role-card-cta { font-size:13px;font-weight:400;display:flex;align-items:center;gap:8px;transition:gap 0.2s; }
+        .role-card.tpa .role-card-cta { color:var(--teal); }
+        .role-card.broker .role-card-cta { color:var(--gold); }
+        .role-card.chro .role-card-cta { color:var(--teal); }
+        .role-card:hover .role-card-cta { gap:14px; }
+
         /* ── Animations ── */
         @keyframes fadeUp { from{opacity:0;transform:translateY(20px);} to{opacity:1;transform:translateY(0);} }
+        .role-hero .role-headline { animation:fadeUp 0.6s ease both; }
+        .role-hero .role-sub { animation:fadeUp 0.7s 0.1s ease both; }
+        .role-hero .role-cards { animation:fadeUp 0.8s 0.2s ease both; }
         .hero-left .eyebrow { animation:fadeUp 0.6s ease both; }
         .hero-left h1 { animation:fadeUp 0.7s 0.1s ease both; }
         .hero-left .hero-body { animation:fadeUp 0.7s 0.2s ease both; }
@@ -189,6 +223,13 @@ export default function SitePage() {
         @media (max-width:960px) {
           .vum-nav { padding:18px 24px; }
           .nav-links { display:none; }
+          .role-hero { padding:100px 24px 60px; }
+          .role-cards { grid-template-columns:1fr; }
+          .role-cards>.role-card:first-child { border-radius:6px; }
+          .role-cards>.role-card:last-child { border-radius:6px; }
+          .role-card { border-radius:6px; }
+          .role-card.broker { border-left:1px solid var(--border) !important; border-right:1px solid var(--border) !important; }
+          #tpa > div, #broker > div, #chro > div { grid-template-columns:1fr !important; }
           .vum-hero { grid-template-columns:1fr;padding:100px 24px 60px;gap:48px; }
           .hero-vline { display:none; }
           .hero-right { display:none; }
@@ -221,31 +262,44 @@ export default function SitePage() {
             <span className="nav-sub">A Wells Onyx Company</span>
           </div>
           <ul className="nav-links">
+            <li><a href="#tpa">For TPAs</a></li>
+            <li><a href="#broker">For Brokers</a></li>
+            <li><a href="#chro">For CHROs</a></li>
             <li><a href="#philosophy">Philosophy</a></li>
-            <li><a href="#model">Our Model</a></li>
-            <li><a href="#compare">Why VantaUM</a></li>
             <li><a href="#demo">Live Demo</a></li>
-            <li><a href="#urac">Accreditation</a></li>
           </ul>
           <a className="nav-cta" href="#contact">Request Early Access</a>
         </nav>
 
-        {/* Hero */}
-        <section className="vum-hero">
-          <div className="hero-vline" />
-          <div className="hero-left" style={{ position: 'relative', zIndex: 1 }}>
-            <div className="eyebrow">Now Accepting Founding TPA Partners</div>
-            <h1>AI that makes UM<br /><em>more</em> human,<br />not less.</h1>
-            <p className="hero-body">VantaUM pairs a world-class concierge team and elite same-specialty physicians with AI engineered to eliminate friction in the middle — so every human in the process can stay focused on what only humans can do.</p>
-            <div className="hero-actions">
-              <a href="#contact" className="btn-primary">Request Early Access</a>
-              <a href="#compare" className="btn-ghost">Compare to legacy UM →</a>
-            </div>
-          </div>
-          <div className="hero-right">
-            <div className="hero-stat"><div className="stat-val" style={{ color: 'var(--gold)' }}>Founding</div><div className="stat-label">Limited founding partner slots open now. Early access means preferred pricing, roadmap input, and white-glove onboarding.</div></div>
-            <div className="hero-stat"><div className="stat-val">~$12 PEPM</div><div className="stat-label">Market-validated pricing locked in for founding partners. No volume thresholds.</div></div>
-            <div className="hero-stat"><div className="stat-val">URAC</div><div className="stat-label">Accreditation in progress. Founding partners go live with a fully accredited UM operation.</div></div>
+        {/* Role Selector Hero */}
+        <section className="role-hero">
+          <p className="role-headline">Choose Your Role in<br />Self-Funded Healthcare</p>
+          <p className="role-sub">We built three different experiences — one for each person who actually moves the needle.</p>
+
+          <div className="role-cards">
+            {/* TPA */}
+            <a href="#tpa" className="role-card tpa">
+              <div className="role-card-eyebrow">TPA</div>
+              <div className="role-card-title">You Run<br />the Plan</div>
+              <p className="role-card-body">Let us handle first-level authorizations with AI that actually works. Clean files, faster decisions, zero added lift on your side.</p>
+              <div className="role-card-cta">See how VantaUM works for TPAs →</div>
+            </a>
+
+            {/* Broker */}
+            <a href="#broker" className="role-card broker" style={{ borderLeft: 'none', borderRight: 'none' }}>
+              <div className="role-card-eyebrow">Broker</div>
+              <div className="role-card-title">You Win<br />the Business</div>
+              <p className="role-card-body">Give your producers a real weapon. Partner with us to help your clients win self-funded accounts your competitors can't match — and keep them longer.</p>
+              <div className="role-card-cta">See how brokers win with VantaUM →</div>
+            </a>
+
+            {/* CHRO */}
+            <a href="#chro" className="role-card chro">
+              <div className="role-card-eyebrow">Total Rewards / CHRO</div>
+              <div className="role-card-title">You Own<br />the Outcome</div>
+              <p className="role-card-body">We built a completely different way to deliver healthcare — one that removes the daily friction employees hate and gives you something genuinely different to bring to your organization.</p>
+              <div className="role-card-cta">See how we make Total Rewards leaders legendary →</div>
+            </a>
           </div>
         </section>
 
@@ -279,6 +333,110 @@ export default function SitePage() {
             </div>
           </div>
         </section>
+
+        {/* ── TPA Section ── */}
+        <section className="vum-section" id="tpa" style={{ background: 'var(--near-black)', borderTop: '1px solid var(--border)' }}>
+          <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '80px', alignItems: 'center' }}>
+            <div>
+              <span className="kicker" style={{ color: 'var(--teal)' }}>For TPAs</span>
+              <h2 className="sh">You Run<br /><em>the Plan.</em><br />Let us run the auths.</h2>
+              <p className="sb" style={{ marginBottom: '24px' }}>First-level utilization management is the part of your operation that consumes the most time, produces the most friction, and carries the most compliance risk — without adding clinical value to your book.</p>
+              <p className="sb" style={{ marginBottom: '40px' }}>VantaUM handles it entirely. We intake every prior auth request, run it through clinical criteria, route it through our nursing tier, and get a determination back — typically in hours, not days. You receive a clean file and a decision. Nothing else changes on your side.</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '40px' }}>
+                {[
+                  'Clean files. Every case documented, criteria-cited, audit-ready on delivery.',
+                  'URAC-accredited operation. No compliance gaps to inherit.',
+                  '~$12 PEPM. No volume floors, no minimums, no surprises.',
+                  'White-glove onboarding. Your team connects once. We handle the rest.',
+                ].map((item, i) => (
+                  <div key={i} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                    <span style={{ color: 'var(--teal)', flexShrink: 0, marginTop: '2px' }}>—</span>
+                    <span style={{ fontSize: '14px', fontWeight: 300, color: 'var(--white-muted)', lineHeight: 1.6 }}>{item}</span>
+                  </div>
+                ))}
+              </div>
+              <a href={EA_EMAIL} className="btn-primary">Request Early Access</a>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+              {[
+                { label: 'Turnaround', val: '< 4 hours', sub: 'Median case-to-determination time' },
+                { label: 'SLA Compliance', val: '99.4%', sub: 'Across all review types and priorities' },
+                { label: 'Lift on your team', val: 'Zero', sub: 'We own intake, review, and delivery entirely' },
+                { label: 'Pricing', val: '~$12 PEPM', sub: 'Founding partner rate — locked in at contract' },
+              ].map((s, i) => (
+                <div key={i} className="hero-stat">
+                  <div className="stat-val" style={{ fontSize: '28px', color: i === 0 ? 'var(--teal)' : 'var(--white)' }}>{s.val}</div>
+                  <div className="stat-label"><strong style={{ color: 'var(--white-muted)' }}>{s.label}</strong> — {s.sub}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <hr className="divider" />
+
+        {/* ── Broker Section ── */}
+        <section className="vum-section" id="broker" style={{ background: 'var(--black)', borderTop: '1px solid var(--border)' }}>
+          <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '80px', alignItems: 'start' }}>
+              <div>
+                <span className="kicker" style={{ color: 'var(--gold)' }}>For Brokers</span>
+                <h2 className="sh">You Win<br /><em>the Business.</em><br />We help you keep it.</h2>
+                <p className="sb" style={{ marginBottom: '24px' }}>Your producers are selling self-funded accounts against carriers who've been in the market for decades. The question on every plan sponsor's mind: what do I get from you that I can't get elsewhere?</p>
+                <p className="sb" style={{ marginBottom: '40px' }}>VantaUM is the answer. Partner with us and bring your clients a modern, URAC-accredited utilization management layer that the legacy players can't match — faster decisions, better member experience, and clinical compliance that holds up under scrutiny.</p>
+                <a href={EA_EMAIL} className="btn-primary" style={{ background: 'transparent', border: '1px solid var(--gold)', color: 'var(--gold)' }}>Become a broker partner →</a>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                {[
+                  { num: '01', title: 'A real differentiator on your proposal', body: 'Most brokers are selling the same TPA relationships. Adding VantaUM gives your clients something competitors can\'t easily replicate — and gives you something concrete to point to when explaining why your book outperforms.' },
+                  { num: '02', title: 'Better retention through better outcomes', body: 'Plan sponsors stay when they can see the results. Faster authorizations, fewer grievances, cleaner audit files — these show up in your annual review and make the renewal conversation easier.' },
+                  { num: '03', title: 'Direct partner relationship', body: 'You talk to us, not to an account manager reading from a script. Founding broker partners get direct access to the Wells Onyx team and input on how the partnership evolves.' },
+                ].map((p) => (
+                  <div key={p.num} className="ea-perk">
+                    <span className="ea-perk-num">{p.num}</span>
+                    <div><div className="ea-perk-title">{p.title}</div><div className="ea-perk-body">{p.body}</div></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <hr className="divider" />
+
+        {/* ── CHRO Section ── */}
+        <section className="vum-section" id="chro" style={{ background: 'var(--near-black)', borderTop: '1px solid var(--border)' }}>
+          <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+            <span className="kicker">For Total Rewards / CHRO</span>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '80px', alignItems: 'start', marginTop: '0' }}>
+              <div>
+                <h2 className="sh">You Own<br /><em>the Outcome.</em><br />Make it exceptional.</h2>
+                <p className="sb" style={{ marginBottom: '24px' }}>Your employees don't distinguish between their health plan and their employer. When a prior authorization takes five days and nobody calls back, that's a benefits failure — and it lands on you.</p>
+                <p className="sb" style={{ marginBottom: '24px' }}>VantaUM changes what's possible. Same-day authorization decisions. A named coordinator who actually picks up the phone. A clinical process that treats every case like it belongs to someone who matters — because it does.</p>
+                <p className="sb" style={{ marginBottom: '40px' }}>This is what genuinely different looks like in self-funded healthcare. Not a better portal. A completely different experience.</p>
+                <a href={EA_EMAIL} className="btn-primary">Talk to us about your population →</a>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                <div style={{ padding: '28px 32px', background: 'rgba(91,138,245,0.06)', border: '1px solid rgba(91,138,245,0.15)', borderRadius: '6px', marginBottom: '2px' }}>
+                  <p style={{ fontFamily: 'var(--serif)', fontSize: '18px', fontWeight: 300, lineHeight: 1.4, color: 'var(--white)', marginBottom: '16px', fontStyle: 'italic' }}>"The daily friction employees hate"</p>
+                  <p style={{ fontSize: '13px', fontWeight: 300, color: 'var(--white-muted)', lineHeight: 1.6 }}>Waiting 5 days for a prior auth answer. Getting a denial letter with no explanation. Being told to call back. We built VantaUM specifically to eliminate this — because it's fixable, and nobody else bothered to fix it.</p>
+                </div>
+                {[
+                  { icon: '→', title: 'Same-day decisions on standard cases', body: 'Median turnaround under 4 hours. Members get answers before they lose faith in the process.' },
+                  { icon: '→', title: 'Named coordinator, not a call center', body: 'One person who knows your plan, your members, and your providers. Reachable. Accountable.' },
+                  { icon: '→', title: 'Something real to bring to your organization', body: 'A benefits story that stands up in the all-hands. Faster, more human, and compliant.' },
+                ].map((item, i) => (
+                  <div key={i} className="urac-item">
+                    <div className="udot" style={{ background: 'var(--teal)' }} />
+                    <div><div className="utitle">{item.title}</div><div className="ubody">{item.body}</div></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <hr className="divider" />
 
         {/* Philosophy */}
         <section className="vum-section philosophy" id="philosophy">
