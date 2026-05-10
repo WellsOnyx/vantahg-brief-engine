@@ -35,7 +35,8 @@ export type IntakeChannel =
   | 'tpa_portal'
   | 'provider_portal'
   | 'csr_manual'
-  | 'manual_modification';
+  | 'manual_modification'
+  | 'ai_agent';
 export type LpnDetermination = 'criteria_met' | 'criteria_not_met' | 'unclear' | 'escalate_to_rn';
 export type RnDetermination = 'approve' | 'escalate_to_md';
 export type AppealStatus = 'pending' | 'in_review' | 'determined' | 'withdrawn';

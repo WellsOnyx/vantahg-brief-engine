@@ -28,6 +28,7 @@ export default function FirstMoverLayout({ children }: { children: ReactNode }) 
             <Link href="/firstmover/triage" className="hover:text-[#c9a227]">Triage</Link>
             <Link href="/firstmover/queue" className="hover:text-[#c9a227]">Clinician queue</Link>
             <Link href="/firstmover/portal" className="hover:text-[#c9a227]">Provider portal</Link>
+            <Link href="/firstmover/admin/gravity-rails" className="hover:text-[#c9a227] opacity-80">Gravity Rails</Link>
           </nav>
         </div>
       </header>

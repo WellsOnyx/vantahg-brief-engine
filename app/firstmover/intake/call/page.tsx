@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useEffect, useMemo, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   validateIntake,
   formatMissingForCaller,
@@ -26,7 +26,17 @@ const SERVICE_TYPES: { value: IntakeServiceType; label: string; hint: string }[]
 ];
 
 export default function ConciergeCallIntake() {
+  return (
+    <Suspense fallback={<div className="text-sm text-slate-500">Loading intake form&hellip;</div>}>
+      <ConciergeCallIntakeForm />
+    </Suspense>
+  );
+}
+
+function ConciergeCallIntakeForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const queueId = searchParams.get('queue_id');
   const [clients, setClients] = useState<ClientOption[]>([]);
   const [clientId, setClientId] = useState('');
   const [serviceType, setServiceType] = useState<IntakeServiceType>('outpatient');
@@ -36,6 +46,7 @@ export default function ConciergeCallIntake() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [dmeDraft, setDmeDraft] = useState({ description: '', code: '' });
+  const [prefillBanner, setPrefillBanner] = useState<{ source: string; supplied: string[]; confidence: number | null } | null>(null);
 
   useEffect(() => {
     fetch('/api/clients')
@@ -45,6 +56,29 @@ export default function ConciergeCallIntake() {
       })
       .catch(() => setClients([]));
   }, []);
+
+  // Pre-fill from eFax / email queue when ?queue_id=... is present
+  useEffect(() => {
+    if (!queueId) return;
+    fetch(`/api/firstmover/intake/from-queue/${queueId}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.payload) {
+          setPayload((p) => ({ ...p, ...data.payload }));
+        }
+        if (data?.service_type_guess) {
+          setServiceType(data.service_type_guess as IntakeServiceType);
+        }
+        setPrefillBanner({
+          source: data?.source || 'queue',
+          supplied: Array.isArray(data?.supplied_fields) ? data.supplied_fields : [],
+          confidence: typeof data?.extraction_confidence === 'number' ? data.extraction_confidence : null,
+        });
+      })
+      .catch(() => {
+        setPrefillBanner({ source: 'queue', supplied: [], confidence: null });
+      });
+  }, [queueId]);
 
   const validation = useMemo(() => validateIntake(payload, serviceType), [payload, serviceType]);
   const requiredLabels = useMemo(() => getRequiredFieldLabels(serviceType), [serviceType]);
@@ -119,6 +153,28 @@ export default function ConciergeCallIntake() {
             Take a call from a provider office. Required fields are gated by service type — the
             SLA clock won&apos;t start until everything below is complete and the member shows green.
           </p>
+          {prefillBanner && (
+            <div className="mt-3 bg-sky-50 border border-sky-200 rounded p-3 text-sm">
+              <div className="font-medium text-sky-900">
+                Pre-filled from {prefillBanner.source}
+                {prefillBanner.confidence !== null && (
+                  <span className="text-xs ml-2 text-sky-700">
+                    (extraction confidence: {prefillBanner.confidence}%)
+                  </span>
+                )}
+              </div>
+              {prefillBanner.supplied.length > 0 ? (
+                <p className="text-xs text-sky-800 mt-1">
+                  Auto-populated: {prefillBanner.supplied.join(', ')}. Verify each field with the
+                  caller and fill any gaps before submitting.
+                </p>
+              ) : (
+                <p className="text-xs text-sky-800 mt-1">
+                  No fields could be extracted from the source. Walk through the form with the caller.
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         <Section title="Client (TPA)">

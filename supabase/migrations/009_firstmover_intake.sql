@@ -114,7 +114,8 @@ end $$;
 alter table cases add constraint cases_intake_channel_check
   check (intake_channel is null or intake_channel in (
     'portal', 'efax', 'email', 'phone', 'api', 'batch_upload',
-    'tpa_portal', 'provider_portal', 'csr_manual', 'manual_modification'
+    'tpa_portal', 'provider_portal', 'csr_manual', 'manual_modification',
+    'ai_agent'
   ));
 
 create index if not exists idx_cases_intake_channel on cases(intake_channel);
