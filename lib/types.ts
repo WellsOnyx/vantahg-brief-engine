@@ -24,7 +24,18 @@ export type PhysicianAgreement = 'agree' | 'disagree' | 'modified';
 export type ReviewType = 'prior_auth' | 'medical_necessity' | 'concurrent' | 'retrospective' | 'peer_to_peer' | 'appeal' | 'second_level_review';
 export type Determination = 'approve' | 'deny' | 'partial_approve' | 'modify' | 'pend' | 'peer_to_peer_requested';
 export type StaffRole = 'lpn' | 'rn' | 'admin_staff';
-export type IntakeChannel = 'portal' | 'efax' | 'email' | 'phone' | 'api' | 'batch_upload';
+export type IntakeChannel =
+  | 'portal'
+  | 'efax'
+  | 'email'
+  | 'phone'
+  | 'api'
+  | 'batch_upload'
+  // Founders Release intake channels (Santana 2026-05-07 ops call)
+  | 'tpa_portal'
+  | 'provider_portal'
+  | 'csr_manual'
+  | 'manual_modification';
 export type LpnDetermination = 'criteria_met' | 'criteria_not_met' | 'unclear' | 'escalate_to_rn';
 export type RnDetermination = 'approve' | 'escalate_to_md';
 export type AppealStatus = 'pending' | 'in_review' | 'determined' | 'withdrawn';
@@ -129,6 +140,7 @@ export interface Case {
   sla_paused_at: string | null;
   sla_resumed_at: string | null;
   sla_pause_total_hours: number;
+  sla_pause_reason?: string | null;
 
   // Intake tracking
   intake_channel: IntakeChannel | null;

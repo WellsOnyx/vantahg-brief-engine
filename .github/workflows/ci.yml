@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: Build & test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        # 97 pre-existing lint issues in main code paths as of this PR.
+        # Treat as non-blocking until a dedicated cleanup PR lands.
+        continue-on-error: true
+        run: npm run lint
+
+      - name: Type-check + production build
+        run: npm run build
+        env:
+          # Build runs in a cleanroom — no secrets needed because demo mode is the
+          # default fallback. Real envs are injected by Vercel at deploy time.
+          NEXT_TELEMETRY_DISABLED: '1'
+
+      - name: Test
+        run: npm run test:ci
