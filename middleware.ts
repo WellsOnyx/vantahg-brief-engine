@@ -4,16 +4,16 @@ import { createServerClient } from '@supabase/ssr';
 // Routes that don't require authentication
 const PUBLIC_ROUTES = ['/', '/login', '/signup', '/welcome', '/demo', '/site', '/api/health', '/api/external/submit', '/api/intake/efax', '/api/intake/email'];
 
-// Founders Release auth pages must be public so providers can sign in.
-const PUBLIC_FOUNDERS_ROUTES = ['/founders/portal/login', '/founders/portal/signup', '/founders/portal/auth-callback', '/api/founders/auth'];
+// First Mover auth pages must be public so providers can sign in.
+const PUBLIC_FIRSTMOVER_ROUTES = ['/firstmover/portal/login', '/firstmover/portal/signup', '/firstmover/portal/auth-callback', '/api/firstmover/auth'];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Founders Release gate: in production, /founders/* is only served when
-  // RELEASE_TRACK=founders is set on the deploy. Dev always allows it.
-  if (pathname.startsWith('/founders') || pathname.startsWith('/api/founders')) {
-    const enabled = process.env.RELEASE_TRACK === 'founders' || process.env.NODE_ENV === 'development';
+  // First Mover gate: in production, /firstmover/* is only served when
+  // RELEASE_TRACK=firstmover is set on the deploy. Dev always allows it.
+  if (pathname.startsWith('/firstmover') || pathname.startsWith('/api/firstmover')) {
+    const enabled = process.env.RELEASE_TRACK === 'firstmover' || process.env.NODE_ENV === 'development';
     if (!enabled) {
       return new NextResponse('Not Found', { status: 404 });
     }
@@ -23,7 +23,7 @@ export async function middleware(request: NextRequest) {
   if (PUBLIC_ROUTES.some((route) => route === '/' ? pathname === '/' : pathname.startsWith(route))) {
     return NextResponse.next();
   }
-  if (PUBLIC_FOUNDERS_ROUTES.some((route) => pathname.startsWith(route))) {
+  if (PUBLIC_FIRSTMOVER_ROUTES.some((route) => pathname.startsWith(route))) {
     return NextResponse.next();
   }
 

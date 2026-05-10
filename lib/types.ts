@@ -31,7 +31,7 @@ export type IntakeChannel =
   | 'phone'
   | 'api'
   | 'batch_upload'
-  // Founders Release intake channels (Santana 2026-05-07 ops call)
+  // First Mover intake channels (Santana 2026-05-07 ops call)
   | 'tpa_portal'
   | 'provider_portal'
   | 'csr_manual'
@@ -146,7 +146,7 @@ export interface Case {
   intake_channel: IntakeChannel | null;
   intake_confirmation_sent: boolean;
   authorization_number: string | null;
-  // Founders Release intake taxonomy (drives required-fields validation + triage)
+  // First Mover intake taxonomy (drives required-fields validation + triage)
   intake_service_type?: 'outpatient' | 'medication' | 'home_health' | 'therapy' | 'inpatient' | 'dme' | null;
 
   // Peer-to-peer
