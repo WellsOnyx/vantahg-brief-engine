@@ -146,6 +146,8 @@ export interface Case {
   intake_channel: IntakeChannel | null;
   intake_confirmation_sent: boolean;
   authorization_number: string | null;
+  // Founders Release intake taxonomy (drives required-fields validation + triage)
+  intake_service_type?: 'outpatient' | 'medication' | 'home_health' | 'therapy' | 'inpatient' | 'dme' | null;
 
   // Peer-to-peer
   peer_to_peer_status: PeerToPeerStatus | null;

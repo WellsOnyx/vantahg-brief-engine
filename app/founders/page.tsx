@@ -14,6 +14,12 @@ const cards = [
     audience: 'Doctor office staff',
   },
   {
+    href: '/founders/triage',
+    title: 'Bulk triage',
+    body: 'Process a batch of pending cases at once: route to LPN / RN / MD lanes by service type, SLA, and complexity. Preview, then apply.',
+    audience: 'Ops + concierge leads',
+  },
+  {
     href: '/founders/queue',
     title: 'Clinician queue',
     body: 'Review packets prepared by intake. Render one of five determinations: approve, deny, partial, pend, peer-to-peer.',

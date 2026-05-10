@@ -25,6 +25,7 @@ export default function FoundersLayout({ children }: { children: ReactNode }) {
           </Link>
           <nav className="flex items-center gap-4 text-sm">
             <Link href="/founders/intake/call" className="hover:text-[#c9a227]">Concierge intake</Link>
+            <Link href="/founders/triage" className="hover:text-[#c9a227]">Triage</Link>
             <Link href="/founders/queue" className="hover:text-[#c9a227]">Clinician queue</Link>
             <Link href="/founders/portal" className="hover:text-[#c9a227]">Provider portal</Link>
           </nav>
