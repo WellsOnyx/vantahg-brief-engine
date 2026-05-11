@@ -22,6 +22,7 @@ import { getServiceClient } from '@/lib/supabase';
 import { isDemoMode } from '@/lib/demo-mode';
 import { logAuditEvent } from '@/lib/audit';
 import { applyRateLimit } from '@/lib/rate-limit-middleware';
+import { apiError } from '@/lib/api-error';
 import {
   verifyPhaxioSignature,
   parsePhaxioWebhook,
@@ -180,10 +181,15 @@ export async function POST(request: NextRequest) {
     if (efaxError || !efaxEntry) {
       // NEVER ask the provider to retry — duplicate webhook deliveries would
       // race and produce duplicate rows. Log loudly and return 200.
-      console.error('Failed to store Phaxio fax:', efaxError);
+      // We persist Supabase's `code` (e.g. "23505") but NOT `message`/`hint`
+      // because PostgREST error messages can echo row values back.
+      console.error('[phaxio] failed to store fax', {
+        fax_id: payload.fax_id,
+        code: efaxError?.code ?? null,
+      });
       await logAuditEvent(null, 'phaxio_webhook_db_error', 'system', {
         fax_id: payload.fax_id,
-        error: efaxError?.message || 'unknown',
+        error_code: efaxError?.code ?? null,
         authorization_number: authNumber,
       });
       return NextResponse.json({
@@ -201,17 +207,9 @@ export async function POST(request: NextRequest) {
       authorization_number: authNumber,
     });
   } catch (err) {
-    console.error('Unexpected error in Phaxio webhook:', err);
-    try {
-      await logAuditEvent(null, 'phaxio_webhook_unexpected_error', 'system', {
-        error: err instanceof Error ? err.message : String(err),
-      });
-    } catch {
-      // Audit logging itself failed — nothing more we can do.
-    }
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 },
-    );
+    return apiError(err, {
+      operation: 'phaxio_webhook',
+      actor: 'system',
+    });
   }
 }

@@ -4,6 +4,8 @@ import { applyRateLimit } from '@/lib/rate-limit-middleware';
 import { isDemoMode, getDemoQualityAudits } from '@/lib/demo-mode';
 import { getServiceClient } from '@/lib/supabase';
 import { createAudit } from '@/lib/quality-audit';
+import { apiError } from '@/lib/api-error';
+import { getRequestContext } from '@/lib/security';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,12 +29,21 @@ export async function GET(request: NextRequest) {
     if (staffId) query = query.eq('audited_staff_id', staffId);
 
     const { data, error } = await query;
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) {
+      return apiError(error, {
+        operation: 'list_quality_audits',
+        actor: authResult.user.email,
+        requestContext: getRequestContext(request),
+      });
+    }
 
     return NextResponse.json(data);
   } catch (err) {
-    console.error('Quality audits GET error:', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return apiError(err, {
+      operation: 'list_quality_audits',
+      actor: 'system',
+      requestContext: getRequestContext(request),
+    });
   }
 }
 
@@ -61,7 +72,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, auditId: result.auditId }, { status: 201 });
   } catch (err) {
-    console.error('Quality audit POST error:', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return apiError(err, {
+      operation: 'create_quality_audit',
+      actor: 'system',
+      requestContext: getRequestContext(request),
+    });
   }
 }

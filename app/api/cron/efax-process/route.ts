@@ -214,13 +214,31 @@ export async function POST(request: NextRequest) {
     });
   } catch (err) {
     // Never throw out of the top-level handler. Return 200 with partial counts.
-    console.error('[efax-process] top-level error', err);
+    // We deliberately do not echo the raw error message — Anthropic/Supabase
+    // upstream errors may include prompt fragments or row values that are PHI.
+    // The error class + code are enough for ops triage; full context is
+    // captured in the audit log via handleProcessingError on each row.
+    const errorKind = err instanceof Error ? err.name : typeof err;
+    const errorCode =
+      err && typeof err === 'object' && 'code' in err
+        ? (err as { code?: unknown }).code ?? null
+        : null;
+    console.error('[efax-process] top-level error', { kind: errorKind, code: errorCode });
+    try {
+      await logAuditEvent(null, 'error:efax_process_top_level', 'system', {
+        worker_id: workerId,
+        error_kind: errorKind,
+        error_code: errorCode,
+      });
+    } catch {
+      // Audit logging itself failed — already logged to console.
+    }
     return NextResponse.json({
       success: false,
       worker_id: workerId,
       processed,
       ...counts,
-      error: err instanceof Error ? err.message : String(err),
+      error: 'Worker error — see audit log',
       time_budget_exceeded: timeBudgetExceeded,
       duration_ms: Date.now() - startTime,
       timestamp: new Date().toISOString(),

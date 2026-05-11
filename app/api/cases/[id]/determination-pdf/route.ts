@@ -4,6 +4,8 @@ import { isDemoMode, getDemoCase } from '@/lib/demo-mode';
 import { requireAuth } from '@/lib/auth-guard';
 import { applyRateLimit } from '@/lib/rate-limit-middleware';
 import { generateDeterminationPdf } from '@/lib/pdf-generator';
+import { apiError } from '@/lib/api-error';
+import { getRequestContext } from '@/lib/security';
 
 export const dynamic = 'force-dynamic';
 
@@ -58,7 +60,10 @@ export async function GET(
       },
     });
   } catch (err) {
-    console.error('Error generating PDF:', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return apiError(err, {
+      operation: 'generate_determination_pdf',
+      actor: 'system',
+      requestContext: getRequestContext(request),
+    });
   }
 }

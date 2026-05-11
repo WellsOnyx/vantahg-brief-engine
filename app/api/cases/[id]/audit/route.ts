@@ -3,6 +3,8 @@ import { getServiceClient } from '@/lib/supabase';
 import { isDemoMode, getDemoAuditLog } from '@/lib/demo-mode';
 import { requireAuth } from '@/lib/auth-guard';
 import { applyRateLimit } from '@/lib/rate-limit-middleware';
+import { apiError } from '@/lib/api-error';
+import { getRequestContext } from '@/lib/security';
 
 export const dynamic = 'force-dynamic';
 
@@ -44,10 +46,12 @@ export async function GET(
           { status: 404 }
         );
       }
-      return NextResponse.json(
-        { error: caseError.message },
-        { status: 500 }
-      );
+      return apiError(caseError, {
+        operation: 'fetch_audit_log',
+        caseId: id,
+        actor: authResult.user.email,
+        requestContext: getRequestContext(request),
+      });
     }
 
     // Fetch audit log entries for the case
@@ -58,15 +62,20 @@ export async function GET(
       .order('created_at', { ascending: false });
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return apiError(error, {
+        operation: 'fetch_audit_log',
+        caseId: id,
+        actor: authResult.user.email,
+        requestContext: getRequestContext(request),
+      });
     }
 
     return NextResponse.json(data);
   } catch (err) {
-    console.error('Error fetching audit log:', err);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return apiError(err, {
+      operation: 'fetch_audit_log',
+      actor: 'system',
+      requestContext: getRequestContext(request),
+    });
   }
 }

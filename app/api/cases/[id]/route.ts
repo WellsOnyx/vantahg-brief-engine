@@ -5,6 +5,8 @@ import { deliverToClient } from '@/lib/notifications';
 import { isDemoMode, getDemoCase } from '@/lib/demo-mode';
 import { requireAuth } from '@/lib/auth-guard';
 import { applyRateLimit } from '@/lib/rate-limit-middleware';
+import { apiError } from '@/lib/api-error';
+import { getRequestContext } from '@/lib/security';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,16 +41,21 @@ export async function GET(
       if (error.code === 'PGRST116') {
         return NextResponse.json({ error: 'Case not found' }, { status: 404 });
       }
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return apiError(error, {
+        operation: 'fetch_case',
+        caseId: id,
+        actor: authResult.user.email,
+        requestContext: getRequestContext(request),
+      });
     }
 
     return NextResponse.json(data);
   } catch (err) {
-    console.error('Error fetching case:', err);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return apiError(err, {
+      operation: 'fetch_case',
+      actor: 'system',
+      requestContext: getRequestContext(request),
+    });
   }
 }
 
@@ -89,7 +96,12 @@ export async function PATCH(
       if (error.code === 'PGRST116') {
         return NextResponse.json({ error: 'Case not found' }, { status: 404 });
       }
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return apiError(error, {
+        operation: 'update_case',
+        caseId: id,
+        actor: body.updated_by || authResult.user.email,
+        requestContext: getRequestContext(request),
+      });
     }
 
     // Log audit events based on what changed
@@ -133,10 +145,10 @@ export async function PATCH(
 
     return NextResponse.json(data);
   } catch (err) {
-    console.error('Error updating case:', err);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return apiError(err, {
+      operation: 'update_case',
+      actor: 'system',
+      requestContext: getRequestContext(request),
+    });
   }
 }

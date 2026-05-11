@@ -4,6 +4,8 @@ import { isDemoMode, getDemoCase } from '@/lib/demo-mode';
 import { scoreDenialStrength } from '@/lib/denial-strength';
 import { requireAuth } from '@/lib/auth-guard';
 import { applyRateLimit } from '@/lib/rate-limit-middleware';
+import { apiError } from '@/lib/api-error';
+import { getRequestContext } from '@/lib/security';
 
 export const dynamic = 'force-dynamic';
 
@@ -49,7 +51,12 @@ export async function GET(
       if (error.code === 'PGRST116') {
         return NextResponse.json({ error: 'Case not found' }, { status: 404 });
       }
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return apiError(error, {
+        operation: 'score_denial_strength',
+        caseId: id,
+        actor: authResult.user.email,
+        requestContext: getRequestContext(request),
+      });
     }
 
     if (caseData.determination !== 'deny' && caseData.determination !== 'partial_approve') {
@@ -72,7 +79,10 @@ export async function GET(
 
     return NextResponse.json(result);
   } catch (err) {
-    console.error('Error calculating denial strength:', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return apiError(err, {
+      operation: 'score_denial_strength',
+      actor: 'system',
+      requestContext: getRequestContext(request),
+    });
   }
 }

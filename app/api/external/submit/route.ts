@@ -4,6 +4,8 @@ import { isDemoMode } from '@/lib/demo-mode';
 import { logAuditEvent } from '@/lib/audit';
 import { applyRateLimit } from '@/lib/rate-limit-middleware';
 import { generateAuthorizationNumber, logIntakeEvent, hashPatientName, sendReceiptConfirmation } from '@/lib/intake/confirmation';
+import { apiError } from '@/lib/api-error';
+import { getRequestContext } from '@/lib/security';
 import crypto from 'crypto';
 
 export const dynamic = 'force-dynamic';
@@ -164,8 +166,12 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (caseError) {
-      console.error('Failed to create case via external API:', caseError);
-      return NextResponse.json({ error: 'Failed to create case' }, { status: 500 });
+      return apiError(caseError, {
+        operation: 'external_submit_case_insert',
+        actor: apiKey ? `key:${apiKey.substring(0, 8)}...` : 'system',
+        requestContext: getRequestContext(request),
+        clientMessage: 'Failed to create case',
+      });
     }
 
     // Send confirmation
@@ -213,7 +219,10 @@ export async function POST(request: NextRequest) {
       confirmation,
     }, { status: 201 });
   } catch (err) {
-    console.error('Error in external submit:', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return apiError(err, {
+      operation: 'external_submit',
+      actor: 'system',
+      requestContext: getRequestContext(request),
+    });
   }
 }
