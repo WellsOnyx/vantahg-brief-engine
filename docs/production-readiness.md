@@ -2,6 +2,37 @@
 
 Operator checklist for going from a fresh clone to "first real customer can use this." Each step is verifiable and idempotent — re-running won't break anything that already worked.
 
+## Quick links — recently added executive + admin surfaces
+
+| Path | Role gate | Purpose |
+|---|---|---|
+| `/mission-control` | admin (browser-side check) | System-wide exec KPI overview |
+| `/office-ceo` | `ceo` / `slt` / `admin` | Strategic dashboard + growth/risk tiles |
+| `/builders` | `builder` / `admin` / `ceo` | Growth-team roster + prospect pipeline |
+| `/admin/billing` | `admin` / `ceo` / `slt` | Phase 1 Meow billing — MRR/PEPM stubs |
+| `/team` | `admin` / `ceo` / `slt` | App-access role management (distinct from `/staff` clinical roster) |
+| `/admin/usage` | admin | Detailed ops view of briefs/cost/intake |
+
+The new organizational roles (`builder`, `ceo`, `practice-lead`, `slt`) are added in migration 011 with RLS policy refresh so internal staff have case access. See `lib/auth-guard.ts::INTERNAL_STAFF_ROLES`.
+
+## 15-minute Valenz demo script
+
+A suggested flow that touches the surfaces a prospect TPA actually cares about. Assumes the env is real-mode-ready (status banner green at `/admin/usage`).
+
+| Min | Page | What to show |
+|---|---|---|
+| 0–2 | `/mission-control` | "System-wide view: cases, SLA, brief volume + cost." Point at the active vs delivered split and the SLA tone-color. |
+| 2–4 | `/cases` | "All cases. Tenant selector lets us focus on one TPA at a time." Demo the selector → filter to one client. |
+| 4–8 | `/cases/[id]` | "Open a case. Loading skeleton, structured AI brief, fact-check badge, audit timeline. Download PDF brief — one click, server-rendered, branded." |
+| 8–10 | `/admin/usage` | "Real-time ops dashboard. Token usage, estimated cost, intake volume by channel, SLA compliance breakdown. Real-mode status bar shows what's wired." |
+| 10–11 | `/admin/billing` | "Phase 1 billing surface. MRR stub, per-client breakdown. Stripe + invoice PDF generation in Phase 2." |
+| 11–13 | `/office-ceo` | "Executive lens. Strategic numbers, growth pulse, risks + opportunities. Real metrics where data exists, stubs where Phase 2 is wired." |
+| 13–15 | `/builders` + `/team` | "Internal tooling: growth roster + pipeline, role-aware team access management. Every role change writes a `security:team_role_changed` audit event." |
+
+**Trust the status bar, not the absence of errors.** Before the demo, confirm `/admin/usage` reports "Real mode — all required components ready." Re-run `npm run test:e2e-synthetic` if you want a paranoid pre-flight.
+
+
+
 Targets the path: **demo → fully configured → first real case landed**. Total time on a clean Supabase project: ~30 minutes.
 
 ---

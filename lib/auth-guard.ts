@@ -4,7 +4,21 @@ import { logSecurityEvent } from './audit';
 import { getRequestContext } from './security';
 import { isDemoMode } from './demo-mode';
 
-export type UserRole = 'admin' | 'reviewer' | 'client';
+export type UserRole = 'admin' | 'reviewer' | 'client' | 'builder' | 'ceo' | 'practice-lead' | 'slt';
+
+/**
+ * Roles considered "internal staff" — admin + organizational + exec views.
+ * Distinct from 'client' (tenant users). Used for nav gating, case-access
+ * decisions, and the new staff-management roster.
+ */
+export const INTERNAL_STAFF_ROLES: ReadonlyArray<UserRole> = [
+  'admin', 'reviewer', 'builder', 'ceo', 'practice-lead', 'slt',
+];
+
+export function isInternalStaff(role: UserRole | null | undefined): boolean {
+  if (!role) return false;
+  return (INTERNAL_STAFF_ROLES as readonly string[]).includes(role);
+}
 
 export interface AuthUser {
   id: string;

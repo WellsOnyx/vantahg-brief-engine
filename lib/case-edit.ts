@@ -46,6 +46,14 @@ export const EDITABLE_FIELDS_BY_ROLE: Record<UserRole, ReadonlyArray<keyof Edita
   // Clients cannot edit cases through this surface; assertCaseAccess on
   // the route refuses them anyway. Listed empty for completeness.
   client: [],
+  // Organizational / exec roles (added in migration 011) have read access
+  // via RLS but no edit privileges on case fields. If a CEO needs to
+  // change priority, they wear the admin hat by reassigning their own
+  // role from /team.
+  builder: [],
+  ceo: [],
+  'practice-lead': [],
+  slt: [],
 };
 
 const PRIORITY_VALUES: ReadonlySet<string> = new Set<CasePriority>([

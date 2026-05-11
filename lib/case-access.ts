@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { logSecurityEvent } from './audit';
 import { getRequestContext, type RequestContext } from './security';
-import type { AuthUser } from './auth-guard';
+import { isInternalStaff, type AuthUser } from './auth-guard';
 
 /**
  * Case-level authorization check.
@@ -39,8 +39,10 @@ export async function assertCaseAccess(
   user: AuthUser,
   request: Request,
 ): Promise<NextResponse | null> {
-  // Admin and reviewer roles are unrestricted at the case level.
-  if (user.role === 'admin' || user.role === 'reviewer') return null;
+  // Internal staff roles (admin, reviewer, and the organizational
+  // builder/ceo/practice-lead/slt views) are unrestricted at the case
+  // level. They are VantaUM-side users, not tenant clients.
+  if (isInternalStaff(user.role)) return null;
 
   // Client role: contact_email must match. If the case has no client_id
   // at all, no client user owns it — deny.

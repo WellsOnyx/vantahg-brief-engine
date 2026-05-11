@@ -37,6 +37,9 @@ export const viewport: Viewport = {
 
 const navLinks = [
   { href: "/mission-control", label: "Mission Control" },
+  { href: "/office-ceo", label: "Office of the CEO" },
+  { href: "/builders", label: "Builders" },
+  { href: "/admin/billing", label: "Billing" },
   { href: "/interactive-demo", label: "Live Demo" },
   { href: "/ops", label: "Ops Dashboard" },
   { href: "/queue", label: "My Queue" },
@@ -48,6 +51,7 @@ const navLinks = [
   { href: "/portal", label: "Client Tracker" },
   { href: "/reviewers", label: "Reviewers" },
   { href: "/staff", label: "Staff" },
+  { href: "/team", label: "Team Access" },
   { href: "/pods", label: "Pods" },
   { href: "/quality", label: "Quality" },
   { href: "/intake", label: "Intake" },
