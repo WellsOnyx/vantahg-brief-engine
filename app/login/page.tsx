@@ -56,7 +56,7 @@ function LoginForm() {
           V
         </div>
         <span className="font-[family-name:var(--font-dm-serif)] text-2xl tracking-tight text-navy">
-          Vanta<span className="text-gold">HG</span>
+          Vanta<span className="text-gold">UM</span>
         </span>
       </div>
 
