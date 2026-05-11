@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import type { UsageMetrics } from '@/lib/usage-metrics';
+import type { RealModeStatus } from '@/lib/real-mode-status';
 
 const CHANNEL_LABELS: Record<string, string> = {
   portal: 'Portal',
@@ -26,31 +27,39 @@ const STATUS_LABELS: Record<string, string> = {
 
 export default function AdminUsagePage() {
   const [metrics, setMetrics] = useState<UsageMetrics | null>(null);
+  const [status, setStatus] = useState<RealModeStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
-    async function fetchMetrics() {
+    async function fetchAll() {
       try {
-        const res = await fetch('/api/admin/usage-metrics');
-        if (!res.ok) {
-          if (res.status === 403) {
+        const [metricsRes, statusRes] = await Promise.all([
+          fetch('/api/admin/usage-metrics'),
+          fetch('/api/admin/real-mode-status'),
+        ]);
+        if (!metricsRes.ok) {
+          if (metricsRes.status === 403) {
             if (!cancelled) setError('Admin role required');
           } else {
-            if (!cancelled) setError(`Failed to load metrics (${res.status})`);
+            if (!cancelled) setError(`Failed to load metrics (${metricsRes.status})`);
           }
           return;
         }
-        const data = (await res.json()) as UsageMetrics;
-        if (!cancelled) setMetrics(data);
+        const metricsData = (await metricsRes.json()) as UsageMetrics;
+        if (!cancelled) setMetrics(metricsData);
+        if (statusRes.ok) {
+          const statusData = (await statusRes.json()) as RealModeStatus;
+          if (!cancelled) setStatus(statusData);
+        }
       } catch {
         if (!cancelled) setError('Failed to load metrics');
       } finally {
         if (!cancelled) setLoading(false);
       }
     }
-    fetchMetrics();
+    fetchAll();
     return () => {
       cancelled = true;
     };
@@ -114,6 +123,9 @@ export default function AdminUsagePage() {
             </div>
           </div>
         </div>
+
+        {/* Real-mode status */}
+        {status && <RealModeStatusBar status={status} />}
 
         {/* Top KPIs */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-10">
@@ -303,6 +315,76 @@ function Stat({
       <div className={`text-2xl font-semibold ${TONE_CLASS[tone]}`}>{value}</div>
       {sub && <div className="text-xs text-muted mt-1">{sub}</div>}
     </div>
+  );
+}
+
+const STATUS_DOT_CLASS: Record<string, string> = {
+  ready: 'bg-green-500',
+  missing: 'bg-red-500',
+  demo: 'bg-amber-400',
+};
+
+const OVERALL_BANNER_CLASS: Record<string, string> = {
+  ready: 'bg-green-50 border-green-200 text-green-900',
+  partial: 'bg-amber-50 border-amber-200 text-amber-900',
+  demo: 'bg-blue-50 border-blue-200 text-blue-900',
+};
+
+const OVERALL_LABEL: Record<string, string> = {
+  ready: 'Real mode — all required components ready',
+  partial: 'Real mode — partially configured',
+  demo: 'Demo mode — using static fixtures, no external calls',
+};
+
+function RealModeStatusBar({ status }: { status: RealModeStatus }) {
+  const components = [
+    { key: 'supabase', label: 'Supabase', c: status.components.supabase },
+    { key: 'anthropic', label: 'Anthropic', c: status.components.anthropic },
+    { key: 'cron', label: 'Cron', c: status.components.cron },
+    { key: 'efax', label: 'eFax', c: status.components.efax },
+    { key: 'ocr', label: 'OCR', c: status.components.ocr },
+    { key: 'sentry', label: 'Sentry', c: status.components.sentry },
+  ];
+  return (
+    <section
+      className={`rounded-xl border shadow-sm p-4 mb-8 ${OVERALL_BANNER_CLASS[status.overall]}`}
+    >
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <div className="text-sm font-semibold">{OVERALL_LABEL[status.overall]}</div>
+        <div className="flex flex-wrap gap-2">
+          {components.map(({ key, label, c }) => (
+            <span
+              key={key}
+              title={[c.hint, ...(c.missing.length > 0 ? [`Missing: ${c.missing.join(', ')}`] : [])].join(' · ')}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white border border-border text-xs"
+            >
+              <span className={`w-2 h-2 rounded-full ${STATUS_DOT_CLASS[c.status]}`} />
+              <span className="font-medium text-navy">{label}</span>
+              <span className="text-muted">{c.status === 'ready' ? '✓' : c.status === 'demo' ? '—' : '!'}</span>
+            </span>
+          ))}
+        </div>
+      </div>
+      {status.overall !== 'ready' && (
+        <details className="mt-3 text-xs">
+          <summary className="cursor-pointer text-navy/80 hover:text-navy">
+            Show next steps to complete setup
+          </summary>
+          <ul className="mt-2 space-y-1">
+            {components
+              .filter(({ c }) => c.status !== 'ready')
+              .map(({ key, label, c }) => (
+                <li key={key} className="text-navy/90">
+                  <span className="font-semibold">{label}:</span> {c.hint}
+                  {c.missing.length > 0 && (
+                    <span className="text-muted"> ({c.missing.join(', ')})</span>
+                  )}
+                </li>
+              ))}
+          </ul>
+        </details>
+      )}
+    </section>
   );
 }
 

@@ -121,6 +121,91 @@ Demo mode is controlled by `lib/demo-mode.ts` with data in `lib/demo-data.ts`.
 
 ---
 
+## Going from Demo to Real — First Customer Onboarding
+
+This is the concrete checklist for switching off demo fixtures and connecting a real Supabase + Anthropic + (optionally) eFax pipeline. Follow it in order. Every step is verifiable from `/admin/usage`, which is the operator dashboard.
+
+### 1. Set the required env vars
+
+In `.env.local` (or your Vercel project settings):
+
+```bash
+# Supabase — required for any non-demo run
+NEXT_PUBLIC_SUPABASE_URL=https://<your-project>.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon key from Supabase → Settings → API>
+SUPABASE_SERVICE_ROLE_KEY=<service role key — server-only, never ship to client>
+
+# Anthropic — required for live brief generation + eFax extraction
+ANTHROPIC_API_KEY=<key from console.anthropic.com>
+ENABLE_REAL_ANTHROPIC=true       # explicit opt-in; staging with a key set can stay demo without this
+
+# Cron — required in production so /api/cron/* endpoints reject anonymous calls
+CRON_SECRET=<long random token; the Vercel cron trigger sends this as Bearer>
+
+# eFax (Phaxio) — required only if you accept faxes
+PHAXIO_API_KEY=<...>
+PHAXIO_API_SECRET=<...>
+PHAXIO_CALLBACK_TOKEN=<webhook signing token>
+
+# OCR (Google Vision) — required only for eFax; falls back to provider-native otherwise
+GOOGLE_VISION_API_KEY=<...>
+
+# Optional but recommended
+SENTRY_DSN=<...>
+```
+
+Notes:
+
+- `ENABLE_REAL_ANTHROPIC` defaults to `false`. Even with `ANTHROPIC_API_KEY` set, real Anthropic calls stay disabled until this flag is `true`. This is deliberate — staging environments can hold the key without making paid calls.
+- The app **does not crash** when env vars are missing. It falls back to demo behavior wherever possible. To see exactly what's wired up, hit `/admin/usage` (or `GET /api/admin/real-mode-status`) — both render a per-component status with the env vars to set next.
+
+### 2. Apply the schema
+
+```bash
+# Apply all migrations in supabase/migrations/ via your Supabase dashboard or CLI:
+supabase db push
+```
+
+Required tables: `clients`, `reviewers`, `cases`, `audit_log`, `intake_log`, `efax_queue` (if you want fax intake), `email_queue` (if you want email intake), plus the pod/quality/missing-info tables from migration 003.
+
+### 3. Bootstrap the first client + reviewer roster
+
+`scripts/bootstrap-real-client.ts` creates the first TPA / health plan / etc. and a minimal reviewer roster (1 LPN + 1 RN + 1 MD) so the intake → brief → review → determination flow has somewhere to land. It's idempotent — re-running with the same `--client-name` only inserts what's missing.
+
+```bash
+npx tsx scripts/bootstrap-real-client.ts \
+  --client-name "Acme TPA" \
+  --client-type tpa \
+  --contact-email ops@acme.example \
+  --lpn-name "Pat LPN"   --lpn-email pat@vantaum.example \
+  --rn-name  "Sam RN"    --rn-email sam@vantaum.example \
+  --md-name  "Dr. Jamie Smith" --md-email jamie@vantaum.example \
+  --md-specialty "Internal Medicine"
+
+# Add --dry-run to preview the inserts before writing.
+```
+
+The script requires `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` in the environment. It refuses to run with anonymous credentials.
+
+### 4. Verify the system is live
+
+Sign in at `/signin` and assign the `admin` role to your operator user (via Supabase Auth → `user_profiles` → edit `role`). Then:
+
+1. Visit `/admin/usage`. The status bar at the top should read **"Real mode — all required components ready"**. If any component shows a red dot, expand "Show next steps to complete setup" — each missing piece names the exact env var to set.
+2. Submit a test case via the portal at `/cases/new`, or POST to `/api/external/submit` with an HMAC-signed body, or fax to your Phaxio number. Watch the case appear in `/cases`.
+3. On `/admin/usage`, briefs generated and estimated cost should tick up. Intake by channel should show the channel you used.
+4. Open the test case, generate a brief, download the PDF — that's the full output loop.
+
+### 5. Monitor as you go
+
+- `/admin/usage` — month-to-date briefs, token usage, estimated Anthropic cost, intake by channel, active cases, SLA compliance.
+- `audit_log` table in Supabase — every PHI access, every determination, every intake event, every error (sanitized — class + code only, no raw messages).
+- Sentry (if configured) — captures any unhandled exception.
+
+If a real-customer onboarding ever silently falls back to demo behavior, `/admin/usage`'s status bar surfaces it as a yellow "Demo mode" banner. Don't trust the absence of errors — trust the status bar.
+
+---
+
 ## Supabase Setup
 
 ### 1. Create a Supabase Project
