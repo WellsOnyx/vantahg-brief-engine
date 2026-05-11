@@ -24,7 +24,6 @@
  * PHI, so callers must NOT write them to the audit log.
  */
 
-import Anthropic from '@anthropic-ai/sdk';
 import type {
   ServiceCategory,
   ReviewType,
@@ -37,6 +36,7 @@ import {
   type ParsedFaxData,
 } from '../efax-parser';
 import { isDemoMode } from '../../demo-mode';
+import { completeWithTool } from '../../llm';
 
 // ── Public types ────────────────────────────────────────────────────────────
 
@@ -57,7 +57,6 @@ export interface AiExtractorResult {
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
-const MODEL = 'claude-opus-4-6';
 const MAX_TOKENS = 2000;
 const TOOL_NAME = 'record_fax_extraction';
 
@@ -227,12 +226,12 @@ export async function extractClinicalDataFromFax(
 
   // 2) AI path
   try {
-    const aiResult = await callAnthropicExtractor(input);
+    const aiResult = await callAiExtractor(input);
     const parsed = finalizeParsedFax(aiResult.extraction, input, warnings);
     return {
       parsed,
       method: 'ai',
-      model: MODEL,
+      model: aiResult.model,
       tokens_used: aiResult.tokensUsed,
       warnings,
     };
@@ -265,11 +264,12 @@ export async function extractClinicalDataFromFax(
   }
 }
 
-// ── Anthropic call (exported-ish for testability) ──────────────────────────
+// ── AI call (exported-ish for testability) ──────────────────────────
 
-interface AnthropicExtractionResult {
+interface AiExtractionResult {
   extraction: RawAiExtraction;
   tokensUsed: number;
+  model: string;
 }
 
 interface RawAiExtraction {
@@ -297,11 +297,9 @@ interface RawAiExtraction {
   manual_review_reasons: string[];
 }
 
-async function callAnthropicExtractor(
+async function callAiExtractor(
   input: AiExtractorInput
-): Promise<AnthropicExtractionResult> {
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
+): Promise<AiExtractionResult> {
   const userContent = `OCR confidence: ${input.ocr_confidence}
 Fax from number: ${input.from_number ?? 'unknown'}
 Page count: ${input.page_count ?? 'unknown'}
@@ -312,36 +310,24 @@ ${input.ocr_text}
 
 Call the record_fax_extraction tool with the extracted structured data.`;
 
-  const response = await client.messages.create({
-    model: MODEL,
-    max_tokens: MAX_TOKENS,
+  const result = await completeWithTool({
     system: SYSTEM_PROMPT,
-    tools: [
-      {
-        name: TOOL_NAME,
-        description:
-          'Record the structured clinical data extracted from an authorization fax.',
-        input_schema: EXTRACTION_TOOL_SCHEMA,
-      },
-    ],
-    tool_choice: { type: 'tool', name: TOOL_NAME },
-    messages: [{ role: 'user', content: userContent }],
+    user: userContent,
+    maxTokens: MAX_TOKENS,
+    tool: {
+      name: TOOL_NAME,
+      description:
+        'Record the structured clinical data extracted from an authorization fax.',
+      input_schema: EXTRACTION_TOOL_SCHEMA as unknown as Record<string, unknown>,
+    },
   });
 
-  const toolUse = response.content.find(
-    (block): block is Extract<typeof block, { type: 'tool_use' }> =>
-      block.type === 'tool_use' && block.name === TOOL_NAME
-  );
-
-  if (!toolUse) {
-    throw new Error('Model did not return a record_fax_extraction tool_use block');
-  }
-
-  const extraction = coerceExtraction(toolUse.input);
-  const tokensUsed =
-    (response.usage?.input_tokens ?? 0) + (response.usage?.output_tokens ?? 0);
-
-  return { extraction, tokensUsed };
+  const extraction = coerceExtraction(result.toolInput);
+  return {
+    extraction,
+    tokensUsed: result.inputTokens + result.outputTokens,
+    model: result.model,
+  };
 }
 
 // ── Coercion / validation ──────────────────────────────────────────────────
