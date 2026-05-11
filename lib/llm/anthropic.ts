@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { getLlmConfig } from './config';
+import { isRealAnthropicEnabled, getAnthropicKey } from '../env';
 import {
   LlmError,
   type LlmMessage,
@@ -13,12 +14,15 @@ let cachedClient: Anthropic | null = null;
 
 function getClient(): Anthropic {
   if (cachedClient) return cachedClient;
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    throw new LlmError('ANTHROPIC_API_KEY is not set', 'auth', false);
+  if (!isRealAnthropicEnabled()) {
+    throw new LlmError(
+      'Real Anthropic calls are disabled (demo mode, missing ANTHROPIC_API_KEY, or ENABLE_REAL_ANTHROPIC=false)',
+      'auth',
+      false,
+    );
   }
   const { maxRetries } = getLlmConfig();
-  cachedClient = new Anthropic({ apiKey, maxRetries });
+  cachedClient = new Anthropic({ apiKey: getAnthropicKey(), maxRetries });
   return cachedClient;
 }
 

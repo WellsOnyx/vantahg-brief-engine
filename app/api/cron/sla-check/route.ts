@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { checkAndEscalateSlaBreach } from '@/lib/sla-escalation';
+import { requireCronSecret } from '@/lib/env';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,11 +11,11 @@ export const dynamic = 'force-dynamic';
  */
 export async function POST(request: NextRequest) {
   try {
-    // Verify cron secret
-    const authHeader = request.headers.get('authorization');
-    const expectedSecret = process.env.CRON_SECRET;
-
-    if (expectedSecret && authHeader !== `Bearer ${expectedSecret}`) {
+    // Hard cron-secret guard. Demo mode is a no-op; production REQUIRES the
+    // secret to be set AND the request header to match.
+    try {
+      requireCronSecret(request.headers.get('authorization'));
+    } catch {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

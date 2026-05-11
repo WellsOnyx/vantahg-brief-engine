@@ -31,6 +31,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceClient } from '@/lib/supabase';
 import { isDemoMode } from '@/lib/demo-mode';
+import { requireCronSecret } from '@/lib/env';
 import { logAuditEvent } from '@/lib/audit';
 import {
   logIntakeEvent,
@@ -91,10 +92,11 @@ interface EfaxQueueRow {
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
 
-  // Auth
-  const authHeader = request.headers.get('authorization');
-  const expectedSecret = process.env.CRON_SECRET;
-  if (expectedSecret && authHeader !== `Bearer ${expectedSecret}`) {
+  // Hard cron-secret guard. Demo mode is a no-op; production REQUIRES the
+  // secret to be set AND the request header to match.
+  try {
+    requireCronSecret(request.headers.get('authorization'));
+  } catch {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

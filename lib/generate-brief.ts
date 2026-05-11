@@ -2,6 +2,7 @@ import { generateClinicalBrief } from './claude';
 import { getCriteriaForCodes } from '@/lib/medical-criteria';
 import { factCheckBrief } from './fact-checker';
 import { analyzeTwoMidnightRule, getTwoMidnightBriefContext } from './two-midnight-rule';
+import { isRealAnthropicEnabled } from './env';
 import type { Case, Client, AIBrief, FactCheckResult } from './types';
 
 interface BriefOptions {
@@ -11,6 +12,16 @@ interface BriefOptions {
 }
 
 export async function generateBriefForCase(caseData: Case, options: BriefOptions = {}): Promise<{ brief: AIBrief; factCheck: FactCheckResult }> {
+  // Gate at the lib boundary so any caller (route, cron, ad-hoc script) is
+  // protected — not just the /api/generate-brief route. Demo-mode callers
+  // should use getDemoBrief() from lib/demo-mode.ts; this function is for
+  // real Anthropic calls only.
+  if (!isRealAnthropicEnabled()) {
+    throw new Error(
+      'generateBriefForCase requires real Anthropic. Caller should use getDemoBrief() in demo mode.',
+    );
+  }
+
   const { client } = options;
 
   // Determine if this is a second-level / MD review (evidence-based, not criteria-based)
