@@ -21,7 +21,7 @@
 
 import { isDemoMode } from '@/lib/demo-mode';
 
-export type OcrProvider = 'google_vision' | 'provider' | 'none' | 'demo';
+export type OcrProvider = 'aws_textract' | 'google_vision' | 'provider' | 'none' | 'demo';
 
 export interface OcrInput {
   /** Raw bytes of the document, if available. */
@@ -54,8 +54,9 @@ export interface OcrResult {
  *   1. EFAX_OCR_PROVIDER env var (explicit override)
  *   2. Demo mode → 'demo'
  *   3. Provider-supplied OCR text → 'provider'
- *   4. GOOGLE_APPLICATION_CREDENTIALS or GOOGLE_VISION_API_KEY set → 'google_vision'
- *   5. Fallback → 'none'
+ *   4. AWS_REGION + S3 bucket configured → 'aws_textract' (preferred — under AWS BAA)
+ *   5. GOOGLE_APPLICATION_CREDENTIALS or GOOGLE_VISION_API_KEY set → 'google_vision'
+ *   6. Fallback → 'none'
  */
 export function selectOcrProvider(input: OcrInput): OcrProvider {
   const explicit = process.env.EFAX_OCR_PROVIDER as OcrProvider | undefined;
@@ -65,6 +66,10 @@ export function selectOcrProvider(input: OcrInput): OcrProvider {
 
   if (input.provider_ocr_text && input.provider_ocr_text.length > 100) {
     return 'provider';
+  }
+
+  if (process.env.AWS_REGION && process.env.EFAX_S3_BUCKET) {
+    return 'aws_textract';
   }
 
   if (process.env.GOOGLE_APPLICATION_CREDENTIALS || process.env.GOOGLE_VISION_API_KEY) {
@@ -82,6 +87,8 @@ export async function runOcr(input: OcrInput): Promise<OcrResult> {
       return demoOcr(input);
     case 'provider':
       return providerOcr(input);
+    case 'aws_textract':
+      return awsTextractOcr(input);
     case 'google_vision':
       return googleVisionOcr(input);
     case 'none':
@@ -159,6 +166,161 @@ function noOcr(input: OcrInput): OcrResult {
     provider: 'none',
     page_count: null,
     warnings: ['OCR not configured — extraction will rely on whatever text the provider supplied'],
+  };
+}
+
+// ── AWS Textract adapter ───────────────────────────────────────────────────
+//
+// Textract is the AWS-native OCR service. Covered under AWS BAA, so it's the
+// preferred path for HIPAA workloads. Supports synchronous detection on
+// single-page documents (up to 5MB) and asynchronous detection on multi-page
+// PDFs stored in S3.
+//
+// Flow:
+//   - If document is already in S3 (s3://bucket/key URL), kick off
+//     StartDocumentTextDetection and poll until SUCCEEDED or FAILED.
+//   - Else if raw bytes are present and small enough, use synchronous
+//     DetectDocumentText (single-page only).
+//   - Else emit a warning and return empty text.
+//
+// Required env:
+//   - AWS_REGION
+//   - AWS credentials (via env, IAM role, or shared credentials file)
+//   - EFAX_S3_BUCKET (used by selectOcrProvider to choose textract)
+
+async function awsTextractOcr(input: OcrInput): Promise<OcrResult> {
+  const warnings: string[] = [];
+  const { TextractClient, StartDocumentTextDetectionCommand, GetDocumentTextDetectionCommand, DetectDocumentTextCommand } = await import('@aws-sdk/client-textract');
+  const client = new TextractClient({ region: process.env.AWS_REGION || 'us-east-1' });
+
+  // Parse s3:// URL if provided
+  const s3Match = input.document_url?.match(/^s3:\/\/([^/]+)\/(.+)$/);
+
+  if (s3Match) {
+    const [, bucket, key] = s3Match;
+    try {
+      const start = await client.send(new StartDocumentTextDetectionCommand({
+        DocumentLocation: { S3Object: { Bucket: bucket, Name: key } },
+      }));
+      if (!start.JobId) {
+        return emptyTextract(input, ['Textract StartDocumentTextDetection returned no JobId']);
+      }
+
+      // Poll for completion. Faxes are typically small, but cap polling at 60s.
+      const maxWaitMs = 60_000;
+      const pollMs = 2_000;
+      const deadline = Date.now() + maxWaitMs;
+      let lastStatus = 'IN_PROGRESS';
+      let pages: string[] = [];
+      let confidences: number[] = [];
+
+      while (Date.now() < deadline) {
+        await new Promise((r) => setTimeout(r, pollMs));
+        const result = await client.send(new GetDocumentTextDetectionCommand({ JobId: start.JobId }));
+        lastStatus = result.JobStatus || 'UNKNOWN';
+
+        if (lastStatus === 'SUCCEEDED') {
+          // Aggregate LINE blocks page by page
+          const blocks = result.Blocks || [];
+          const pageMap: Record<number, string[]> = {};
+          for (const b of blocks) {
+            if (b.BlockType !== 'LINE') continue;
+            const page = b.Page ?? 1;
+            (pageMap[page] = pageMap[page] || []).push(b.Text || '');
+            if (typeof b.Confidence === 'number') confidences.push(b.Confidence);
+          }
+          pages = Object.keys(pageMap)
+            .map(Number)
+            .sort((a, b) => a - b)
+            .map((p) => pageMap[p].join('\n'));
+
+          // If Textract pages exceed one response page, paginate via NextToken
+          let nextToken = result.NextToken;
+          while (nextToken) {
+            const more = await client.send(new GetDocumentTextDetectionCommand({ JobId: start.JobId, NextToken: nextToken }));
+            for (const b of more.Blocks || []) {
+              if (b.BlockType !== 'LINE') continue;
+              const page = b.Page ?? 1;
+              if (!pageMap[page]) pageMap[page] = [];
+              pageMap[page].push(b.Text || '');
+              if (typeof b.Confidence === 'number') confidences.push(b.Confidence);
+            }
+            nextToken = more.NextToken;
+          }
+          pages = Object.keys(pageMap).map(Number).sort((a, b) => a - b).map((p) => pageMap[p].join('\n'));
+          break;
+        }
+        if (lastStatus === 'FAILED') {
+          return emptyTextract(input, [`Textract job failed: ${result.StatusMessage || 'unknown'}`]);
+        }
+      }
+
+      if (lastStatus !== 'SUCCEEDED') {
+        return emptyTextract(input, [`Textract job did not complete within ${maxWaitMs}ms (last status: ${lastStatus})`]);
+      }
+
+      const text = pages.join('\n\n').trim();
+      const confidence = confidences.length
+        ? Math.round(confidences.reduce((a, b) => a + b, 0) / confidences.length)
+        : text.length > 50 ? 80 : 0;
+
+      return {
+        text,
+        confidence,
+        provider: 'aws_textract',
+        page_count: pages.length || null,
+        pages,
+        warnings,
+      };
+    } catch (err) {
+      return emptyTextract(input, [`Textract async error: ${err instanceof Error ? err.message : String(err)}`]);
+    }
+  }
+
+  // Synchronous fallback: single-page only, bytes must fit in 5MB
+  if (!input.document) {
+    return emptyTextract(input, ['Textract: no S3 location or document bytes provided']);
+  }
+  if (input.document.byteLength > 5 * 1024 * 1024) {
+    return emptyTextract(input, [`Textract sync: document is ${input.document.byteLength} bytes, exceeds 5MB sync limit — upload to S3 first`]);
+  }
+
+  try {
+    const result = await client.send(new DetectDocumentTextCommand({
+      Document: { Bytes: input.document },
+    }));
+    const lines: string[] = [];
+    const confidences: number[] = [];
+    for (const b of result.Blocks || []) {
+      if (b.BlockType !== 'LINE') continue;
+      lines.push(b.Text || '');
+      if (typeof b.Confidence === 'number') confidences.push(b.Confidence);
+    }
+    const text = lines.join('\n').trim();
+    const confidence = confidences.length
+      ? Math.round(confidences.reduce((a, b) => a + b, 0) / confidences.length)
+      : text.length > 50 ? 80 : 0;
+
+    return {
+      text,
+      confidence,
+      provider: 'aws_textract',
+      page_count: text ? 1 : null,
+      pages: [text],
+      warnings: ['Textract sync (single page) — multi-page PDFs require S3 upload first'],
+    };
+  } catch (err) {
+    return emptyTextract(input, [`Textract sync error: ${err instanceof Error ? err.message : String(err)}`]);
+  }
+}
+
+function emptyTextract(input: OcrInput, warnings: string[]): OcrResult {
+  return {
+    text: input.provider_ocr_text || '',
+    confidence: input.provider_ocr_text ? 50 : 0,
+    provider: 'aws_textract',
+    page_count: null,
+    warnings,
   };
 }
 

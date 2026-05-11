@@ -24,7 +24,8 @@
  * PHI, so callers must NOT write them to the audit log.
  */
 
-import Anthropic from '@anthropic-ai/sdk';
+import type Anthropic from '@anthropic-ai/sdk';
+import { createMessage } from '../../claude';
 import type {
   ServiceCategory,
   ReviewType,
@@ -57,7 +58,9 @@ export interface AiExtractorResult {
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
-const MODEL = 'claude-opus-4-6';
+// Bedrock cross-region inference profile for Claude Opus 4.6.
+// Routes to whichever US region has capacity. Override with BEDROCK_CLAUDE_MODEL_ID.
+const MODEL = process.env.BEDROCK_CLAUDE_MODEL_ID || 'us.anthropic.claude-opus-4-6-v1:0';
 const MAX_TOKENS = 2000;
 const TOOL_NAME = 'record_fax_extraction';
 
@@ -300,8 +303,6 @@ interface RawAiExtraction {
 async function callAnthropicExtractor(
   input: AiExtractorInput
 ): Promise<AnthropicExtractionResult> {
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
   const userContent = `OCR confidence: ${input.ocr_confidence}
 Fax from number: ${input.from_number ?? 'unknown'}
 Page count: ${input.page_count ?? 'unknown'}
@@ -312,7 +313,8 @@ ${input.ocr_text}
 
 Call the record_fax_extraction tool with the extracted structured data.`;
 
-  const response = await client.messages.create({
+  // Routes through lib/claude.ts → AWS Bedrock for HIPAA BAA coverage.
+  const response = await createMessage({
     model: MODEL,
     max_tokens: MAX_TOKENS,
     system: SYSTEM_PROMPT,

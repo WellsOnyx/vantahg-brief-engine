@@ -1,32 +1,50 @@
 /**
  * eFax document storage and submission fingerprinting.
  *
- * This module handles two related concerns for the eFax intake pipeline:
+ * Storage backend: AWS S3 (HIPAA-eligible under the AWS BAA).
+ * Bucket name comes from EFAX_S3_BUCKET, region from AWS_REGION.
+ *
+ * Two concerns handled here:
  *
  * 1. Document persistence: fax providers (Phaxio, Documo, etc.) expose the
  *    received document via a transient media URL that may expire or rotate.
  *    We download the bytes, compute a SHA-256, and persist our own copy in
- *    the `efax-documents` Supabase Storage bucket so downstream steps
- *    (OCR, manual review, audit) always have a stable reference.
+ *    S3 so downstream steps (OCR, manual review, audit) always have a stable
+ *    reference. Object keys are stored as the `storage_path` on efax_queue
+ *    rows; downstream code resolves them to s3://bucket/key for Textract.
  *
  * 2. Submission fingerprinting: providers sometimes re-fax the same
- *    authorization request within hours (retries on their end, fax
- *    machine redials, or provider office workflows that send the same
- *    packet to multiple eFax numbers). We compute a stable SHA-256 over
- *    normalized patient + procedure + sender fields so the worker can
- *    detect and surface duplicates. The fingerprint is one-way — raw PHI
- *    cannot be recovered from it — and the lookup window is scoped to
- *    24 hours by default because legitimate re-submissions of the same
- *    case after a day are treated as distinct events (e.g. corrected
- *    records, additional documentation).
+ *    authorization request within hours (retries, redials, provider offices
+ *    fanning out to multiple numbers). A stable SHA-256 over normalized
+ *    patient + procedure + sender fields lets the worker detect duplicates.
+ *    The fingerprint is one-way — raw PHI cannot be recovered — and the
+ *    lookup window is scoped to 24h by default.
  */
 
 import { createHash, randomBytes } from 'crypto';
+import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getServiceClient } from '@/lib/supabase';
 import { isDemoMode } from '@/lib/demo-mode';
 
-const BUCKET = 'efax-documents';
 const DEFAULT_WINDOW_HOURS = 24;
+
+function s3Bucket(): string {
+  const b = process.env.EFAX_S3_BUCKET;
+  if (!b) throw new Error('EFAX_S3_BUCKET env var is required for S3 document storage');
+  return b;
+}
+
+function s3Client(): S3Client {
+  return new S3Client({ region: process.env.AWS_REGION || 'us-east-1' });
+}
+
+/**
+ * Build the `s3://bucket/key` URL form used by downstream consumers
+ * (e.g., the Textract OCR adapter, which detects this prefix).
+ */
+export function s3UrlFor(storage_path: string): string {
+  return `s3://${s3Bucket()}/${storage_path}`;
+}
 
 export interface StoredDocument {
   storage_path: string;
@@ -129,21 +147,18 @@ export async function fetchAndStoreDocument(
   const path = buildStoragePath(fax_id, contentType);
 
   try {
-    const supabase = getServiceClient();
-    const { error } = await supabase.storage
-      .from(BUCKET)
-      .upload(path, buffer, { contentType, upsert: false });
-    if (error) {
-      console.warn(`[efax/storage] upload to bucket '${BUCKET}' failed:`, error.message);
-      return {
-        storage_path: '',
-        storage_sha256: sha256,
-        storage_bytes: buffer.byteLength,
-        content_type: contentType,
-      };
-    }
+    const client = s3Client();
+    await client.send(new PutObjectCommand({
+      Bucket: s3Bucket(),
+      Key: path,
+      Body: buffer,
+      ContentType: contentType,
+      // ServerSideEncryption is enforced by bucket policy; we omit it here
+      // so a single misconfigured upload doesn't fail. Bucket should be
+      // configured with SSE-S3 or SSE-KMS as default.
+    }));
   } catch (err) {
-    console.warn('[efax/storage] storage client error', err);
+    console.warn('[efax/storage] S3 upload failed', err);
     return {
       storage_path: '',
       storage_sha256: sha256,
@@ -165,14 +180,23 @@ export async function getStoredDocumentBytes(storage_path: string): Promise<Buff
     return Buffer.alloc(0);
   }
   try {
-    const supabase = getServiceClient();
-    const { data, error } = await supabase.storage.from(BUCKET).download(storage_path);
-    if (error || !data) {
-      console.warn('[efax/storage] download failed', error?.message);
-      return Buffer.alloc(0);
+    const client = s3Client();
+    const result = await client.send(new GetObjectCommand({
+      Bucket: s3Bucket(),
+      Key: storage_path,
+    }));
+    if (!result.Body) return Buffer.alloc(0);
+    const stream = result.Body as { transformToByteArray?: () => Promise<Uint8Array> };
+    if (typeof stream.transformToByteArray === 'function') {
+      const bytes = await stream.transformToByteArray();
+      return Buffer.from(bytes);
     }
-    const arrayBuf = await data.arrayBuffer();
-    return Buffer.from(arrayBuf);
+    // Fallback: collect from a Node stream
+    const chunks: Buffer[] = [];
+    for await (const chunk of result.Body as AsyncIterable<Buffer>) {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    }
+    return Buffer.concat(chunks);
   } catch (err) {
     console.warn('[efax/storage] getStoredDocumentBytes error', err);
     return Buffer.alloc(0);
