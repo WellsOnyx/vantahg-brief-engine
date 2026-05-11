@@ -471,6 +471,36 @@ function ContractPanel({ row, onUpdate }: { row: SignupRow; onUpdate: (next: Sig
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [viewing, setViewing] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [missingVars, setMissingVars] = useState<string[] | null>(null);
+
+  async function generateContract() {
+    setError(null);
+    setSuccess(null);
+    setMissingVars(null);
+    setGenerating(true);
+    try {
+      const res = await fetch(`/api/admin/signups/${row.id}/generate-contract`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ template_slug: 'msa-with-baa' }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        if (Array.isArray(data.missing) && data.missing.length > 0) {
+          setMissingVars(data.missing as string[]);
+        }
+        setError(data.error ?? `Generate failed (${res.status})`);
+        return;
+      }
+      if (data.signup) onUpdate(data.signup as SignupRow);
+      setSuccess('Contract generated from template.');
+    } catch {
+      setError('Network error. Try again.');
+    } finally {
+      setGenerating(false);
+    }
+  }
 
   async function submitUpload() {
     setError(null);
@@ -553,6 +583,14 @@ function ContractPanel({ row, onUpdate }: { row: SignupRow; onUpdate: (next: Sig
             >
               {viewing ? 'Opening…' : 'Open contract'}
             </button>
+            <button
+              onClick={generateContract}
+              disabled={generating}
+              className="bg-white border border-navy/30 text-navy px-4 py-2 rounded-lg text-sm font-medium hover:border-navy disabled:opacity-50"
+              title="Regenerate the MSA from the template — replaces what's currently on file."
+            >
+              {generating ? 'Regenerating…' : 'Regenerate MSA'}
+            </button>
             <label className="bg-white border border-border text-navy px-4 py-2 rounded-lg text-sm font-medium hover:border-navy/40 cursor-pointer">
               Replace…
               <input
@@ -576,10 +614,18 @@ function ContractPanel({ row, onUpdate }: { row: SignupRow; onUpdate: (next: Sig
       ) : (
         <div className="space-y-3">
           <p className="text-sm text-muted">
-            No contract on file. Upload the signed BAA / MSA as a single PDF. Approving a signup
-            without a contract is allowed for self-testing but emits a security audit event.
+            No contract on file. Either generate the standard VantaUM MSA-with-BAA from the
+            template (uses the captured signup data), or upload a custom signed PDF.
           </p>
           <div className="flex flex-wrap gap-2 items-center">
+            <button
+              onClick={generateContract}
+              disabled={generating}
+              className="bg-navy text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-navy/90 disabled:opacity-50"
+            >
+              {generating ? 'Generating…' : 'Generate MSA'}
+            </button>
+            <span className="text-xs text-muted">or</span>
             <label className="bg-white border border-border text-navy px-4 py-2 rounded-lg text-sm font-medium hover:border-navy/40 cursor-pointer">
               Choose PDF…
               <input
@@ -607,6 +653,14 @@ function ContractPanel({ row, onUpdate }: { row: SignupRow; onUpdate: (next: Sig
         </div>
       )}
 
+      {missingVars && missingVars.length > 0 && (
+        <div className="rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-xs px-3 py-2">
+          <div className="font-semibold mb-1">Missing required variables — fill these on the signup row first:</div>
+          <ul className="list-disc list-inside font-mono">
+            {missingVars.map((k) => (<li key={k}>{k}</li>))}
+          </ul>
+        </div>
+      )}
       {error && (
         <div className="rounded-lg bg-red-50 border border-red-200 text-red-800 text-xs px-3 py-2">
           {error}
