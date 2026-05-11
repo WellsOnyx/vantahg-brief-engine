@@ -189,6 +189,25 @@ The script requires `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` i
 
 ### 4. Verify the system is live
 
+**Fast path — one command:**
+
+```bash
+npm run test:e2e-synthetic
+```
+
+This drives a synthetic case through the full pipeline:
+
+1. Pre-flight check (real-mode status, bootstrap present)
+2. Create a synthetic intake case (clearly marked, fake patient)
+3. Generate the clinical brief + fact-check (real Anthropic call, ~$0.02-$0.05)
+4. Record an MD determination
+5. Generate the brief PDF (asserts `%PDF-` header + reasonable size)
+6. Verify all expected audit events are present
+
+A `✅ Full end-to-end flow successful` line means every layer below the HTTP boundary works. Add `-- --cleanup` to remove the synthetic case after.
+
+**Manual checks (in addition to or instead of the smoke command):**
+
 Sign in at `/signin` and assign the `admin` role to your operator user (via Supabase Auth → `user_profiles` → edit `role`). Then:
 
 1. Visit `/admin/usage`. The status bar at the top should read **"Real mode — all required components ready"**. If any component shows a red dot, expand "Show next steps to complete setup" — each missing piece names the exact env var to set.
