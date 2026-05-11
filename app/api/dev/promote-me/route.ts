@@ -32,7 +32,7 @@ export const dynamic = 'force-dynamic';
  * future bootstraps go through scripts/bootstrap-master-admin.ts.
  */
 
-const FOUNDER_EMAIL = 'me@jonahmanning.co';
+const FOUNDER_EMAIL = 'jonah@wellsonyx.com';
 
 export async function GET(request: NextRequest) {
   try {
