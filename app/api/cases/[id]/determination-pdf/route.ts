@@ -6,6 +6,8 @@ import { applyRateLimit } from '@/lib/rate-limit-middleware';
 import { generateDeterminationPdf } from '@/lib/pdf-generator';
 import { apiError } from '@/lib/api-error';
 import { getRequestContext } from '@/lib/security';
+import { logAuditEvent } from '@/lib/audit';
+import { assertCaseAccess } from '@/lib/case-access';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,6 +44,12 @@ export async function GET(
       caseData = data;
     }
 
+    // Tenant ownership check. Admin/reviewer roles pass through; client
+    // role must match clients.contact_email on the joined client record.
+    // assertCaseAccess writes its own security audit event on 403.
+    const denied = await assertCaseAccess(caseData, authResult.user, request);
+    if (denied) return denied;
+
     if (!caseData.determination) {
       return NextResponse.json(
         { error: 'No determination has been made for this case' },
@@ -50,6 +58,14 @@ export async function GET(
     }
 
     const pdfBuffer = await generateDeterminationPdf(caseData);
+
+    // SOC 2 CC6.1: determination PDF contains PHI + the final clinical
+    // decision. Log the export. Fire-and-forget so the download doesn't
+    // fail if the audit table is briefly unavailable.
+    logAuditEvent(id, 'determination_pdf_downloaded', authResult.user.email, {
+      case_number: caseData.case_number,
+      determination: caseData.determination,
+    }, getRequestContext(request)).catch(() => { /* already logged inside logAuditEvent */ });
 
     return new NextResponse(new Uint8Array(pdfBuffer), {
       status: 200,

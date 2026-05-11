@@ -7,6 +7,7 @@ import { generateBriefPdf } from '@/lib/pdf-generator';
 import { apiError } from '@/lib/api-error';
 import { getRequestContext } from '@/lib/security';
 import { logAuditEvent } from '@/lib/audit';
+import { assertCaseAccess } from '@/lib/case-access';
 
 export const dynamic = 'force-dynamic';
 
@@ -41,6 +42,12 @@ export async function GET(
       }
       caseData = data;
     }
+
+    // Tenant ownership check. Admin/reviewer roles pass through; client
+    // role must match clients.contact_email on the joined client record.
+    // assertCaseAccess writes its own security audit event on 403.
+    const denied = await assertCaseAccess(caseData, authResult.user, request);
+    if (denied) return denied;
 
     if (!caseData.ai_brief) {
       return NextResponse.json(
