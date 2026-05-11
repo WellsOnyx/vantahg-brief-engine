@@ -185,9 +185,7 @@ export default function AdminSignupDetailPage() {
             </span>
           </div>
         </div>
-        <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-xs text-amber-900 max-w-sm">
-          Read-only view. Approve / reject / contract-upload actions land in subsequent PRs.
-        </div>
+        <ActionPanel row={row} onUpdate={(updated) => setRow(updated)} />
       </div>
 
       {/* Sections */}
@@ -257,6 +255,215 @@ export default function AdminSignupDetailPage() {
         </Section>
       </div>
     </Frame>
+  );
+}
+
+// ── Action Panel ───────────────────────────────────────────────────────────
+
+type ActionMode = 'idle' | 'confirming_approve' | 'confirming_reject';
+
+function ActionPanel({ row, onUpdate }: { row: SignupRow; onUpdate: (next: SignupRow) => void }) {
+  const [mode, setMode] = useState<ActionMode>('idle');
+  const [pepmDollars, setPepmDollars] = useState('');
+  const [rejectReason, setRejectReason] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  // Only show actionable UI when the row is still pending. Other statuses
+  // get a calm summary line instead.
+  if (row.status !== 'pending_review') {
+    return (
+      <div className="bg-surface border border-border rounded-lg px-4 py-3 text-xs text-muted max-w-sm">
+        Status is <span className="font-semibold text-navy">{STATUS_LABEL[row.status]}</span>.{' '}
+        {row.status === 'rejected' && row.rejection_reason && (
+          <span>Reason: <span className="text-navy">{row.rejection_reason}</span></span>
+        )}
+        {row.status === 'approved' && row.client_id && (
+          <span>Tenant: <span className="font-mono text-navy">{row.client_id.slice(0, 8)}…</span></span>
+        )}
+      </div>
+    );
+  }
+
+  async function submitApprove() {
+    setError(null);
+    setSubmitting(true);
+    const body: { pepm_rate_cents?: number } = {};
+    const dollars = parseFloat(pepmDollars);
+    if (pepmDollars.trim().length > 0) {
+      if (!Number.isFinite(dollars) || dollars < 0) {
+        setError('PEPM must be a non-negative number.');
+        setSubmitting(false);
+        return;
+      }
+      body.pepm_rate_cents = Math.round(dollars * 100);
+    }
+    try {
+      const res = await fetch(`/api/admin/signups/${row.id}/approve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data.error ?? `Approve failed (${res.status})`);
+        return;
+      }
+      if (data.signup) {
+        onUpdate(data.signup as SignupRow);
+      }
+      setSuccess('Approved. Client tenant created.');
+      setMode('idle');
+    } catch {
+      setError('Network error. Try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function submitReject() {
+    setError(null);
+    if (rejectReason.trim().length === 0) {
+      setError('A reason is required.');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const res = await fetch(`/api/admin/signups/${row.id}/reject`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: rejectReason.trim() }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data.error ?? `Reject failed (${res.status})`);
+        return;
+      }
+      if (data.signup) {
+        onUpdate(data.signup as SignupRow);
+      }
+      setSuccess('Rejected.');
+      setMode('idle');
+    } catch {
+      setError('Network error. Try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="w-full md:max-w-sm space-y-2">
+      {error && (
+        <div className="rounded-lg bg-red-50 border border-red-200 text-red-800 text-xs px-3 py-2">
+          {error}
+        </div>
+      )}
+      {success && (
+        <div className="rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs px-3 py-2">
+          {success}
+        </div>
+      )}
+
+      {mode === 'idle' && (
+        <div className="flex gap-2">
+          <button
+            onClick={() => { setMode('confirming_approve'); setError(null); setSuccess(null); }}
+            className="flex-1 bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-colors"
+          >
+            Approve
+          </button>
+          <button
+            onClick={() => { setMode('confirming_reject'); setError(null); setSuccess(null); }}
+            className="flex-1 bg-white border border-red-300 text-red-700 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-red-50 transition-colors"
+          >
+            Reject
+          </button>
+        </div>
+      )}
+
+      {mode === 'confirming_approve' && (
+        <div className="rounded-lg bg-surface border border-border p-4 space-y-3">
+          <h3 className="text-sm font-semibold text-navy">Approve & create tenant</h3>
+          <p className="text-xs text-muted">
+            Creates a new client (TPA) row, links it back to this signup, and audit-logs both steps.
+          </p>
+          <label className="block">
+            <span className="block text-xs font-medium text-navy mb-1">Negotiated PEPM in $/member/month (optional)</span>
+            <input
+              type="number"
+              step="0.01"
+              min={0}
+              value={pepmDollars}
+              onChange={(e) => setPepmDollars(e.target.value)}
+              placeholder="e.g. 2.40"
+              className="w-full px-3 py-2 border border-border rounded text-sm focus:outline-none focus:ring-2 focus:ring-gold/40"
+            />
+            <span className="block text-[11px] text-muted mt-1">
+              Stored as integer cents. Leave blank to defer the rate decision.
+            </span>
+          </label>
+          {!row.contract_storage_path && (
+            <div className="rounded bg-amber-50 border border-amber-200 text-amber-900 text-[11px] px-2.5 py-2">
+              No signed contract on file. Approve will succeed but a
+              <code className="mx-1 bg-amber-100 px-1 rounded">security:signup_approved_without_baa</code>
+              audit event will be written for traceability. Upload the signed contract first (piece 6) for the clean path.
+            </div>
+          )}
+          <div className="flex gap-2">
+            <button
+              onClick={submitApprove}
+              disabled={submitting}
+              className="flex-1 bg-emerald-600 text-white px-3 py-1.5 rounded text-xs font-semibold hover:bg-emerald-700 disabled:opacity-50"
+            >
+              {submitting ? 'Approving…' : 'Confirm Approve'}
+            </button>
+            <button
+              onClick={() => { setMode('idle'); setError(null); }}
+              disabled={submitting}
+              className="px-3 py-1.5 rounded text-xs font-medium text-muted hover:text-navy"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {mode === 'confirming_reject' && (
+        <div className="rounded-lg bg-surface border border-border p-4 space-y-3">
+          <h3 className="text-sm font-semibold text-red-800">Reject this application</h3>
+          <p className="text-xs text-muted">
+            The reason is required and stored on the signup row for the audit trail.
+          </p>
+          <label className="block">
+            <span className="block text-xs font-medium text-navy mb-1">Reason</span>
+            <textarea
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              rows={3}
+              placeholder="e.g. Out of target geography / not enough volume / poor fit"
+              className="w-full px-3 py-2 border border-border rounded text-sm focus:outline-none focus:ring-2 focus:ring-red-200 resize-y"
+            />
+          </label>
+          <div className="flex gap-2">
+            <button
+              onClick={submitReject}
+              disabled={submitting}
+              className="flex-1 bg-red-600 text-white px-3 py-1.5 rounded text-xs font-semibold hover:bg-red-700 disabled:opacity-50"
+            >
+              {submitting ? 'Rejecting…' : 'Confirm Reject'}
+            </button>
+            <button
+              onClick={() => { setMode('idle'); setError(null); }}
+              disabled={submitting}
+              className="px-3 py-1.5 rounded text-xs font-medium text-muted hover:text-navy"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
