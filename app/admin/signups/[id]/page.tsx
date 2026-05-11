@@ -6,8 +6,9 @@ import Link from 'next/link';
 import { createBrowserClient } from '@/lib/supabase-browser';
 
 /**
- * Admin signup detail — read-only in this PR. Action buttons (approve
- * / reject / upload contract) land in subsequent pieces.
+ * Admin signup detail. Shows captured prospect data + the action panel
+ * (approve / reject) + contract upload. Admin / executive / builder
+ * roles only — non-staff hits a friendly access-denied frame.
  */
 
 type Status = 'pending_review' | 'approved' | 'rejected' | 'signed' | 'live';
@@ -242,17 +243,12 @@ export default function AdminSignupDetailPage() {
           <Field label="Linked client_id" value={row.client_id} mono hint="Set on approve. Links to the tenant created via bootstrap-real-client logic." />
         </Section>
 
-        <Section title="Signed contract">
-          {row.contract_storage_path ? (
-            <>
-              <Field label="Storage path" value={row.contract_storage_path} mono />
-              <Field label="Uploaded by" value={row.contract_uploaded_by} mono />
-              <Field label="Uploaded at" value={row.contract_uploaded_at ? new Date(row.contract_uploaded_at).toLocaleString() : null} />
-            </>
-          ) : (
-            <p className="text-sm text-muted italic">No contract uploaded yet. Upload UI lands in piece 6/N.</p>
-          )}
-        </Section>
+        <section className="bg-surface rounded-xl border border-border shadow-sm p-6">
+          <h2 className="font-semibold text-sm text-navy uppercase tracking-wide mb-4">
+            Signed contract
+          </h2>
+          <ContractPanel row={row} onUpdate={(updated) => setRow(updated)} />
+        </section>
       </div>
     </Frame>
   );
@@ -461,6 +457,164 @@ function ActionPanel({ row, onUpdate }: { row: SignupRow; onUpdate: (next: Signu
               Cancel
             </button>
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Contract Panel ─────────────────────────────────────────────────────────
+
+function ContractPanel({ row, onUpdate }: { row: SignupRow; onUpdate: (next: SignupRow) => void }) {
+  const [file, setFile] = useState<File | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [viewing, setViewing] = useState(false);
+
+  async function submitUpload() {
+    setError(null);
+    setSuccess(null);
+    if (!file) {
+      setError('Choose a PDF first.');
+      return;
+    }
+    if (file.type !== 'application/pdf') {
+      setError('PDF only.');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setError(`File too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Max is 10 MB.`);
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await fetch(`/api/admin/signups/${row.id}/contract`, {
+        method: 'POST',
+        body: fd,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data.error ?? `Upload failed (${res.status})`);
+        return;
+      }
+      if (data.signup) onUpdate(data.signup as SignupRow);
+      setSuccess('Contract uploaded.');
+      setFile(null);
+    } catch {
+      setError('Network error. Try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function viewContract() {
+    setError(null);
+    setViewing(true);
+    try {
+      const res = await fetch(`/api/admin/signups/${row.id}/contract`);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.url) {
+        setError(data.error ?? `Could not open contract (${res.status})`);
+        return;
+      }
+      window.open(data.url as string, '_blank', 'noopener,noreferrer');
+    } catch {
+      setError('Network error. Try again.');
+    } finally {
+      setViewing(false);
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      {row.contract_storage_path ? (
+        <div className="space-y-3">
+          <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
+            <Field
+              label="Storage path"
+              value={row.contract_storage_path}
+              mono
+              hint="Private bucket — only accessible via signed URL."
+            />
+            <Field label="Uploaded by" value={row.contract_uploaded_by} mono />
+            <Field
+              label="Uploaded at"
+              value={row.contract_uploaded_at ? new Date(row.contract_uploaded_at).toLocaleString() : null}
+            />
+          </dl>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={viewContract}
+              disabled={viewing}
+              className="bg-navy text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-navy/90 disabled:opacity-50"
+            >
+              {viewing ? 'Opening…' : 'Open contract'}
+            </button>
+            <label className="bg-white border border-border text-navy px-4 py-2 rounded-lg text-sm font-medium hover:border-navy/40 cursor-pointer">
+              Replace…
+              <input
+                type="file"
+                accept="application/pdf"
+                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                className="hidden"
+              />
+            </label>
+            {file && (
+              <button
+                onClick={submitUpload}
+                disabled={submitting}
+                className="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-emerald-700 disabled:opacity-50"
+              >
+                {submitting ? 'Uploading…' : `Upload ${file.name}`}
+              </button>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <p className="text-sm text-muted">
+            No contract on file. Upload the signed BAA / MSA as a single PDF. Approving a signup
+            without a contract is allowed for self-testing but emits a security audit event.
+          </p>
+          <div className="flex flex-wrap gap-2 items-center">
+            <label className="bg-white border border-border text-navy px-4 py-2 rounded-lg text-sm font-medium hover:border-navy/40 cursor-pointer">
+              Choose PDF…
+              <input
+                type="file"
+                accept="application/pdf"
+                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                className="hidden"
+              />
+            </label>
+            {file && (
+              <>
+                <span className="text-xs text-muted">
+                  {file.name} · {(file.size / 1024 / 1024).toFixed(2)} MB
+                </span>
+                <button
+                  onClick={submitUpload}
+                  disabled={submitting}
+                  className="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-emerald-700 disabled:opacity-50"
+                >
+                  {submitting ? 'Uploading…' : 'Upload'}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {error && (
+        <div className="rounded-lg bg-red-50 border border-red-200 text-red-800 text-xs px-3 py-2">
+          {error}
+        </div>
+      )}
+      {success && (
+        <div className="rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs px-3 py-2">
+          {success}
         </div>
       )}
     </div>
