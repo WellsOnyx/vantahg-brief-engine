@@ -5,6 +5,12 @@ import { logAuditEvent } from '@/lib/audit';
 import { applyRateLimit } from '@/lib/rate-limit-middleware';
 import { parseEmailPayload, type EmailPayload } from '@/lib/intake/email-parser';
 import { generateAuthorizationNumber, logIntakeEvent, hashPatientName, sendReceiptConfirmation } from '@/lib/intake/confirmation';
+import {
+  computeSubmissionFingerprint,
+  findDuplicateCase,
+} from '@/lib/intake/efax/storage';
+import { apiError } from '@/lib/api-error';
+import { getRequestContext } from '@/lib/security';
 
 export const dynamic = 'force-dynamic';
 
@@ -237,13 +243,57 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (emailError) {
-      console.error('Failed to store email:', emailError);
-      return NextResponse.json({ error: 'Failed to process email' }, { status: 500 });
+      return apiError(emailError, {
+        operation: 'email_intake_store',
+        actor: 'system',
+        requestContext: getRequestContext(request),
+        clientMessage: 'Failed to process email',
+      });
     }
 
     // Auto-create case if confidence is high enough
     let caseId: string | null = null;
     if (!parsed.needs_manual_review && parsed.patient_name && parsed.procedure_codes.length > 0) {
+      // Cross-channel dedup. If the same patient + procedure codes + sender
+      // arrived from any channel in the last 24h, return the existing case
+      // instead of creating a duplicate. Senders that genuinely need a new
+      // case after correction can wait out the window or use a different
+      // member_id / procedure code combination.
+      const fingerprint = computeSubmissionFingerprint({
+        patient_name: parsed.patient_name,
+        patient_dob: parsed.patient_dob,
+        patient_member_id: parsed.member_id ?? null,
+        procedure_codes: parsed.procedure_codes,
+        from_number: extractDomain(from) ?? null,
+      });
+
+      if (fingerprint) {
+        const duplicate = await findDuplicateCase(fingerprint);
+        if (duplicate) {
+          await supabase
+            .from('email_queue')
+            .update({ case_id: duplicate.case_id, status: 'duplicate' })
+            .eq('id', emailEntry.id);
+          await logAuditEvent(duplicate.case_id, 'email_intake_duplicate_detected', 'system', {
+            email_id: emailId,
+            existing_case_number: duplicate.case_number,
+            existing_age_hours: Math.round(duplicate.age_hours * 10) / 10,
+          }, getRequestContext(request));
+          return NextResponse.json(
+            {
+              success: true,
+              duplicate: true,
+              case_id: duplicate.case_id,
+              case_number: duplicate.case_number,
+              authorization_number: duplicate.authorization_number,
+              status: 'duplicate',
+              message: `Duplicate of case submitted ${Math.round(duplicate.age_hours * 10) / 10}h ago`,
+            },
+            { status: 200 },
+          );
+        }
+      }
+
       const caseNumber = `VUM-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
 
       const { data: newCase, error: caseError } = await supabase
@@ -271,6 +321,7 @@ export async function POST(request: NextRequest) {
           intake_received_at: new Date().toISOString(),
           submitted_documents: [],
           vertical: 'medical',
+          submission_fingerprint: fingerprint,
         })
         .select('id')
         .single();
@@ -334,8 +385,11 @@ export async function POST(request: NextRequest) {
       manual_review_reasons: parsed.manual_review_reasons,
     });
   } catch (err) {
-    console.error('Error processing inbound email:', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return apiError(err, {
+      operation: 'email_intake',
+      actor: 'system',
+      requestContext: getRequestContext(request),
+    });
   }
 }
 
@@ -467,13 +521,20 @@ export async function GET(request: NextRequest) {
     const { data, error } = await query;
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return apiError(error, {
+        operation: 'email_queue_list',
+        actor: 'system',
+        requestContext: getRequestContext(request),
+      });
     }
 
     return NextResponse.json(data || []);
   } catch (err) {
-    console.error('Error fetching email queue:', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return apiError(err, {
+      operation: 'email_queue_list',
+      actor: 'system',
+      requestContext: getRequestContext(request),
+    });
   }
 }
 

@@ -98,13 +98,26 @@ export async function getUsageMetrics(): Promise<UsageMetrics> {
 
   const supabase = getServiceClient();
 
-  // ── Briefs + token counts (audit_log) ────────────────────────────────
-  // brief_generation_completed details: { attempt, model, input_tokens,
-  // output_tokens, cache_read_tokens } per lib/generate-brief.ts.
-  const { data: briefRows } = await supabase
+  // ── Briefs + LLM token counts (audit_log) ────────────────────────────
+  //
+  // Both events share an identical details payload shape:
+  //   { model, input_tokens, output_tokens, cache_read_tokens }
+  // so we can sum them in one pass.
+  //
+  // - brief_generation_completed: written by lib/generate-brief.ts
+  // - efax_extraction_completed:  written by lib/intake/efax/ai-extractor.ts
+  //
+  // brief_generation_failed contributes only to the failed count; eFax
+  // failures fall back to regex extraction (no LLM cost), so they do not
+  // affect the cost line and are aggregated separately if needed.
+  const { data: llmRows } = await supabase
     .from('audit_log')
     .select('action, details')
-    .in('action', ['brief_generation_completed', 'brief_generation_failed'])
+    .in('action', [
+      'brief_generation_completed',
+      'brief_generation_failed',
+      'efax_extraction_completed',
+    ])
     .gte('created_at', period.start)
     .lte('created_at', period.end);
 
@@ -112,16 +125,18 @@ export async function getUsageMetrics(): Promise<UsageMetrics> {
   let failed = 0;
   const tokens = { input: 0, output: 0, cache_read: 0 };
 
-  for (const row of briefRows ?? []) {
+  for (const row of llmRows ?? []) {
+    if (row.action === 'brief_generation_failed') {
+      failed += 1;
+      continue;
+    }
     if (row.action === 'brief_generation_completed') {
       generated += 1;
-      const d = (row.details as Record<string, unknown>) ?? {};
-      tokens.input += numberField(d.input_tokens);
-      tokens.output += numberField(d.output_tokens);
-      tokens.cache_read += numberField(d.cache_read_tokens);
-    } else {
-      failed += 1;
     }
+    const d = (row.details as Record<string, unknown>) ?? {};
+    tokens.input += numberField(d.input_tokens);
+    tokens.output += numberField(d.output_tokens);
+    tokens.cache_read += numberField(d.cache_read_tokens);
   }
 
   // ── Intake volume by channel (intake_log) ────────────────────────────

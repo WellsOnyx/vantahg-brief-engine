@@ -6,6 +6,10 @@ import { applyRateLimit } from '@/lib/rate-limit-middleware';
 import { generateAuthorizationNumber, logIntakeEvent, hashPatientName, sendReceiptConfirmation } from '@/lib/intake/confirmation';
 import { apiError } from '@/lib/api-error';
 import { getRequestContext } from '@/lib/security';
+import {
+  computeSubmissionFingerprint,
+  findDuplicateCase,
+} from '@/lib/intake/efax/storage';
 import crypto from 'crypto';
 
 export const dynamic = 'force-dynamic';
@@ -131,6 +135,40 @@ export async function POST(request: NextRequest) {
 
     const supabase = getServiceClient();
 
+    // Cross-channel dedup. Same as the email/portal paths: a fingerprint over
+    // normalized patient + procedure + sender identifies near-identical
+    // submissions within the 24h window. API clients that need to override
+    // dedup (corrections, intentional resubmission) can vary member_id or
+    // wait the window out.
+    const fingerprint = computeSubmissionFingerprint({
+      patient_name: body.patient_name ?? null,
+      patient_dob: body.patient_dob ?? null,
+      patient_member_id: body.patient_member_id ?? null,
+      procedure_codes: Array.isArray(body.procedure_codes) ? body.procedure_codes : [],
+      from_number: apiKey ? `key:${apiKey.substring(0, 8)}` : null,
+    });
+
+    if (fingerprint) {
+      const duplicate = await findDuplicateCase(fingerprint);
+      if (duplicate) {
+        await logAuditEvent(duplicate.case_id, 'api_intake_duplicate_detected', 'system', {
+          existing_case_number: duplicate.case_number,
+          existing_age_hours: Math.round(duplicate.age_hours * 10) / 10,
+          api_key_prefix: apiKey?.substring(0, 8),
+        });
+        return NextResponse.json(
+          {
+            duplicate: true,
+            case_id: duplicate.case_id,
+            case_number: duplicate.case_number,
+            authorization_number: duplicate.authorization_number,
+            message: `Duplicate of case submitted ${Math.round(duplicate.age_hours * 10) / 10}h ago`,
+          },
+          { status: 409 },
+        );
+      }
+    }
+
     const { data: newCase, error: caseError } = await supabase
       .from('cases')
       .insert({
@@ -161,6 +199,7 @@ export async function POST(request: NextRequest) {
         intake_received_at: new Date().toISOString(),
         submitted_documents: body.document_urls || [],
         vertical: 'medical',
+        submission_fingerprint: fingerprint,
       })
       .select('id, case_number, status')
       .single();

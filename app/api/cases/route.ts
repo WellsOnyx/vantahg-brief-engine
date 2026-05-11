@@ -9,6 +9,12 @@ import { notifyLpnCaseAssigned, notifyIntakeConfirmation } from '@/lib/notificat
 import { isDemoMode, getDemoCases } from '@/lib/demo-mode';
 import { requireAuth } from '@/lib/auth-guard';
 import { applyRateLimit } from '@/lib/rate-limit-middleware';
+import {
+  computeSubmissionFingerprint,
+  findDuplicateCase,
+} from '@/lib/intake/efax/storage';
+import { apiError } from '@/lib/api-error';
+import { getRequestContext } from '@/lib/security';
 
 export const dynamic = 'force-dynamic';
 
@@ -100,16 +106,20 @@ export async function GET(request: NextRequest) {
     const { data, error } = await query;
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return apiError(error, {
+        operation: 'list_cases',
+        actor: authResult.user.email,
+        requestContext: getRequestContext(request),
+      });
     }
 
     return NextResponse.json(data);
   } catch (err) {
-    console.error('Error fetching cases:', err);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return apiError(err, {
+      operation: 'list_cases',
+      actor: 'system',
+      requestContext: getRequestContext(request),
+    });
   }
 }
 
@@ -133,7 +143,11 @@ export async function POST(request: NextRequest) {
       .ilike('case_number', `${prefix}-%`);
 
     if (countError) {
-      return NextResponse.json({ error: countError.message }, { status: 500 });
+      return apiError(countError, {
+        operation: 'create_case_count',
+        actor: body.created_by || authResult.user.email,
+        requestContext: getRequestContext(request),
+      });
     }
 
     const nextNumber = ((count ?? 0) + 1).toString().padStart(4, '0');
@@ -142,6 +156,38 @@ export async function POST(request: NextRequest) {
     // Generate authorization number
     const authNumber = `AUTH-${new Date().getFullYear()}-${nextNumber}`;
 
+    // Cross-channel dedup: same patient + procedure codes within 24h returns
+    // the existing case rather than a new one. The fingerprint is also
+    // persisted on the row so the eFax worker (and any future channel) can
+    // dedupe against portal-submitted cases too.
+    const fingerprint = computeSubmissionFingerprint({
+      patient_name: body.patient_name ?? null,
+      patient_dob: body.patient_dob ?? null,
+      patient_member_id: body.patient_member_id ?? null,
+      procedure_codes: Array.isArray(body.procedure_codes) ? body.procedure_codes : [],
+      from_number: null,
+    });
+
+    if (fingerprint) {
+      const duplicate = await findDuplicateCase(fingerprint);
+      if (duplicate) {
+        await logAuditEvent(duplicate.case_id, 'portal_intake_duplicate_detected', body.created_by || authResult.user.email, {
+          existing_case_number: duplicate.case_number,
+          existing_age_hours: Math.round(duplicate.age_hours * 10) / 10,
+        }, getRequestContext(request));
+        return NextResponse.json(
+          {
+            duplicate: true,
+            case_id: duplicate.case_id,
+            case_number: duplicate.case_number,
+            authorization_number: duplicate.authorization_number,
+            message: `Duplicate of case submitted ${Math.round(duplicate.age_hours * 10) / 10}h ago`,
+          },
+          { status: 409 },
+        );
+      }
+    }
+
     const caseData = {
       ...body,
       case_number: caseNumber,
@@ -149,6 +195,7 @@ export async function POST(request: NextRequest) {
       authorization_number: authNumber,
       intake_channel: body.intake_channel || 'portal',
       intake_confirmation_sent: false,
+      submission_fingerprint: fingerprint,
     };
 
     const { data, error } = await supabase
@@ -158,7 +205,11 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return apiError(error, {
+        operation: 'create_case_insert',
+        actor: body.created_by || authResult.user.email,
+        requestContext: getRequestContext(request),
+      });
     }
 
     // Log audit event for case creation
@@ -204,15 +255,22 @@ export async function POST(request: NextRequest) {
         }
       }
     }).catch((err) => {
-      console.error('Background brief generation failed:', err);
+      // Background brief generation runs independently of the create response.
+      // We log a PHI-safe audit entry rather than echoing err.message to
+      // server logs. Common cause: real Anthropic disabled — the case still
+      // exists and a reviewer can regenerate later.
+      const errorKind = err instanceof Error ? err.name : typeof err;
+      logAuditEvent(data.id, 'background_brief_generation_failed', 'system', {
+        error_kind: errorKind,
+      }).catch(() => { /* already logged inside logAuditEvent */ });
     });
 
     return NextResponse.json(data, { status: 201 });
   } catch (err) {
-    console.error('Error creating case:', err);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return apiError(err, {
+      operation: 'create_case',
+      actor: 'system',
+      requestContext: getRequestContext(request),
+    });
   }
 }

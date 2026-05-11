@@ -37,6 +37,7 @@ import {
 } from '../efax-parser';
 import { isDemoMode } from '../../demo-mode';
 import { completeWithTool } from '../../llm';
+import { logAuditEvent } from '../../audit';
 
 // ── Public types ────────────────────────────────────────────────────────────
 
@@ -227,6 +228,18 @@ export async function extractClinicalDataFromFax(
   // 2) AI path
   try {
     const aiResult = await callAiExtractor(input);
+
+    // Audit event with token counts for cost visibility on /admin/usage.
+    // Mirrors brief_generation_completed's details shape exactly so the
+    // aggregator in lib/usage-metrics.ts can sum both events uniformly.
+    // No case_id yet — extraction runs before case creation in the worker.
+    logAuditEvent(null, 'efax_extraction_completed', 'system', {
+      model: aiResult.model,
+      input_tokens: aiResult.inputTokens,
+      output_tokens: aiResult.outputTokens,
+      cache_read_tokens: aiResult.cacheReadTokens,
+    }).catch(() => { /* already logged inside logAuditEvent */ });
+
     const parsed = finalizeParsedFax(aiResult.extraction, input, warnings);
     return {
       parsed,
@@ -237,6 +250,11 @@ export async function extractClinicalDataFromFax(
     };
   } catch (err) {
     // 3) Regex fallback path
+    const errorKind = err instanceof Error ? err.name : typeof err;
+    logAuditEvent(null, 'efax_extraction_failed', 'system', {
+      error_kind: errorKind,
+    }).catch(() => { /* already logged inside logAuditEvent */ });
+
     const message = err instanceof Error ? err.message : String(err);
     warnings.push(`AI extraction failed, falling back to regex parser: ${message}`);
 
@@ -270,6 +288,9 @@ interface AiExtractionResult {
   extraction: RawAiExtraction;
   tokensUsed: number;
   model: string;
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens: number;
 }
 
 interface RawAiExtraction {
@@ -327,6 +348,9 @@ Call the record_fax_extraction tool with the extracted structured data.`;
     extraction,
     tokensUsed: result.inputTokens + result.outputTokens,
     model: result.model,
+    inputTokens: result.inputTokens,
+    outputTokens: result.outputTokens,
+    cacheReadTokens: result.cacheReadTokens,
   };
 }
 

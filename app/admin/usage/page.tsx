@@ -163,7 +163,7 @@ export default function AdminUsagePage() {
           </div>
           <p className="text-xs text-muted mt-4">
             Estimate based on Claude Opus 4.6 list pricing ($5/1M input, $25/1M output, $0.50/1M cache read).
-            Includes only brief generation; eFax extraction tokens are not yet tracked.
+            Includes brief generation and eFax extraction. Bedrock pricing differs — re-baseline if LLM_PROVIDER is changed.
           </p>
         </Section>
 
