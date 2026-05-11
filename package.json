@@ -11,7 +11,8 @@
     "test:ci": "vitest run",
     "test:e2e-synthetic": "npx tsx scripts/smoke-e2e.ts",
     "seed": "npx tsx scripts/seed-demo.ts",
-    "bootstrap-real-client": "npx tsx scripts/bootstrap-real-client.ts"
+    "bootstrap-real-client": "npx tsx scripts/bootstrap-real-client.ts",
+    "bootstrap-master-admin": "npx tsx scripts/bootstrap-master-admin.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.74.0",
