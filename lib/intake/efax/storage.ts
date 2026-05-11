@@ -24,6 +24,7 @@
 import { createHash, randomBytes } from 'crypto';
 import { getServiceClient } from '@/lib/supabase';
 import { isDemoMode } from '@/lib/demo-mode';
+import { logAuditEvent } from '@/lib/audit';
 
 const BUCKET = 'efax-documents';
 const DEFAULT_WINDOW_HOURS = 24;
@@ -151,6 +152,18 @@ export async function fetchAndStoreDocument(
       content_type: contentType,
     };
   }
+
+  // Audit the upload. No case_id yet — the document is persisted before the
+  // cron worker creates the case. fax_id + storage_sha256 give a stable join
+  // key for later reconciliation. Fire-and-forget so a failing audit write
+  // doesn't break the intake pipeline.
+  logAuditEvent(null, 'efax_document_stored', 'system', {
+    fax_id,
+    storage_path: path,
+    storage_sha256: sha256,
+    storage_bytes: buffer.byteLength,
+    content_type: contentType,
+  }).catch(() => { /* already logged inside logAuditEvent */ });
 
   return {
     storage_path: path,

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceClient } from '@/lib/supabase';
-import { logAuditEvent } from '@/lib/audit';
+import { logAuditEvent, logDataAccess } from '@/lib/audit';
 import { deliverToClient } from '@/lib/notifications';
 import { isDemoMode, getDemoCase } from '@/lib/demo-mode';
 import { requireAuth } from '@/lib/auth-guard';
@@ -48,6 +48,11 @@ export async function GET(
         requestContext: getRequestContext(request),
       });
     }
+
+    // SOC 2 CC6.1: log every PHI read. Don't block on the audit write — the
+    // GET response shouldn't fail if the audit table is briefly unavailable.
+    logDataAccess(id, authResult.user.email, ['case_record'], getRequestContext(request))
+      .catch(() => { /* already logged inside logAuditEvent */ });
 
     return NextResponse.json(data);
   } catch (err) {
