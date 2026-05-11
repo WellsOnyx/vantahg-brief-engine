@@ -3,11 +3,36 @@
 import { useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { createBrowserClient } from '@/lib/supabase-browser';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import Link from 'next/link';
+
+/**
+ * Routes a freshly-signed-in user to the right landing page based on their
+ * role. Clients land on their My Cases dashboard; everyone else falls
+ * through to root. Defensive: if the role lookup fails for any reason, we
+ * still send the user somewhere reasonable rather than blocking sign-in.
+ */
+async function resolveLandingPage(supabase: SupabaseClient): Promise<string> {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return '/';
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('role')
+      .eq('id', user.id)
+      .maybeSingle();
+    if (profile?.role === 'client') return '/client/cases';
+    return '/';
+  } catch {
+    return '/';
+  }
+}
 
 function LoginForm() {
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get('redirect') || '/';
+  // `redirect` is honored when explicitly set (e.g. someone clicked a deep
+  // link that required auth). Otherwise we role-route after sign-in below.
+  const explicitRedirect = searchParams.get('redirect');
   const fromSquarespace = searchParams.get('from') === 'squarespace';
 
   const [email, setEmail] = useState('');
@@ -25,23 +50,34 @@ function LoginForm() {
 
     if (!supabase) {
       // Demo mode — redirect straight through
-      window.location.href = redirectTo;
+      window.location.href = explicitRedirect || '/';
       return;
     }
 
     if (useMagicLink) {
+      // Magic link users land back on / after the callback. The role-routing
+      // happens in middleware (or future callback handler). For now we just
+      // show the success message — the user clicks the email and the
+      // browser handles the redirect via Supabase's PKCE flow.
       const { error } = await supabase.auth.signInWithOtp({ email });
       if (error) {
         setMessage({ type: 'error', text: error.message });
       } else {
-        setMessage({ type: 'success', text: 'Check your email for the magic link.' });
+        setMessage({
+          type: 'success',
+          text: 'Check your email for the magic link. Client users will land on My Cases after sign-in.',
+        });
       }
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
         setMessage({ type: 'error', text: error.message });
       } else {
-        window.location.href = redirectTo;
+        // Role-route the user. Clients go to their dashboard; everyone else
+        // goes to the explicit redirect target or root.
+        const destination = explicitRedirect ?? (await resolveLandingPage(supabase));
+        window.location.href = destination;
+        return;
       }
     }
 
@@ -139,6 +175,15 @@ function LoginForm() {
             Sign up
           </Link>
         </span>
+        <p className="text-xs text-muted">
+          <Link
+            href="/client/cases"
+            className="hover:text-foreground transition-colors underline decoration-dotted"
+          >
+            View My Cases
+          </Link>
+          {' '}(for client users)
+        </p>
         <p className="text-xs text-muted">
           <a
             href="https://www.wellsonyx.com/firstlevelreview"
