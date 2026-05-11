@@ -2,6 +2,8 @@
 
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import Link from 'next/link';
+import { useTenantScope, withTenantScope } from '@/lib/tenant-scope';
+import { TenantScopeBadge } from '@/components/TenantScopeBadge';
 import type {
   Case,
   CaseStatus,
@@ -182,13 +184,17 @@ export default function CasesListPage() {
     return () => clearTimeout(timer);
   }, [search]);
 
-  // Fetch reviewers once
+  const { selectedClientId } = useTenantScope();
+
+  // Re-fetch reviewers whenever the tenant scope changes — the eligible
+  // pool depends on reviewers.client_ids containing the selected client.
+  // When scope is null ("All"), this returns the full roster.
   useEffect(() => {
-    fetch('/api/reviewers')
+    fetch(withTenantScope('/api/reviewers', selectedClientId))
       .then((res) => res.json())
       .then(setReviewers)
       .catch(() => setReviewers([]));
-  }, []);
+  }, [selectedClientId]);
 
   // Build query params and fetch cases
   const fetchCases = useCallback(async () => {
@@ -204,6 +210,10 @@ export default function CasesListPage() {
     if (filterReviewer) params.set('assigned_reviewer_id', filterReviewer);
     if (dateFrom) params.set('date_from', dateFrom);
     if (dateTo) params.set('date_to', dateTo);
+    // Tenant scope wins over a manually-picked reviewer filter when both
+    // are present — the cases list reflects whatever the admin is focused
+    // on at the top-nav level.
+    if (selectedClientId) params.set('client_id', selectedClientId);
 
     try {
       const res = await fetch(`/api/cases?${params.toString()}`);
@@ -217,7 +227,7 @@ export default function CasesListPage() {
     } finally {
       setLoading(false);
     }
-  }, [debouncedSearch, filterStatus, filterCategory, filterPriority, filterReviewType, filterReviewer, dateFrom, dateTo]);
+  }, [debouncedSearch, filterStatus, filterCategory, filterPriority, filterReviewType, filterReviewer, dateFrom, dateTo, selectedClientId]);
 
   useEffect(() => {
     fetchCases();
@@ -267,9 +277,12 @@ export default function CasesListPage() {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
         <div>
-          <h1 className="font-[family-name:var(--font-dm-serif)] text-3xl text-navy">
-            Case Management
-          </h1>
+          <div className="flex items-center gap-3">
+            <h1 className="font-[family-name:var(--font-dm-serif)] text-3xl text-navy">
+              Case Management
+            </h1>
+            <TenantScopeBadge />
+          </div>
           <p className="text-muted mt-1">View and manage all utilization review cases</p>
         </div>
         <Link

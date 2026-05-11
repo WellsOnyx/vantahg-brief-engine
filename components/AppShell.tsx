@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { MobileNav } from '@/components/MobileNav';
 import { HeaderAuth } from '@/components/HeaderAuth';
 import { BridgeBar } from '@/components/BridgeBar';
+import { TenantScopeProvider } from '@/lib/tenant-scope';
+import { TenantScopeSelector } from '@/components/TenantScopeSelector';
 
 interface NavLink {
   href: string;
@@ -26,6 +28,7 @@ export function AppShell({
   }
 
   return (
+    <TenantScopeProvider>
     <div className="min-h-screen flex flex-col">
       <BridgeBar />
       {/* Sticky header with backdrop blur */}
@@ -55,8 +58,9 @@ export function AppShell({
               ))}
             </nav>
 
-            {/* Auth + Mobile nav */}
+            {/* Tenant scope (admin) + Auth + Mobile nav */}
             <div className="flex items-center gap-2">
+              <TenantScopeSelector />
               <HeaderAuth />
               <MobileNav links={navLinks} />
             </div>
@@ -107,5 +111,6 @@ export function AppShell({
         </div>
       </footer>
     </div>
+    </TenantScopeProvider>
   );
 }

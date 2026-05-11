@@ -1,7 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { QualityAudit, Staff } from '@/lib/types';
+import { useTenantScope, withTenantScope } from '@/lib/tenant-scope';
+import { TenantScopeBadge } from '@/components/TenantScopeBadge';
 
 interface QualityMetrics {
   total_audits: number;
@@ -22,30 +24,40 @@ export default function QualityPage() {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'audits'>('dashboard');
 
-  useEffect(() => {
-    Promise.all([fetchAudits(), fetchMetrics(), fetchStaff()]).finally(() => setLoading(false));
-  }, []);
+  const { selectedClientId } = useTenantScope();
 
-  async function fetchAudits() {
+  // Audits re-fetch when scope changes; metrics + staff are tenant-agnostic
+  // and only need to load once.
+  const fetchAudits = useCallback(async () => {
     try {
-      const res = await fetch('/api/quality/audits');
+      const res = await fetch(withTenantScope('/api/quality/audits', selectedClientId));
       if (res.ok) setAudits(await res.json());
     } catch { /* ok */ }
-  }
+  }, [selectedClientId]);
 
-  async function fetchMetrics() {
+  const fetchMetrics = useCallback(async () => {
     try {
       const res = await fetch('/api/quality/metrics');
       if (res.ok) setMetrics(await res.json());
     } catch { /* ok */ }
-  }
+  }, []);
 
-  async function fetchStaff() {
+  const fetchStaff = useCallback(async () => {
     try {
       const res = await fetch('/api/staff');
       if (res.ok) setStaff(await res.json());
     } catch { /* ok */ }
-  }
+  }, []);
+
+  // Initial load
+  useEffect(() => {
+    Promise.all([fetchAudits(), fetchMetrics(), fetchStaff()]).finally(() => setLoading(false));
+  }, [fetchAudits, fetchMetrics, fetchStaff]);
+
+  // Re-fetch audits on scope change without reloading the whole page state
+  useEffect(() => {
+    fetchAudits();
+  }, [selectedClientId, fetchAudits]);
 
   function getStaffName(id: string): string {
     return staff.find((s) => s.id === id)?.name || id.slice(0, 8);
@@ -72,7 +84,10 @@ export default function QualityPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="font-[family-name:var(--font-dm-serif)] text-3xl text-navy">Quality Assurance</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="font-[family-name:var(--font-dm-serif)] text-3xl text-navy">Quality Assurance</h1>
+            <TenantScopeBadge />
+          </div>
           <p className="text-muted mt-1">URAC compliance monitoring, audit history, and per-staff quality trends</p>
         </div>
       </div>

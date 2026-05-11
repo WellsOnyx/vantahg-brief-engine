@@ -180,6 +180,10 @@ export interface Reviewer {
   phone: string | null;
   status: ReviewerStatus;
   cases_completed: number;
+  /** Approved client tenants — when set, only cases for these clients
+   * may be assigned to this reviewer (added in migration 003). Empty or
+   * absent means no tenant restriction. */
+  client_ids?: string[];
 }
 
 export type OnboardingStatus = 'pending' | 'credentials_needed' | 'active' | 'suspended';
