@@ -253,6 +253,8 @@ export default function SitePage() {
           <span className="ea-bar-pill">Early Access</span>
           <span className="ea-bar-text">VantaUM is now accepting founding TPA partners — limited spots available.</span>
           <a href={EA_EMAIL} className="ea-bar-link">Apply now →</a>
+          <span className="ea-bar-text" aria-hidden="true">·</span>
+          <a href="/login" className="ea-bar-link">Sign in</a>
         </div>
 
         {/* Nav */}
@@ -267,6 +269,7 @@ export default function SitePage() {
             <li><a href="#chro">For CHROs</a></li>
             <li><a href="#philosophy">Philosophy</a></li>
             <li><a href="#demo">Live Demo</a></li>
+            <li><a href="/login">Sign in</a></li>
           </ul>
           <a className="nav-cta" href="#contact">Request Early Access</a>
         </nav>
