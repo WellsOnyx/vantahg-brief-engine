@@ -1,9 +1,15 @@
-import { generateClinicalBrief } from './claude';
 import { getCriteriaForCodes } from '@/lib/medical-criteria';
 import { factCheckBrief } from './fact-checker';
 import { analyzeTwoMidnightRule, getTwoMidnightBriefContext } from './two-midnight-rule';
 import { isRealAnthropicEnabled } from './env';
+import { completeWithTool, LlmError } from './llm';
+import { BRIEF_TOOL_INPUT_SCHEMA, validateAIBrief } from './llm/brief-schema';
+import { logAuditEvent } from './audit';
 import type { Case, Client, AIBrief, FactCheckResult } from './types';
+
+const BRIEF_TOOL_NAME = 'record_clinical_brief';
+const MAX_ATTEMPTS = 2;
+const BRIEF_MAX_TOKENS = 4096;
 
 interface BriefOptions {
   client?: Client | null;
@@ -11,7 +17,10 @@ interface BriefOptions {
   mdReviewMode?: boolean;
 }
 
-export async function generateBriefForCase(caseData: Case, options: BriefOptions = {}): Promise<{ brief: AIBrief; factCheck: FactCheckResult }> {
+export async function generateBriefForCase(
+  caseData: Case,
+  options: BriefOptions = {},
+): Promise<{ brief: AIBrief; factCheck: FactCheckResult }> {
   // Gate at the lib boundary so any caller (route, cron, ad-hoc script) is
   // protected — not just the /api/generate-brief route. Demo-mode callers
   // should use getDemoBrief() from lib/demo-mode.ts; this function is for
@@ -22,15 +31,103 @@ export async function generateBriefForCase(caseData: Case, options: BriefOptions
     );
   }
 
-  const { client } = options;
-
-  // Determine if this is a second-level / MD review (evidence-based, not criteria-based)
-  const isMdReview = options.mdReviewMode ||
+  const isMdReview =
+    options.mdReviewMode ||
     caseData.status === 'md_review' ||
     caseData.review_type === 'second_level_review' ||
     caseData.review_type === 'appeal';
 
-  const systemPrompt = isMdReview
+  const systemPrompt = buildSystemPrompt(isMdReview);
+  const userPrompt = buildUserPrompt(caseData, options.client ?? null, isMdReview);
+
+  logAuditEvent(caseData.id, 'brief_generation_started', 'system', {
+    md_review_mode: isMdReview,
+    procedure_code_count: caseData.procedure_codes?.length ?? 0,
+  }).catch(() => { /* already logged inside logAuditEvent */ });
+
+  // Retry loop. The Anthropic SDK already retries 5xx/429 transport errors
+  // internally; this loop handles a different class of failure — the model
+  // returns successfully but emits a payload that doesn't match the schema
+  // (missing field, wrong enum, etc.). We give it one more chance with
+  // explicit feedback before giving up.
+  let lastValidationReason: string | null = null;
+
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    const promptForAttempt = lastValidationReason
+      ? `${userPrompt}\n\n---\nNOTE: Your previous response failed schema validation. Issues: ${lastValidationReason}. Re-emit the tool call with all required fields populated and correct types.`
+      : userPrompt;
+
+    let result;
+    try {
+      result = await completeWithTool({
+        system: systemPrompt,
+        user: promptForAttempt,
+        maxTokens: BRIEF_MAX_TOKENS,
+        tool: {
+          name: BRIEF_TOOL_NAME,
+          description:
+            'Record the structured clinical review brief. Call this exactly once with the full brief object.',
+          input_schema: BRIEF_TOOL_INPUT_SCHEMA as unknown as Record<string, unknown>,
+        },
+      });
+    } catch (err) {
+      // Transport-level failure. SDK already retried. Bubble to caller with
+      // structured audit; the route maps LlmError to status code.
+      logBriefFailure(caseData.id, attempt, err);
+      throw err;
+    }
+
+    const validation = validateAIBrief(result.toolInput);
+    if (validation.ok) {
+      logAuditEvent(caseData.id, 'brief_generation_completed', 'system', {
+        attempt,
+        model: result.model,
+        input_tokens: result.inputTokens,
+        output_tokens: result.outputTokens,
+        cache_read_tokens: result.cacheReadTokens,
+      }).catch(() => { /* already logged inside logAuditEvent */ });
+
+      const factCheck = factCheckBrief(validation.brief, caseData);
+      logAuditEvent(caseData.id, 'fact_check_completed', 'system', {
+        score: factCheck.overall_score,
+        status: factCheck.overall_status,
+        flagged: factCheck.summary.flagged,
+      }).catch(() => { /* already logged inside logAuditEvent */ });
+
+      return { brief: validation.brief, factCheck };
+    }
+
+    lastValidationReason = validation.reason;
+    logAuditEvent(caseData.id, 'brief_generation_invalid_payload', 'system', {
+      attempt,
+      reason: validation.reason,
+      will_retry: attempt < MAX_ATTEMPTS,
+    }).catch(() => { /* already logged inside logAuditEvent */ });
+  }
+
+  logBriefFailure(caseData.id, MAX_ATTEMPTS, new Error('schema_validation_exhausted'));
+  throw new LlmError(
+    `Brief generation produced an invalid payload after ${MAX_ATTEMPTS} attempts. Last issue: ${lastValidationReason}`,
+    'no_response',
+    false,
+  );
+}
+
+function logBriefFailure(caseId: string, attempt: number, err: unknown): void {
+  const kind = err instanceof Error ? err.name : typeof err;
+  logAuditEvent(caseId, 'brief_generation_failed', 'system', {
+    attempt,
+    error_kind: kind,
+    // For LlmError specifically, surface the structured discriminators we
+    // already trust to be PHI-safe (kind/status/retryable).
+    error_llm_kind: err instanceof LlmError ? err.kind : null,
+    error_llm_status: err instanceof LlmError ? err.status ?? null : null,
+    error_llm_retryable: err instanceof LlmError ? err.retryable : null,
+  }).catch(() => { /* already logged inside logAuditEvent */ });
+}
+
+function buildSystemPrompt(isMdReview: boolean): string {
+  return isMdReview
     ? `You are the clinical intelligence behind VantaUM, preparing a second-level physician advisor review brief. Your role is to do the heavy lifting so the reviewing physician can spend their time on clinical judgment, not paperwork. This brief is for a board-certified physician advisor who will render a medical necessity determination using EVIDENCE-BASED MEDICINE — NOT commercial criteria like InterQual or MCG.
 
 The physician advisor uses:
@@ -49,8 +146,9 @@ Key principles:
 - Consider the patient's individual risk factors, comorbidities, and clinical trajectory
 - Note the strength of evidence (systematic review > RCT > cohort > case series > expert opinion)
 - Address level of care determination: inpatient vs. observation vs. outpatient based on clinical acuity
-- If this is an appeal, analyze why the original denial may or may not have been appropriate`
+- If this is an appeal, analyze why the original denial may or may not have been appropriate
 
+Call the record_clinical_brief tool exactly once with the complete structured brief. Populate every required field; use empty arrays where a list field has no entries.`
     : `You are the clinical intelligence behind VantaUM, a concierge utilization management service for TPAs, health plans, and self-funded employers. Your role is to do the heavy lifting — analyzing clinical data and preparing a structured one-page brief — so the reviewing physician can spend their time on what matters: clinical judgment, not paperwork.
 
 You are NOT rendering a determination. You are preparing the brief so the physician has more time with the case, not less.
@@ -62,8 +160,12 @@ Key principles:
 - Assess setting appropriateness (inpatient vs. outpatient vs. ASC vs. office)
 - Identify conservative alternatives that may not have been tried
 - Note any state-specific regulatory requirements that apply
-- Consider the review type context (prior auth, concurrent, retrospective, appeal, P2P)`;
+- Consider the review type context (prior auth, concurrent, retrospective, appeal, P2P)
 
+Call the record_clinical_brief tool exactly once with the complete structured brief. Populate every required field; use empty arrays where a list field has no entries.`;
+}
+
+function buildUserPrompt(caseData: Case, client: Client | null, isMdReview: boolean): string {
   // Look up medical criteria for the submitted procedure codes
   let criteriaContext = '';
   if (caseData.procedure_codes?.length) {
@@ -88,7 +190,14 @@ Key principles:
     }
   }
 
-  const userPrompt = `Generate a clinical review brief for the following case:
+  const twoMidnight = analyzeTwoMidnightRule(caseData);
+  const twoMidnightContext = getTwoMidnightBriefContext(twoMidnight);
+
+  const mdReviewBanner = isMdReview
+    ? '\n\nREVIEW LEVEL: SECOND-LEVEL PHYSICIAN ADVISOR REVIEW. Use evidence-based medicine and published clinical guidelines. Do NOT rely on commercial criteria products (InterQual/MCG) as the primary basis — cite peer-reviewed literature and specialty society guidelines instead.'
+    : '';
+
+  return `Generate a clinical review brief for the following case:
 
 CASE NUMBER: ${caseData.case_number}
 REVIEW TYPE: ${caseData.review_type || 'Not specified'}
@@ -126,72 +235,9 @@ SLA / TURNAROUND: ${caseData.sla_hours ? `${caseData.sla_hours} hours` : 'Not sp
 TURNAROUND DEADLINE: ${caseData.turnaround_deadline || 'Not specified'}
 
 SUBMITTED DOCUMENTATION: ${caseData.submitted_documents?.length || 0} documents attached
-${criteriaContext}${clientCriteriaContext}${(() => {
-    const twoMidnight = analyzeTwoMidnightRule(caseData);
-    return getTwoMidnightBriefContext(twoMidnight);
-  })()}${isMdReview ? '\n\nREVIEW LEVEL: SECOND-LEVEL PHYSICIAN ADVISOR REVIEW. Use evidence-based medicine and published clinical guidelines. Do NOT rely on commercial criteria products (InterQual/MCG) as the primary basis — cite peer-reviewed literature and specialty society guidelines instead.' : ''}
+${criteriaContext}${clientCriteriaContext}${twoMidnightContext}${mdReviewBanner}
 
 ---
 
-Generate a structured clinical brief in the following JSON format:
-
-{
-  "clinical_question": "Refined clinical question for the reviewer",
-  "patient_summary": "Brief patient demographics, relevant clinical context, and pertinent medical history",
-  "diagnosis_analysis": {
-    "primary_diagnosis": "Primary ICD-10 diagnosis with clinical description",
-    "secondary_diagnoses": ["Array of secondary/supporting diagnoses with clinical relevance"],
-    "diagnosis_procedure_alignment": "Analysis of whether the diagnosis codes support the requested procedure/service"
-  },
-  "procedure_analysis": {
-    "codes": ["Array of CPT/HCPCS codes with descriptions"],
-    "clinical_rationale": "Why is this procedure/service being requested based on clinical presentation",
-    "complexity_level": "routine | moderate | complex",
-    "setting_appropriateness": "Is the requested setting (inpatient/outpatient/ASC/office/home) appropriate for this procedure and patient acuity?"
-  },
-  "criteria_match": {
-    "guideline_source": "Primary guideline source used (e.g., InterQual, MCG, ACR, NCCN, specialty society, CMS NCD/LCD)",
-    "applicable_guideline": "Specific guideline name and version/year",
-    "criteria_met": ["List of medical necessity criteria that appear to be met based on available information"],
-    "criteria_not_met": ["List of criteria that are NOT met or are unclear based on submitted documentation"],
-    "criteria_unable_to_assess": ["Criteria that cannot be assessed due to missing information"],
-    "conservative_alternatives": ["Less invasive or lower-cost alternatives that may not have been tried or documented"]
-  },
-  "documentation_review": {
-    "documents_provided": "Summary of what clinical documentation was submitted",
-    "key_findings": ["Key clinical findings from the documentation that support or contradict medical necessity"],
-    "missing_documentation": ["Any documentation that would be needed but is missing or incomplete"]
-  },
-  "ai_recommendation": {
-    "recommendation": "approve | deny | pend | peer_to_peer_recommended",
-    "confidence": "high | medium | low",
-    "rationale": "Clinical rationale for the recommendation, citing specific criteria and evidence",
-    "key_considerations": ["Specific clinical factors the reviewer should evaluate"],
-    "if_modify_suggestion": "If partial approval or modification is appropriate, describe the suggested modification (e.g., different setting, reduced frequency, step therapy). Null if not applicable."
-  },
-  "reviewer_action": {
-    "decision_required": "What specific clinical judgment is needed from the reviewer",
-    "time_sensitivity": "Regulatory or clinical time constraints (e.g., state-mandated turnaround, clinical urgency)",
-    "peer_to_peer_suggested": true/false,
-    "additional_info_needed": ["Any additional clinical information that should be requested from the provider"],
-    "state_specific_requirements": ["Any state-specific UR regulations, mandated benefits, or turnaround requirements that apply"]
-  }
-}
-
-Return ONLY valid JSON. No markdown, no explanation outside the JSON.`;
-
-  const responseText = await generateClinicalBrief({
-    system: systemPrompt,
-    user: userPrompt,
-  });
-
-  // Parse the JSON response, stripping any markdown fences if present
-  let cleanText = responseText.trim();
-  if (cleanText.startsWith('```')) {
-    cleanText = cleanText.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
-  }
-
-  const brief: AIBrief = JSON.parse(cleanText);
-  const factCheck = factCheckBrief(brief, caseData);
-  return { brief, factCheck };
+Call the record_clinical_brief tool with the structured brief. The tool's schema enumerates every required field — do not omit any. Use empty arrays for list fields with no entries.`;
 }

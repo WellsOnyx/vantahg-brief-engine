@@ -7,6 +7,9 @@ import { notifyCaseAssigned } from '@/lib/notifications';
 import { isDemoMode, getDemoBrief } from '@/lib/demo-mode';
 import { requireAuth } from '@/lib/auth-guard';
 import { applyRateLimit } from '@/lib/rate-limit-middleware';
+import { LlmError } from '@/lib/llm';
+import { apiError } from '@/lib/api-error';
+import { getRequestContext } from '@/lib/security';
 
 export const dynamic = 'force-dynamic';
 
@@ -53,10 +56,12 @@ export async function POST(request: NextRequest) {
           { status: 404 }
         );
       }
-      return NextResponse.json(
-        { error: fetchError.message },
-        { status: 500 }
-      );
+      return apiError(fetchError, {
+        operation: 'fetch_case_for_brief',
+        caseId: case_id,
+        actor: authResult.user.email,
+        requestContext: getRequestContext(request),
+      });
     }
 
     // Generate the brief and run fact-check (pass client for criteria source context)
@@ -77,10 +82,12 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (updateError) {
-      return NextResponse.json(
-        { error: updateError.message },
-        { status: 500 }
-      );
+      return apiError(updateError, {
+        operation: 'persist_brief',
+        caseId: case_id,
+        actor: authResult.user.email,
+        requestContext: getRequestContext(request),
+      });
     }
 
     // Log audit event
@@ -100,42 +107,73 @@ export async function POST(request: NextRequest) {
       brief,
     });
   } catch (err: unknown) {
-    console.error('Error generating brief:', err);
+    // Structured handling for the LlmError shape from lib/llm. Every other
+    // path falls through to apiError(), which logs PHI-safe metadata and
+    // returns a generic 500. No more string-sniffing error messages.
+    if (err instanceof LlmError) {
+      const ctx = getRequestContext(request);
+      const briefCaseId = await safeReadCaseId(request);
 
-    // Provide specific error messages for common failure modes
-    const errorObj = err as { status?: number; message?: string; code?: string };
+      logAuditEvent(briefCaseId, 'brief_llm_error', 'system', {
+        kind: err.kind,
+        status: err.status ?? null,
+        retryable: err.retryable,
+      }, ctx).catch(() => { /* already logged inside logAuditEvent */ });
 
-    if (errorObj?.status === 401 || errorObj?.message?.includes('API key') || errorObj?.message?.includes('authentication')) {
-      return NextResponse.json(
-        { error: 'AI service authentication failed. Please check API key configuration.' },
-        { status: 503 }
-      );
+      switch (err.kind) {
+        case 'auth':
+          return NextResponse.json(
+            { error: 'AI service authentication failed. Check API key configuration.' },
+            { status: 503 },
+          );
+        case 'rate_limit':
+          return NextResponse.json(
+            { error: 'AI service rate limit reached. Please try again in a few minutes.' },
+            { status: 429 },
+          );
+        case 'timeout':
+          return NextResponse.json(
+            { error: 'AI service timed out. Please try again.' },
+            { status: 504 },
+          );
+        case 'server':
+          return NextResponse.json(
+            { error: 'AI service is temporarily unavailable. Please try again shortly.' },
+            { status: 503 },
+          );
+        case 'no_response':
+          return NextResponse.json(
+            { error: 'AI returned an incomplete brief. Please try again.' },
+            { status: 502 },
+          );
+        case 'bad_request':
+        default:
+          return NextResponse.json(
+            { error: 'Failed to generate clinical brief. Please try again.' },
+            { status: 500 },
+          );
+      }
     }
 
-    if (errorObj?.status === 429 || errorObj?.message?.includes('rate limit') || errorObj?.code === 'rate_limit_exceeded') {
-      return NextResponse.json(
-        { error: 'AI service rate limit reached. Please try again in a few minutes.' },
-        { status: 429 }
-      );
-    }
+    return apiError(err, {
+      operation: 'generate_brief',
+      actor: 'system',
+      requestContext: getRequestContext(request),
+      clientMessage: 'Failed to generate clinical brief. Please try again.',
+    });
+  }
+}
 
-    if (errorObj?.message?.includes('JSON') || errorObj?.message?.includes('parse') || errorObj?.message?.includes('Unexpected token')) {
-      return NextResponse.json(
-        { error: 'AI response could not be parsed. Please try generating the brief again.' },
-        { status: 502 }
-      );
-    }
-
-    if (errorObj?.status === 500 || errorObj?.status === 503 || errorObj?.message?.includes('overloaded')) {
-      return NextResponse.json(
-        { error: 'AI service is temporarily unavailable. Please try again shortly.' },
-        { status: 503 }
-      );
-    }
-
-    return NextResponse.json(
-      { error: 'Failed to generate clinical brief. Please try again.' },
-      { status: 500 }
-    );
+// Helper: the brief route reads case_id from a JSON body. By the time the
+// catch fires, we may not have it in scope (the request has been consumed).
+// Re-cloning the request once for audit purposes is cheap and safer than
+// hoisting the body.
+async function safeReadCaseId(request: NextRequest): Promise<string | null> {
+  try {
+    const clone = request.clone();
+    const body = await clone.json();
+    return typeof body?.case_id === 'string' ? body.case_id : null;
+  } catch {
+    return null;
   }
 }
