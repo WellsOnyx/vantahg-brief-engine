@@ -8,23 +8,39 @@ import Link from 'next/link';
 
 /**
  * Routes a freshly-signed-in user to the right landing page based on their
- * role. Clients land on their My Cases dashboard; everyone else falls
- * through to root. Defensive: if the role lookup fails for any reason, we
- * still send the user somewhere reasonable rather than blocking sign-in.
+ * role.
+ *
+ * Critically, this must NEVER return '/' for a signed-in user — '/' is
+ * the chromeless marketing page (see AppShell.tsx isChromeless), which
+ * means landing there hides the app nav and makes the sign-in look
+ * broken ("blank page, no nav"). Every signed-in user gets routed to
+ * an app surface with the top nav visible.
+ *
+ * If role lookup fails for any reason, fall through to /cases — that
+ * page renders with the nav and works for any internal role.
  */
 async function resolveLandingPage(supabase: SupabaseClient): Promise<string> {
   try {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return '/';
+    if (!user) return '/login';
     const { data: profile } = await supabase
       .from('user_profiles')
       .select('role')
       .eq('id', user.id)
       .maybeSingle();
-    if (profile?.role === 'client') return '/client/cases';
-    return '/';
+    const role = profile?.role ?? 'reviewer';
+    switch (role) {
+      case 'admin':         return '/mission-control';
+      case 'ceo':           return '/office-ceo';
+      case 'slt':           return '/office-ceo';
+      case 'builder':       return '/builders';
+      case 'client':        return '/client/cases';
+      case 'reviewer':      return '/cases';
+      case 'practice-lead': return '/cases';
+      default:              return '/cases';
+    }
   } catch {
-    return '/';
+    return '/cases';
   }
 }
 
