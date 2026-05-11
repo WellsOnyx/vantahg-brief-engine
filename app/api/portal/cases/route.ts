@@ -4,6 +4,7 @@ import { isDemoMode, getDemoCases } from '@/lib/demo-mode';
 import { applyRateLimit } from '@/lib/rate-limit-middleware';
 import { apiError } from '@/lib/api-error';
 import { getRequestContext } from '@/lib/security';
+import { logAuditEvent } from '@/lib/audit';
 
 export const dynamic = 'force-dynamic';
 
@@ -56,6 +57,21 @@ function maskName(name: string | null): string {
 function maskMemberId(id: string | null): string {
   if (!id || id.length < 4) return 'REDACTED';
   return `***${id.slice(-4)}`;
+}
+
+/**
+ * Classifies the portal search query into a low-cardinality bucket so we
+ * can log lookup activity without recording the raw value (which could be
+ * a patient name or member ID — both PHI). The classification is just
+ * enough to answer "how are prospects using the lookup form" — by case
+ * number, auth number, or freeform text.
+ */
+function classifySearchQuery(q: string | null): 'none' | 'case_number' | 'auth_number' | 'freeform' {
+  if (!q || q.trim().length === 0) return 'none';
+  const v = q.trim().toUpperCase();
+  if (v.startsWith('VUM-')) return 'case_number';
+  if (v.startsWith('AUTH-')) return 'auth_number';
+  return 'freeform';
 }
 
 function maskForPortal(c: RawCase) {
@@ -116,6 +132,16 @@ export async function GET(request: NextRequest) {
     }
 
     const { data, error } = await query;
+
+    // Operational visibility: log every public lookup so we can see prospect-
+    // side activity (volume + lookup type + whether it returned anything).
+    // PHI-safe: classifies the query rather than logging the raw value.
+    // Fire-and-forget; failure here must not break a public endpoint.
+    logAuditEvent(null, 'portal_lookup', 'public', {
+      query_type: classifySearchQuery(search),
+      query_length: search ? search.length : 0,
+      result_count: error ? null : (data?.length ?? 0),
+    }, getRequestContext(request)).catch(() => { /* already logged inside logAuditEvent */ });
 
     if (error) {
       return apiError(error, {

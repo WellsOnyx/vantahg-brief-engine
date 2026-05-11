@@ -5,6 +5,7 @@ import { applyRateLimit } from '@/lib/rate-limit-middleware';
 import { isDemoMode, getDemoCases } from '@/lib/demo-mode';
 import { apiError } from '@/lib/api-error';
 import { getRequestContext } from '@/lib/security';
+import { logAuditEvent } from '@/lib/audit';
 
 export const dynamic = 'force-dynamic';
 
@@ -76,6 +77,15 @@ export async function GET(request: NextRequest) {
         requestContext: getRequestContext(request),
       });
     }
+
+    // Operational visibility: log every client dashboard load so we can
+    // see when TPA users actually engage with the portal. case_id is null
+    // because this is a list view, not a single-case access. Fire-and-
+    // forget so the response doesn't fail if the audit table is briefly
+    // unavailable.
+    logAuditEvent(null, 'client_portal_list_viewed', authResult.user.email, {
+      case_count: data?.length ?? 0,
+    }, getRequestContext(request)).catch(() => { /* already logged inside logAuditEvent */ });
 
     return NextResponse.json(data ?? []);
   } catch (err) {

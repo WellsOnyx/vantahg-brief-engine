@@ -113,7 +113,27 @@ async function main() {
         : undefined,
     );
   }
-  console.log(`  ${OK_PREFIX} Supabase reachable, real Anthropic enabled`);
+
+  // Mirror the /admin/usage status banner: production-readiness means
+  // overall === 'ready', which requires supabase + anthropic + cron all
+  // green. The two checks above already gate supabase + anthropic, so a
+  // 'partial' verdict here is almost always a missing CRON_SECRET. We
+  // surface every non-ready component by name so the operator gets the
+  // same actionable info the banner gives them.
+  if (status.overall !== 'ready') {
+    const notReady = Object.entries(status.components)
+      .filter(([, c]) => c.status !== 'ready')
+      .map(([name, c]) => {
+        const missing = c.missing.length > 0 ? ` [missing: ${c.missing.join(', ')}]` : '';
+        return `    - ${name}: ${c.hint}${missing}`;
+      })
+      .join('\n');
+    fail(
+      `Status banner reports overall="${status.overall}", not "ready". The /admin/usage page would surface the same issue. Components not ready:\n${notReady}`,
+      'Set the missing env vars above and re-run. This is the same gate the operator dashboard uses.',
+    );
+  }
+  console.log(`  ${OK_PREFIX} Status banner reports ready (supabase, anthropic, cron all green)`);
 
   const supabase = getServiceClient();
 
