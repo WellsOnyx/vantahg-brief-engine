@@ -21,7 +21,7 @@ export function AppShell({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const isChromeless = pathname === '/' || pathname === '/demo' || pathname === '/site';
+  const isChromeless = pathname === '/' || pathname === '/demo' || pathname === '/site' || pathname === '/signup-tpa';
 
   if (isChromeless) {
     return <>{children}</>;
