@@ -90,6 +90,27 @@ export default function ClientCasesPage() {
         if (!cancelled) setUserEmail(user.email ?? null);
       }
 
+      // First-login redirect: if the TPA hasn't completed onboarding yet,
+      // send them to /onboarding. We skip this when ?onboarded=1 is set
+      // (the wizard appends it on completion) to avoid a redirect loop.
+      try {
+        const params = new URLSearchParams(window.location.search);
+        if (!params.has('onboarded')) {
+          const obRes = await fetch('/api/onboarding', { cache: 'no-store' });
+          if (obRes.ok) {
+            const ob = (await obRes.json()) as { status: 'not_started' | 'in_progress' | 'completed' };
+            if (ob.status !== 'completed') {
+              router.replace('/onboarding');
+              return;
+            }
+          }
+          // 401/403/404 here is fine — TPA isn't a signup-linked user
+          // (e.g. internal staff hitting this page). Fall through.
+        }
+      } catch {
+        // Onboarding probe is best-effort. Don't block the page.
+      }
+
       try {
         const res = await fetch('/api/client/my-cases');
         if (!res.ok) {
