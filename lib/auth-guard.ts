@@ -4,7 +4,16 @@ import { logSecurityEvent } from './audit';
 import { getRequestContext } from './security';
 import { isDemoMode } from './demo-mode';
 
-export type UserRole = 'admin' | 'reviewer' | 'client' | 'builder' | 'ceo' | 'practice-lead' | 'slt';
+export type UserRole =
+  | 'admin'
+  | 'reviewer'
+  | 'client'
+  | 'builder'
+  | 'ceo'
+  | 'practice-lead'
+  | 'slt'
+  | 'delivery-lead'
+  | 'concierge';
 
 /**
  * Roles considered "internal staff" — admin + organizational + exec views.
@@ -12,7 +21,7 @@ export type UserRole = 'admin' | 'reviewer' | 'client' | 'builder' | 'ceo' | 'pr
  * decisions, and the new staff-management roster.
  */
 export const INTERNAL_STAFF_ROLES: ReadonlyArray<UserRole> = [
-  'admin', 'reviewer', 'builder', 'ceo', 'practice-lead', 'slt',
+  'admin', 'reviewer', 'builder', 'ceo', 'practice-lead', 'slt', 'delivery-lead', 'concierge',
 ];
 
 export function isInternalStaff(role: UserRole | null | undefined): boolean {

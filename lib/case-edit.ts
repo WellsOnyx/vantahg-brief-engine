@@ -54,6 +54,11 @@ export const EDITABLE_FIELDS_BY_ROLE: Record<UserRole, ReadonlyArray<keyof Edita
   ceo: [],
   'practice-lead': [],
   slt: [],
+  // Delivery-side roles (added in migration 016). They see cases via RLS
+  // for routing + load views but don't edit case fields directly. If a DL
+  // needs to override they wear the admin hat.
+  'delivery-lead': [],
+  concierge: [],
 };
 
 const PRIORITY_VALUES: ReadonlySet<string> = new Set<CasePriority>([
