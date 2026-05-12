@@ -44,6 +44,20 @@ const EnvSchema = z.object({
 
   // Optional prod tools
   SENTRY_DSN: z.string().url().optional(),
+
+  // Dropbox Sign (formerly HelloSign) — e-signature for contracts.
+  // The API key still uses the legacy HELLOSIGN_ prefix in the SDK and
+  // Vercel env, so we keep the same name here.
+  HELLOSIGN_API_KEY: z.string().min(1).optional(),
+  // Client ID is required only when using embedded signing or webhook
+  // signature verification. We use the webhook flow, so it's required
+  // in real mode.
+  HELLOSIGN_CLIENT_ID: z.string().min(1).optional(),
+  // Test mode flag — explicit opt-in just like ENABLE_REAL_ANTHROPIC so
+  // production stays on test signatures until we deliberately flip it.
+  // Test signatures are free + non-binding; they're indistinguishable
+  // from real ones in the API surface, just marked test in Dropbox Sign.
+  ENABLE_REAL_HELLOSIGN: z.coerce.boolean().default(false),
 });
 
 export type Env = z.infer<typeof EnvSchema>;
@@ -94,6 +108,26 @@ export function getAnthropicKey(): string {
 export function isRealCronEnabled(): boolean {
   if (canonicalIsDemoMode()) return false;
   return !!getEnv().CRON_SECRET;
+}
+
+export function isRealHelloSignEnabled(): boolean {
+  if (canonicalIsDemoMode()) return false;
+  const env = getEnv();
+  return env.ENABLE_REAL_HELLOSIGN && !!env.HELLOSIGN_API_KEY && !!env.HELLOSIGN_CLIENT_ID;
+}
+
+export function getHelloSignConfig(): { apiKey: string; clientId: string; testMode: boolean } {
+  if (!isRealHelloSignEnabled()) {
+    throw new Error(
+      'Real HelloSign calls are disabled. Check isDemoMode(), HELLOSIGN_API_KEY, HELLOSIGN_CLIENT_ID, and ENABLE_REAL_HELLOSIGN.',
+    );
+  }
+  const env = getEnv();
+  return {
+    apiKey: env.HELLOSIGN_API_KEY!,
+    clientId: env.HELLOSIGN_CLIENT_ID!,
+    testMode: env.NODE_ENV !== 'production',
+  };
 }
 
 /**
