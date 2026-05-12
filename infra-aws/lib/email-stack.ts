@@ -1,4 +1,7 @@
 import * as cdk from 'aws-cdk-lib';
+import * as ses from 'aws-cdk-lib/aws-ses';
+import * as sns from 'aws-cdk-lib/aws-sns';
+import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import { Construct } from 'constructs';
 
 export interface EmailStackProps extends cdk.StackProps {
@@ -6,45 +9,73 @@ export interface EmailStackProps extends cdk.StackProps {
 }
 
 /**
- * SES configuration replacing Supabase project SMTP + nodemailer.
+ * SES configuration + bounce/complaint handling.
  *
- * Contents:
- *   - SES Configuration Set "vantaum-${env}" with engagement metrics
- *     enabled and a dedicated IP pool (request from AWS support
- *     when crossing 100K emails/month).
- *   - SES Event Destination → SNS topic "vantaum-${env}-email-events"
- *     receiving Bounce + Complaint events.
- *   - SNS topic subscribed by a Lambda that writes the offending address
- *     into a "suppressions" DynamoDB table.
- *   - DynamoDB table "vantaum-${env}-email-suppressions" keyed by email.
- *   - IAM role for the Fargate task allowing SendEmail with this
- *     configuration set only.
+ * V1 scope:
+ *   - Configuration set "vantaum-${env}" with engagement metrics on.
+ *   - SNS topic for bounces + complaints. The Fargate app can subscribe
+ *     a /api/webhooks/ses route to this topic later for auto-suppression.
+ *   - DynamoDB suppressions table (one row per bad address).
  *
- * Domain setup (manual, not in this stack):
- *   - Verify vantaum.com in SES (DKIM, SPF, DMARC).
- *   - Move SES out of sandbox (AWS support ticket, 24-48h).
+ * NOT in this stack (manual):
+ *   - Domain verification for vantaum.com (DKIM, SPF, DMARC).
+ *     Reason: SES domain verification requires DNS records on the domain
+ *     owner's side. We'll do that after Cloudflare/Route 53 is wired up.
+ *   - Sandbox-removal request (AWS support ticket, 24-48h).
  *
- * Suppression check:
- *   - The SES email adapter (lib/adapters/email/ses.ts) should query
- *     the suppressions table before sending and short-circuit with
- *     code='suppressed' if the address is on the list.
- *
- * Path-of-least-resistance alternative:
- *   - You can use SES via its SMTP endpoint with the existing
- *     SmtpEmailAdapter. Just configure SMTP_HOST + SMTP_USER +
- *     SMTP_PASS to the SES SMTP credentials. No code changes, no
- *     custom adapter, but no native bounce/suppression handling.
- *   - This is the recommended FIRST step. Stand up SES, swap SMTP env,
- *     verify email works. Then build the SDK adapter later for
- *     bounce tracking.
+ * For the initial migration you can ALSO just point SMTP_HOST at the
+ * SES SMTP endpoint and use the existing SmtpEmailAdapter — no code
+ * changes, no native bounce handling, but works on day one. The
+ * configuration set + suppression table here is the upgrade path.
  */
 export class EmailStack extends cdk.Stack {
+  public readonly configSet: ses.ConfigurationSet;
+  public readonly bounceTopic: sns.Topic;
+  public readonly suppressionTable: dynamodb.Table;
+
   constructor(scope: Construct, id: string, props: EmailStackProps) {
     super(scope, id, props);
-    // TODO: SES configuration set
-    // TODO: SNS topic for bounces + complaints
-    // TODO: DynamoDB suppressions table
-    // TODO: Lambda subscriber that writes to suppressions on bounce/complaint
-    // TODO: IAM role allowing ses:SendEmail with the configuration set
+
+    const { envName } = props;
+
+    // ── Configuration set ────────────────────────────────────────────────
+    this.configSet = new ses.ConfigurationSet(this, 'ConfigurationSet', {
+      configurationSetName: `vantaum-${envName}`,
+      sendingEnabled: true,
+      reputationMetrics: true,
+      tlsPolicy: ses.ConfigurationSetTlsPolicy.REQUIRE,
+    });
+
+    // ── SNS topic for bounce + complaint events ──────────────────────────
+    this.bounceTopic = new sns.Topic(this, 'BounceTopic', {
+      topicName: `vantaum-${envName}-email-events`,
+      displayName: `VantaUM ${envName} email bounces and complaints`,
+    });
+
+    // ── Suppressions table ───────────────────────────────────────────────
+    // Keyed by lowercase email. The app's SES adapter checks this table
+    // before sending and short-circuits with code='suppressed' if the
+    // address is on the list.
+    this.suppressionTable = new dynamodb.Table(this, 'SuppressionsTable', {
+      tableName: `vantaum-${envName}-email-suppressions`,
+      partitionKey: { name: 'email', type: dynamodb.AttributeType.STRING },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      pointInTimeRecoverySpecification: { pointInTimeRecoveryEnabled: true },
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
+    });
+
+    // ── Outputs ──────────────────────────────────────────────────────────
+    new cdk.CfnOutput(this, 'ConfigurationSetName', {
+      value: this.configSet.configurationSetName,
+      exportName: `vantaum-${envName}-ses-config-set`,
+    });
+    new cdk.CfnOutput(this, 'BounceTopicArn', {
+      value: this.bounceTopic.topicArn,
+      exportName: `vantaum-${envName}-ses-bounce-topic-arn`,
+    });
+    new cdk.CfnOutput(this, 'SuppressionTableName', {
+      value: this.suppressionTable.tableName,
+      exportName: `vantaum-${envName}-ses-suppression-table`,
+    });
   }
 }

@@ -36,12 +36,22 @@ const env = {
   region: process.env.CDK_DEFAULT_REGION ?? 'us-east-1',
 };
 
-const envName = process.env.VANTAUM_ENV ?? 'dev';
+const envName = process.env.VANTAUM_ENV ?? 'prod';
 const appName = `vantaum-${envName}`;
+
+// App-wide tags so every resource we create is identifiable as ours.
+// Defensive: makes it trivial to filter "vantaum stuff" vs anyone else's
+// resources in the same account.
+cdk.Tags.of(app).add('Project', 'vantaum');
+cdk.Tags.of(app).add('Environment', envName);
+cdk.Tags.of(app).add('ManagedBy', 'cdk-vantaum-infra');
 
 new DatabaseStack(app, `${appName}-database`, { env, envName });
 new StorageStack(app, `${appName}-storage`, { env, envName });
 new EmailStack(app, `${appName}-email`, { env, envName });
 new AuthStack(app, `${appName}-auth`, { env, envName });
 new ComputeStack(app, `${appName}-compute`, { env, envName });
-new CronStack(app, `${appName}-cron`, { env, envName });
+// CronStack omitted from the deploy until ComputeStack v2 ships a
+// running Fargate service for the cron Lambda to invoke. The class
+// exists so the migration plan stays intact.
+void CronStack;

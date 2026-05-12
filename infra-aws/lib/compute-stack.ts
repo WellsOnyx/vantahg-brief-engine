@@ -1,4 +1,5 @@
 import * as cdk from 'aws-cdk-lib';
+import * as ecr from 'aws-cdk-lib/aws-ecr';
 import { Construct } from 'constructs';
 
 export interface ComputeStackProps extends cdk.StackProps {
@@ -6,56 +7,65 @@ export interface ComputeStackProps extends cdk.StackProps {
 }
 
 /**
- * Fargate service hosting the Next.js app, replacing Vercel.
+ * Fargate-hosted Next.js app, replacing Vercel for the AUTHENTICATED
+ * app surfaces only. The marketing site (vantaum.com root, /site,
+ * /demo-record, /interactive-demo, blog) stays on Vercel.
  *
- * Why Fargate instead of Lambda:
- *   - Long-running, warm processes for the eFax cron worker that's
- *     poll-and-claim style. Lambda cold starts and concurrency caps
- *     are annoying for that workload.
- *   - Simpler image-based deploys (Vercel-like flow with ECR + CodeDeploy).
+ * Split:
+ *   - vantaum.com       → Vercel (marketing, no PHI, no BAA needed)
+ *   - app.vantaum.com   → AWS Fargate (authenticated app, PHI, BAA)
  *
- * Build:
- *   - Next.js produces a standalone output when `output: 'standalone'`
- *     is set in next.config (already implicit at build time for Vercel;
- *     verify before Cole's deploy).
- *   - Multi-stage Dockerfile at repo root:
- *       Stage 1: node:22-alpine + npm ci + next build (standalone)
- *       Stage 2: node:22-alpine + copy /app/.next/standalone + /public
- *   - Final image ~150MB.
+ * V1 (tonight): ECR repo only. Container image push target. No Fargate
+ * service yet — that lands tomorrow when we have:
+ *   - Dockerfile at repo root
+ *   - Image built and pushed to ECR
+ *   - DB credentials wired from Secrets Manager
+ *   - Cognito User Pool ID/Client ID wired
+ *   - All ENABLE_AWS_* flags set
+ *   - HELLOSIGN, ANTHROPIC, etc. moved into Secrets Manager
  *
- * Resources:
- *   - VPC: reuse the one DatabaseStack created.
- *   - Cluster: one shared per environment.
- *   - Service: 2+ tasks behind an ALB. CPU 1024 / Memory 2048 to start.
- *   - Auto-scaling on CPU + ALB request count.
- *   - ALB:
- *       - HTTPS listener with ACM cert for vantaum.com (validated via Route53).
- *       - HTTP redirect to HTTPS.
- *       - Health check at /api/health.
- *   - ECR repo with lifecycle keeping last 30 images.
+ * Why not the full service tonight: Fargate without a working image
+ * fails health checks immediately. Better to deploy the service when
+ * we can land the full stack in one session.
  *
- * Env vars / secrets:
- *   - DATABASE_URL from DatabaseStack secret.
- *   - SES_FROM_ADDRESS from EmailStack output.
- *   - COGNITO_USER_POOL_ID + COGNITO_CLIENT_ID from AuthStack.
- *   - All ENABLE_AWS_* flags set to "true" so adapters pick the AWS impl.
- *   - HELLOSIGN_API_KEY etc. pulled from Secrets Manager.
- *
- * DNS cutover:
- *   - Pre-cutover: ALB DNS points at the running service, smoke-tested
- *     via a temporary hostname like vantaum-aws.wellsonyx.com.
- *   - Cutover: change vantaum.com A record from Vercel to the ALB.
- *   - Rollback: change back. Vercel deploy stays running for 30 days.
+ * For full plan see docs/aws-migration.md "Phase 5 - Compute".
  */
 export class ComputeStack extends cdk.Stack {
+  public readonly appRepository: ecr.Repository;
+
   constructor(scope: Construct, id: string, props: ComputeStackProps) {
     super(scope, id, props);
-    // TODO: ECR repo
-    // TODO: VPC import or shared
-    // TODO: ALB + HTTPS listener + ACM cert
-    // TODO: Fargate cluster + task definition + service
-    // TODO: auto-scaling policy
-    // TODO: CloudWatch log group + retention
-    // TODO: Route53 record (manual cutover; create record but leave swap to the operator)
+
+    const { envName } = props;
+
+    // ── ECR repo for the Next.js app image ───────────────────────────────
+    // Lifecycle: keep the last 30 images, expire untagged after 7 days.
+    this.appRepository = new ecr.Repository(this, 'AppRepository', {
+      repositoryName: `vantaum-${envName}-app`,
+      imageScanOnPush: true,
+      imageTagMutability: ecr.TagMutability.MUTABLE,
+      lifecycleRules: [
+        {
+          description: 'Expire untagged images after 7 days',
+          tagStatus: ecr.TagStatus.UNTAGGED,
+          maxImageAge: cdk.Duration.days(7),
+        },
+        {
+          description: 'Keep last 30 images total',
+          tagStatus: ecr.TagStatus.ANY,
+          maxImageCount: 30,
+        },
+      ],
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
+    });
+
+    new cdk.CfnOutput(this, 'AppRepositoryUri', {
+      value: this.appRepository.repositoryUri,
+      exportName: `vantaum-${envName}-app-ecr-uri`,
+    });
+    new cdk.CfnOutput(this, 'AppRepositoryArn', {
+      value: this.appRepository.repositoryArn,
+      exportName: `vantaum-${envName}-app-ecr-arn`,
+    });
   }
 }

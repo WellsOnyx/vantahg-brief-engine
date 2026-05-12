@@ -8,38 +8,21 @@ export interface CronStackProps extends cdk.StackProps {
 /**
  * EventBridge schedules replacing Vercel Cron.
  *
- * Each Vercel Cron entry maps to an EventBridge rule whose target is a
- * tiny invocation Lambda that POSTs to the existing /api/cron/* route on
- * the Fargate ALB with the Authorization: Bearer ${CRON_SECRET} header.
+ * V1 (tonight): empty placeholder stack. The schedules need a working
+ * Fargate service to POST to (currently no service is deployed). When
+ * ComputeStack v2 lands tomorrow with the running Fargate service, this
+ * stack picks up:
+ *   - EventBridge rule: rate(1 minute) for /api/cron/efax-process
+ *   - Invocation Lambda with the POST-with-bearer logic + CRON_SECRET
+ *     pulled from Secrets Manager
+ *   - DLQ + CloudWatch alarms
  *
- * Why a Lambda instead of an HTTPS target:
- *   - EventBridge HTTPS targets require API destinations + connections
- *     which are clumsy for our header-auth pattern.
- *   - A 50-line Lambda gives us auth header injection, retry policy,
- *     and a CloudWatch log line per invocation for free.
- *
- * Existing cron jobs (read from vercel.json at the repo root):
- *   - /api/cron/efax-process — every minute. Most critical.
- *   - (add others as they appear in vercel.json)
- *
- * Schedules in CDK:
- *   - rate(1 minute) for the efax worker.
- *   - cron(0 9 * * ? *) UTC for daily reports if/when we add them.
- *
- * Invocation Lambda env:
- *   - CRON_TARGET_URL = ALB DNS + path
- *   - CRON_SECRET via Secrets Manager
- *
- * Failure handling:
- *   - DLQ for missed invocations (SQS).
- *   - CloudWatch alarm on schedule failures + Lambda errors.
+ * Until then this is a no-op stack — exists so the CDK app file doesn't
+ * reference a non-existent class.
  */
 export class CronStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: CronStackProps) {
     super(scope, id, props);
-    // TODO: invocation Lambda (Node 22) with the POST-with-bearer logic
-    // TODO: EventBridge rule for /api/cron/efax-process (rate 1 minute)
-    // TODO: DLQ (SQS) + CloudWatch alarm
-    // TODO: parse other cron entries from app's vercel.json at infra-build time
+    // Intentionally empty. See class comment.
   }
 }
