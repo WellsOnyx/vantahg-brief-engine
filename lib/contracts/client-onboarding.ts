@@ -1,21 +1,16 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { getAuthAdapter } from '@/lib/adapters/auth';
 
 /**
  * Composable "TPA signed → create their account → send magic link" path.
  *
- * Deliberately isolated in a single file because:
- *  1. The "create auth user + send magic link" surface is exactly what
- *     differs between Supabase Auth and AWS Cognito (the eventual target).
- *     Keeping it as one function means the migration is one swap.
- *  2. The webhook handler should stay focused on signature semantics
- *     (parse event → match contract → update status). Account
- *     provisioning is a separate concern that the webhook delegates to.
+ * Routes through the AuthAdminAdapter so swapping Supabase Auth for
+ * Cognito later is a one-line change in the adapter factory, not a
+ * rewrite of this function.
  *
- * On Supabase: uses `auth.admin.generateLink({ type: 'magiclink' })` which
- * also creates the user if they don't exist. On Cognito the equivalent is
- * `AdminCreateUser` (or `AdminInitiateAuth` for magic-link-style flows
- * using a custom challenge). Same inputs, same outputs — only the body
- * of this function changes.
+ * `SupabaseClient` is kept in the signature for backwards compatibility
+ * with existing call sites; future callers can pass null and let the
+ * adapter pick its own client from env.
  */
 
 export interface ProvisionTpaUserParams {
@@ -60,7 +55,7 @@ export interface ProvisionTpaUserResult {
  * When we move to AWS we'll send via SES inside this function explicitly.
  */
 export async function provisionTpaUserAndMagicLink(
-  supabase: SupabaseClient,
+  _supabase: SupabaseClient | null,
   params: ProvisionTpaUserParams,
   siteUrl: string,
 ): Promise<ProvisionTpaUserResult> {
@@ -71,36 +66,25 @@ export async function provisionTpaUserAndMagicLink(
   const redirectPath = params.redirectPath ?? '/client/cases';
   const redirectTo = `${siteUrl.replace(/\/$/, '')}${redirectPath.startsWith('/') ? redirectPath : `/${redirectPath}`}`;
 
-  try {
-    const { data, error } = await supabase.auth.admin.generateLink({
-      type: 'magiclink',
-      email: params.email,
-      options: {
-        redirectTo,
-        data: {
-          full_name: params.fullName ?? undefined,
-          client_id: params.clientId ?? undefined,
-          signup_id: params.signupId,
-          provisioned_by: 'contract_signed_webhook',
-        },
-      },
-    });
+  const adapter = getAuthAdapter();
+  const result = await adapter.createUserWithMagicLink({
+    email: params.email,
+    fullName: params.fullName ?? undefined,
+    metadata: {
+      client_id: params.clientId ?? undefined,
+      signup_id: params.signupId,
+      provisioned_by: 'contract_signed_webhook',
+    },
+    redirectUrl: redirectTo,
+  });
 
-    if (error) {
-      return { userId: null, magicLink: null, demo: false, error: error.message };
-    }
-
-    return {
-      userId: data?.user?.id ?? null,
-      magicLink: data?.properties?.action_link ?? null,
-      demo: false,
-    };
-  } catch (err) {
-    return {
-      userId: null,
-      magicLink: null,
-      demo: false,
-      error: err instanceof Error ? err.message : 'Unknown error generating magic link',
-    };
+  if (!result.ok) {
+    return { userId: null, magicLink: null, demo: false, error: result.message };
   }
+
+  return {
+    userId: result.userId,
+    magicLink: result.magicLink,
+    demo: false,
+  };
 }
