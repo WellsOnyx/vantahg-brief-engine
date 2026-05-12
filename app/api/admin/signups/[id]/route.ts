@@ -54,7 +54,20 @@ export async function GET(
       });
     }
 
-    return NextResponse.json(data);
+    // Latest contract for this signup — the UI uses it to render the
+    // signature status and drive the "Send for signature" action.
+    // We expose only the fields the UI needs; the raw variable_values
+    // contain TPA contact info that doesn't need to round-trip to the
+    // browser.
+    const { data: latestContract } = await supabase
+      .from('contracts')
+      .select('id, status, hellosign_signature_request_id, sent_at, signed_at, generated_at')
+      .eq('signup_id', id)
+      .order('generated_at', { ascending: false, nullsFirst: false })
+      .limit(1)
+      .maybeSingle();
+
+    return NextResponse.json({ ...data, latest_contract: latestContract ?? null });
   } catch (err) {
     return apiError(err, {
       operation: 'get_signup',

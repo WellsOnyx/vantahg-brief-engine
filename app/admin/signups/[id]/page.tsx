@@ -46,6 +46,16 @@ interface SignupRow {
   client_id: string | null;
   approved_at: string | null;
   approved_by: string | null;
+  latest_contract: LatestContract | null;
+}
+
+interface LatestContract {
+  id: string;
+  status: 'draft' | 'generated' | 'sent' | 'partially_signed' | 'signed' | 'void';
+  hellosign_signature_request_id: string | null;
+  sent_at: string | null;
+  signed_at: string | null;
+  generated_at: string | null;
 }
 
 const STATUS_LABEL: Record<Status, string> = {
@@ -472,7 +482,42 @@ function ContractPanel({ row, onUpdate }: { row: SignupRow; onUpdate: (next: Sig
   const [success, setSuccess] = useState<string | null>(null);
   const [viewing, setViewing] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [sending, setSending] = useState(false);
   const [missingVars, setMissingVars] = useState<string[] | null>(null);
+
+  async function sendForSignature() {
+    if (!row.latest_contract) {
+      setError('No generated contract to send. Generate the MSA first.');
+      return;
+    }
+    setError(null);
+    setSuccess(null);
+    setSending(true);
+    try {
+      const res = await fetch(`/api/admin/contracts/${row.latest_contract.id}/send-for-signature`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data.error ?? `Send failed (${res.status})`);
+        return;
+      }
+      // Refresh by re-fetching the signup row so latest_contract updates.
+      const refetch = await fetch(`/api/admin/signups/${row.id}`);
+      const refreshed = await refetch.json().catch(() => null);
+      if (refreshed && refreshed.id) onUpdate(refreshed as SignupRow);
+      setSuccess(
+        data.demo
+          ? 'Sent for signature (demo mode — no real email).'
+          : 'Sent for signature. TPA signer will receive the email shortly.',
+      );
+    } catch {
+      setError('Network error. Try again.');
+    } finally {
+      setSending(false);
+    }
+  }
 
   async function generateContract() {
     setError(null);
@@ -610,6 +655,8 @@ function ContractPanel({ row, onUpdate }: { row: SignupRow; onUpdate: (next: Sig
               </button>
             )}
           </div>
+
+          <SignatureStatusRow contract={row.latest_contract} onSend={sendForSignature} sending={sending} />
         </div>
       ) : (
         <div className="space-y-3">
@@ -670,6 +717,66 @@ function ContractPanel({ row, onUpdate }: { row: SignupRow; onUpdate: (next: Sig
         <div className="rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs px-3 py-2">
           {success}
         </div>
+      )}
+    </div>
+  );
+}
+
+// Renders e-signature status + a "Send for signature" button when the
+// contract is in 'generated' state. Once sent, shows the envelope id and
+// progress. The actual sending is wired by the parent ContractPanel.
+function SignatureStatusRow({
+  contract,
+  onSend,
+  sending,
+}: {
+  contract: LatestContract | null;
+  onSend: () => void;
+  sending: boolean;
+}) {
+  if (!contract) return null;
+
+  const sigStatus = contract.status;
+  const sigId = contract.hellosign_signature_request_id;
+
+  // Map contract status to a presentation pill.
+  const sigPill: Record<LatestContract['status'], { label: string; className: string }> = {
+    draft: { label: 'Draft', className: 'bg-gray-100 text-gray-700 border-gray-200' },
+    generated: { label: 'Generated · not yet sent', className: 'bg-amber-50 text-amber-800 border-amber-200' },
+    sent: { label: 'Sent for signature · awaiting TPA', className: 'bg-blue-50 text-blue-800 border-blue-200' },
+    partially_signed: { label: 'TPA signed · awaiting VantaUM counter-signature', className: 'bg-indigo-50 text-indigo-800 border-indigo-200' },
+    signed: { label: 'Fully executed', className: 'bg-emerald-50 text-emerald-800 border-emerald-200' },
+    void: { label: 'Void', className: 'bg-red-50 text-red-800 border-red-200' },
+  };
+  const pill = sigPill[sigStatus];
+
+  return (
+    <div className="border-t border-border pt-3 mt-3 space-y-2">
+      <div className="flex items-center gap-3 flex-wrap">
+        <span className="text-xs text-muted uppercase tracking-wide font-medium">Signature</span>
+        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${pill.className}`}>
+          {pill.label}
+        </span>
+        {sigId && (
+          <span className="text-[11px] text-muted font-mono">env: {sigId}</span>
+        )}
+      </div>
+
+      {sigStatus === 'generated' && (
+        <button
+          onClick={onSend}
+          disabled={sending}
+          className="bg-navy text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-navy/90 disabled:opacity-50"
+          title="Send the generated MSA to the TPA signer via Dropbox Sign. Jonathan Arias will counter-sign automatically after."
+        >
+          {sending ? 'Sending…' : 'Send for signature'}
+        </button>
+      )}
+      {contract.sent_at && (
+        <p className="text-[11px] text-muted">Sent {new Date(contract.sent_at).toLocaleString()}</p>
+      )}
+      {contract.signed_at && (
+        <p className="text-[11px] text-muted">Signed {new Date(contract.signed_at).toLocaleString()}</p>
       )}
     </div>
   );
