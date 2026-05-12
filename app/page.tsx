@@ -47,8 +47,11 @@ export default function SitePage() {
         .nav-links { display:flex;gap:36px;list-style:none; }
         .nav-links a { font-size:13px;font-weight:300;color:var(--white-muted);text-decoration:none;transition:color 0.2s; }
         .nav-links a:hover { color:var(--white); }
-        .nav-cta { border:1px solid var(--border-strong);color:var(--white);background:transparent;padding:9px 22px;border-radius:4px;font-size:13px;font-weight:400;text-decoration:none;transition:border-color 0.2s,color 0.2s; }
+        .nav-cta-group { display:flex;align-items:center;gap:10px; }
+        .nav-cta { border:1px solid var(--border-strong);color:var(--white);background:transparent;padding:9px 22px;border-radius:4px;font-size:13px;font-weight:400;text-decoration:none;transition:border-color 0.2s,color 0.2s,background 0.2s; }
         .nav-cta:hover { border-color:var(--teal);color:var(--teal); }
+        .nav-cta-primary { background:var(--teal);border-color:var(--teal);color:var(--black); }
+        .nav-cta-primary:hover { background:transparent;color:var(--teal); }
 
         /* ── Hero ── */
         .vum-hero { min-height:100vh;display:grid;grid-template-columns:1fr 1fr;align-items:center;padding:170px 56px 80px;gap:80px;position:relative;overflow:hidden; }
@@ -223,6 +226,8 @@ export default function SitePage() {
         @media (max-width:960px) {
           .vum-nav { padding:18px 24px; }
           .nav-links { display:none; }
+          .nav-cta-group { gap:6px; }
+          .nav-cta { padding:8px 14px;font-size:12px; }
           .role-hero { padding:100px 24px 60px; }
           .role-cards { grid-template-columns:1fr; }
           .role-cards>.role-card:first-child { border-radius:6px; }
@@ -269,9 +274,11 @@ export default function SitePage() {
             <li><a href="#chro">For CHROs</a></li>
             <li><a href="#philosophy">Philosophy</a></li>
             <li><a href="#demo">Live Demo</a></li>
-            <li><a href="/login">Sign in</a></li>
           </ul>
-          <a className="nav-cta" href="#contact">Request Early Access</a>
+          <div className="nav-cta-group">
+            <a className="nav-cta" href="/login">Sign In</a>
+            <a className="nav-cta nav-cta-primary" href="#contact">Request Early Access</a>
+          </div>
         </nav>
 
         {/* Role Selector Hero */}
