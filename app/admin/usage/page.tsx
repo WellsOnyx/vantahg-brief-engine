@@ -339,7 +339,9 @@ const OVERALL_LABEL: Record<string, string> = {
 function RealModeStatusBar({ status }: { status: RealModeStatus }) {
   const components = [
     { key: 'supabase', label: 'Supabase', c: status.components.supabase },
+    { key: 'migrations', label: 'Migrations', c: status.components.migrations },
     { key: 'anthropic', label: 'Anthropic', c: status.components.anthropic },
+    { key: 'hellosign', label: 'Dropbox Sign', c: status.components.hellosign },
     { key: 'cron', label: 'Cron', c: status.components.cron },
     { key: 'efax', label: 'eFax', c: status.components.efax },
     { key: 'ocr', label: 'OCR', c: status.components.ocr },

@@ -40,8 +40,35 @@ export interface RealModeStatus {
     efax: ComponentStatus;
     ocr: ComponentStatus;
     sentry: ComponentStatus;
+    hellosign: ComponentStatus;
+    migrations: ComponentStatus;
   };
   generated_at: string;
+}
+
+/**
+ * Checks the canonical Phase 1 / 2 tables exist in the database. Cheap —
+ * single information_schema query. If Supabase is unreachable we surface
+ * 'missing' with a hint to fix Supabase first.
+ */
+async function probeRequiredTables(): Promise<{ ok: boolean; missing: string[] }> {
+  // Tables introduced by migrations 010–014. If any are absent, the signup
+  // → contract → e-sign loop won't function.
+  const required = ['signup_requests', 'contracts', 'contract_templates'];
+  try {
+    const supabase = getServiceClient();
+    const missing: string[] = [];
+    for (const t of required) {
+      const { error } = await supabase.from(t).select('*', { count: 'exact', head: true }).limit(1);
+      // PGRST205/42P01-ish errors mean the table doesn't exist.
+      if (error && /relation .* does not exist|not found in the schema|PGRST205/i.test(error.message)) {
+        missing.push(t);
+      }
+    }
+    return { ok: missing.length === 0, missing };
+  } catch {
+    return { ok: false, missing: required };
+  }
 }
 
 /**
@@ -168,6 +195,61 @@ export async function getRealModeStatus(): Promise<RealModeStatus> {
         hint: 'Optional. Without Sentry, errors only appear in Vercel logs + the audit_log table.',
       };
 
+  // ── Dropbox Sign (formerly HelloSign) ────────────────────────────────
+  const hellosignMissing: string[] = [];
+  if (!env.HELLOSIGN_API_KEY) hellosignMissing.push('HELLOSIGN_API_KEY');
+  if (!env.HELLOSIGN_CLIENT_ID) hellosignMissing.push('HELLOSIGN_CLIENT_ID');
+  if (!env.ENABLE_REAL_HELLOSIGN) hellosignMissing.push('ENABLE_REAL_HELLOSIGN=true');
+
+  const hellosignStatus: ComponentStatus = demo
+    ? {
+        status: 'demo',
+        missing: hellosignMissing,
+        hint:
+          'Demo mode: contract send-for-signature returns a stub envelope id. Set ENABLE_REAL_HELLOSIGN=true and provide both API key + client ID to switch.',
+      }
+    : hellosignMissing.length === 0
+      ? {
+          status: 'ready',
+          missing: [],
+          hint:
+            'Real Dropbox Sign enabled. Confirm webhook URL is configured at https://app.hellosign.com → API → App: https://vantaum.com/api/webhooks/hellosign',
+        }
+      : {
+          status: 'missing',
+          missing: hellosignMissing,
+          hint:
+            hellosignMissing.includes('HELLOSIGN_API_KEY')
+              ? 'Provide HELLOSIGN_API_KEY from app.hellosign.com → API.'
+              : hellosignMissing.includes('HELLOSIGN_CLIENT_ID')
+                ? 'Provide HELLOSIGN_CLIENT_ID (App ID) — required for webhook HMAC verification.'
+                : 'Keys set but ENABLE_REAL_HELLOSIGN is off — flip it to true to send real signature requests.',
+        };
+
+  // ── Migrations (Phase 1 + 2 tables) ──────────────────────────────────
+  let migrationsStatus: ComponentStatus;
+  if (supabaseStatus.status !== 'ready') {
+    migrationsStatus = {
+      status: 'missing',
+      missing: [],
+      hint: 'Fix the Supabase connection first — migrations can\'t be probed without it.',
+    };
+  } else {
+    const probe = await probeRequiredTables();
+    migrationsStatus = probe.ok
+      ? {
+          status: 'ready',
+          missing: [],
+          hint: 'signup_requests, contracts, and contract_templates tables present.',
+        }
+      : {
+          status: 'missing',
+          missing: probe.missing,
+          hint:
+            'Run migrations 010–014 against Supabase (SQL editor, or `supabase db push`). The signup → contract → e-sign loop requires these tables.',
+        };
+  }
+
   // ── Overall ──────────────────────────────────────────────────────────
   let overall: RealModeStatus['overall'];
   if (demo) {
@@ -175,7 +257,8 @@ export async function getRealModeStatus(): Promise<RealModeStatus> {
   } else if (
     supabaseStatus.status === 'ready' &&
     anthropicStatus.status === 'ready' &&
-    cronStatus.status === 'ready'
+    cronStatus.status === 'ready' &&
+    migrationsStatus.status === 'ready'
   ) {
     overall = 'ready';
   } else {
@@ -192,6 +275,8 @@ export async function getRealModeStatus(): Promise<RealModeStatus> {
       efax: efaxStatus,
       ocr: ocrStatus,
       sentry: sentryStatus,
+      hellosign: hellosignStatus,
+      migrations: migrationsStatus,
     },
     generated_at: new Date().toISOString(),
   };
