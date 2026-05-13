@@ -141,6 +141,35 @@ What's still required to actually run the new code in prod:
    confirm the triage tab renders, source-fax preview loads a signed
    URL, OCR card shows raw text, promote creates a case row in RDS.
 
+**Determination letter email delivery (added later in the same session):**
+- `71e5cb0` — feat: EmailAdapter interface now supports
+  `attachments: EmailAttachment[]`. SMTP impl forwards them to
+  nodemailer.sendMail. Backwards compatible. SES stub is unchanged
+  (note in the file points future-Cole at SendRawEmailCommand for
+  binary attachments via SDK).
+- `b1ac78f` — feat: `lib/notifications/determination-delivery.ts`
+  ships `deliverDeterminationLetter(caseId, { actor, recipientOverride })`.
+  Renders the existing determination PDF via
+  `generateDeterminationPdf`, sends via the adapter with the PDF
+  attached, updates `cases.status` to `delivered`, audit-logs the
+  message id and a redacted recipient. Idempotent via the
+  `delivered` status — no migration required.
+- `48dd671` — feat: `POST /api/cases/[id]/send-determination-email`
+  endpoint (requireRole INTERNAL_STAFF_ROLES) + "Send to TPA"
+  button on the determination letter page. UI shows a "Delivered"
+  pill once the send succeeds and the action label flips to
+  "Re-send to TPA" (handler is idempotent so re-sends are safe).
+- `26fd5b9` — test: 12 Vitest cases — SMTP attachment passthrough
+  (3), `deliverDeterminationLetter` preconditions + happy path (7),
+  endpoint auth gate + demo response (3).
+
+What it takes to actually send a real letter in prod:
+1. SES domain verification per `docs/ses-verification-runbook.md`.
+2. `SMTP_HOST` / `SMTP_USER` / `SMTP_PASS` filled in the third-party
+   vault (or `ENABLE_AWS_EMAIL=true` once Cole implements
+   SesEmailAdapter via SendRawEmailCommand).
+3. v3 container rebuild + Fargate force-new-deployment.
+
 ---
 
 > ## 🆕 Resuming as a fresh Claude thread? Do this:
