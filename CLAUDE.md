@@ -70,7 +70,7 @@ docs/                   # Setup guides and handoff docs
 5. Demo mode (full platform works without any external services)
 6. CSR triage UI — `/intake` "CSR Triage" tab handles `manual_review` and `dead_letter` eFax rows. Auth-gated to INTERNAL_STAFF_ROLES, side-by-side editable-extraction + source-fax PDF preview (signed URL via `/api/intake/efax/queue/[id]/document`), raw OCR text panel, idempotent promote-to-case. Backed by `app/api/intake/efax/queue/route.ts` (GET/PATCH).
 7. Determination letter delivery — `lib/pdf-generator.ts:generateDeterminationPdf` renders the formal letter; `lib/notifications/determination-delivery.ts:deliverDeterminationLetter` emails it as a PDF attachment via the EmailAdapter (attachments support added to `lib/adapters/email/types.ts`). `POST /api/cases/[id]/send-determination-email` and a "Send to TPA" button on `/cases/[id]/determination` trigger the send. Idempotent (case status `delivered` is the marker).
-8. 100+ passing tests (211 from prior + 13 for triage queue API + 12 for determination delivery)
+8. 100+ passing tests (211 from prior + 13 for triage queue API + 12 for determination delivery + 11 for portal endpoints incl. cross-tenant invite guard)
 
 ## What's next
 1. Provider portal (external-facing status checks)

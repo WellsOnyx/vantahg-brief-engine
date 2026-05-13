@@ -170,6 +170,16 @@ What it takes to actually send a real letter in prod:
    SesEmailAdapter via SendRawEmailCommand).
 3. v3 container rebuild + Fargate force-new-deployment.
 
+**Portal integration tests (closes the gap flagged after Plan A Steps 3-7):**
+- `5862c7a` — test: 11 Vitest cases covering the three portal-facing
+  endpoints. tpa-me + provider-me each get demo-shape / unauth-401 /
+  missing-tenant-403 coverage. The big one is the
+  cross-tenant invite test: a tpa-A admin trying to invite a user
+  into a tpa-B practice returns 403 AND the
+  `security:cross_tenant_practice_invite_blocked` audit event must
+  fire. If the `practice.client_id === inviter.tpa.id` check ever
+  regresses, that test is the alarm.
+
 ---
 
 > ## 🆕 Resuming as a fresh Claude thread? Do this:
