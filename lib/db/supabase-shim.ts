@@ -1,5 +1,14 @@
 import { getPool } from './pool';
 import { getStorageAdapter, type LogicalBucket } from '@/lib/adapters/storage';
+import type {
+  DbClient,
+  QueryChain,
+  SbResult,
+  SbStorage,
+  SbStorageBucket,
+  CountOptions as DbCountOptions,
+  OrderOptions as DbOrderOptions,
+} from './types';
 
 /**
  * Drop-in replacement for the slice of @supabase/supabase-js the app uses.
@@ -59,23 +68,9 @@ interface SelectShape {
   joins: Array<{ alias: string; table: string; cols: string }>;
 }
 
-interface CountOptions {
-  count?: 'exact' | 'planned' | 'estimated';
-  head?: boolean;
-}
-
-interface OrderOptions {
-  ascending?: boolean;
-  nullsFirst?: boolean;
-}
-
-interface SbResult<T> {
-  data: T | null;
-  error: { message: string; code?: string; details?: string; hint?: string } | null;
-  count?: number | null;
-  status?: number;
-  statusText?: string;
-}
+// Re-export the canonical types under the names used throughout this file.
+type CountOptions = DbCountOptions;
+type OrderOptions = DbOrderOptions;
 
 type Operation = 'select' | 'insert' | 'update' | 'upsert' | 'delete';
 
@@ -132,7 +127,7 @@ interface Filter {
   value?: unknown;
 }
 
-class QueryBuilder<T = Record<string, unknown>> {
+class QueryBuilder<T = Record<string, unknown>> implements QueryChain<T> {
   private readonly table: string;
   private op: Operation = 'select';
   private selectShape: SelectShape = { baseCols: '*', joins: [] };
@@ -220,12 +215,12 @@ class QueryBuilder<T = Record<string, unknown>> {
   single(): this { this.singleMode = 'single'; return this; }
   maybeSingle(): this { this.singleMode = 'maybe'; return this; }
 
-  // Promise-compatible: callers `await` the builder.
+  // PromiseLike<SbResult<T>> conformance: callers `await` the builder.
   then<R1 = SbResult<T>, R2 = never>(
-    resolve: (v: SbResult<T>) => R1 | Promise<R1>,
-    reject?: (reason: unknown) => R2 | Promise<R2>,
+    onfulfilled?: ((value: SbResult<T>) => R1 | PromiseLike<R1>) | null,
+    onrejected?: ((reason: unknown) => R2 | PromiseLike<R2>) | null,
   ): Promise<R1 | R2> {
-    return this.execute().then(resolve, reject);
+    return this.execute().then(onfulfilled, onrejected);
   }
 
   private buildWhere(params: unknown[]): string {
@@ -418,8 +413,8 @@ class QueryBuilder<T = Record<string, unknown>> {
  * (lib/adapters/storage) respectively. Callers that touch
  * `supabase.auth.*` or `supabase.storage.*` need explicit migration.
  */
-export class PgShimClient {
-  from<T = Record<string, unknown>>(table: string): QueryBuilder<T> {
+export class PgShimClient implements DbClient {
+  from<T = Record<string, unknown>>(table: string): QueryChain<T> {
     return new QueryBuilder<T>(table);
   }
 
@@ -432,11 +427,7 @@ export class PgShimClient {
     );
   }
 
-  get storage() {
-    // Route storage calls through the StorageAdapter (S3 in AWS mode,
-    // Supabase Storage otherwise). The returned object exposes the
-    // .from(bucket).upload/download/createSignedUrl/remove surface the
-    // app's 4 callers use.
+  get storage(): SbStorage {
     return new StorageShim();
   }
 }
@@ -460,40 +451,20 @@ export function getPgShim(): PgShimClient {
  *   createSignedUrl -> { data: { signedUrl }, error }
  *   remove          -> { data: [], error }
  */
-class StorageShim {
-  from(bucket: string) {
+class StorageShim implements SbStorage {
+  from(bucket: string): SbStorageBucket {
     return new StorageBucketShim(bucket as LogicalBucket);
   }
 }
 
-interface UploadResponse {
-  data: { path: string } | null;
-  error: { message: string } | null;
-}
-
-interface DownloadResponse {
-  data: Blob | null;
-  error: { message: string } | null;
-}
-
-interface SignedUrlResponse {
-  data: { signedUrl: string } | null;
-  error: { message: string } | null;
-}
-
-interface RemoveResponse {
-  data: unknown[] | null;
-  error: { message: string } | null;
-}
-
-class StorageBucketShim {
+class StorageBucketShim implements SbStorageBucket {
   constructor(private readonly bucket: LogicalBucket) {}
 
   async upload(
     path: string,
     body: Buffer | Blob | ArrayBuffer | Uint8Array,
     opts?: { contentType?: string; upsert?: boolean },
-  ): Promise<UploadResponse> {
+  ): ReturnType<SbStorageBucket['upload']> {
     const adapter = getStorageAdapter();
     let bytes: Buffer;
     if (Buffer.isBuffer(body)) bytes = body;
@@ -512,7 +483,7 @@ class StorageBucketShim {
     return { data: { path: r.path }, error: null };
   }
 
-  async download(path: string): Promise<DownloadResponse> {
+  async download(path: string): ReturnType<SbStorageBucket['download']> {
     const adapter = getStorageAdapter();
     const r = await adapter.download(this.bucket, path);
     if (!r.ok) return { data: null, error: { message: r.message } };
@@ -521,14 +492,14 @@ class StorageBucketShim {
     return { data: blob, error: null };
   }
 
-  async createSignedUrl(path: string, ttlSeconds: number): Promise<SignedUrlResponse> {
+  async createSignedUrl(path: string, ttlSeconds: number): ReturnType<SbStorageBucket['createSignedUrl']> {
     const adapter = getStorageAdapter();
     const r = await adapter.signedUrl(this.bucket, path, ttlSeconds);
     if (!r.ok) return { data: null, error: { message: r.message } };
     return { data: { signedUrl: r.url }, error: null };
   }
 
-  async remove(paths: string[]): Promise<RemoveResponse> {
+  async remove(paths: string[]): ReturnType<SbStorageBucket['remove']> {
     const adapter = getStorageAdapter();
     const errors: string[] = [];
     for (const p of paths) {
