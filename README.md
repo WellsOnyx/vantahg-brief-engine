@@ -4,8 +4,10 @@
 
 [![Next.js 16](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript)](https://www.typescriptlang.org/)
-[![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-3ECF8E?logo=supabase)](https://supabase.com/)
+[![AWS](https://img.shields.io/badge/AWS-Fargate-FF9900?logo=amazon-aws)](https://aws.amazon.com/fargate/)
 [![License: Proprietary](https://img.shields.io/badge/License-Proprietary-red)](#license)
+
+> **Engineers / future Claude sessions:** read [`STATE.md`](STATE.md) **first**. It's the single source of truth for the current build state, AWS resources, the path to first customer, and every identifier you need. This README is for prospects.
 
 ---
 
