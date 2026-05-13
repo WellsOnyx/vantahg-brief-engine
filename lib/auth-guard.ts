@@ -39,13 +39,26 @@ export interface AuthUser {
  * Checks authentication on an API route request.
  * Returns the authenticated user or a 401 response.
  *
- * In demo mode, returns a mock admin user so the app remains functional.
+ * Demo mode (no Supabase config) auto-admins ONLY in non-production
+ * environments. In production, demo mode + a request to an authenticated
+ * route is a 401 — never a free admin session. This closes the bypass
+ * where a misconfigured prod (Supabase keys empty in the AWS secrets
+ * vault) silently handed admin access to anyone on the internet.
  */
 export async function requireAuth(
   request: Request
 ): Promise<{ user: AuthUser } | NextResponse> {
-  // Demo mode bypass — return mock admin
   if (isDemoMode()) {
+    if (process.env.NODE_ENV === 'production') {
+      const ctx = getRequestContext(request);
+      await logSecurityEvent(
+        'auth_failure',
+        'anonymous',
+        { reason: 'demo_mode_in_production' },
+        ctx,
+      );
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     return {
       user: { id: 'demo-user', email: 'demo@vantaum.com', role: 'admin' },
     };

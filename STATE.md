@@ -3,6 +3,52 @@
 **This is the single source of truth for "where the build is right now."**
 Future Claude/Cole/Jonah sessions: read this first.
 
+---
+
+## 📱 MOBILE HANDOFF — 2026-05-13 (4:09 PM ET)
+
+Jonah is heading out. Fresh thread on the phone Claude app should pick up here.
+
+**What just shipped in this push:**
+
+1. **Demo-mode admin auth bypass closed.** [lib/auth-guard.ts](lib/auth-guard.ts) used to auto-mint a mock admin user whenever `isDemoMode()` was true. Production was in demo mode (empty Supabase secrets), so anyone hitting `/admin/*` got admin access. Fix: `if (isDemoMode() && NODE_ENV === 'production') return 401`. Local dev / test still get the mock admin. Three new tests in `__tests__/lib/auth-guard.test.ts` lock this in. **215/215 tests passing.**
+
+2. **RDS migrations 019 + 020 applied.** RDS was stuck at migration 018 — `practices`, `practice_users`, all `meow_*` columns didn't exist. Both applied cleanly via bastion. RDS-specific variants live at `infra-aws/rds-migrations/019_practices.sql` (auth.users FKs stripped, RLS simplified to get_user_role-only) and `infra-aws/rds-migrations/020_meow_billing.sql` (identical to Supabase version).
+
+**What's still broken on prod (NOT fixed in this push, intentionally deferred):**
+
+- **Fargate container is stale.** Running image `vantaum-prod-app:v2`, pushed 2026-05-12 22:32 EDT — predates portals, Meow integration, auto-assign hook, and migrations 019/020. `/portal/tpa` and `/portal/provider` both 404 in prod. The code is on main; the image doesn't have it.
+- **App is in demo mode on prod.** `/api/health` returns `database: "demo_mode"`. Three reasons stacked:
+  - Supabase keys are empty strings in `vantaum-prod-third-party-keys`
+  - `ENABLE_AWS_DB` is not set in `infra-aws/lib/compute-stack.ts` (it's not even wired)
+  - So `getServiceClient()` → empty URL → `hasSupabaseConfig()=false` → demo mode
+- **SES has zero verified identities.** Magic-link / signature emails would fail to send even if everything else worked.
+- **HelloSign keys empty** in the secrets vault. `send-for-signature` returns stub envelopes.
+- **Meow runtime bootstrap paused** waiting on Jonah to provision the dedicated "VantaUM" Meow account. See the ACTIVE TASKS section at the bottom.
+
+**Honest production readiness: ~20%.** Migrations + auth bypass closed move the needle from 15% but the running container is still the old one and the DB env vars aren't wired. To get to "real customer can complete signup → portal" you still need:
+
+1. Build new container image from current main, push to ECR, force ECS redeploy (~30–45 min)
+2. Either fill Supabase keys OR add `ENABLE_AWS_DB=true` + RDS URL to compute-stack (~15 min)
+3. Verify SES domain (`vantaum.com`) for email (async, ~10 min config + 24–48h AWS ticket for prod access)
+4. Fill HelloSign keys when ready to send real e-sign requests
+5. Resume Meow bootstrap once Jonah's new Meow account exists
+
+**Branch state:** This commit is on `claude/upbeat-wu-eef6c1`. Will be pushed to `origin` after this edit. Jonah will merge to main via PR or fast-forward later.
+
+**What NOT to do on the phone:**
+- Don't kick off a `docker build` / ECR push from a phone session — too long, too easy to corrupt
+- Don't apply any more RDS migrations until you've confirmed on a desktop session that 019/020 are reflected
+- Don't try to fix SES or HelloSign without Jonah on the line (verification emails, key rotation)
+
+**Safe phone-thread tasks if Jonah asks:**
+- Review the audit findings, propose ordering for the remaining gaps
+- Read STATE.md sections + answer questions about the architecture
+- Plan the next container build (write the Dockerfile diff, etc. — just don't execute it)
+- Update memory files or STATE.md notes
+
+---
+
 > ## 🆕 Resuming as a fresh Claude thread? Do this:
 >
 > ```bash
