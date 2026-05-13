@@ -180,6 +180,28 @@ What it takes to actually send a real letter in prod:
   fire. If the `practice.client_id === inviter.tpa.id` check ever
   regresses, that test is the alarm.
 
+**Auto-book weekly kickoff calendar invite (backlog item from spec):**
+- `107c7ca` — feat: `lib/calendar/ical-generator.ts` minimal RFC 5545
+  builder. METHOD:REQUEST so Outlook / Gmail render Accept / Decline,
+  weekly RRULE, UTC times, TEXT-field escaping, 75-octet line folding,
+  CRLF compliance. No new dep. Plus `nextWeekdayOccurrenceUtc` helper
+  for "next future instance" math. 12 Vitest cases.
+- `90c8ac6` — feat: `lib/notifications/kickoff-invite.ts:sendKickoffInvite`
+  emails the .ics as a text/calendar attachment via the email adapter
+  on onboarding completion. Hooked into POST /api/onboarding via
+  fire-and-forget after `body.complete` flips status to 'completed'
+  (a failed invite must not block the onboarding response). Idempotent
+  via `onboarding_data.kickoff.invite_sent_at` — JSONB column, no
+  migration required. 7 Vitest cases covering demo, signup_not_found,
+  no_kickoff / no_recipient skips, already_sent idempotency, happy
+  path with attachment validation, and send_failed.
+
+What it takes to deliver real kickoff invites in prod:
+1. SES domain verification per `docs/ses-verification-runbook.md`.
+2. SMTP env vars filled in the third-party vault (same as
+   determination delivery — same email adapter).
+3. v3 container rebuild + Fargate force-new-deployment.
+
 ---
 
 > ## 🆕 Resuming as a fresh Claude thread? Do this:

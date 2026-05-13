@@ -70,13 +70,15 @@ docs/                   # Setup guides and handoff docs
 5. Demo mode (full platform works without any external services)
 6. CSR triage UI — `/intake` "CSR Triage" tab handles `manual_review` and `dead_letter` eFax rows. Auth-gated to INTERNAL_STAFF_ROLES, side-by-side editable-extraction + source-fax PDF preview (signed URL via `/api/intake/efax/queue/[id]/document`), raw OCR text panel, idempotent promote-to-case. Backed by `app/api/intake/efax/queue/route.ts` (GET/PATCH).
 7. Determination letter delivery — `lib/pdf-generator.ts:generateDeterminationPdf` renders the formal letter; `lib/notifications/determination-delivery.ts:deliverDeterminationLetter` emails it as a PDF attachment via the EmailAdapter (attachments support added to `lib/adapters/email/types.ts`). `POST /api/cases/[id]/send-determination-email` and a "Send to TPA" button on `/cases/[id]/determination` trigger the send. Idempotent (case status `delivered` is the marker).
-8. 100+ passing tests (211 from prior + 13 for triage queue API + 12 for determination delivery + 11 for portal endpoints incl. cross-tenant invite guard)
+8. Onboarding kickoff calendar invite — `lib/calendar/ical-generator.ts` builds an RFC 5545 .ics file with a weekly RRULE; `lib/notifications/kickoff-invite.ts:sendKickoffInvite` emails it as a `text/calendar; method=REQUEST` attachment on onboarding completion. Hooked into `POST /api/onboarding` fire-and-forget after `body.complete` flips status to `completed`. Idempotent via `onboarding_data.kickoff.invite_sent_at` (JSONB — no migration needed).
+9. 100+ passing tests (211 from prior + 13 for triage queue API + 12 for determination delivery + 11 for portal endpoints incl. cross-tenant invite guard + 19 for iCal generator and kickoff invite)
 
 ## What's next
 1. Provider portal (external-facing status checks)
-2. Receipt-confirmation email wiring (the intake-confirmation notification helper exists but isn't dispatched from the eFax pipeline yet)
+2. Receipt-confirmation email wiring (the intake-confirmation notification helper exists but isn't dispatched from the eFax pipeline yet — blocked on schema for `requesting_provider_email`)
 3. Quality audit dashboard
 4. Pod-based reviewer assignment optimization
+5. Real PDF upload on case submission (currently text description only)
 
 ## Environment variables
 See `.env.local.example`. For the eFax pipeline, also need:
