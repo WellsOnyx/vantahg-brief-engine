@@ -1,3 +1,11 @@
+import {
+  S3Client,
+  PutObjectCommand,
+  GetObjectCommand,
+  DeleteObjectCommand,
+  HeadObjectCommand,
+} from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import type {
   StorageAdapter,
   LogicalBucket,
@@ -13,67 +21,173 @@ import type {
 /**
  * AWS S3 implementation of the StorageAdapter.
  *
- * STATUS: stubbed for Cole.
+ * Maps each LogicalBucket to a real S3 bucket using a per-environment
+ * prefix:
+ *   - 'signup-contracts'  -> vantaum-prod-signup-contracts
+ *   - 'efax-documents'    -> vantaum-prod-efax-documents
+ *   - 'public-assets'     -> vantaum-prod-public-assets
  *
- * Every method below throws with a clear "not yet implemented" message.
- * The shape is correct — fill in the SDK calls and this file is the only
- * thing that needs to change. Callers and tests don't move.
+ * The buckets are provisioned by StorageStack (KMS-encrypted, versioned,
+ * block-public, TLS-only). The Fargate task role has GetObject /
+ * PutObject / DeleteObject scoped to these bucket ARNs, plus
+ * kms:Decrypt / kms:Encrypt on the storage key.
  *
- * To finish this:
- *   1. `npm install @aws-sdk/client-s3 @aws-sdk/s3-request-presigner`
- *   2. Read AWS_S3_REGION + AWS_S3_BUCKET_PREFIX from process.env.
- *      The prefix lets us map logical buckets to real bucket names —
- *      e.g. prefix "vantaum-prod-" + logical "signup-contracts" =
- *      real bucket "vantaum-prod-signup-contracts".
- *   3. In `infra-aws/` CDK stack, define one bucket per logical name,
- *      all with server-side encryption (SSE-KMS) + versioning enabled
- *      + block-public-access on.
- *   4. Credential strategy: in production we use the IAM role attached
- *      to the runtime (ECS task role / Lambda execution role). In dev,
- *      fall back to AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY.
+ * Credentials come from the IAM role attached to the runtime (Fargate
+ * task role in production, AWS_ACCESS_KEY_ID locally for dev).
  *
- * Error-code mapping notes (when you implement):
- *   - S3 `NoSuchKey` → download `not_found`
- *   - S3 `EntityTooLarge` → upload `too_large`
- *   - S3 `AccessDenied` → either `forbidden`
- *   - HTTP 5xx + retryable SDK error → `transient`
- *   - For upload duplicate detection: S3 has no native "fail if exists"
- *     — use If-None-Match: * on the PutObject. The SDK exposes this
- *     via the `IfNoneMatch` request parameter.
+ * Error-code mapping:
+ *   - NoSuchKey                  -> download not_found
+ *   - PreconditionFailed         -> upload duplicate (when If-None-Match=* used)
+ *   - EntityTooLarge             -> upload too_large
+ *   - AccessDenied / Forbidden   -> forbidden
+ *   - 5xx / RequestTimeout       -> transient
+ *   - default                    -> unknown
  */
 
-const NOT_IMPLEMENTED = (op: string) =>
-  new Error(
-    `S3StorageAdapter.${op} is not implemented yet. See lib/adapters/storage/s3.ts for the migration checklist. The Supabase adapter is the source of truth until ENABLE_AWS_STORAGE=true is set.`,
-  );
+const ENV_PREFIX = process.env.AWS_S3_BUCKET_PREFIX || 'vantaum-prod-';
+
+function realBucketName(logical: LogicalBucket): string {
+  return `${ENV_PREFIX}${logical}`;
+}
+
+function classifyError(err: unknown): { code: string; message: string } {
+  if (!err || typeof err !== 'object') {
+    return { code: 'unknown', message: String(err) };
+  }
+  const e = err as { name?: string; Code?: string; $metadata?: { httpStatusCode?: number }; message?: string };
+  const name = e.name ?? e.Code ?? '';
+  const status = e.$metadata?.httpStatusCode;
+  const msg = e.message ?? name ?? 'S3 error';
+  if (name === 'NoSuchKey' || name === 'NotFound' || status === 404) {
+    return { code: 'not_found', message: msg };
+  }
+  if (name === 'PreconditionFailed' || status === 412) {
+    return { code: 'duplicate', message: msg };
+  }
+  if (name === 'EntityTooLarge' || status === 413) {
+    return { code: 'too_large', message: msg };
+  }
+  if (name === 'AccessDenied' || status === 403) {
+    return { code: 'forbidden', message: msg };
+  }
+  if (typeof status === 'number' && status >= 500) {
+    return { code: 'transient', message: msg };
+  }
+  return { code: 'unknown', message: msg };
+}
+
+let _client: S3Client | null = null;
+function client(): S3Client {
+  if (!_client) {
+    _client = new S3Client({
+      region: process.env.AWS_REGION || 'us-east-1',
+    });
+  }
+  return _client;
+}
 
 export class S3StorageAdapter implements StorageAdapter {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async upload(
-    _bucket: LogicalBucket,
-    _path: string,
-    _bytes: Buffer,
-    _options: { contentType: string; upsert?: boolean },
+    bucket: LogicalBucket,
+    path: string,
+    bytes: Buffer,
+    options: { contentType: string; upsert?: boolean },
   ): Promise<UploadResult | UploadError> {
-    throw NOT_IMPLEMENTED('upload');
+    try {
+      const cmd = new PutObjectCommand({
+        Bucket: realBucketName(bucket),
+        Key: path,
+        Body: bytes,
+        ContentType: options.contentType,
+        // S3 doesn't have a native "fail-if-exists" for PutObject
+        // except via If-None-Match (Conditional Writes - beta). Treating
+        // this as best-effort: if the caller said upsert=false, we
+        // HEAD first to see if it exists.
+        ...(options.upsert === false ? {} : {}),
+      });
+      if (options.upsert === false) {
+        try {
+          await client().send(new HeadObjectCommand({
+            Bucket: realBucketName(bucket),
+            Key: path,
+          }));
+          return { ok: false, code: 'duplicate', message: 'Object already exists at this path' };
+        } catch (headErr) {
+          const c = classifyError(headErr);
+          if (c.code !== 'not_found') {
+            return { ok: false, code: c.code as UploadError['code'], message: c.message };
+          }
+          // not found -> fall through to put
+        }
+      }
+      await client().send(cmd);
+      return { ok: true, path, bytes: bytes.byteLength };
+    } catch (err) {
+      const c = classifyError(err);
+      return { ok: false, code: (c.code === 'not_found' ? 'unknown' : c.code) as UploadError['code'], message: c.message };
+    }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async download(_bucket: LogicalBucket, _path: string): Promise<DownloadResult | DownloadError> {
-    throw NOT_IMPLEMENTED('download');
+  async download(bucket: LogicalBucket, path: string): Promise<DownloadResult | DownloadError> {
+    try {
+      const r = await client().send(new GetObjectCommand({
+        Bucket: realBucketName(bucket),
+        Key: path,
+      }));
+      if (!r.Body) {
+        return { ok: false, code: 'not_found', message: 'Empty body' };
+      }
+      // Convert the AWS-SDK stream to a Buffer.
+      const stream = r.Body as { transformToByteArray?: () => Promise<Uint8Array> };
+      if (typeof stream.transformToByteArray !== 'function') {
+        return { ok: false, code: 'unknown', message: 'Unexpected S3 response shape' };
+      }
+      const bytes = Buffer.from(await stream.transformToByteArray());
+      return {
+        ok: true,
+        bytes,
+        contentType: r.ContentType ?? 'application/octet-stream',
+      };
+    } catch (err) {
+      const c = classifyError(err);
+      return { ok: false, code: c.code as DownloadError['code'], message: c.message };
+    }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async signedUrl(
-    _bucket: LogicalBucket,
-    _path: string,
-    _ttlSeconds: number,
+    bucket: LogicalBucket,
+    path: string,
+    ttlSeconds: number,
   ): Promise<SignedUrlResult | SignedUrlError> {
-    throw NOT_IMPLEMENTED('signedUrl');
+    try {
+      const url = await getSignedUrl(
+        client(),
+        new GetObjectCommand({ Bucket: realBucketName(bucket), Key: path }),
+        { expiresIn: ttlSeconds },
+      );
+      return {
+        ok: true,
+        url,
+        expiresAt: new Date(Date.now() + ttlSeconds * 1000),
+      };
+    } catch (err) {
+      const c = classifyError(err);
+      return { ok: false, code: c.code as SignedUrlError['code'], message: c.message };
+    }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async remove(_bucket: LogicalBucket, _path: string): Promise<RemoveResult> {
-    throw NOT_IMPLEMENTED('remove');
+  async remove(bucket: LogicalBucket, path: string): Promise<RemoveResult> {
+    try {
+      await client().send(new DeleteObjectCommand({
+        Bucket: realBucketName(bucket),
+        Key: path,
+      }));
+      return { ok: true };
+    } catch (err) {
+      const c = classifyError(err);
+      // not_found is treated as success
+      if (c.code === 'not_found') return { ok: true };
+      return { ok: false, message: c.message };
+    }
   }
 }

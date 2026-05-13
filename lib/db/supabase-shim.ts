@@ -1,4 +1,5 @@
 import { getPool } from './pool';
+import { getStorageAdapter, type LogicalBucket } from '@/lib/adapters/storage';
 
 /**
  * Drop-in replacement for the slice of @supabase/supabase-js the app uses.
@@ -431,10 +432,12 @@ export class PgShimClient {
     );
   }
 
-  get storage(): never {
-    throw new Error(
-      'pg-shim does not implement .storage.* - migrate caller to StorageAdapter (lib/adapters/storage)',
-    );
+  get storage() {
+    // Route storage calls through the StorageAdapter (S3 in AWS mode,
+    // Supabase Storage otherwise). The returned object exposes the
+    // .from(bucket).upload/download/createSignedUrl/remove surface the
+    // app's 4 callers use.
+    return new StorageShim();
   }
 }
 
@@ -443,6 +446,98 @@ let _shim: PgShimClient | null = null;
 export function getPgShim(): PgShimClient {
   if (!_shim) _shim = new PgShimClient();
   return _shim;
+}
+
+/**
+ * Storage shim that routes Supabase Storage-shaped calls
+ * (.from(bucket).upload(), .download(), .createSignedUrl(), .remove())
+ * through the StorageAdapter so the underlying impl can be S3 (when
+ * ENABLE_AWS_STORAGE=true) or Supabase Storage otherwise.
+ *
+ * Returns shapes that match supabase-js for drop-in compatibility:
+ *   upload          -> { data: { path }, error }
+ *   download        -> { data: Blob, error }
+ *   createSignedUrl -> { data: { signedUrl }, error }
+ *   remove          -> { data: [], error }
+ */
+class StorageShim {
+  from(bucket: string) {
+    return new StorageBucketShim(bucket as LogicalBucket);
+  }
+}
+
+interface UploadResponse {
+  data: { path: string } | null;
+  error: { message: string } | null;
+}
+
+interface DownloadResponse {
+  data: Blob | null;
+  error: { message: string } | null;
+}
+
+interface SignedUrlResponse {
+  data: { signedUrl: string } | null;
+  error: { message: string } | null;
+}
+
+interface RemoveResponse {
+  data: unknown[] | null;
+  error: { message: string } | null;
+}
+
+class StorageBucketShim {
+  constructor(private readonly bucket: LogicalBucket) {}
+
+  async upload(
+    path: string,
+    body: Buffer | Blob | ArrayBuffer | Uint8Array,
+    opts?: { contentType?: string; upsert?: boolean },
+  ): Promise<UploadResponse> {
+    const adapter = getStorageAdapter();
+    let bytes: Buffer;
+    if (Buffer.isBuffer(body)) bytes = body;
+    else if (body instanceof Uint8Array) bytes = Buffer.from(body);
+    else if (body instanceof ArrayBuffer) bytes = Buffer.from(body);
+    else if (typeof Blob !== 'undefined' && body instanceof Blob) {
+      bytes = Buffer.from(await body.arrayBuffer());
+    } else {
+      return { data: null, error: { message: 'Unsupported upload body type' } };
+    }
+    const r = await adapter.upload(this.bucket, path, bytes, {
+      contentType: opts?.contentType ?? 'application/octet-stream',
+      upsert: opts?.upsert,
+    });
+    if (!r.ok) return { data: null, error: { message: r.message } };
+    return { data: { path: r.path }, error: null };
+  }
+
+  async download(path: string): Promise<DownloadResponse> {
+    const adapter = getStorageAdapter();
+    const r = await adapter.download(this.bucket, path);
+    if (!r.ok) return { data: null, error: { message: r.message } };
+    // Return a Blob to match supabase-js. Node 22 has global Blob.
+    const blob = new Blob([new Uint8Array(r.bytes)], { type: r.contentType });
+    return { data: blob, error: null };
+  }
+
+  async createSignedUrl(path: string, ttlSeconds: number): Promise<SignedUrlResponse> {
+    const adapter = getStorageAdapter();
+    const r = await adapter.signedUrl(this.bucket, path, ttlSeconds);
+    if (!r.ok) return { data: null, error: { message: r.message } };
+    return { data: { signedUrl: r.url }, error: null };
+  }
+
+  async remove(paths: string[]): Promise<RemoveResponse> {
+    const adapter = getStorageAdapter();
+    const errors: string[] = [];
+    for (const p of paths) {
+      const r = await adapter.remove(this.bucket, p);
+      if (!r.ok && r.message) errors.push(r.message);
+    }
+    if (errors.length) return { data: null, error: { message: errors.join('; ') } };
+    return { data: [], error: null };
+  }
 }
 
 // Type compatibility - the rest of the codebase imports SupabaseClient

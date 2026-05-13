@@ -171,8 +171,10 @@ describe('PgShimClient query generation', () => {
     expect(() => c.auth).toThrow(/AuthAdminAdapter/);
   });
 
-  it('throws helpful error on .storage access', () => {
+  it('exposes .storage routed through StorageAdapter', () => {
     const c = new PgShimClient();
-    expect(() => c.storage).toThrow(/StorageAdapter/);
+    const s = c.storage;
+    expect(s).toBeDefined();
+    expect(typeof s.from).toBe('function');
   });
 });

@@ -39,14 +39,12 @@ describe('storage adapter factory', () => {
     expect(mod.getStorageAdapter()).toBeInstanceOf(S3StorageAdapter);
   });
 
-  it('S3 stub throws on every operation', async () => {
+  it('S3 adapter instantiates without throwing', async () => {
     const { S3StorageAdapter } = await import('@/lib/adapters/storage/s3');
-    const s3 = new S3StorageAdapter();
-    await expect(s3.upload('signup-contracts', 'p', Buffer.from('x'), { contentType: 'x' }))
-      .rejects.toThrow(/not implemented/);
-    await expect(s3.download('signup-contracts', 'p')).rejects.toThrow(/not implemented/);
-    await expect(s3.signedUrl('signup-contracts', 'p', 60)).rejects.toThrow(/not implemented/);
-    await expect(s3.remove('signup-contracts', 'p')).rejects.toThrow(/not implemented/);
+    expect(() => new S3StorageAdapter()).not.toThrow();
+    // Real S3 calls obviously won't work in tests without credentials -
+    // we don't exercise them here. The validate-rds-shim.mjs pattern
+    // proves the SDK calls work on the bastion.
   });
 });
 
