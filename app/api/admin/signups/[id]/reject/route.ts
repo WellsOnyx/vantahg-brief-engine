@@ -46,7 +46,7 @@ export async function POST(
         success: true,
         demo: true,
         message: 'Reject recorded (demo mode — no row updated).',
-      });
+      }, { headers: { 'X-Demo-Mode': 'true' } });
     }
 
     const raw = await request.json().catch(() => ({}));

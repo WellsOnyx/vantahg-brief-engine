@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
     if (rateLimited) return rateLimited;
 
     if (isDemoMode()) {
-      return NextResponse.json({ invoices: DEMO_INVOICES });
+      return NextResponse.json({ invoices: DEMO_INVOICES }, { headers: { 'X-Demo-Mode': 'true' } });
     }
 
     const supabase = getServiceClient();
@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
         demo: true,
         invoice_id: 'demo-inv-new',
         invoice_number: 'VUM-INV-DEMO-00003',
-      });
+      }, { headers: { 'X-Demo-Mode': 'true' } });
     }
 
     let periodStart: Date;
