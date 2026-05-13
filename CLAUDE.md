@@ -1,20 +1,26 @@
 # VantaUM — AI-Powered Utilization Review Platform
 
+> **‼️ Before doing anything else, read [`STATE.md`](STATE.md).** It's the live status of the build — what's shipped, what's in flight, what's locked. This file is the high-level project description. STATE.md is the truth.
+
 ## What this is
 VantaUM automates the middle of healthcare prior authorization: human concierge intake (Chewy-style CSRs) + human clinician determinations, with AI handling OCR, data extraction, clinical brief generation, deduplication, routing, and SLA tracking.
 
 Scale target: 333k supported lives (~41,625 monthly auths, ~1,400/day).
 
-## Tech stack
+## Tech stack (current as of 2026-05-13)
 - **Framework:** Next.js 16 App Router, TypeScript 5, Tailwind CSS 4
-- **Database:** Supabase (Postgres + RLS + Storage + Realtime)
-- **AI:** Anthropic Claude API (claude-opus-4-6) with tool-use for structured extraction
-- **OCR:** Google Cloud Vision (DOCUMENT_TEXT_DETECTION, REST API — no SDK)
-- **eFax:** Phaxio/Sinch with HMAC-SHA256 webhook signatures
-- **Cron:** Vercel Cron (every minute for eFax processing)
-- **Testing:** Vitest + Testing Library
-- **Monitoring:** Sentry
-- **Deploy:** Vercel
+- **Authenticated app:** AWS Fargate at `https://app.vantaum.com` (live)
+- **Marketing site:** Vercel at `https://vantaum.com` (stays on Vercel forever)
+- **Database:** Hybrid — Supabase Postgres + RDS Postgres both deployed. App routes through `lib/db/supabase-shim.ts` so swapping is one env flag.
+- **Storage:** Adapter pattern at `lib/adapters/storage` — Supabase or S3 via `ENABLE_AWS_STORAGE`
+- **Auth:** Supabase Auth (V1). Cognito + magic-link Lambdas deployed but not cutover.
+- **AI:** Anthropic Claude API
+- **OCR:** Google Cloud Vision (REST, no SDK)
+- **eFax:** Phaxio/Sinch (HMAC-SHA256 webhooks)
+- **Billing:** Meow — locked decision, NOT Stripe. Code shipped; runtime config in flight (see STATE.md)
+- **Cron:** Vercel Cron + AWS EventBridge (both running)
+- **Testing:** Vitest, 211/211 passing
+- **Monitoring:** Sentry (slot wired, not yet sending)
 
 ## Key commands
 ```bash
