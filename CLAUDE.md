@@ -68,15 +68,15 @@ docs/                   # Setup guides and handoff docs
 3. Case management + determination workflow
 4. Dashboard + command center
 5. Demo mode (full platform works without any external services)
-6. 100 passing tests
+6. CSR triage UI — `/intake` "CSR Triage" tab handles `manual_review` and `dead_letter` eFax rows. Auth-gated to INTERNAL_STAFF_ROLES, side-by-side editable-extraction + source-fax PDF preview (signed URL via `/api/intake/efax/queue/[id]/document`), raw OCR text panel, idempotent promote-to-case. Backed by `app/api/intake/efax/queue/route.ts` (GET/PATCH).
+7. 100+ passing tests (211 from prior + 13 added for the triage queue API)
 
 ## What's next
-1. CSR triage UI — screen for `manual_review` / `dead_letter` eFax rows
-2. Email notification delivery (receipt confirmations, determination letters)
-3. Determination letter PDF rendering
-4. Provider portal (external-facing status checks)
-5. Quality audit dashboard
-6. Pod-based reviewer assignment optimization
+1. Email notification delivery (receipt confirmations, determination letters)
+2. Determination letter PDF rendering
+3. Provider portal (external-facing status checks)
+4. Quality audit dashboard
+5. Pod-based reviewer assignment optimization
 
 ## Environment variables
 See `.env.local.example`. For the eFax pipeline, also need:

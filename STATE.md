@@ -77,6 +77,72 @@ the build stands.
 
 ---
 
+## 🛠️ Phone-session feature work 2026-05-13 (evening)
+
+Same branch (`claude/review-mobile-handoff-state-VNw1N`, draft PR #25)
+now also carries pure-code feature commits beyond the docs. None of
+these are live in prod yet — they ship with the v3 container rebuild
+described in `docs/container-rebuild-2026-05-13.md`. All commits
+pushed to origin.
+
+**Infra wiring (compute-stack.ts, will activate on `cdk deploy
+vantaum-prod-compute`):**
+- `5614aff` — `ENABLE_AWS_DB=true` env var added so the Fargate task
+  routes DB calls through the pg shim (`lib/db/supabase-shim.ts`)
+  against RDS. Auth still hybrid-Supabase per V1 plan.
+- `2376e38` — Meow billing env vars wired (`MEOW_API_KEY`,
+  `MEOW_ENTITY_ID`, `MEOW_COLLECTION_ACCOUNT_ID`,
+  `MEOW_VANTAUM_PRODUCT_ID`, plus `ENABLE_REAL_MEOW=true`). Slots
+  empty until Jonah finishes provisioning the dedicated VantaUM Meow
+  account per `docs/meow-bootstrap-resume.md`.
+
+**Admin demo-mode signal:**
+- `f5c8330` — `X-Demo-Mode: true` response header on the 12 admin
+  demo-mode short-circuits. Dev-tools clarity; the branches
+  themselves are now unreachable in prod after `e1615ed`.
+
+**CSR triage UI completion (the chunky track from this session):**
+- `0de4903` — security: closed an auth bypass on
+  `/api/intake/efax/queue`. The middleware's `/api/intake/efax`
+  prefix match inadvertently whitelisted the CSR triage API as
+  public. Split `PUBLIC_ROUTES` into `PUBLIC_PAGE_PREFIXES`
+  (loose, for marketing pages) + `PUBLIC_EXACT` + `PUBLIC_API_PREFIXES`
+  (slash-bounded, for Phaxio webhook subpaths only). Added
+  `requireRole(INTERNAL_STAFF_ROLES)` to GET and PATCH. Same class
+  of bug as the admin auth bypass `e1615ed` patched.
+- `4059999` — feature: source-fax PDF preview in the triage detail
+  panel. New endpoint `GET /api/intake/efax/queue/[id]/document`
+  mints a 5-minute signed URL via `supabase.storage.createSignedUrl`
+  against the existing `efax-documents` bucket. UI adds a load-on-
+  demand "Source Fax" card with embedded iframe + "open in new tab"
+  link. Audit-logs the PHI access.
+- `004097a` — feature: raw OCR text panel (collapsible `<details>`
+  in the right-side diagnostic column) + idempotent promote. The
+  promote PATCH now short-circuits with `{ already_promoted: true }`
+  when `row.case_id` is already set, preventing double-create on
+  double-click. Demo rows carry realistic OCR snippets so the UI
+  surfaces the new card with content.
+- `3d0edea` — test: 13 Vitest cases covering the queue route. Auth
+  gate (401 in prod demo / 200 in dev demo / 401 PATCH), demo shape
+  (items include `ocr_text`, filter works, has dead_letter rows),
+  each of the four PATCH verbs, and the document endpoint. Could
+  not run vitest in this phone harness — desktop session should
+  `npm run test:ci` before merging.
+
+**Triage tab is the "CSR triage UI" item that used to live in
+CLAUDE.md's "What's next" list** — moved to "What's built" in this
+session along with this STATE.md update.
+
+What's still required to actually run the new code in prod:
+1. Container rebuild + push v3 to ECR (per
+   `docs/container-rebuild-2026-05-13.md`)
+2. Force-new-deployment on Fargate
+3. Once running: hit `/intake` as a logged-in concierge or admin,
+   confirm the triage tab renders, source-fax preview loads a signed
+   URL, OCR card shows raw text, promote creates a case row in RDS.
+
+---
+
 > ## 🆕 Resuming as a fresh Claude thread? Do this:
 >
 > ```bash
