@@ -13,6 +13,7 @@ import { getServiceClient } from '@/lib/supabase';
 import { isDemoMode } from '@/lib/demo-mode';
 import { logAuditEvent } from '@/lib/audit';
 import { applyRateLimit } from '@/lib/rate-limit-middleware';
+import { requireRole, INTERNAL_STAFF_ROLES } from '@/lib/auth-guard';
 
 export const dynamic = 'force-dynamic';
 
@@ -293,6 +294,9 @@ export async function GET(request: NextRequest) {
     const rateLimited = await applyRateLimit(request, { maxRequests: 100 });
     if (rateLimited) return rateLimited;
 
+    const authResult = await requireRole(request, [...INTERNAL_STAFF_ROLES]);
+    if (authResult instanceof NextResponse) return authResult;
+
     const { searchParams } = new URL(request.url);
     const statusFilter = searchParams.get('status'); // 'manual_review', 'dead_letter', or 'all'
 
@@ -382,6 +386,10 @@ export async function PATCH(request: NextRequest) {
     const rateLimited = await applyRateLimit(request, { maxRequests: 60 });
     if (rateLimited) return rateLimited;
 
+    const authResult = await requireRole(request, [...INTERNAL_STAFF_ROLES]);
+    if (authResult instanceof NextResponse) return authResult;
+    const actor = authResult.user.email;
+
     const body = await request.json();
     const { id, action, extracted_data, reject_reason } = body as {
       id: string;
@@ -418,7 +426,7 @@ export async function PATCH(request: NextRequest) {
           break;
       }
 
-      await logAuditEvent(null, `efax_triage_${action}`, 'csr', {
+      await logAuditEvent(null, `efax_triage_${action}`, actor, {
         efax_queue_id: id,
         demo: true,
       });
@@ -502,7 +510,7 @@ export async function PATCH(request: NextRequest) {
           })
           .eq('id', id);
 
-        await logAuditEvent(newCase.id, 'efax_triage_promote', 'csr', {
+        await logAuditEvent(newCase.id, 'efax_triage_promote', actor, {
           efax_queue_id: id,
           case_number: newCase.case_number,
         });
@@ -527,7 +535,7 @@ export async function PATCH(request: NextRequest) {
           })
           .eq('id', id);
 
-        await logAuditEvent(null, 'efax_triage_reject', 'csr', {
+        await logAuditEvent(null, 'efax_triage_reject', actor, {
           efax_queue_id: id,
           reason: reject_reason || 'No reason provided',
         });
@@ -554,7 +562,7 @@ export async function PATCH(request: NextRequest) {
           })
           .eq('id', id);
 
-        await logAuditEvent(null, 'efax_triage_retry', 'csr', {
+        await logAuditEvent(null, 'efax_triage_retry', actor, {
           efax_queue_id: id,
         });
 
@@ -581,7 +589,7 @@ export async function PATCH(request: NextRequest) {
           })
           .eq('id', id);
 
-        await logAuditEvent(null, 'efax_triage_update_data', 'csr', {
+        await logAuditEvent(null, 'efax_triage_update_data', actor, {
           efax_queue_id: id,
         });
 
