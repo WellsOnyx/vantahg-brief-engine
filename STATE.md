@@ -341,7 +341,9 @@ If you (Claude in a future session) detect that this doc is wrong:
 
 ## 🔴 ACTIVE TASKS RIGHT NOW (2026-05-13)
 
-**Current workstream: "Plan A — Provider + TPA portals + AWS cutover, sequential."** Jonah confirmed Plan A on 2026-05-13 after I outlined two paths. If you're a fresh thread, this is the work in flight. Estimated ~10 focused hours, broken into 8 steps below. Do them in order.
+**Plan A Steps 3-8 complete.** TPA portal + Provider portal + Practice management + invite flow all shipped. AWS cutover (Step 2) deferred until the portals are validated end-to-end with a real workflow. See "What's built tonight" below.
+
+**Next session: pick a remaining backlog item from the list below, or push for cutover to AWS now that portals are real.**
 
 ### LOCKED DECISIONS (don't relitigate)
 
@@ -409,6 +411,15 @@ If you (Claude in a future session) detect that this doc is wrong:
 ### Old AWS cutover task list (parked — resume any time)
 
 ### What's built tonight (product features)
+
+- **TPA Portal + Provider Portal + Practices management + Invite flow** (DONE 2026-05-13) — Plan A Steps 3-7
+  - Migration 019: `practices` table (NPI, address, specialty, weekly volume) + `practice_users` junction (user ↔ practice with admin/staff role) + `practice_id` column on `cases`. RLS: internal staff full access; TPA users see their tenant's practices; practice users see only their practices.
+  - `components/CaseUploadForm.tsx` — shared upload form (patient block, procedure codes + clinical justification, service category + priority, optional practice picker, documents description). Wraps existing `POST /api/cases` with duplicate detection (409 → link to existing case).
+  - `/portal/tpa` — TPA dashboard with stats + recent cases + practice sidebar. `/portal/tpa/submit` with practice dropdown. `/portal/tpa/practices` with inline add-practice form + per-practice invite (email + staff/admin role → magic link via existing `provisionTpaUserAndMagicLink` → `practice_users` insert with cross-tenant guard).
+  - `/portal/provider` — provider dashboard scoped to single practice via `practice_users` lookup. `/portal/provider/submit` with practice_id auto-filled and locked.
+  - API: `GET /api/tpa/me`, `GET/POST /api/tpa/practices`, `POST /api/tpa/practices/[id]/invite`, `GET /api/provider/me`.
+  - Nav: "TPA Portal" + "Provider Portal" added.
+  - **202/202 tests still passing. Build clean.** No new tests for portals yet — integration tests are a future task.
 
 - **Auto-assign Delivery Lead + Concierge on signup approval** (DONE 2026-05-13)
   - New `lib/delivery/auto-assign.ts` ties existing helpers together

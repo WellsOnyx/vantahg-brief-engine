@@ -45,6 +45,8 @@ const navLinks = [
   { href: "/admin/signups", label: "TPA Signups" },
   { href: "/delivery-lead", label: "Delivery Lead" },
   { href: "/concierge", label: "My Concierge" },
+  { href: "/portal/tpa", label: "TPA Portal" },
+  { href: "/portal/provider", label: "Provider Portal" },
   { href: "/interactive-demo", label: "Live Demo" },
   { href: "/ops", label: "Ops Dashboard" },
   { href: "/queue", label: "My Queue" },
