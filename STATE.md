@@ -49,6 +49,34 @@ Jonah is heading out. Fresh thread on the phone Claude app should pick up here.
 
 ---
 
+## 📎 Phone-session docs added 2026-05-13
+
+Six planning/runbook docs added under `docs/` from a phone-session
+review of the MOBILE HANDOFF state. All documentation, no code or
+infra changes. Live on branch `claude/review-mobile-handoff-state-VNw1N`
+(draft PR #25 — not yet merged).
+
+- `docs/container-rebuild-2026-05-13.md` — runbook to build + push v3
+  image to ECR + cycle Fargate off the stale v2. Includes rollback.
+- `docs/db-wiring-decision.md` — Option A (ENABLE_AWS_DB → RDS shim)
+  vs Option B (fill Supabase keys). Recommends A. CDK diff included.
+- `docs/demo-mode-audit.md` — 12 `isDemoMode()` branches across 9
+  admin routes catalogued. All HIGH-risk branches are now dead in
+  prod (`e1615ed` 401s before them); flagged as dev-only.
+- `docs/ses-verification-runbook.md` — end-to-end SES domain
+  verification for `vantaum.com` + production-access ticket template.
+- `docs/meow-bootstrap-resume.md` — clean checklist version of the
+  buried Meow bootstrap section below. Resume path for when Jonah
+  provisions the new VantaUM Meow account.
+- `docs/pr-e1615ed.md` — retrospective PR description for the
+  auth-guard fix + RDS migrations 019/020 commit.
+
+A future thread should treat these as the source of truth for HOW to
+execute each blocker. STATE.md remains the source of truth for WHERE
+the build stands.
+
+---
+
 > ## 🆕 Resuming as a fresh Claude thread? Do this:
 >
 > ```bash
