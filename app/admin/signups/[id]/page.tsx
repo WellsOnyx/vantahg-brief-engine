@@ -656,7 +656,7 @@ function ContractPanel({ row, onUpdate }: { row: SignupRow; onUpdate: (next: Sig
             )}
           </div>
 
-          <SignatureStatusRow contract={row.latest_contract} onSend={sendForSignature} sending={sending} />
+          <SignatureStatusRow contract={row.latest_contract} onSend={sendForSignature} sending={sending} signupId={row.id} />
         </div>
       ) : (
         <div className="space-y-3">
@@ -729,17 +729,22 @@ function SignatureStatusRow({
   contract,
   onSend,
   sending,
+  signupId,
 }: {
   contract: LatestContract | null;
   onSend: () => void;
   sending: boolean;
+  signupId: string;
 }) {
+  const [busy, setBusy] = useState<'resend' | 'void' | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+
   if (!contract) return null;
 
   const sigStatus = contract.status;
   const sigId = contract.hellosign_signature_request_id;
 
-  // Map contract status to a presentation pill.
   const sigPill: Record<LatestContract['status'], { label: string; className: string }> = {
     draft: { label: 'Draft', className: 'bg-gray-100 text-gray-700 border-gray-200' },
     generated: { label: 'Generated · not yet sent', className: 'bg-amber-50 text-amber-800 border-amber-200' },
@@ -749,6 +754,55 @@ function SignatureStatusRow({
     void: { label: 'Void', className: 'bg-red-50 text-red-800 border-red-200' },
   };
   const pill = sigPill[sigStatus];
+
+  const canResend = sigStatus === 'sent' || sigStatus === 'partially_signed';
+  const canVoid = sigStatus === 'sent' || sigStatus === 'partially_signed' || sigStatus === 'generated';
+
+  async function resend() {
+    setBusy('resend'); setActionError(null); setActionSuccess(null);
+    try {
+      const res = await fetch(`/api/admin/contracts/${contract!.id}/resend`, { method: 'POST' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setActionError(data.error ?? `Failed (${res.status})`);
+      } else {
+        setActionSuccess(data.demo ? 'Reminder sent (demo).' : 'Reminder sent to the next pending signer.');
+      }
+    } catch {
+      setActionError('Network error.');
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function voidContract() {
+    if (!confirm('Void this contract? The signer will not be able to sign it. This cannot be undone.')) return;
+    const reason = prompt('Reason (optional, max 200 chars):') ?? undefined;
+    setBusy('void'); setActionError(null); setActionSuccess(null);
+    try {
+      const res = await fetch(`/api/admin/contracts/${contract!.id}/void`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(reason ? { reason } : {}),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setActionError(data.error ?? `Failed (${res.status})`);
+      } else {
+        setActionSuccess('Contract voided. Generate a new MSA to start over.');
+        // Refresh the parent page state.
+        const refetch = await fetch(`/api/admin/signups/${signupId}`);
+        if (refetch.ok) {
+          // Force a top-level state refresh by reloading.
+          window.location.reload();
+        }
+      }
+    } catch {
+      setActionError('Network error.');
+    } finally {
+      setBusy(null);
+    }
+  }
 
   return (
     <div className="border-t border-border pt-3 mt-3 space-y-2">
@@ -762,16 +816,46 @@ function SignatureStatusRow({
         )}
       </div>
 
-      {sigStatus === 'generated' && (
-        <button
-          onClick={onSend}
-          disabled={sending}
-          className="bg-navy text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-navy/90 disabled:opacity-50"
-          title="Send the generated MSA to the TPA signer via Dropbox Sign. Jonathan Arias will counter-sign automatically after."
-        >
-          {sending ? 'Sending…' : 'Send for signature'}
-        </button>
+      <div className="flex flex-wrap gap-2">
+        {sigStatus === 'generated' && (
+          <button
+            onClick={onSend}
+            disabled={sending}
+            className="bg-navy text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-navy/90 disabled:opacity-50"
+            title="Send the generated MSA to the TPA signer via Dropbox Sign. Jonathan Arias will counter-sign automatically after."
+          >
+            {sending ? 'Sending…' : 'Send for signature'}
+          </button>
+        )}
+        {canResend && (
+          <button
+            onClick={resend}
+            disabled={busy !== null}
+            className="bg-white border border-navy/30 text-navy px-4 py-2 rounded-lg text-sm font-medium hover:border-navy disabled:opacity-50"
+            title="Re-send the signature request email. Dropbox Sign rate-limits reminders."
+          >
+            {busy === 'resend' ? 'Sending…' : 'Resend reminder'}
+          </button>
+        )}
+        {canVoid && (
+          <button
+            onClick={voidContract}
+            disabled={busy !== null}
+            className="bg-white border border-red-300 text-red-700 px-4 py-2 rounded-lg text-sm font-medium hover:border-red-500 hover:bg-red-50 disabled:opacity-50"
+            title="Cancel the signature request and mark this contract void. A new MSA will need to be generated."
+          >
+            {busy === 'void' ? 'Voiding…' : 'Void contract'}
+          </button>
+        )}
+      </div>
+
+      {actionError && (
+        <div className="rounded-lg bg-red-50 border border-red-200 text-red-800 text-xs px-3 py-2">{actionError}</div>
       )}
+      {actionSuccess && (
+        <div className="rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs px-3 py-2">{actionSuccess}</div>
+      )}
+
       {contract.sent_at && (
         <p className="text-[11px] text-muted">Sent {new Date(contract.sent_at).toLocaleString()}</p>
       )}
