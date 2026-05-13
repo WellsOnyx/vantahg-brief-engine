@@ -336,3 +336,79 @@ If you (Claude in a future session) detect that this doc is wrong:
 1. **Trust observed state over this doc.** Run AWS CLI / git log to confirm.
 2. **Update this doc.** Future-you depends on it.
 3. **Don't generate "next step" docs in `docs/` instead.** Update this one.
+
+---
+
+## 🔴 ACTIVE TASKS RIGHT NOW (2026-05-13)
+
+**Jonah and Claude are mid-cutover. If you're a fresh thread reading this, this is where to resume.**
+
+Three tasks in order:
+
+### Task 1 — Fill secrets vault (IN PROGRESS)
+- AWS Console → Secrets Manager → `vantaum-prod-third-party-keys` → Retrieve secret → Edit → Plaintext tab
+- 13 JSON fields to fill. Mapping below.
+- **Where we are at thread compact:** Jonah is on the Plaintext editor. Hasn't pasted values yet.
+- **Source for the values:** Vercel project `vantahg-brief-engine` → Settings → Environment Variables. Each value needs to be copy-pasted by Jonah (Claude cannot see them and shouldn't ask for them in chat).
+- **Three special cases:**
+  - `hellosign_client_id` — NOT in Vercel. Get from app.hellosign.com → API → API Settings.
+  - `cron_secret` — generate fresh: `openssl rand -hex 32`.
+  - Anything not configured in Vercel (e.g. Phaxio if not set up) — leave `""`.
+- **Don't save yet** — once filled, paste the JSON back to Claude (with values redacted as `<filled>`) so Claude verifies the shape.
+
+**Vercel → AWS JSON key mapping:**
+
+| Vercel env var | AWS JSON key |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | `supabase_url` |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `supabase_anon_key` |
+| `SUPABASE_SERVICE_ROLE_KEY` | `supabase_service_role_key` |
+| `ANTHROPIC_API_KEY` | `anthropic_api_key` |
+| `HELLOSIGN_API_KEY` | `hellosign_api_key` |
+| (Dropbox Sign dashboard) | `hellosign_client_id` |
+| `PHAXIO_API_KEY` | `phaxio_api_key` |
+| `PHAXIO_API_SECRET` | `phaxio_api_secret` |
+| `PHAXIO_CALLBACK_TOKEN` | `phaxio_callback_token` |
+| `GOOGLE_VISION_API_KEY` | `google_vision_api_key` |
+| `SENTRY_DSN` | `sentry_dsn` |
+| `GRAVITY_RAIL_API_KEY` | `gravity_rail_api_key` |
+| (generate fresh) | `cron_secret` |
+
+### Task 2 — Force Fargate redeploy
+After Task 1 saves:
+```bash
+aws ecs update-service \
+  --cluster vantaum-prod \
+  --service vantaum-prod-app \
+  --force-new-deployment \
+  --profile vantaum --region us-east-1
+```
+Then wait ~2 min and:
+```bash
+curl http://vantaum-prod-alb-1169380410.us-east-1.elb.amazonaws.com/api/health
+```
+Expected: `"database":"connected"`. If `demo_mode`, Supabase URL is empty or wrong in the secret.
+
+### Task 3 — ACM cert + HTTPS + DNS for app.vantaum.com
+1. AWS Console → Certificate Manager (us-east-1) → Request → `app.vantaum.com` → DNS validation
+2. Copy the validation CNAME from ACM → add to vantaum.com DNS (Vercel DNS / Cloudflare / wherever the apex lives)
+3. Wait for cert to issue (5-30 min — ACM auto-detects)
+4. EC2 → Load Balancers → vantaum-prod-alb → Listeners → Add listener → HTTPS:443 → forward to existing target group with the new cert
+5. Edit port 80 listener → change action to "Redirect to" port 443
+6. Add CNAME record: `app.vantaum.com` → `vantaum-prod-alb-1169380410.us-east-1.elb.amazonaws.com`
+7. Test: `curl https://app.vantaum.com/api/health` → 200
+
+### After all 3 tasks
+- AWS is live and serving on `https://app.vantaum.com`
+- Marketing site stays on Vercel at `vantaum.com`
+- Update the marketing site's "Sign In" button if it doesn't already point at `https://app.vantaum.com/login`
+- Move to real product functionality (next priorities to be set by Jonah)
+
+### Resume command for a fresh thread
+```bash
+cd ~/vantahg-brief-engine
+git pull origin main
+head -300 STATE.md
+tail -150 STATE.md   # for the ACTIVE TASKS section
+```
+Then ask Jonah which task he's on.
