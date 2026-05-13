@@ -161,6 +161,13 @@ export class ComputeStack extends cdk.Stack {
         ENABLE_AWS_STORAGE: 'true',
         ENABLE_AWS_AUTH: 'true',
         ENABLE_AWS_EMAIL: 'true',
+        // Route DB calls through the pg shim against RDS instead of
+        // Supabase Postgres. lib/supabase.ts:27 reads this flag and
+        // substitutes PgShimClient. Auth (auth.getUser) still routes
+        // to Supabase Auth in V1 — see lib/supabase.ts:19-22, which
+        // means the Supabase Auth secrets must still be populated for
+        // authenticated routes to work.
+        ENABLE_AWS_DB: 'true',
         ENABLE_REAL_ANTHROPIC: 'true',
         ENABLE_REAL_HELLOSIGN: 'true',
         ENABLE_REAL_EFAX: 'true',
