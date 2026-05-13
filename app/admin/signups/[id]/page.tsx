@@ -319,7 +319,22 @@ function ActionPanel({ row, onUpdate }: { row: SignupRow; onUpdate: (next: Signu
       if (data.signup) {
         onUpdate(data.signup as SignupRow);
       }
-      setSuccess('Approved. Client tenant created.');
+      // Surface the auto-assignment outcome - admins want to know if a
+      // concierge got assigned, or if they need to do it manually.
+      const a = data.assignment as
+        | { ok: true; concierge_name: string; concierge_email: string; delivery_lead_name: string | null; assigned_weekly_volume: number }
+        | { ok: false; message: string }
+        | null;
+      if (a && a.ok) {
+        const dlPart = a.delivery_lead_name ? ` · DL: ${a.delivery_lead_name}` : '';
+        setSuccess(
+          `Approved. Auto-assigned to ${a.concierge_name} (${a.concierge_email})${dlPart}. +${a.assigned_weekly_volume} weekly auths to their load.`,
+        );
+      } else if (a && !a.ok) {
+        setSuccess(`Approved. ⚠️ Auto-assignment skipped: ${a.message} You'll need to assign a concierge manually.`);
+      } else {
+        setSuccess('Approved. Client tenant created.');
+      }
       setMode('idle');
     } catch {
       setError('Network error. Try again.');

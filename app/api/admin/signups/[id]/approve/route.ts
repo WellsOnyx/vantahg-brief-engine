@@ -7,6 +7,7 @@ import { applyRateLimit } from '@/lib/rate-limit-middleware';
 import { logAuditEvent } from '@/lib/audit';
 import { apiError } from '@/lib/api-error';
 import { getRequestContext } from '@/lib/security';
+import { autoAssignDeliveryTeam, type AssignmentOutcome } from '@/lib/delivery/auto-assign';
 
 export const dynamic = 'force-dynamic';
 
@@ -189,10 +190,49 @@ export async function POST(
       }, getRequestContext(request));
     }
 
+    // Auto-assign a Delivery Lead + Concierge to this client. Picks the
+    // concierge with the most spare capacity that can absorb the TPA's
+    // expected weekly auth volume, then derives the DL from that concierge.
+    // Failures are non-fatal - approval succeeds either way, but the
+    // admin is told to assign manually. Audit-logged either way.
+    let assignmentOutcome: AssignmentOutcome | null = null;
+    try {
+      const expectedAuths = signup.expected_weekly_auths ?? 0;
+      assignmentOutcome = await autoAssignDeliveryTeam(supabase, {
+        client_id: newClient.id,
+        expected_weekly_auths: expectedAuths,
+        assigned_by: authResult.user.email,
+      });
+
+      if (assignmentOutcome.ok) {
+        await logAuditEvent(newClient.id, 'delivery_team_auto_assigned', authResult.user.email, {
+          signup_id: id,
+          concierge_id: assignmentOutcome.concierge_id,
+          concierge_email: assignmentOutcome.concierge_email,
+          delivery_lead_id: assignmentOutcome.delivery_lead_id,
+          assignment_id: assignmentOutcome.assignment_id,
+          assigned_weekly_volume: assignmentOutcome.assigned_weekly_volume,
+        }, getRequestContext(request));
+      } else {
+        await logAuditEvent(newClient.id, 'delivery_team_auto_assign_failed', authResult.user.email, {
+          signup_id: id,
+          code: assignmentOutcome.code,
+          message: assignmentOutcome.message,
+        }, getRequestContext(request));
+      }
+    } catch (err) {
+      // Don't let an unexpected assignment failure block approval.
+      await logAuditEvent(newClient.id, 'delivery_team_auto_assign_threw', authResult.user.email, {
+        signup_id: id,
+        error_message: err instanceof Error ? err.message.slice(0, 200) : 'unknown',
+      }, getRequestContext(request));
+    }
+
     return NextResponse.json({
       success: true,
       signup: updated,
       client: newClient,
+      assignment: assignmentOutcome,
     });
   } catch (err) {
     return apiError(err, {

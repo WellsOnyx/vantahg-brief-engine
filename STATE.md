@@ -341,11 +341,39 @@ If you (Claude in a future session) detect that this doc is wrong:
 
 ## 🔴 ACTIVE TASKS RIGHT NOW (2026-05-13)
 
-**Jonah and Claude are mid-cutover. If you're a fresh thread reading this, this is where to resume.**
+**Jonah and Claude paused the cutover mid-way.** New context: Supabase was barely set up (no real customer data, no real users), so the "migration" framing was wrong. Pivoting to building real product features. The AWS stack stays running idle until we actually need it.
 
-Three tasks in order:
+### What's built tonight (product features)
 
-### Task 1 — Fill secrets vault (IN PROGRESS)
+- **Auto-assign Delivery Lead + Concierge on signup approval** (DONE 2026-05-13)
+  - New `lib/delivery/auto-assign.ts` ties existing helpers together
+  - Hooked into `app/api/admin/signups/[id]/approve/route.ts` — runs after client tenant is created
+  - Picks the concierge with most spare capacity that can absorb the TPA's expected weekly auth volume
+  - Derives the Delivery Lead from that concierge's `delivery_lead_id`
+  - Writes a row to `client_concierge_assignments` (whole-client, practice_id=NULL for V1)
+  - Audit-logged: `delivery_team_auto_assigned` on success, `delivery_team_auto_assign_failed` with code on capacity/empty-pool failures, `delivery_team_auto_assign_threw` on unexpected errors
+  - Admin UI on `/admin/signups/[id]` shows the assignment outcome inline in the success message
+  - Failure is non-fatal — approval succeeds, admin gets told to assign manually
+  - 7 new unit tests covering no_concierges, no_capacity, happy path, persist_failed, null-DL graceful handling
+  - **Test pass: 202/202**
+
+### Next product features in priority order (from Jonah's spec)
+
+The signup → contract → e-sign → onboarding flow exists. Auto-assignment was the missing connective tissue. Remaining gaps from the original spec:
+
+1. ~~Auto-assign DL + Concierge on signup approval~~ ✅ DONE
+2. **Auto-book weekly check-in calendar invite** (~2 hrs) — onboarding wizard captures the time preference, but no calendar invite gets sent. Needs iCal-attachment-in-email or Google Calendar API integration.
+3. **Practices table + per-physician-office concierge routing** (~3 hrs) — `practice_id` reserved on `client_concierge_assignments` but no `practices` table exists yet.
+4. **TPA system connector framework** (~big) — start with one specific connector (FHIR or X12 EDI) once we know which TPA wants in first.
+5. **Real billing collection at signup** (~3 hrs) — Stripe checkout link tied to contract signing.
+6. **Concierge phone/email/fax auto-provisioning via RingCentral** (~4 hrs) — schema fields exist (`ringcentral_phone`, `intake_email`, `intake_efax`), no provisioning happens.
+7. **Activity upstream/downstream view for Delivery Lead** (~2 hrs) — DL sees their team's load; missing: case flow visibility.
+
+### Old AWS cutover task list (parked — resume any time)
+
+Three tasks in order. Pick this up after the product features feel ready to demo:
+
+### Task 1 — Fill secrets vault (PARKED)
 - AWS Console → Secrets Manager → `vantaum-prod-third-party-keys` → Retrieve secret → Edit → Plaintext tab
 - 13 JSON fields to fill. Mapping below.
 - **Where we are at thread compact:** Jonah is on the Plaintext editor. Hasn't pasted values yet.
