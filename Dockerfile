@@ -18,7 +18,7 @@ WORKDIR /app
 # Copy only the package manifest files first so this layer caches when
 # only source code changes.
 COPY package.json package-lock.json* ./
-RUN npm ci --omit=dev=false
+RUN npm ci --include=dev
 
 # ── Stage 2: build ───────────────────────────────────────────────────────────
 FROM node:22-alpine AS builder
