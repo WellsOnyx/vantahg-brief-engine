@@ -16,6 +16,9 @@ interface Invoice {
   sent_at: string | null;
   paid_at: string | null;
   created_at: string;
+  meow_invoice_id: string | null;
+  meow_status: string | null;
+  meow_payment_url: string | null;
 }
 
 interface Client {
@@ -209,6 +212,7 @@ export default function InvoicesPage() {
                     <th className="text-right px-4 py-2">PEPM</th>
                     <th className="text-right px-4 py-2">Total</th>
                     <th className="text-left px-4 py-2">Status</th>
+                    <th className="text-left px-4 py-2">Meow</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -224,6 +228,25 @@ export default function InvoicesPage() {
                         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border ${STATUS_PILL[inv.status]}`}>
                           {inv.status}
                         </span>
+                      </td>
+                      <td className="px-4 py-3 text-xs">
+                        {inv.meow_invoice_id ? (
+                          <>
+                            <div className="text-muted font-mono">{inv.meow_status ?? '—'}</div>
+                            {inv.meow_payment_url && (
+                              <a
+                                href={inv.meow_payment_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-navy underline"
+                              >
+                                Pay link →
+                              </a>
+                            )}
+                          </>
+                        ) : (
+                          <span className="text-muted">not pushed</span>
+                        )}
                       </td>
                     </tr>
                   ))}

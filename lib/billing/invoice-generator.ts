@@ -1,4 +1,11 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import {
+  createCustomer,
+  createInvoice as meowCreateInvoice,
+  meowStatusToLocal,
+  type MeowInvoice,
+} from './meow-client';
+import { getMeowConfig, isRealMeowEnabled } from '@/lib/env';
 
 /**
  * Monthly PEPM invoice generation.
@@ -33,6 +40,19 @@ export interface GenerateInvoiceResult {
   invoiceId: string;
   invoiceNumber: string;
   totalCents: number;
+  /**
+   * Meow push outcome. The local invoice row always exists when ok=true;
+   * Meow integration is best-effort because we don't want a Meow outage
+   * to block our admin's ability to record what they billed.
+   *
+   * - meowed=true with meow_invoice_id: invoice was pushed to Meow successfully
+   * - meowed=true with skipped='disabled': we ran in demo or ENABLE_REAL_MEOW=false
+   * - meowed=false with meow_error: real-mode Meow call failed; admin can retry
+   */
+  meow:
+    | { meowed: true; skipped: 'disabled'; meow_invoice_id: null }
+    | { meowed: true; skipped: null; meow_invoice_id: string; meow_payment_url: string | null }
+    | { meowed: false; skipped: null; meow_error: string };
 }
 
 export interface GenerateInvoiceError {
@@ -142,11 +162,157 @@ export async function generateInvoice(
     return { ok: false, code: 'unknown', message: insertErr?.message ?? 'Insert failed' };
   }
 
+  // ── Push to Meow ────────────────────────────────────────────────────────
+  // We have a local row; now we send it to Meow so the customer gets a
+  // bill they can pay. Failure here is logged + surfaced but does NOT
+  // roll back the local row — the admin can retry the Meow push later
+  // without losing the invoice number sequence.
+  const meow = await pushInvoiceToMeow(supabase, {
+    clientId: params.clientId,
+    clientName: client.name,
+    localInvoiceId: created.id,
+    localInvoiceNumber: created.invoice_number,
+    pepmDollars: pepm / 100,
+    memberCount: members,
+    periodStart: params.periodStart,
+    periodEnd: params.periodEnd,
+  });
+
   return {
     ok: true,
     invoiceId: created.id,
     invoiceNumber: created.invoice_number,
     totalCents,
+    meow,
+  };
+}
+
+/**
+ * Push the local invoice to Meow. Handles customer creation lazily
+ * (first invoice for a client creates the customer; subsequent invoices
+ * reuse the stored meow_customer_id).
+ *
+ * Mutates the local invoice row to record meow_invoice_id, meow_status,
+ * meow_payment_url. On disabled-mode or failure the local row stays as
+ * draft and admin can retry via /api/admin/invoices/[id]/push-to-meow
+ * (V2 - not built yet; for now they'd regenerate).
+ *
+ * Exported so the upcoming retry endpoint can call it standalone.
+ */
+export async function pushInvoiceToMeow(
+  supabase: SupabaseClient,
+  args: {
+    clientId: string;
+    clientName: string;
+    localInvoiceId: string;
+    localInvoiceNumber: string;
+    pepmDollars: number;
+    memberCount: number;
+    periodStart: Date;
+    periodEnd: Date;
+  },
+): Promise<GenerateInvoiceResult['meow']> {
+  if (!isRealMeowEnabled()) {
+    return { meowed: true, skipped: 'disabled', meow_invoice_id: null };
+  }
+
+  const config = getMeowConfig();
+  if (!config.vantaumProductId) {
+    return {
+      meowed: false,
+      skipped: null,
+      meow_error: 'MEOW_VANTAUM_PRODUCT_ID is not set. Run scripts/bootstrap-meow-product.ts once to create the Meow Product and store its UUID.',
+    };
+  }
+
+  // 1. Ensure a Meow customer exists for this client.
+  const { data: clientRow } = await supabase
+    .from('clients')
+    .select('id, name, contact_email, meow_customer_id')
+    .eq('id', args.clientId)
+    .single();
+
+  let meowCustomerId = (clientRow as { meow_customer_id?: string } | null)?.meow_customer_id ?? null;
+  if (!meowCustomerId) {
+    const contactEmail = (clientRow as { contact_email?: string } | null)?.contact_email;
+    if (!contactEmail) {
+      return {
+        meowed: false,
+        skipped: null,
+        meow_error: 'Client has no contact_email; Meow customer requires an email.',
+      };
+    }
+    const created = await createCustomer({
+      nickname: args.clientName,
+      email: contactEmail,
+    });
+    if (!created.ok) {
+      return {
+        meowed: false,
+        skipped: null,
+        meow_error: `Meow customer create failed: ${created.code} ${created.message}`,
+      };
+    }
+    meowCustomerId = created.data.id;
+    await supabase
+      .from('clients')
+      .update({ meow_customer_id: meowCustomerId })
+      .eq('id', args.clientId);
+  }
+
+  // 2. Create the invoice line item against the existing VantaUM product.
+  //    Meow expects price in dollars (decimal), quantity = member count.
+  //    Default due date: 30 days from period end.
+  const invoiceDate = toDateOnly(new Date());
+  const dueDate = toDateOnly(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000));
+
+  const invoice = await meowCreateInvoice({
+    customer_id: meowCustomerId,
+    collection_account_id: config.collectionAccountId,
+    invoice_date: invoiceDate,
+    due_date: dueDate,
+    payment_method_types: ['BANK_TRANSFER', 'ACH_DIRECT_DEBIT'],
+    send_email_on_creation: true,
+    name: args.localInvoiceNumber.slice(0, 32),
+    note: `VantaUM PEPM ${toDateOnly(args.periodStart)} – ${toDateOnly(args.periodEnd)}`,
+    line_items: [
+      {
+        product_id: config.vantaumProductId,
+        quantity: args.memberCount,
+        price: args.pepmDollars,
+        description: `PEPM @ $${args.pepmDollars.toFixed(2)} × ${args.memberCount.toLocaleString()} members`,
+      },
+    ],
+  });
+
+  if (!invoice.ok) {
+    return {
+      meowed: false,
+      skipped: null,
+      meow_error: `Meow invoice create failed: ${invoice.code} ${invoice.message}`,
+    };
+  }
+
+  // 3. Persist Meow IDs onto the local invoice row.
+  const meowInv: MeowInvoice = invoice.data;
+  await supabase
+    .from('invoices')
+    .update({
+      status: meowStatusToLocal(meowInv.status),
+      meow_invoice_id: meowInv.id,
+      meow_status: meowInv.status,
+      meow_invoice_number: meowInv.invoice_number ?? null,
+      meow_payment_url: meowInv.hosted_invoice_url ?? null,
+      meow_last_synced_at: new Date().toISOString(),
+      sent_at: meowInv.status === 'OPEN' ? new Date().toISOString() : null,
+    })
+    .eq('id', args.localInvoiceId);
+
+  return {
+    meowed: true,
+    skipped: null,
+    meow_invoice_id: meowInv.id,
+    meow_payment_url: meowInv.hosted_invoice_url ?? null,
   };
 }
 

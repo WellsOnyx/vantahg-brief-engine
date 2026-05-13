@@ -58,6 +58,22 @@ const EnvSchema = z.object({
   // Test signatures are free + non-binding; they're indistinguishable
   // from real ones in the API surface, just marked test in Dropbox Sign.
   ENABLE_REAL_HELLOSIGN: z.coerce.boolean().default(false),
+
+  // Meow — B2B banking + invoicing.
+  // API key from Meow dashboard. Auth via x-api-key header.
+  // ENTITY_ID is optional (multi-entity accounts only); we pass it
+  // when present.
+  // COLLECTION_ACCOUNT_ID identifies the Meow account that invoice
+  // payments deposit into — get from Meow's `/billing/collection-accounts`
+  // and treat as configuration.
+  // VANTAUM_PRODUCT_ID is the Meow Product representing "VantaUM PEPM";
+  // we create it once via script then cache the UUID here so every
+  // invoice line item references the same product.
+  MEOW_API_KEY: z.string().min(1).optional(),
+  MEOW_ENTITY_ID: z.string().min(1).optional(),
+  MEOW_COLLECTION_ACCOUNT_ID: z.string().uuid().optional(),
+  MEOW_VANTAUM_PRODUCT_ID: z.string().uuid().optional(),
+  ENABLE_REAL_MEOW: z.coerce.boolean().default(false),
 });
 
 export type Env = z.infer<typeof EnvSchema>;
@@ -127,6 +143,42 @@ export function getHelloSignConfig(): { apiKey: string; clientId: string; testMo
     apiKey: env.HELLOSIGN_API_KEY!,
     clientId: env.HELLOSIGN_CLIENT_ID!,
     testMode: env.NODE_ENV !== 'production',
+  };
+}
+
+export interface MeowConfig {
+  apiKey: string;
+  entityId: string | null;
+  collectionAccountId: string;
+  vantaumProductId: string | null;
+  baseUrl: string;
+}
+
+/**
+ * Real Meow calls require the API key, the collection account ID
+ * (where invoice payments deposit), and the opt-in flag. Product ID
+ * is filled in after first-run bootstrap (see scripts/bootstrap-meow-product.ts)
+ * so it's optional at the type level but checked at create-invoice time.
+ */
+export function isRealMeowEnabled(): boolean {
+  if (canonicalIsDemoMode()) return false;
+  const env = getEnv();
+  return env.ENABLE_REAL_MEOW && !!env.MEOW_API_KEY && !!env.MEOW_COLLECTION_ACCOUNT_ID;
+}
+
+export function getMeowConfig(): MeowConfig {
+  if (!isRealMeowEnabled()) {
+    throw new Error(
+      'Real Meow calls are disabled. Check isDemoMode(), MEOW_API_KEY, MEOW_COLLECTION_ACCOUNT_ID, and ENABLE_REAL_MEOW.',
+    );
+  }
+  const env = getEnv();
+  return {
+    apiKey: env.MEOW_API_KEY!,
+    entityId: env.MEOW_ENTITY_ID ?? null,
+    collectionAccountId: env.MEOW_COLLECTION_ACCOUNT_ID!,
+    vantaumProductId: env.MEOW_VANTAUM_PRODUCT_ID ?? null,
+    baseUrl: 'https://api.meow.com/v1',
   };
 }
 

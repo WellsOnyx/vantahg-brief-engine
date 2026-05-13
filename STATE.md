@@ -436,6 +436,18 @@ If you (Claude in a future session) detect that this doc is wrong:
 
 ### What's built tonight (product features)
 
+- **Meow banking integration for PEPM invoicing** (DONE 2026-05-13)
+  - Migration 020: `clients.meow_customer_id`, `invoices.meow_invoice_id` + `meow_status` + `meow_invoice_number` + `meow_last_synced_at` + `meow_payment_url`. Partial indexes on populated rows + OPEN/DRAFT status.
+  - `lib/billing/meow-client.ts` — typed fetch wrapper for the 4 Meow endpoints we use: `POST /billing/customers`, `POST /billing/products`, `POST /billing/invoices`, `GET /billing/invoices/{id}`. Demo-mode safe: returns deterministic stubs when `ENABLE_REAL_MEOW` is false. Error path returns `{ ok: false, status, code, message }` discriminated union. Translates Meow's `DRAFT/OPEN/PAID/UNCOLLECTIBLE/VOID` to our local `draft/sent/paid/void` via `meowStatusToLocal()`.
+  - `lib/billing/invoice-generator.ts` — `generateInvoice()` now pushes to Meow after the local insert. Lazy customer creation (first invoice per client creates Meow customer, stores `meow_customer_id` on clients row, reuses on subsequent invoices). Line item uses the singleton `MEOW_VANTAUM_PRODUCT_ID` Product (run `scripts/bootstrap-meow-product.ts` once to create it). Push failure is **non-fatal** — local row stays as draft, admin can retry. Result type now includes a discriminated `meow` field: `{ meowed: true, skipped: 'disabled' }` | `{ meowed: true, meow_invoice_id, meow_payment_url }` | `{ meowed: false, meow_error }`.
+  - `pushInvoiceToMeow()` exported so a future `/api/admin/invoices/[id]/push-to-meow` retry endpoint can call it standalone.
+  - Cron: `GET /api/cron/meow-invoice-sync` polls every 30 min, finds invoices with `meow_status IN ('DRAFT', 'OPEN')`, calls `getInvoice()` to check for transitions, updates `meow_status` + local `status` + `paid_at`/`voided_at` as needed. Audit-logs every transition. Added to `vercel.json` schedule. Bearer CRON_SECRET auth.
+  - Env vars in `lib/env.ts`: `MEOW_API_KEY`, `MEOW_ENTITY_ID` (optional), `MEOW_COLLECTION_ACCOUNT_ID`, `MEOW_VANTAUM_PRODUCT_ID`, `ENABLE_REAL_MEOW` (opt-in flag matching ENABLE_REAL_ANTHROPIC / ENABLE_REAL_HELLOSIGN pattern). `isRealMeowEnabled()` + `getMeowConfig()` helpers.
+  - `scripts/bootstrap-meow-product.ts` — one-time setup: creates "VantaUM PEPM" Product in Meow, prints UUID to copy into env. Idempotency check refuses to run if `MEOW_VANTAUM_PRODUCT_ID` already set.
+  - Admin UI: `/admin/invoices` now shows a "Meow" column with the Meow status + "Pay link →" hosted invoice URL when present, "not pushed" when local-only.
+  - Tests: 9 new (`meow-client.test.ts`) covering demo-mode stubs for all 4 methods + the 5-way status translation table. 211/211 tests passing total.
+  - **To go live with real Meow:** add `MEOW_API_KEY`, `MEOW_COLLECTION_ACCOUNT_ID`, `ENABLE_REAL_MEOW=true` to env, run `scripts/bootstrap-meow-product.ts` to create the Product, copy the returned UUID into `MEOW_VANTAUM_PRODUCT_ID`. Cron picks up status changes every 30 min.
+
 - **TPA Portal + Provider Portal + Practices management + Invite flow** (DONE 2026-05-13) — Plan A Steps 3-7
   - Migration 019: `practices` table (NPI, address, specialty, weekly volume) + `practice_users` junction (user ↔ practice with admin/staff role) + `practice_id` column on `cases`. RLS: internal staff full access; TPA users see their tenant's practices; practice users see only their practices.
   - `components/CaseUploadForm.tsx` — shared upload form (patient block, procedure codes + clinical justification, service category + priority, optional practice picker, documents description). Wraps existing `POST /api/cases` with duplicate detection (409 → link to existing case).

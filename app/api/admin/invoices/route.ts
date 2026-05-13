@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
     const supabase = getServiceClient();
     const { data, error } = await supabase
       .from('invoices')
-      .select('id, invoice_number, client_id, period_start, period_end, pepm_rate_cents, member_count, total_cents, status, sent_at, paid_at, created_at, clients(name)')
+      .select('id, invoice_number, client_id, period_start, period_end, pepm_rate_cents, member_count, total_cents, status, sent_at, paid_at, created_at, meow_invoice_id, meow_status, meow_payment_url, clients(name)')
       .order('period_start', { ascending: false })
       .order('created_at', { ascending: false })
       .limit(100);
