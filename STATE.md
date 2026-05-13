@@ -341,7 +341,72 @@ If you (Claude in a future session) detect that this doc is wrong:
 
 ## 🔴 ACTIVE TASKS RIGHT NOW (2026-05-13)
 
-**Jonah and Claude paused the cutover mid-way.** New context: Supabase was barely set up (no real customer data, no real users), so the "migration" framing was wrong. Pivoting to building real product features. The AWS stack stays running idle until we actually need it.
+**Current workstream: "Plan A — Provider + TPA portals + AWS cutover, sequential."** Jonah confirmed Plan A on 2026-05-13 after I outlined two paths. If you're a fresh thread, this is the work in flight. Estimated ~10 focused hours, broken into 8 steps below. Do them in order.
+
+### LOCKED DECISIONS (don't relitigate)
+
+- **Billing path: Meow.** Not Stripe. When billing comes up, it's Meow. Spec already exists in Jonah's plan.
+- **Florida governance + Jonathan Arias as signer** for all VantaUM contracts. Hardcoded in `lib/contracts/templates/msa-with-baa-v1.ts`.
+- **Marketing on Vercel forever** at `vantaum.com`. Authenticated app on AWS at `app.vantaum.com` (post-cutover).
+- **Auth in V1: hybrid mode** (Supabase Auth + AWS-everything-else). Cognito magic-link Lambdas are deployed and ready but not cutover. Decision: don't cut over auth until after first paying customer.
+- **Practice provisioning: self-serve invite from TPA admin** (Plan i). Auto-discovery from inbound faxes (Plan ii) is V2.
+- **Customer portals are TWO portals:**
+  - TPA-facing portal — sees all cases in their network, can upload on behalf of any provider
+  - Provider-facing portal — sees only their practice's cases, scoped by practice_id
+  - Shared CaseUploadForm component, different access guards
+- **AWS account already has BAA active.** All infra deployed, just needs secrets + DNS to cut over.
+
+### PLAN A — 8-step sequential workstream
+
+**Step 1 — Lock Meow as the billing path** (5 min)
+- Save to memory + this doc. Done above ✅
+
+**Step 2 — Finish AWS cutover Tasks 1-3** (~2 hrs)
+- Task 1: fill secrets vault `vantaum-prod-third-party-keys` in AWS Secrets Manager. The Vercel pull showed most keys are marked Sensitive (can't be pulled) and several services (Phaxio, Google Vision, Sentry, Gravity Rail) were never actually set up. So really just need: `anthropic_api_key` (Claude has the value locally from .env.vercel.local pull), `cron_secret` (generate fresh: `openssl rand -hex 32`), `hellosign_api_key` + `hellosign_client_id` (from Dropbox Sign dashboard), and the 3 Supabase keys (from supabase.com dashboard since they're Sensitive in Vercel). Leave the rest as empty strings — graceful degradation handles them.
+- Task 2: `aws ecs update-service --cluster vantaum-prod --service vantaum-prod-app --force-new-deployment --profile vantaum --region us-east-1` then verify `curl http://vantaum-prod-alb-1169380410.us-east-1.elb.amazonaws.com/api/health` returns `"database":"connected"`.
+- Task 3: ACM cert for `app.vantaum.com` + add HTTPS:443 listener to ALB + CNAME `app.vantaum.com` → ALB DNS. Detailed steps already in the cutover section below.
+
+**Step 3 — Practices schema** (~1 hr)
+- New migration `019_practices.sql`:
+  - `practices` table (id, name, npi, address, phone, client_id FK to clients, created_at)
+  - `practice_users` table (id, practice_id FK, user_id FK to auth.users, role check 'admin'|'staff', created_at) — OR add `practice_id` + `user_role_at_practice` columns to `user_profiles`. **Decision pending**: separate table is cleaner for a user-belongs-to-many-practices model; column on user_profiles is simpler for V1's "one user, one practice" assumption. Go with separate `practice_users` table for forward-compatibility.
+  - Indexes on `practice_users(user_id)` and `practice_users(practice_id)`
+  - RLS: providers see their own practice; TPA admins see all practices linked to their client_id
+- Apply to RDS via SSM bastion (pattern in `docs/aws-migration-status.md`)
+- Add `practice_id` to `client_concierge_assignments` already exists (V2-ready slot)
+
+**Step 4 — Shared CaseUploadForm component** (~1 hr)
+- `components/CaseUploadForm.tsx` — React component
+- Fields: patient name (or pseudonymized ID), DOB, member ID, procedure codes (CPT/HCPCS), procedure description, clinical question/justification, clinical document upload (multiple PDFs), priority (standard/urgent/expedited)
+- Wraps the existing `/api/cases` POST flow
+- Accepts a `scope` prop: `{ client_id: string; practice_id?: string }` — used to pre-fill those fields and constrain backend writes
+- Uses existing `lib/intake/efax/storage.ts`-style upload path → S3 via storage adapter
+
+**Step 5 — TPA portal `/portal/tpa`** (~2 hrs)
+- Two surfaces:
+  - `/portal/tpa` — list view of all cases for `client_id = current user's tpa`
+  - `/portal/tpa/submit` — upload form, can pick which practice the case is from (dropdown of practices linked to this TPA)
+- Access guard: user_profiles.role = 'client' AND clients.id maps to the current user
+- Reuses CaseUploadForm with `scope = { client_id: user's tpa }`
+
+**Step 6 — Provider portal `/portal/provider`** (~2 hrs)
+- Same two surfaces but scoped:
+  - `/portal/provider` — list view of cases where `practice_id = current user's practice`
+  - `/portal/provider/submit` — upload form, practice_id auto-filled, can't be changed
+- Access guard: user is linked to a practice via practice_users table
+- Reuses CaseUploadForm with `scope = { client_id: practice's client_id, practice_id: user's practice }`
+
+**Step 7 — Practice invite flow** (~1 hr)
+- TPA admin endpoint: `POST /api/tpa/practices` — create a new practice for this TPA
+- TPA admin endpoint: `POST /api/tpa/practices/[id]/invite` — invite an email to be a practice user. Generates a magic link via existing `provisionTpaUserAndMagicLink` pattern from `lib/contracts/client-onboarding.ts`.
+- UI: a "Practices" tab inside `/portal/tpa` showing the list + add/invite buttons
+
+**Step 8 — Tests, STATE.md update, commit + push** (~30 min)
+- Unit tests for the new access guards (provider can't see other practice's cases, TPA can see all)
+- Integration test for the upload flow with practice scoping
+- Update this STATE.md section: mark Plan A complete, document the new portal URLs, list the backlog items still remaining
+
+### Old AWS cutover task list (parked — resume any time)
 
 ### What's built tonight (product features)
 
