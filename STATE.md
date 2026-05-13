@@ -341,9 +341,33 @@ If you (Claude in a future session) detect that this doc is wrong:
 
 ## 🔴 ACTIVE TASKS RIGHT NOW (2026-05-13)
 
-**Plan A Steps 3-8 complete.** TPA portal + Provider portal + Practice management + invite flow all shipped. AWS cutover (Step 2) deferred until the portals are validated end-to-end with a real workflow. See "What's built tonight" below.
+**Plan A complete + AWS cutover complete.** All 8 steps shipped. `https://app.vantaum.com` is live on AWS Fargate with HTTPS. The temporary ALB hostname is no longer the way in.
 
-**Next session: pick a remaining backlog item from the list below, or push for cutover to AWS now that portals are real.**
+**Live URLs:**
+- `https://app.vantaum.com/api/health` → 200, `{"status":"healthy", ...}`
+- `http://app.vantaum.com/...` → 301 redirect to HTTPS
+- Marketing `vantaum.com` + `www.vantaum.com` → still Vercel (unchanged)
+
+**Cutover details (done 2026-05-13):**
+- Secrets vault `vantaum-prod-third-party-keys` populated. Real values: `anthropic_api_key` (108 chars), `cron_secret` (64-char openssl rand). Everything else intentionally empty — Supabase wasn't actually set up so the app boots in demo mode for DB-backed pages; HelloSign / Phaxio / Google Vision / Sentry / Gravity Rail not wired yet but the slots exist for when each is set up.
+- Fargate force-new-deployment: `aws ecs update-service --cluster vantaum-prod --service vantaum-prod-app --force-new-deployment`.
+- ACM cert: `arn:aws:acm:us-east-1:309921834034:certificate/aec5ab1f-bf47-498e-9990-2bfbcd85338a` for `app.vantaum.com`, DNS-validated via Squarespace CNAME, valid until 2026-11-26.
+- ALB listener config:
+  - Port 443: HTTPS, ACM cert attached, TLS-1.3-1.2 policy, forwards to existing target group.
+  - Port 80: 301 redirect → HTTPS (Host=#{host}, Path=/#{path}, Query=#{query}).
+  - ALB security group `sg-0f06949bdce6982d9`: 80 + 443 open to 0.0.0.0/0.
+- Squarespace DNS records added on vantaum.com:
+  - `_84194f7149cbda81841f5d02ef257c06.app.vantaum.com CNAME _13a6dc4caddd04486f6bd4674c1fbb78.jkddzztszm.acm-validations.aws.` (validation; can be removed but harmless to keep)
+  - `app.vantaum.com CNAME vantaum-prod-alb-1169380410.us-east-1.elb.amazonaws.com` (live traffic)
+
+**Backlog from STATE.md remaining:**
+- Auto-book weekly check-in calendar invite
+- TPA system connector framework (FHIR / X12)
+- Meow billing integration (locked decision: not Stripe)
+- RingCentral phone/email/fax auto-provisioning
+- DL upstream/downstream activity view
+- Real PDF upload on case submission (currently text description only)
+- Fill remaining secrets (Supabase if reviving, HelloSign client ID, others) when their owning service is actually set up
 
 ### LOCKED DECISIONS (don't relitigate)
 
