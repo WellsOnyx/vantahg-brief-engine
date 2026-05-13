@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
+import path from "node:path";
 
 const securityHeaders = [
   { key: 'X-Frame-Options', value: 'DENY' },
@@ -23,6 +24,18 @@ const demoHeaders = securityHeaders
   );
 
 const nextConfig: NextConfig = {
+  // Standalone output produces a self-contained /app/server.js + minimal
+  // node_modules in .next/standalone. Required for the Fargate container
+  // image to stay small (~150MB instead of ~800MB).
+  // Vercel ignores this setting (their build pipeline uses its own
+  // output mode) so it's safe to leave on for both deploy targets.
+  output: 'standalone',
+  // Pin the trace root to this directory so the standalone bundle puts
+  // server.js at the root of .next/standalone/ instead of nesting it
+  // under the absolute path. Without this, builds inside a git worktree
+  // (which Claude Code uses) emit server.js under .next/standalone/.claude/...
+  // which breaks the Dockerfile COPY paths.
+  outputFileTracingRoot: path.join(__dirname),
   async headers() {
     return [
       {

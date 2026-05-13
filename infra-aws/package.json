@@ -21,7 +21,11 @@
     "typescript": "^5.7.2"
   },
   "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.1045.0",
+    "@aws-sdk/client-secrets-manager": "^3.1045.0",
+    "@aws-sdk/client-sesv2": "^3.1045.0",
     "aws-cdk-lib": "^2.171.1",
-    "constructs": "^10.4.2"
+    "constructs": "^10.4.2",
+    "esbuild": "^0.28.0"
   }
 }

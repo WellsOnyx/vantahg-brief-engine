@@ -1,0 +1,14 @@
+node_modules
+.next
+.git
+.vercel
+.claude
+infra-aws/node_modules
+infra-aws/cdk.out
+infra-aws/cdk.context.json
+__tests__
+*.log
+.env*.local
+.DS_Store
+README.md
+docs

@@ -46,12 +46,32 @@ cdk.Tags.of(app).add('Project', 'vantaum');
 cdk.Tags.of(app).add('Environment', envName);
 cdk.Tags.of(app).add('ManagedBy', 'cdk-vantaum-infra');
 
-new DatabaseStack(app, `${appName}-database`, { env, envName });
+const databaseStack = new DatabaseStack(app, `${appName}-database`, { env, envName });
 new StorageStack(app, `${appName}-storage`, { env, envName });
-new EmailStack(app, `${appName}-email`, { env, envName });
-new AuthStack(app, `${appName}-auth`, { env, envName });
-new ComputeStack(app, `${appName}-compute`, { env, envName });
-// CronStack omitted from the deploy until ComputeStack v2 ships a
-// running Fargate service for the cron Lambda to invoke. The class
-// exists so the migration plan stays intact.
-void CronStack;
+const emailStack = new EmailStack(app, `${appName}-email`, { env, envName });
+
+// AuthStack needs SES details for the magic-link Lambdas.
+new AuthStack(app, `${appName}-auth`, {
+  env,
+  envName,
+  appUrl: process.env.APP_URL ?? 'https://app.vantaum.com',
+  sesConfigSet: emailStack.configSet.configurationSetName,
+  sesFromAddress: process.env.SES_FROM_ADDRESS ?? 'noreply@vantaum.com',
+});
+
+// ComputeStack depends on DatabaseStack (needs VPC, db secret, db SG).
+// CDK auto-orders deploys based on stack references.
+const computeStack = new ComputeStack(app, `${appName}-compute`, {
+  env,
+  envName,
+  vpc: databaseStack.vpc,
+  dbSecret: databaseStack.database.secret!,
+  dbSecurityGroup: databaseStack.dbSecurityGroup,
+});
+
+// CronStack POSTs to the ALB on a schedule.
+new CronStack(app, `${appName}-cron`, {
+  env,
+  envName,
+  albDnsName: computeStack.loadBalancer.loadBalancerDnsName,
+});
