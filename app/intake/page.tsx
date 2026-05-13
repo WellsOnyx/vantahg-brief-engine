@@ -49,6 +49,7 @@ interface TriageQueueItem {
   needs_manual_review: boolean;
   manual_review_reasons: string[];
   extracted_data: Record<string, unknown> | null;
+  ocr_text: string | null;
   case_id: string | null;
   ocr_confidence: number | null;
   extraction_method: string | null;
@@ -1314,6 +1315,34 @@ export default function IntakePage() {
                           </div>
                         </div>
                       )}
+
+                      {/* Raw OCR text — collapsed by default, opens on click */}
+                      <details className="bg-surface rounded-xl border border-border shadow-sm overflow-hidden group">
+                        <summary className="px-5 py-4 border-b border-border cursor-pointer flex items-center justify-between hover:bg-gray-50 transition-colors list-none">
+                          <div>
+                            <h3 className="font-semibold text-navy">Raw OCR Text</h3>
+                            <p className="text-xs text-muted mt-0.5">
+                              {selectedTriageItem.ocr_text
+                                ? `${selectedTriageItem.ocr_text.length} characters extracted`
+                                : 'No OCR text captured'}
+                            </p>
+                          </div>
+                          <svg className="w-4 h-4 text-muted transform transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                          </svg>
+                        </summary>
+                        <div className="p-5">
+                          {selectedTriageItem.ocr_text && selectedTriageItem.ocr_text.length > 0 ? (
+                            <pre className="text-xs font-mono whitespace-pre-wrap break-words text-foreground bg-gray-50 rounded-lg p-4 max-h-96 overflow-y-auto">
+                              {selectedTriageItem.ocr_text}
+                            </pre>
+                          ) : (
+                            <p className="text-sm text-muted italic">
+                              OCR returned no text. The source PDF may be image-only without an embedded text layer, blank, or unreadable.
+                            </p>
+                          )}
+                        </div>
+                      </details>
                     </div>
                   </div>
                 </div>
