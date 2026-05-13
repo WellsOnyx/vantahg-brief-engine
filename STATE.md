@@ -360,6 +360,47 @@ If you (Claude in a future session) detect that this doc is wrong:
 
 ---
 
+## ⚠️ HONEST AUDIT (2026-05-13, late session)
+
+**Done a real probe of `https://app.vantaum.com`. Findings are harsher than the docs above claim:**
+
+| Probe | Result | Reality |
+|---|---|---|
+| GET `/api/health` | 200, `database: "demo_mode"` | App is HEALTHY but in DEMO MODE |
+| GET `/` | 200 marketing-ish HTML | Live |
+| GET `/signup-tpa` | 200 | Page renders |
+| GET `/admin/signups` | 200 (no auth check) | Demo-mode bypasses auth |
+| GET `/portal/tpa` | **404** | **Recent code not deployed** |
+| POST `/api/signup-tpa` synthetic | 201 `{success:true, demo:true, "no row written"}` | **Real signups silently disappear** |
+
+### What this means
+- The Fargate container is running an **older image** that pre-dates the TPA + Provider portals, the auto-assignment feature, and the Meow client. All that code is on `main` but **NOT in the running container**.
+- The app is in demo mode because `NEXT_PUBLIC_SUPABASE_URL` is empty in the AWS secrets vault. `hasSupabaseConfig()` returns false, `isDemoMode()` returns true, every API route short-circuits to demo data.
+- Demo mode silently swallows POST requests instead of writing rows. **A prospect filling out `/signup-tpa` today would get a "success" message but nothing happens.**
+- Admin pages have no auth gate when demo mode is on. Not a security issue right now (no real data) but anyone with the URL sees admin UI.
+
+### To make app.vantaum.com actually production-ready
+The deltas, in priority order:
+
+1. **Decide the database backend.** Two options:
+   - **Use Supabase from AWS:** add `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` to the secrets vault. Wire them in ComputeStack. App leaves demo mode. Fast.
+   - **Use RDS:** flip `ENABLE_AWS_DB=true` env var on the Fargate task. App routes through the pg shim (already coded). RDS has the schema but zero data — fresh start.
+   The honest right answer is **Supabase from AWS for V1** since we're not ready to drop Supabase Auth.
+2. **Rebuild + push the Docker image to ECR.** The current ECR image was built before the TPA Portal / Provider Portal / Meow code merged. Build a new image from `main`, push, force-deploy Fargate.
+3. **Verify the probes again** after step 2 — `/portal/tpa` should return 200, `POST /api/signup-tpa` should write a real row, `database: "connected"` in health.
+
+### What's actually demo-ready vs production-ready right now
+- 🟢 Marketing site at `vantaum.com` — fully real, on Vercel
+- 🟢 The codebase on `main` — 212 tests passing, comprehensive feature set
+- 🟡 `app.vantaum.com` URL/cert/HTTPS — infrastructure live, but serving stale + demo
+- 🔴 Customer onboarding flow on `app.vantaum.com` — **silently broken** until container rebuild + Supabase env wired
+- 🔴 Meow billing — code merged, runtime paused (see below)
+
+### Single-sentence summary
+**VantaUM is ~70% ready to onboard a real TPA: the code is shipped, the URL is live, but the running container is stale and the database isn't connected. ~30 min of work (rebuild image + wire Supabase env) closes the visible gap; Meow + Auth migration are separate workstreams.**
+
+---
+
 ## 🔴 ACTIVE TASKS RIGHT NOW (2026-05-13)
 
 **PAUSED: Meow runtime bootstrap, blocked on Jonah provisioning a new "VantaUM" Meow account.**

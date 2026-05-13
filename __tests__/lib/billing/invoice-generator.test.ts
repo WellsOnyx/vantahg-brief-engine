@@ -52,3 +52,29 @@ describe('formatCents', () => {
     expect(formatCents(0)).toBe('$0.00');
   });
 });
+
+describe('pushInvoiceToMeow payment method types', () => {
+  // Guards against the production-blocking bug we discovered:
+  // ACH_DIRECT_DEBIT is NOT enabled on the Vanta HG LLC Meow account.
+  // Verified via GET /v1/billing/payment-method-types on 2026-05-13.
+  // If anyone re-adds ACH here, the first real invoice will 4xx from
+  // Meow's invoice create endpoint. This test reads the source to
+  // assert the array contains only BANK_TRANSFER. It's a static check
+  // (no module mock dance) so it stays fast and unambiguous.
+  it('only sends BANK_TRANSFER (ACH_DIRECT_DEBIT must NOT be in the array)', async () => {
+    const fs = await import('node:fs/promises');
+    const path = await import('node:path');
+    const src = await fs.readFile(
+      path.join(process.cwd(), 'lib/billing/invoice-generator.ts'),
+      'utf8',
+    );
+    // Find the line that sets payment_method_types and assert its contents.
+    const match = src.match(/payment_method_types:\s*(\[[^\]]+\])/);
+    expect(match).not.toBeNull();
+    const arr = match![1];
+    expect(arr).toContain('BANK_TRANSFER');
+    expect(arr).not.toContain('ACH_DIRECT_DEBIT');
+    expect(arr).not.toContain('INTERNATIONAL_WIRE');
+    expect(arr).not.toContain('CARD');
+  });
+});

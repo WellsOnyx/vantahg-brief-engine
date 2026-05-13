@@ -271,7 +271,13 @@ export async function pushInvoiceToMeow(
     collection_account_id: config.collectionAccountId,
     invoice_date: invoiceDate,
     due_date: dueDate,
-    payment_method_types: ['BANK_TRANSFER', 'ACH_DIRECT_DEBIT'],
+    // BANK_TRANSFER only. ACH_DIRECT_DEBIT is not enabled on the
+    // Vanta HG LLC Meow account - verified via GET /v1/billing/payment-method-types
+    // on 2026-05-13, which returned allowed_types: ["BANK_TRANSFER",
+    // "INTERNATIONAL_WIRE"]. Sending ACH_DIRECT_DEBIT would 4xx the
+    // invoice create call. When Meow enables ACH for this entity,
+    // add it back here.
+    payment_method_types: ['BANK_TRANSFER'],
     send_email_on_creation: true,
     name: args.localInvoiceNumber.slice(0, 32),
     note: `VantaUM PEPM ${toDateOnly(args.periodStart)} – ${toDateOnly(args.periodEnd)}`,
