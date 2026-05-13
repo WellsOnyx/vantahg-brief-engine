@@ -98,12 +98,48 @@ export class ComputeStack extends cdk.Stack {
       },
     });
 
-    const usePlaceholder = process.env.REAL_IMAGE_TAG === undefined;
+    // Default to the real app image now that one's been pushed.
+    // Set USE_PLACEHOLDER_IMAGE=true to revert to nginx for debugging.
+    const usePlaceholder = process.env.USE_PLACEHOLDER_IMAGE === 'true';
+    const imageTag = process.env.REAL_IMAGE_TAG ?? 'latest';
     const containerImage = usePlaceholder
       ? ecs.ContainerImage.fromRegistry('public.ecr.aws/nginx/nginx:alpine')
-      : ecs.ContainerImage.fromEcrRepository(this.appRepository, process.env.REAL_IMAGE_TAG);
+      : ecs.ContainerImage.fromEcrRepository(this.appRepository, imageTag);
 
     const containerPort = usePlaceholder ? 80 : 3000;
+
+    // Third-party API keys live in a single JSON secret. Fields:
+    //   anthropic_api_key, hellosign_api_key, hellosign_client_id,
+    //   phaxio_api_key, phaxio_api_secret, phaxio_callback_token,
+    //   google_vision_api_key, sentry_dsn, gravity_rail_api_key
+    // Created here with empty defaults so the service can deploy even
+    // before secrets are populated. Fill them in via AWS Console ->
+    // Secrets Manager after the stack is up.
+    // Third-party + Supabase API keys live in a single JSON secret.
+    // The app still talks to Supabase Postgres for V1 - we'll port to
+    // RDS-direct in a later phase. Until then, AWS-side compute + S3 +
+    // SES are real, and the DB call path goes through Supabase.
+    const thirdPartySecret = new secretsmanager.Secret(this, 'ThirdPartySecret', {
+      secretName: `vantaum-${envName}-third-party-keys`,
+      description: 'API keys for Supabase, Anthropic, HelloSign, Phaxio, Google Vision, Sentry, Gravity Rail',
+      secretObjectValue: {
+        supabase_url: cdk.SecretValue.unsafePlainText(''),
+        supabase_anon_key: cdk.SecretValue.unsafePlainText(''),
+        supabase_service_role_key: cdk.SecretValue.unsafePlainText(''),
+        anthropic_api_key: cdk.SecretValue.unsafePlainText(''),
+        hellosign_api_key: cdk.SecretValue.unsafePlainText(''),
+        hellosign_client_id: cdk.SecretValue.unsafePlainText(''),
+        phaxio_api_key: cdk.SecretValue.unsafePlainText(''),
+        phaxio_api_secret: cdk.SecretValue.unsafePlainText(''),
+        phaxio_callback_token: cdk.SecretValue.unsafePlainText(''),
+        google_vision_api_key: cdk.SecretValue.unsafePlainText(''),
+        sentry_dsn: cdk.SecretValue.unsafePlainText(''),
+        gravity_rail_api_key: cdk.SecretValue.unsafePlainText(''),
+        cron_secret: cdk.SecretValue.unsafePlainText(''),
+      },
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
+    });
+    thirdPartySecret.grantRead(taskRole);
 
     const logGroup = new logs.LogGroup(this, 'AppLogGroup', {
       logGroupName: `/vantaum/${envName}/app`,
@@ -121,18 +157,46 @@ export class ComputeStack extends cdk.Stack {
       environment: {
         NODE_ENV: 'production',
         PORT: String(containerPort),
+        // AWS adapter flags - the app routes through S3 / Cognito / SES.
         ENABLE_AWS_STORAGE: 'true',
         ENABLE_AWS_AUTH: 'true',
         ENABLE_AWS_EMAIL: 'true',
+        ENABLE_REAL_ANTHROPIC: 'true',
+        ENABLE_REAL_HELLOSIGN: 'true',
+        ENABLE_REAL_EFAX: 'true',
+        // App URL and SES sender (must be SES-verified domain).
+        NEXT_PUBLIC_SITE_URL: 'https://app.vantaum.com',
+        APP_URL: 'https://app.vantaum.com',
+        SES_FROM_ADDRESS: 'noreply@vantaum.com',
+        // Region for AWS SDK clients.
+        AWS_REGION: this.region,
       },
-      // Real container will need more secrets (HelloSign, Anthropic, etc.) —
-      // those land when we swap from placeholder to real image.
       secrets: usePlaceholder
         ? undefined
         : {
-            // DB credentials. The secret value is a JSON object — we
-            // exposed individual fields via JSONPath.
-            DATABASE_URL: ecs.Secret.fromSecretsManager(dbSecret),
+            // RDS connection (available for the future direct-Postgres swap).
+            DB_HOST: ecs.Secret.fromSecretsManager(dbSecret, 'host'),
+            DB_PORT: ecs.Secret.fromSecretsManager(dbSecret, 'port'),
+            DB_NAME: ecs.Secret.fromSecretsManager(dbSecret, 'dbname'),
+            DB_USER: ecs.Secret.fromSecretsManager(dbSecret, 'username'),
+            DB_PASSWORD: ecs.Secret.fromSecretsManager(dbSecret, 'password'),
+            // Supabase connection - V1 app talks to Supabase Postgres
+            // via the @supabase/supabase-js client. Will swap to direct
+            // pg/Drizzle in a later phase.
+            NEXT_PUBLIC_SUPABASE_URL: ecs.Secret.fromSecretsManager(thirdPartySecret, 'supabase_url'),
+            NEXT_PUBLIC_SUPABASE_ANON_KEY: ecs.Secret.fromSecretsManager(thirdPartySecret, 'supabase_anon_key'),
+            SUPABASE_SERVICE_ROLE_KEY: ecs.Secret.fromSecretsManager(thirdPartySecret, 'supabase_service_role_key'),
+            // Third-party API keys.
+            ANTHROPIC_API_KEY: ecs.Secret.fromSecretsManager(thirdPartySecret, 'anthropic_api_key'),
+            HELLOSIGN_API_KEY: ecs.Secret.fromSecretsManager(thirdPartySecret, 'hellosign_api_key'),
+            HELLOSIGN_CLIENT_ID: ecs.Secret.fromSecretsManager(thirdPartySecret, 'hellosign_client_id'),
+            PHAXIO_API_KEY: ecs.Secret.fromSecretsManager(thirdPartySecret, 'phaxio_api_key'),
+            PHAXIO_API_SECRET: ecs.Secret.fromSecretsManager(thirdPartySecret, 'phaxio_api_secret'),
+            PHAXIO_CALLBACK_TOKEN: ecs.Secret.fromSecretsManager(thirdPartySecret, 'phaxio_callback_token'),
+            GOOGLE_VISION_API_KEY: ecs.Secret.fromSecretsManager(thirdPartySecret, 'google_vision_api_key'),
+            SENTRY_DSN: ecs.Secret.fromSecretsManager(thirdPartySecret, 'sentry_dsn'),
+            GRAVITY_RAIL_API_KEY: ecs.Secret.fromSecretsManager(thirdPartySecret, 'gravity_rail_api_key'),
+            CRON_SECRET: ecs.Secret.fromSecretsManager(thirdPartySecret, 'cron_secret'),
           },
     });
 
