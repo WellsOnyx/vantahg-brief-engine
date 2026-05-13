@@ -362,33 +362,45 @@ If you (Claude in a future session) detect that this doc is wrong:
 
 ## 🔴 ACTIVE TASKS RIGHT NOW (2026-05-13)
 
-**IN-FLIGHT: Meow bootstrap, blocked on regenerating the API key.**
+**PAUSED: Meow runtime bootstrap, blocked on Jonah provisioning a new "VantaUM" Meow account.**
 
-Current state of the Meow integration go-live (the code is shipped — see "Meow banking integration" below — this is the runtime configuration):
+> Decision recorded 2026-05-13: Jonah does NOT want PEPM invoice payments routed into the existing Operating Account (8841) or IP Fees Account (2472) inside Vanta HG LLC. A new dedicated **"VantaUM"** account will be provisioned inside Meow (sub-account of Vanta HG LLC, or possibly its own entity — TBD when Jonah sets it up). Bootstrap resumes the moment that account exists.
 
-### What's done
-- ✅ Meow API key created in Meow UI for **Vanta HG LLC entity** (NOT Wells Onyx). Named "VantaUM". Goal scopes: `accounts:read` + all `billing:*` read/write + `billing:accounts:read`. IP allowlist: only `3.81.192.170` (the Fargate NAT EIP).
-- ✅ Meow API key stored in `vantaum-prod-third-party-keys` Secrets Manager → `meow_api_key`. Length 22 chars (confirmed full key, Meow uses short opaque tokens). Last 4 chars `-bmg`.
-- ✅ Bastion IAM role granted `secretsmanager:GetSecretValue` on `vantaum-prod-third-party-keys` (`ReadThirdPartySecret` inline policy on `vantaum-prod-compute-BastionRole201D3308-z9URw5kwddFg`).
+### What's done in the bootstrap so far (DO NOT redo)
+- ✅ Meow API key created in Meow UI for **Vanta HG LLC entity**. Named "VantaUM". 8 scopes verified working (200 OK on `/api-keys/accessible-entities`, `/billing/customers`, `/accounts`). IP allowlist contains `3.81.192.170` (Fargate NAT EIP).
+- ✅ Meow API key stored in `vantaum-prod-third-party-keys` Secrets Manager → `meow_api_key`. Length 43 chars, last4 `Tv5s`. **This is the current working key — do not regenerate unless you have a reason.**
+- ✅ Bastion IAM role granted `secretsmanager:GetSecretValue` on `vantaum-prod-third-party-keys` (inline policy `ReadThirdPartySecret` on `vantaum-prod-compute-BastionRole201D3308-z9URw5kwddFg`).
 - ✅ Bastion confirmed to egress via the allowlisted NAT IP `3.81.192.170`.
+- ✅ **Entity ID discovered:** `1a267bae-6772-4a76-bd98-51f5086cb4b3` (Vanta HG LLC). Not stored in secret yet because we're waiting on the VantaUM account.
+- ✅ **Existing accounts inside Vanta HG LLC discovered (NEITHER WILL BE USED):**
+  - Operating Account (8841) → `20bfdb1e-ac74-4eb1-b8cb-3a6e007bbf52`
+  - IP Fees Account (2472) → `ec2d0820-1cb9-4e4b-a30b-240f2f0b467d`
+- ✅ Vault has empty slots ready for `meow_entity_id`, `meow_collection_account_id`, `meow_vantaum_product_id`.
+- ⚠️ **Allowed payment methods on this Meow setup:** `BANK_TRANSFER`, `INTERNATIONAL_WIRE` only — `ACH_DIRECT_DEBIT` is NOT enabled. When invoices are created, use only `BANK_TRANSFER` in the `payment_method_types` field. The Meow client wrapper in `lib/billing/meow-client.ts` currently includes ACH_DIRECT_DEBIT in the type union; that's fine since it's a default option but callers should pass only `['BANK_TRANSFER']` to `createInvoice`. The `generateInvoice()` function in `lib/billing/invoice-generator.ts` currently passes `['BANK_TRANSFER', 'ACH_DIRECT_DEBIT']` — change this to `['BANK_TRANSFER']` only before the first real invoice. (Trivial 1-line edit.)
 
-### What's blocking
-- ❌ Every Meow API call from the bastion returns `HTTP 403 Forbidden` even though:
-  - The key validates (it's 403 not 401, so auth header is recognized — confirmed via `Authorization: Bearer` returning 401 vs `x-api-key` returning 403)
-  - The egress IP matches the allowlist
-- Diagnosis: the scopes weren't actually applied to the key when it was created. Could be: boxes not checked, UI bug, or IP allowlist field interfered with scope-saving. **Cannot tell from the outside.**
+### Earlier troubleshooting lessons (DON'T REPEAT THESE)
+- The AWS Console plaintext JSON editor appended duplicate `meow_api_key` entries twice instead of replacing. **Don't use Console for the third-party-keys vault** — use `aws secretsmanager put-secret-value` from a tmp JSON file via CLI.
+- A `curl -sv` (verbose mode) on a header-auth request leaks the API key into stdout. **Never use `-v` or `--trace` on any command with a secret in a header.** The first Meow key (22 chars, last4 `O0jA`) was leaked and revoked because of this.
+- Meow returns 403 (not 401) for IP-allowlist-blocked requests regardless of key validity. If a known-good key suddenly 403s, suspect the IP allowlist before scopes.
 
-### Next step on resume
-1. **Regenerate the Meow API key.** In Meow UI: revoke the current "VantaUM" key, create a new one with the exact same name. Carefully check each scope checkbox this time (8 boxes: `accounts:read`, `billing:products:read`, `billing:products:write`, `billing:customers:read`, `billing:customers:write`, `billing:invoices:read`, `billing:invoices:write`, `billing:accounts:read`). IP allowlist `3.81.192.170` only.
-2. **Replace `meow_api_key` value** in AWS Secrets Manager (`vantaum-prod-third-party-keys`). Jonah does this in the AWS Console (we tried CLI flow and it kept getting tangled with the `read -s` trick).
-3. **Retry discovery via SSM bastion** — same commands as before. Should now return real data (accessible-entities + collection-accounts).
-4. Write entity ID + collection account UUID into the secret as `meow_entity_id` and `meow_collection_account_id` (new fields, append to the JSON).
-5. Run `scripts/bootstrap-meow-product.ts` from the bastion to create the VantaUM PEPM Product. Use `npx tsx` and pass env via the secret. Capture the returned product UUID.
-6. Write product UUID into the secret as `meow_vantaum_product_id`.
-7. **Update `infra-aws/lib/compute-stack.ts`** to wire all 4 Meow env vars onto the Fargate task definition from the secret. Pattern: existing `HELLOSIGN_API_KEY` wiring. Add `MEOW_API_KEY`, `MEOW_ENTITY_ID`, `MEOW_COLLECTION_ACCOUNT_ID`, `MEOW_VANTAUM_PRODUCT_ID`. Also add `ENABLE_REAL_MEOW=true` as a plain environment variable (not from secret).
-8. `cdk deploy vantaum-prod-compute` to push the new task definition.
-9. `aws ecs update-service --cluster vantaum-prod --service vantaum-prod-app --force-new-deployment` to roll the task.
-10. Smoke test: hit `https://app.vantaum.com/admin/invoices`, generate a test invoice for a test client (need a client with `contact_email` set), verify the invoice shows up in the Meow dashboard with the right total. Also verify the local `invoices` row has `meow_invoice_id` populated.
+### When the VantaUM Meow account exists, resume here
+1. Find the new account UUID via SSM on bastion:
+   ```
+   curl -s -H "x-api-key: $MEOW_KEY" https://api.meow.com/v1/accounts
+   ```
+   Look for the one with nickname/name "VantaUM".
+2. Write entity_id + the new collection_account_id into the secret via CLI (NOT Console):
+   ```bash
+   aws secretsmanager get-secret-value --profile vantaum --region us-east-1 --secret-id vantaum-prod-third-party-keys --query SecretString --output text > /tmp/cur.json
+   python3 -c "import json; d=json.load(open('/tmp/cur.json')); d['meow_entity_id']='1a267bae-6772-4a76-bd98-51f5086cb4b3'; d['meow_collection_account_id']='<NEW_VANTAUM_UUID>'; print(json.dumps(d))" > /tmp/new.json
+   aws secretsmanager put-secret-value --profile vantaum --region us-east-1 --secret-id vantaum-prod-third-party-keys --secret-string file:///tmp/new.json
+   rm /tmp/cur.json /tmp/new.json
+   ```
+3. Edit `lib/billing/invoice-generator.ts` line that passes `payment_method_types`: change `['BANK_TRANSFER', 'ACH_DIRECT_DEBIT']` to `['BANK_TRANSFER']`.
+4. Run `scripts/bootstrap-meow-product.ts` from the bastion via SSM. Capture the returned product UUID. Write it to the secret as `meow_vantaum_product_id` via the same pattern as step 2.
+5. **Update `infra-aws/lib/compute-stack.ts`** to wire all 4 Meow env vars from the secret onto the Fargate task definition. Pattern: existing `HELLOSIGN_API_KEY` wiring. Add `MEOW_API_KEY`, `MEOW_ENTITY_ID`, `MEOW_COLLECTION_ACCOUNT_ID`, `MEOW_VANTAUM_PRODUCT_ID`. Also add `ENABLE_REAL_MEOW=true` as a plain env var (not secret).
+6. `cdk deploy vantaum-prod-compute` then `aws ecs update-service --cluster vantaum-prod --service vantaum-prod-app --force-new-deployment`.
+7. Smoke test: hit `https://app.vantaum.com/admin/invoices`, generate a test invoice for a test client (need a client with `contact_email` set), verify the invoice shows up in the Meow dashboard with the right total and that the local `invoices` row has `meow_invoice_id` populated.
 
 **Plan A complete + AWS cutover complete.** All 8 steps shipped. `https://app.vantaum.com` is live on AWS Fargate with HTTPS. The temporary ALB hostname is no longer the way in.
 
