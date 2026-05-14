@@ -233,16 +233,22 @@ What it takes to deliver real kickoff invites in prod:
 What still needs desktop work to fully ship this:
 1. v3 container rebuild + Fargate force-new-deployment.
 
-**Quality audit endpoint test coverage:**
+**Quality audit endpoint test coverage + "New audit" entry point:**
 - `070073a` — test: 12 Vitest cases for the `/api/quality/*` surface
   that had zero coverage before. GET /audits (3 — auth gate, demo
   list, filter param passthrough), POST /audits (3 — auth gate,
   400 on missing case_id, 201 happy path), GET /audits/[id] (2 —
   auth gate, dev-demo 404), PATCH /audits/[id] (2 — auth gate,
   success), GET /metrics (2 — auth gate, response shape match).
-  The dashboard at `/quality` is already shipped + working —
-  remaining gap is just a "New audit" entry point button somewhere
-  in the case detail / quality page, not a backend gap.
+- `08743dc` — feat: "+ New audit" button + modal on /quality.
+  Three inputs: Case ID (free text UUID), Auditor (dropdown of
+  staff filtered to RN), Staff audited (dropdown of staff filtered
+  to LPN). Submit POSTs to /api/quality/audits, closes modal,
+  switches to "Audit History" tab, re-fetches audits so the new
+  row shows up immediately. URAC workflow is now end-to-end
+  reachable from the UI. The criteria-scoring PATCH still has
+  no dedicated UI (auditor calls the PATCH directly today) —
+  that's a future detail page tracked in CLAUDE.md "What's next".
 
 **SLA-aware LPN selection in pod assignment:**
 - `18a52dd` — feat: new `lib/delivery/lpn-scoring.ts` module.
