@@ -233,6 +233,17 @@ What it takes to deliver real kickoff invites in prod:
 What still needs desktop work to fully ship this:
 1. v3 container rebuild + Fargate force-new-deployment.
 
+**Quality audit endpoint test coverage:**
+- `070073a` — test: 12 Vitest cases for the `/api/quality/*` surface
+  that had zero coverage before. GET /audits (3 — auth gate, demo
+  list, filter param passthrough), POST /audits (3 — auth gate,
+  400 on missing case_id, 201 happy path), GET /audits/[id] (2 —
+  auth gate, dev-demo 404), PATCH /audits/[id] (2 — auth gate,
+  success), GET /metrics (2 — auth gate, response shape match).
+  The dashboard at `/quality` is already shipped + working —
+  remaining gap is just a "New audit" entry point button somewhere
+  in the case detail / quality page, not a backend gap.
+
 **SLA-aware LPN selection in pod assignment:**
 - `18a52dd` — feat: new `lib/delivery/lpn-scoring.ts` module.
   Replaces the legacy `(activeCount asc, avg_turnaround_hours asc)`
