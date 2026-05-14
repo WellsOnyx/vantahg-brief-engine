@@ -79,8 +79,8 @@ docs/                   # Setup guides and handoff docs
 ## What's next
 1. Provider portal (external-facing status checks)
 2. Receipt-confirmation email wiring (the intake-confirmation notification helper exists but isn't dispatched from the eFax pipeline yet — blocked on schema for `requesting_provider_email`)
-3. Quality audit detail page where the auditing RN fills in criteria_accuracy / documentation_quality / sla_compliance / etc. (PATCH endpoint exists; UI is the gap)
-4. SLA-aware LPN scoring: tune `LOAD_PENALTY_WEIGHT` once production assignment data exists (currently 0.1, set by synthetic-test-driven defaults)
+3. SLA-aware LPN scoring: tune `LOAD_PENALTY_WEIGHT` once production assignment data exists (currently 0.1, set by synthetic-test-driven defaults)
+4. TPA system connector framework (FHIR / X12 EDI) — start with one specific connector once the first TPA's TPA-system is known
 
 ## Environment variables
 See `.env.local.example`. For the eFax pipeline, also need:

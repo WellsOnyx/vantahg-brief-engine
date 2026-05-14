@@ -245,10 +245,18 @@ What still needs desktop work to fully ship this:
   staff filtered to RN), Staff audited (dropdown of staff filtered
   to LPN). Submit POSTs to /api/quality/audits, closes modal,
   switches to "Audit History" tab, re-fetches audits so the new
-  row shows up immediately. URAC workflow is now end-to-end
-  reachable from the UI. The criteria-scoring PATCH still has
-  no dedicated UI (auditor calls the PATCH directly today) —
-  that's a future detail page tracked in CLAUDE.md "What's next".
+  row shows up immediately.
+- `371d71e` — feat: /quality/[id] scoring page. Auditing RN gets
+  a form with the four scoring fields (two 0..100 sliders for
+  criteria_accuracy / documentation_quality, two Yes/No toggles
+  for sla_compliance / determination_appropriate) plus a notes
+  textarea. Live "Overall N%" pill in the header mirrors the
+  server-side avg computation. PATCHes /api/quality/audits/[id]
+  and redirects back to /quality on success. Re-edits supported
+  for completed audits (form seeds from stored values, button
+  label flips to "Save changes"). The audit history rows in
+  /quality are now clickable to navigate here. URAC's full
+  create → score → review-in-list loop is now UI-reachable.
 
 **SLA-aware LPN selection in pod assignment:**
 - `18a52dd` — feat: new `lib/delivery/lpn-scoring.ts` module.
