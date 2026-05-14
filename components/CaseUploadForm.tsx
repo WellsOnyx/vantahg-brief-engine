@@ -48,7 +48,12 @@ interface FormState {
   service_category: string;
   priority: Priority;
   practice_id: string;
-  documents_description: string;  // free text for V1; real uploads in V2
+  documents_description: string;  // free text — backup when the user has no PDF to attach
+}
+
+interface UploadFeedback {
+  accepted_count: number;
+  rejected: { filename: string; reason: string; detail?: string }[];
 }
 
 const SERVICE_CATEGORIES = [
@@ -82,8 +87,39 @@ export default function CaseUploadForm({ scope, practiceOptions = [], onSuccess 
   const [error, setError] = useState<string | null>(null);
   const [duplicateInfo, setDuplicateInfo] = useState<{ case_id: string; case_number: string; message: string } | null>(null);
 
+  // PDF attachments. Two-phase submit: create the case via JSON POST,
+  // then upload selected files via multipart POST to the documents
+  // endpoint. A failed upload does NOT roll back case creation —
+  // the user can retry from the case detail page.
+  const [files, setFiles] = useState<File[]>([]);
+  const [uploadFeedback, setUploadFeedback] = useState<UploadFeedback | null>(null);
+  const [uploading, setUploading] = useState(false);
+
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((p) => ({ ...p, [key]: value }));
+  }
+
+  function handleFilesPicked(picked: FileList | null) {
+    if (!picked) return;
+    const next = Array.from(picked);
+    // Client-side guard rails — the API does the authoritative checks.
+    const tooMany = next.length > 5;
+    const tooLarge = next.find((f) => f.size > 10 * 1024 * 1024);
+    const wrongType = next.find((f) => f.type !== 'application/pdf');
+    if (tooMany) {
+      setError('Pick at most 5 PDF files per submission.');
+      return;
+    }
+    if (tooLarge) {
+      setError(`"${tooLarge.name}" is larger than 10 MB.`);
+      return;
+    }
+    if (wrongType) {
+      setError(`"${wrongType.name}" is not a PDF. Only PDF attachments are accepted.`);
+      return;
+    }
+    setError(null);
+    setFiles(next);
   }
 
   async function submit(e: React.FormEvent) {
@@ -154,6 +190,53 @@ export default function CaseUploadForm({ scope, practiceOptions = [], onSuccess 
 
       const caseId = data.id ?? data.case_id;
       const caseNumber = data.case_number;
+
+      // Phase 2: upload any selected PDFs. We do this AFTER case creation
+      // so a partial upload still leaves a valid case the user can
+      // re-attach to from the case detail page. Failures here surface as
+      // a non-fatal banner rather than blocking navigation.
+      if (caseId && files.length > 0) {
+        setUploading(true);
+        try {
+          const fd = new FormData();
+          for (const f of files) fd.append('files', f);
+          const uploadRes = await fetch(`/api/cases/${caseId}/documents`, {
+            method: 'POST',
+            body: fd,
+          });
+          const uploadData = (await uploadRes.json().catch(() => ({}))) as {
+            accepted?: { filename: string; storage_path: string; bytes: number }[];
+            rejected?: { filename: string; reason: string; detail?: string }[];
+            error?: string;
+          };
+          if (!uploadRes.ok) {
+            setUploadFeedback({
+              accepted_count: 0,
+              rejected: files.map((f) => ({
+                filename: f.name,
+                reason: 'server_error',
+                detail: uploadData.error ?? `HTTP ${uploadRes.status}`,
+              })),
+            });
+          } else {
+            setUploadFeedback({
+              accepted_count: uploadData.accepted?.length ?? 0,
+              rejected: uploadData.rejected ?? [],
+            });
+          }
+        } catch {
+          setUploadFeedback({
+            accepted_count: 0,
+            rejected: files.map((f) => ({
+              filename: f.name,
+              reason: 'network_error',
+            })),
+          });
+        } finally {
+          setUploading(false);
+        }
+      }
+
       if (onSuccess && caseId) {
         onSuccess(caseId, caseNumber);
       } else if (caseId) {
@@ -274,18 +357,63 @@ export default function CaseUploadForm({ scope, practiceOptions = [], onSuccess 
 
       <Section title="Clinical documents">
         <Field
-          label="Document description"
-          hint="List the documents you're attaching to support this case. (PDF upload coming soon — for now, fax or email the docs to your concierge after submitting.)"
+          label="Attach PDFs"
+          hint="Up to 5 files, 10 MB each. PDF only. Uploaded after the case is created."
+        >
+          <input
+            type="file"
+            accept="application/pdf"
+            multiple
+            onChange={(e) => handleFilesPicked(e.target.files)}
+            className="block w-full text-sm text-foreground file:mr-3 file:py-2 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-navy/5 file:text-navy hover:file:bg-navy/10 cursor-pointer"
+          />
+          {files.length > 0 && (
+            <ul className="mt-2 space-y-1">
+              {files.map((f, i) => (
+                <li key={`${f.name}-${i}`} className="flex items-center justify-between text-xs text-muted bg-gray-50 rounded px-3 py-1.5">
+                  <span className="font-mono truncate mr-3">{f.name}</span>
+                  <span className="flex-shrink-0">{(f.size / 1024 / 1024).toFixed(2)} MB</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Field>
+
+        <Field
+          label="Document description (fallback)"
+          hint="Only needed when you can't attach a PDF — your concierge will follow up to collect the docs."
         >
           <textarea
             value={form.documents_description}
             onChange={(e) => update('documents_description', e.target.value)}
-            rows={3}
+            rows={2}
             className="w-full bg-white border border-border rounded-lg px-3 py-2 text-sm"
-            placeholder="Sleep study report (PDF), face-to-face evaluation notes (2 pages), insurance card"
+            placeholder="Sleep study report, face-to-face evaluation notes, insurance card"
           />
         </Field>
       </Section>
+
+      {uploadFeedback && (
+        <div className={`rounded-lg border text-sm px-4 py-3 ${
+          uploadFeedback.rejected.length === 0
+            ? 'bg-green-50 border-green-200 text-green-800'
+            : 'bg-amber-50 border-amber-200 text-amber-900'
+        }`}>
+          <p className="font-semibold">
+            {uploadFeedback.accepted_count} of {uploadFeedback.accepted_count + uploadFeedback.rejected.length} file(s) uploaded.
+          </p>
+          {uploadFeedback.rejected.length > 0 && (
+            <ul className="mt-1 list-disc list-inside text-xs">
+              {uploadFeedback.rejected.map((r, i) => (
+                <li key={i}>
+                  <span className="font-mono">{r.filename}</span> — {r.reason}
+                  {r.detail ? `: ${r.detail}` : ''}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
 
       {error && (
         <div className="rounded-lg bg-red-50 border border-red-200 text-red-800 text-sm px-4 py-3">
@@ -312,10 +440,14 @@ export default function CaseUploadForm({ scope, practiceOptions = [], onSuccess 
       <div className="flex items-center justify-end gap-3 border-t border-border pt-4">
         <button
           type="submit"
-          disabled={submitting}
+          disabled={submitting || uploading}
           className="bg-navy text-white px-6 py-2.5 rounded-lg text-sm font-semibold hover:bg-navy/90 disabled:opacity-50"
         >
-          {submitting ? 'Submitting…' : 'Submit authorization request'}
+          {uploading
+            ? `Uploading ${files.length} file${files.length === 1 ? '' : 's'}…`
+            : submitting
+              ? 'Submitting…'
+              : 'Submit authorization request'}
         </button>
       </div>
     </form>
