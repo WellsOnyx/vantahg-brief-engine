@@ -73,13 +73,14 @@ docs/                   # Setup guides and handoff docs
 8. Onboarding kickoff calendar invite — `lib/calendar/ical-generator.ts` builds an RFC 5545 .ics file with a weekly RRULE; `lib/notifications/kickoff-invite.ts:sendKickoffInvite` emails it as a `text/calendar; method=REQUEST` attachment on onboarding completion. Hooked into `POST /api/onboarding` fire-and-forget after `body.complete` flips status to `completed`. Idempotent via `onboarding_data.kickoff.invite_sent_at` (JSONB — no migration needed).
 9. Real PDF upload on case submission — `CaseUploadForm` accepts up to 5 PDF attachments per submission via a two-phase submit (create case → `POST /api/cases/[id]/documents` multipart). Files persist through the existing storage adapter to the `efax-documents` bucket under `cases/<id>/<ts>-<filename>`. Per-file validation (PDF only, 10 MB cap) with typed `accepted[]` / `rejected[]` response so partial-success surfaces inline. `cases.submitted_documents` is appended in order.
 10. Submitted-documents download view — `/cases/[id]` Documents card now renders each entry in `submitted_documents[]` as a click-to-download button backed by `GET /api/cases/[id]/documents/sign`. The endpoint mints a 5-min signed URL via the storage adapter after passing a two-stage guard (path must live in `cases/<caseId>/`, must appear in `submitted_documents[]`). Both bad-path branches return identical 404s so the response never leaks whether a file exists elsewhere; security events fire on both. Filenames display stripped of the upload-timestamp prefix.
-11. 200+ passing tests (211 from prior + 13 for triage queue API + 12 for determination delivery + 11 for portal endpoints incl. cross-tenant invite guard + 19 for iCal generator and kickoff invite + 6 for case-documents upload + 7 for case-documents signed-URL)
+11. SLA-aware LPN selection — `lib/delivery/lpn-scoring.ts:scoreLpnForCase` computes `slack_hours = time_to_deadline − (activeCount + 1) * avg_turnaround` and picks the highest-scored LPN. `lib/pod-assignment-engine.ts` calls `pickLpnByScore` in place of the legacy `(load, turnaround)` sort. Falls back to legacy ordering when the case has no `turnaround_deadline`. The `pod_assigned` audit event now carries `sla_score / sla_slack_hours / expected_completion_hours` so missed SLAs can be investigated. Tunable knob: `LOAD_PENALTY_WEIGHT` (default 0.1).
+12. 200+ passing tests (211 from prior + 13 for triage queue API + 12 for determination delivery + 11 for portal endpoints incl. cross-tenant invite guard + 19 for iCal generator and kickoff invite + 6 for case-documents upload + 7 for case-documents signed-URL + 12 for SLA-aware LPN scoring)
 
 ## What's next
 1. Provider portal (external-facing status checks)
 2. Receipt-confirmation email wiring (the intake-confirmation notification helper exists but isn't dispatched from the eFax pipeline yet — blocked on schema for `requesting_provider_email`)
 3. Quality audit dashboard
-4. Pod-based reviewer assignment optimization (SLA-aware LPN selection)
+4. SLA-aware LPN scoring: tune `LOAD_PENALTY_WEIGHT` once production assignment data exists (currently 0.1, set by synthetic-test-driven defaults)
 
 ## Environment variables
 See `.env.local.example`. For the eFax pipeline, also need:

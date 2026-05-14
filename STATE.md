@@ -233,6 +233,33 @@ What it takes to deliver real kickoff invites in prod:
 What still needs desktop work to fully ship this:
 1. v3 container rebuild + Fargate force-new-deployment.
 
+**SLA-aware LPN selection in pod assignment:**
+- `18a52dd` — feat: new `lib/delivery/lpn-scoring.ts` module.
+  Replaces the legacy `(activeCount asc, avg_turnaround_hours asc)`
+  sort with a score that maximizes slack vs the case deadline,
+  lightly penalized by load as a tiebreaker.
+    expected_completion = (activeCount + 1) * avg_turnaround
+    slack_hours          = time_to_deadline - expected_completion
+    score                = slack_hours - LOAD_PENALTY_WEIGHT * activeCount
+  When the case has no turnaround_deadline (rare — pre-SLA cases),
+  falls back to the legacy ordering so no behavior regresses. The
+  `pod_assigned` audit event now carries sla_score, sla_slack_hours,
+  and expected_completion_hours so ops can investigate missed
+  SLAs by reading the trail. Tunable knob: LOAD_PENALTY_WEIGHT
+  (default 0.1). Bump toward 1.0 to favor load balancing; toward
+  0.0 to favor pure SLA fit.
+- `2b07594` — test: 12 Vitest cases on the pure scorer (no DB, no
+  clock). Math assertions cover slack / score / fallback / null
+  avg_turnaround. Selection scenarios cover the key cases: SLA
+  pressure wins over load on tight deadlines (the whole point),
+  load tiebreaker wins on comfortable deadlines, least-bad LPN
+  picked when no one can hit the deadline, stable tiebreaker on
+  equal scores.
+
+Real-world tuning of LOAD_PENALTY_WEIGHT will happen once
+production assignment data exists. The synthetic-test suite is
+the contract until then.
+
 **Submitted-documents download view (closes the loop from real-PDF upload):**
 - `afdb476` — feat: `GET /api/cases/[id]/documents/sign?path=<...>`
   mints a 5-min signed URL via the storage adapter (same
