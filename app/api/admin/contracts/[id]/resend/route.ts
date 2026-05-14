@@ -33,7 +33,7 @@ export async function POST(
     const { id } = await params;
 
     if (isDemoMode()) {
-      return NextResponse.json({ success: true, demo: true, message: 'Reminder sent (demo mode).' });
+      return NextResponse.json({ success: true, demo: true, message: 'Reminder sent (demo mode).' }, { headers: { 'X-Demo-Mode': 'true' } });
     }
 
     const supabase = getServiceClient();

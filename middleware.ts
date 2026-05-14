@@ -1,14 +1,39 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 
-// Routes that don't require authentication
-const PUBLIC_ROUTES = ['/', '/login', '/signup', '/welcome', '/demo', '/site', '/api/health', '/api/external/submit', '/api/intake/efax', '/api/intake/email'];
+// Public marketing / auth-flow page prefixes. `startsWith` semantics are
+// intentional here because routes like `/signup-tpa` and `/demo-tour` are
+// real pages that should remain reachable without auth.
+const PUBLIC_PAGE_PREFIXES = ['/login', '/signup', '/welcome', '/demo', '/site'];
+
+// Public API endpoints. STRICT matching — `/api/intake/efax/queue` is a
+// CSR-only triage surface that must NOT be reachable just because it
+// shares the `/api/intake/efax` prefix. Webhooks self-authenticate via
+// HMAC where applicable.
+const PUBLIC_EXACT = new Set([
+  '/',
+  '/api/health',
+  '/api/external/submit',
+  '/api/intake/efax', // generic webhook (HMAC-protected, see app/api/intake/efax/route.ts)
+  '/api/intake/email', // email intake webhook
+]);
+
+// Public API prefixes whose sub-paths are themselves public. The trailing
+// slash boundary prevents `/api/intake/efax/phaxio` from also matching
+// something like `/api/intake/efax/phaxio-queue` if that's ever added.
+const PUBLIC_API_PREFIXES = ['/api/intake/efax/phaxio'];
+
+function isPublicRoute(pathname: string): boolean {
+  if (PUBLIC_EXACT.has(pathname)) return true;
+  if (PUBLIC_PAGE_PREFIXES.some((p) => pathname.startsWith(p))) return true;
+  if (PUBLIC_API_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + '/'))) return true;
+  return false;
+}
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Allow public routes (exact match for '/', prefix match for others)
-  if (PUBLIC_ROUTES.some((route) => route === '/' ? pathname === '/' : pathname.startsWith(route))) {
+  if (isPublicRoute(pathname)) {
     return NextResponse.next();
   }
 

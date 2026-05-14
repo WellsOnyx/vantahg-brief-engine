@@ -62,7 +62,7 @@ export async function POST(
         demo: true,
         message: 'Upload recorded (demo mode — no file persisted).',
         contract_storage_path: `demo/${id}/contract.pdf`,
-      });
+      }, { headers: { 'X-Demo-Mode': 'true' } });
     }
 
     let formData: FormData;
@@ -211,7 +211,7 @@ export async function GET(
         demo: true,
         url: '#demo-contract-not-real',
         expires_in_seconds: SIGNED_URL_TTL_SECONDS,
-      });
+      }, { headers: { 'X-Demo-Mode': 'true' } });
     }
 
     const supabase = getServiceClient();

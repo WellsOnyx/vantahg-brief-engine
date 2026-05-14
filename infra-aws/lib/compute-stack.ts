@@ -136,6 +136,17 @@ export class ComputeStack extends cdk.Stack {
         sentry_dsn: cdk.SecretValue.unsafePlainText(''),
         gravity_rail_api_key: cdk.SecretValue.unsafePlainText(''),
         cron_secret: cdk.SecretValue.unsafePlainText(''),
+        // Meow billing — PEPM invoice push + status sync. Slots
+        // declared empty so CDK is self-consistent; populated out-of-
+        // band via aws secretsmanager put-secret-value from the
+        // bastion (see docs/meow-bootstrap-resume.md). NOTE: CDK does
+        // not overwrite existing secret values on stack update — only
+        // the initial create — so re-deploying this stack will NOT
+        // wipe populated meow_* values.
+        meow_api_key: cdk.SecretValue.unsafePlainText(''),
+        meow_entity_id: cdk.SecretValue.unsafePlainText(''),
+        meow_collection_account_id: cdk.SecretValue.unsafePlainText(''),
+        meow_vantaum_product_id: cdk.SecretValue.unsafePlainText(''),
       },
       removalPolicy: cdk.RemovalPolicy.RETAIN,
     });
@@ -161,9 +172,21 @@ export class ComputeStack extends cdk.Stack {
         ENABLE_AWS_STORAGE: 'true',
         ENABLE_AWS_AUTH: 'true',
         ENABLE_AWS_EMAIL: 'true',
+        // Route DB calls through the pg shim against RDS instead of
+        // Supabase Postgres. lib/supabase.ts:27 reads this flag and
+        // substitutes PgShimClient. Auth (auth.getUser) still routes
+        // to Supabase Auth in V1 — see lib/supabase.ts:19-22, which
+        // means the Supabase Auth secrets must still be populated for
+        // authenticated routes to work.
+        ENABLE_AWS_DB: 'true',
         ENABLE_REAL_ANTHROPIC: 'true',
         ENABLE_REAL_HELLOSIGN: 'true',
         ENABLE_REAL_EFAX: 'true',
+        // Opt-in flag for the Meow billing client. Matches the
+        // ENABLE_REAL_ANTHROPIC / ENABLE_REAL_HELLOSIGN pattern.
+        // lib/env.ts::isRealMeowEnabled() reads this. Demo-mode stubs
+        // run when false.
+        ENABLE_REAL_MEOW: 'true',
         // App URL and SES sender (must be SES-verified domain).
         NEXT_PUBLIC_SITE_URL: 'https://app.vantaum.com',
         APP_URL: 'https://app.vantaum.com',
@@ -190,6 +213,12 @@ export class ComputeStack extends cdk.Stack {
             ANTHROPIC_API_KEY: ecs.Secret.fromSecretsManager(thirdPartySecret, 'anthropic_api_key'),
             HELLOSIGN_API_KEY: ecs.Secret.fromSecretsManager(thirdPartySecret, 'hellosign_api_key'),
             HELLOSIGN_CLIENT_ID: ecs.Secret.fromSecretsManager(thirdPartySecret, 'hellosign_client_id'),
+            // Meow billing — see docs/meow-bootstrap-resume.md for the
+            // bootstrap sequence that populates these vault slots.
+            MEOW_API_KEY: ecs.Secret.fromSecretsManager(thirdPartySecret, 'meow_api_key'),
+            MEOW_ENTITY_ID: ecs.Secret.fromSecretsManager(thirdPartySecret, 'meow_entity_id'),
+            MEOW_COLLECTION_ACCOUNT_ID: ecs.Secret.fromSecretsManager(thirdPartySecret, 'meow_collection_account_id'),
+            MEOW_VANTAUM_PRODUCT_ID: ecs.Secret.fromSecretsManager(thirdPartySecret, 'meow_vantaum_product_id'),
             PHAXIO_API_KEY: ecs.Secret.fromSecretsManager(thirdPartySecret, 'phaxio_api_key'),
             PHAXIO_API_SECRET: ecs.Secret.fromSecretsManager(thirdPartySecret, 'phaxio_api_secret'),
             PHAXIO_CALLBACK_TOKEN: ecs.Secret.fromSecretsManager(thirdPartySecret, 'phaxio_callback_token'),

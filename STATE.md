@@ -49,6 +49,272 @@ Jonah is heading out. Fresh thread on the phone Claude app should pick up here.
 
 ---
 
+## 📎 Phone-session docs added 2026-05-13
+
+Six planning/runbook docs added under `docs/` from a phone-session
+review of the MOBILE HANDOFF state. All documentation, no code or
+infra changes. Live on branch `claude/review-mobile-handoff-state-VNw1N`
+(draft PR #25 — not yet merged).
+
+- `docs/container-rebuild-2026-05-13.md` — runbook to build + push v3
+  image to ECR + cycle Fargate off the stale v2. Includes rollback.
+- `docs/db-wiring-decision.md` — Option A (ENABLE_AWS_DB → RDS shim)
+  vs Option B (fill Supabase keys). Recommends A. CDK diff included.
+- `docs/demo-mode-audit.md` — 12 `isDemoMode()` branches across 9
+  admin routes catalogued. All HIGH-risk branches are now dead in
+  prod (`e1615ed` 401s before them); flagged as dev-only.
+- `docs/ses-verification-runbook.md` — end-to-end SES domain
+  verification for `vantaum.com` + production-access ticket template.
+- `docs/meow-bootstrap-resume.md` — clean checklist version of the
+  buried Meow bootstrap section below. Resume path for when Jonah
+  provisions the new VantaUM Meow account.
+- `docs/pr-e1615ed.md` — retrospective PR description for the
+  auth-guard fix + RDS migrations 019/020 commit.
+
+A future thread should treat these as the source of truth for HOW to
+execute each blocker. STATE.md remains the source of truth for WHERE
+the build stands.
+
+---
+
+## 🛠️ Phone-session feature work 2026-05-13 (evening)
+
+Same branch (`claude/review-mobile-handoff-state-VNw1N`, draft PR #25)
+now also carries pure-code feature commits beyond the docs. None of
+these are live in prod yet — they ship with the v3 container rebuild
+described in `docs/container-rebuild-2026-05-13.md`. All commits
+pushed to origin.
+
+**Infra wiring (compute-stack.ts, will activate on `cdk deploy
+vantaum-prod-compute`):**
+- `5614aff` — `ENABLE_AWS_DB=true` env var added so the Fargate task
+  routes DB calls through the pg shim (`lib/db/supabase-shim.ts`)
+  against RDS. Auth still hybrid-Supabase per V1 plan.
+- `2376e38` — Meow billing env vars wired (`MEOW_API_KEY`,
+  `MEOW_ENTITY_ID`, `MEOW_COLLECTION_ACCOUNT_ID`,
+  `MEOW_VANTAUM_PRODUCT_ID`, plus `ENABLE_REAL_MEOW=true`). Slots
+  empty until Jonah finishes provisioning the dedicated VantaUM Meow
+  account per `docs/meow-bootstrap-resume.md`.
+
+**Admin demo-mode signal:**
+- `f5c8330` — `X-Demo-Mode: true` response header on the 12 admin
+  demo-mode short-circuits. Dev-tools clarity; the branches
+  themselves are now unreachable in prod after `e1615ed`.
+
+**CSR triage UI completion (the chunky track from this session):**
+- `0de4903` — security: closed an auth bypass on
+  `/api/intake/efax/queue`. The middleware's `/api/intake/efax`
+  prefix match inadvertently whitelisted the CSR triage API as
+  public. Split `PUBLIC_ROUTES` into `PUBLIC_PAGE_PREFIXES`
+  (loose, for marketing pages) + `PUBLIC_EXACT` + `PUBLIC_API_PREFIXES`
+  (slash-bounded, for Phaxio webhook subpaths only). Added
+  `requireRole(INTERNAL_STAFF_ROLES)` to GET and PATCH. Same class
+  of bug as the admin auth bypass `e1615ed` patched.
+- `4059999` — feature: source-fax PDF preview in the triage detail
+  panel. New endpoint `GET /api/intake/efax/queue/[id]/document`
+  mints a 5-minute signed URL via `supabase.storage.createSignedUrl`
+  against the existing `efax-documents` bucket. UI adds a load-on-
+  demand "Source Fax" card with embedded iframe + "open in new tab"
+  link. Audit-logs the PHI access.
+- `004097a` — feature: raw OCR text panel (collapsible `<details>`
+  in the right-side diagnostic column) + idempotent promote. The
+  promote PATCH now short-circuits with `{ already_promoted: true }`
+  when `row.case_id` is already set, preventing double-create on
+  double-click. Demo rows carry realistic OCR snippets so the UI
+  surfaces the new card with content.
+- `3d0edea` — test: 13 Vitest cases covering the queue route. Auth
+  gate (401 in prod demo / 200 in dev demo / 401 PATCH), demo shape
+  (items include `ocr_text`, filter works, has dead_letter rows),
+  each of the four PATCH verbs, and the document endpoint. Could
+  not run vitest in this phone harness — desktop session should
+  `npm run test:ci` before merging.
+
+**Triage tab is the "CSR triage UI" item that used to live in
+CLAUDE.md's "What's next" list** — moved to "What's built" in this
+session along with this STATE.md update.
+
+What's still required to actually run the new code in prod:
+1. Container rebuild + push v3 to ECR (per
+   `docs/container-rebuild-2026-05-13.md`)
+2. Force-new-deployment on Fargate
+3. Once running: hit `/intake` as a logged-in concierge or admin,
+   confirm the triage tab renders, source-fax preview loads a signed
+   URL, OCR card shows raw text, promote creates a case row in RDS.
+
+**Determination letter email delivery (added later in the same session):**
+- `71e5cb0` — feat: EmailAdapter interface now supports
+  `attachments: EmailAttachment[]`. SMTP impl forwards them to
+  nodemailer.sendMail. Backwards compatible. SES stub is unchanged
+  (note in the file points future-Cole at SendRawEmailCommand for
+  binary attachments via SDK).
+- `b1ac78f` — feat: `lib/notifications/determination-delivery.ts`
+  ships `deliverDeterminationLetter(caseId, { actor, recipientOverride })`.
+  Renders the existing determination PDF via
+  `generateDeterminationPdf`, sends via the adapter with the PDF
+  attached, updates `cases.status` to `delivered`, audit-logs the
+  message id and a redacted recipient. Idempotent via the
+  `delivered` status — no migration required.
+- `48dd671` — feat: `POST /api/cases/[id]/send-determination-email`
+  endpoint (requireRole INTERNAL_STAFF_ROLES) + "Send to TPA"
+  button on the determination letter page. UI shows a "Delivered"
+  pill once the send succeeds and the action label flips to
+  "Re-send to TPA" (handler is idempotent so re-sends are safe).
+- `26fd5b9` — test: 12 Vitest cases — SMTP attachment passthrough
+  (3), `deliverDeterminationLetter` preconditions + happy path (7),
+  endpoint auth gate + demo response (3).
+
+What it takes to actually send a real letter in prod:
+1. SES domain verification per `docs/ses-verification-runbook.md`.
+2. `SMTP_HOST` / `SMTP_USER` / `SMTP_PASS` filled in the third-party
+   vault (or `ENABLE_AWS_EMAIL=true` once Cole implements
+   SesEmailAdapter via SendRawEmailCommand).
+3. v3 container rebuild + Fargate force-new-deployment.
+
+**Portal integration tests (closes the gap flagged after Plan A Steps 3-7):**
+- `5862c7a` — test: 11 Vitest cases covering the three portal-facing
+  endpoints. tpa-me + provider-me each get demo-shape / unauth-401 /
+  missing-tenant-403 coverage. The big one is the
+  cross-tenant invite test: a tpa-A admin trying to invite a user
+  into a tpa-B practice returns 403 AND the
+  `security:cross_tenant_practice_invite_blocked` audit event must
+  fire. If the `practice.client_id === inviter.tpa.id` check ever
+  regresses, that test is the alarm.
+
+**Auto-book weekly kickoff calendar invite (backlog item from spec):**
+- `107c7ca` — feat: `lib/calendar/ical-generator.ts` minimal RFC 5545
+  builder. METHOD:REQUEST so Outlook / Gmail render Accept / Decline,
+  weekly RRULE, UTC times, TEXT-field escaping, 75-octet line folding,
+  CRLF compliance. No new dep. Plus `nextWeekdayOccurrenceUtc` helper
+  for "next future instance" math. 12 Vitest cases.
+- `90c8ac6` — feat: `lib/notifications/kickoff-invite.ts:sendKickoffInvite`
+  emails the .ics as a text/calendar attachment via the email adapter
+  on onboarding completion. Hooked into POST /api/onboarding via
+  fire-and-forget after `body.complete` flips status to 'completed'
+  (a failed invite must not block the onboarding response). Idempotent
+  via `onboarding_data.kickoff.invite_sent_at` — JSONB column, no
+  migration required. 7 Vitest cases covering demo, signup_not_found,
+  no_kickoff / no_recipient skips, already_sent idempotency, happy
+  path with attachment validation, and send_failed.
+
+What it takes to deliver real kickoff invites in prod:
+1. SES domain verification per `docs/ses-verification-runbook.md`.
+2. SMTP env vars filled in the third-party vault (same as
+   determination delivery — same email adapter).
+3. v3 container rebuild + Fargate force-new-deployment.
+
+**Real PDF upload on case submission (backlog item from STATE.md tail):**
+- `56759cc` — feat: `POST /api/cases/[id]/documents` multipart upload
+  endpoint. Auth-gated via requireAuth + assertCaseAccess (TPA can
+  only upload to cases their tenant owns). Per-file validation:
+  PDF-only, 10 MB cap, 5-file cap per request. Returns
+  `{ accepted: [...], rejected: [...] }` so partial-success is the
+  normal shape, not an error. Stores via the existing storage
+  adapter to `efax-documents` bucket at
+  `cases/<caseId>/<UTC-yyyymmddThhmmss>-<safe-filename>`. Note:
+  reuses `efax-documents` bucket instead of provisioning a new
+  `case-documents` logical bucket — semantically slightly off but
+  avoids an infra change. Audit-logs `case_documents_uploaded`
+  with counts + bytes_total (never the filenames, which may include
+  PHI).
+- `07c0afb` — feat: CaseUploadForm now accepts up to 5 PDFs per
+  submission via a two-phase submit (Phase 1: JSON POST to /api/cases
+  creates the case; Phase 2: multipart POST to the documents endpoint
+  with the selected files). A failed Phase 2 does NOT roll back the
+  case — the user can re-attach from the case detail page. UI shows
+  per-file MB counts, transitions the submit button copy through
+  Submitting → Uploading N file(s), and surfaces accepted/rejected
+  counts inline with per-rejection reason + detail.
+- `71ee3e6` — test: 6 Vitest cases. Auth gate (prod 401 / dev 200 +
+  X-Demo-Mode), empty / oversized request 400s, non-PDF rejection
+  shape (storage adapter never called), happy path with adapter
+  bytes + bucket + path-prefix assertions + submitted_documents
+  append.
+
+What still needs desktop work to fully ship this:
+1. v3 container rebuild + Fargate force-new-deployment.
+
+**Quality audit endpoint test coverage + "New audit" entry point:**
+- `070073a` — test: 12 Vitest cases for the `/api/quality/*` surface
+  that had zero coverage before. GET /audits (3 — auth gate, demo
+  list, filter param passthrough), POST /audits (3 — auth gate,
+  400 on missing case_id, 201 happy path), GET /audits/[id] (2 —
+  auth gate, dev-demo 404), PATCH /audits/[id] (2 — auth gate,
+  success), GET /metrics (2 — auth gate, response shape match).
+- `08743dc` — feat: "+ New audit" button + modal on /quality.
+  Three inputs: Case ID (free text UUID), Auditor (dropdown of
+  staff filtered to RN), Staff audited (dropdown of staff filtered
+  to LPN). Submit POSTs to /api/quality/audits, closes modal,
+  switches to "Audit History" tab, re-fetches audits so the new
+  row shows up immediately.
+- `371d71e` — feat: /quality/[id] scoring page. Auditing RN gets
+  a form with the four scoring fields (two 0..100 sliders for
+  criteria_accuracy / documentation_quality, two Yes/No toggles
+  for sla_compliance / determination_appropriate) plus a notes
+  textarea. Live "Overall N%" pill in the header mirrors the
+  server-side avg computation. PATCHes /api/quality/audits/[id]
+  and redirects back to /quality on success. Re-edits supported
+  for completed audits (form seeds from stored values, button
+  label flips to "Save changes"). The audit history rows in
+  /quality are now clickable to navigate here. URAC's full
+  create → score → review-in-list loop is now UI-reachable.
+
+**SLA-aware LPN selection in pod assignment:**
+- `18a52dd` — feat: new `lib/delivery/lpn-scoring.ts` module.
+  Replaces the legacy `(activeCount asc, avg_turnaround_hours asc)`
+  sort with a score that maximizes slack vs the case deadline,
+  lightly penalized by load as a tiebreaker.
+    expected_completion = (activeCount + 1) * avg_turnaround
+    slack_hours          = time_to_deadline - expected_completion
+    score                = slack_hours - LOAD_PENALTY_WEIGHT * activeCount
+  When the case has no turnaround_deadline (rare — pre-SLA cases),
+  falls back to the legacy ordering so no behavior regresses. The
+  `pod_assigned` audit event now carries sla_score, sla_slack_hours,
+  and expected_completion_hours so ops can investigate missed
+  SLAs by reading the trail. Tunable knob: LOAD_PENALTY_WEIGHT
+  (default 0.1). Bump toward 1.0 to favor load balancing; toward
+  0.0 to favor pure SLA fit.
+- `2b07594` — test: 12 Vitest cases on the pure scorer (no DB, no
+  clock). Math assertions cover slack / score / fallback / null
+  avg_turnaround. Selection scenarios cover the key cases: SLA
+  pressure wins over load on tight deadlines (the whole point),
+  load tiebreaker wins on comfortable deadlines, least-bad LPN
+  picked when no one can hit the deadline, stable tiebreaker on
+  equal scores.
+
+Real-world tuning of LOAD_PENALTY_WEIGHT will happen once
+production assignment data exists. The synthetic-test suite is
+the contract until then.
+
+**Submitted-documents download view (closes the loop from real-PDF upload):**
+- `afdb476` — feat: `GET /api/cases/[id]/documents/sign?path=<...>`
+  mints a 5-min signed URL via the storage adapter (same
+  `efax-documents` bucket as the uploader). Two-stage path guard:
+  the path must start with `cases/<caseId>/` (no traversal, no
+  cross-case access by prefix) AND must appear in
+  `submitted_documents[]` for the row (membership check — a TPA
+  who guesses the upload-time path pattern still gets a 404).
+  Both bad-path branches return identical 404s so the response
+  never leaks whether a file exists elsewhere; both fire a
+  `security:document_sign_*` audit event so investigations have
+  a trail. Happy path audit-logs `case_document_viewed`.
+- The case detail page Documents card is now click-to-download:
+  each entry renders as a button that fetches a fresh signed URL
+  and opens it in a new tab. Filenames display stripped of the
+  upload-timestamp prefix (`clin-notes.pdf` instead of the raw
+  `20260513T140000-clin-notes.pdf`). Loading / error states render
+  inline; the full storage path remains in the button's title
+  attribute for debugging.
+- `9a2a361` — test: 7 Vitest cases. Path-validation branches are
+  the highest-stakes assertions in the suite — they're the line
+  between "TPA reviews their own upload" and "TPA peeks at a
+  sibling case's upload" within their own tenant. Tests cover
+  401 prod demo, dev demo no-op shape, missing `path` 400,
+  cross-case prefix 404, `..` traversal 404, well-shaped path
+  not-in-membership 404, and the happy-path signed-URL +
+  audit-log assertions.
+
+---
+
 > ## 🆕 Resuming as a fresh Claude thread? Do this:
 >
 > ```bash

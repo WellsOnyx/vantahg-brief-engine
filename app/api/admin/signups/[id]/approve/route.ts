@@ -56,7 +56,7 @@ export async function POST(
         success: true,
         demo: true,
         message: 'Approve recorded (demo mode — no tenant created).',
-      });
+      }, { headers: { 'X-Demo-Mode': 'true' } });
     }
 
     const raw = await request.json().catch(() => ({}));

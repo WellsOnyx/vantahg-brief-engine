@@ -51,7 +51,7 @@ export async function POST(
         message: 'Sent for signature (demo mode — no real envelope created).',
         signature_request_id: `demo-sig-${id}`,
         status: 'sent',
-      });
+      }, { headers: { 'X-Demo-Mode': 'true' } });
     }
 
     const supabase = getServiceClient();

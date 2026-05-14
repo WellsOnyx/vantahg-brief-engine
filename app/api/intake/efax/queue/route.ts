@@ -13,6 +13,7 @@ import { getServiceClient } from '@/lib/supabase';
 import { isDemoMode } from '@/lib/demo-mode';
 import { logAuditEvent } from '@/lib/audit';
 import { applyRateLimit } from '@/lib/rate-limit-middleware';
+import { requireRole, INTERNAL_STAFF_ROLES } from '@/lib/auth-guard';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,6 +30,7 @@ interface DemoQueueRow {
   needs_manual_review: boolean;
   manual_review_reasons: string[];
   extracted_data: Record<string, unknown> | null;
+  ocr_text: string | null;
   case_id: string | null;
   ocr_confidence: number | null;
   extraction_method: string | null;
@@ -84,6 +86,7 @@ function getDemoQueueItems(): DemoQueueRow[] {
       max_attempts: 5,
       last_error: null,
       authorization_number: 'VUM-20260413-0001',
+      ocr_text: 'PRIOR AUTHORIZATION REQUEST\n\nPatient: [illegible]\nDOB: 06/15/1978   Member ID: BCA-9921034\nRequesting Provider: Dr. Angela Torres, MD\nNPI: 1234567890   Specialty: Orthopedic Surgery\n\nProcedure: Total knee arthroplasty, right knee (27447)\nDiagnosis: Severe primary osteoarthritis, right knee (M17.11)\nFacility: Bay Area Orthopedic Center\nPayer: Blue Cross Advantage PPO\n\nClinical justification attached on page 2-3.',
       provider: 'phaxio',
     },
     {
@@ -128,6 +131,7 @@ function getDemoQueueItems(): DemoQueueRow[] {
       max_attempts: 5,
       last_error: null,
       authorization_number: 'VUM-20260413-0002',
+      ocr_text: 'AUTH REQUEST FORM\n\nPatient Name: James R. Whitfield\nDOB: 11/02/1955\nMember ID: [field blank]\n\nReferring MD: signature illegible\nReason for request: chronic sleep apnea evaluation (G47.33)\n\nNo CPT codes provided. Provider office to attach.',
       provider: 'phaxio',
     },
     {
@@ -172,6 +176,7 @@ function getDemoQueueItems(): DemoQueueRow[] {
       max_attempts: 5,
       last_error: null,
       authorization_number: 'VUM-20260412-0007',
+      ocr_text: 'PRIOR AUTHORIZATION — URGENT\n\n--- PATIENT 1 ---\nLinda M. Chen   DOB: 03/22/1969   UHC-8830021\n\n--- PATIENT 2 ---\nRobert Chen   DOB: 07/14/1962   UHC-8830022\n(possible second patient on same fax — fax cover sheet ambiguous)\n\nRequesting: Dr. Kevin Park, MD (NPI 9876543210), Cardiology\nProcedure(s): 93306 + 93320 (echocardiogram + Doppler)\nDiagnosis: I25.10 chronic CAD, I10 essential HTN\nFacility: Manhattan Heart Institute (outpatient)\nPayer: UnitedHealthcare HMO',
       provider: 'phaxio',
     },
     {
@@ -193,6 +198,7 @@ function getDemoQueueItems(): DemoQueueRow[] {
       max_attempts: 5,
       last_error: 'OCR returned empty response after 5 attempts. Document may be blank or image-only PDF without text layer.',
       authorization_number: 'VUM-20260412-0004',
+      ocr_text: '',
       provider: 'phaxio',
     },
     {
@@ -237,6 +243,7 @@ function getDemoQueueItems(): DemoQueueRow[] {
       max_attempts: 5,
       last_error: 'AI extraction error: Request timed out after 30s. Regex fallback extracted minimal data.',
       authorization_number: 'VUM-20260411-0002',
+      ocr_text: '[partial OCR] PRI__ A__HORIZA__ION    R. Thompson\nDOB: __/__/____   Member ID: ________\n\n______ procedure code __ __ ____\nDiagnosis: ___________\n\nDocument quality very poor — likely an image-only scan with no embedded text layer. Multiple OCR retries returned similarly incomplete output.',
       provider: 'phaxio',
     },
     {
@@ -281,6 +288,7 @@ function getDemoQueueItems(): DemoQueueRow[] {
       max_attempts: 5,
       last_error: null,
       authorization_number: 'VUM-20260413-0003',
+      ocr_text: 'PRIOR AUTHORIZATION\n\nPatient: Patricia Anne Delgado\nDOB: 09/14/1988\nMember ID: CIG-7720145   Gender: F\n\nRequesting Provider: Dr. Sarah Mitchell, DO\nNPI: 5678901234   Specialty: Pain Management\n\nProcedure(s): 64483 (lumbar epidural steroid injection L4-L5), 64484 (additional level L5-S1)\nDiagnosis: M54.5 low back pain, M51.16 lumbar disc disorder with radiculopathy\nFacility: Sacramento Pain & Spine Center (ASC)\nPayer: Cigna PPO',
       provider: 'phaxio',
     },
   ];
@@ -292,6 +300,9 @@ export async function GET(request: NextRequest) {
   try {
     const rateLimited = await applyRateLimit(request, { maxRequests: 100 });
     if (rateLimited) return rateLimited;
+
+    const authResult = await requireRole(request, [...INTERNAL_STAFF_ROLES]);
+    if (authResult instanceof NextResponse) return authResult;
 
     const { searchParams } = new URL(request.url);
     const statusFilter = searchParams.get('status'); // 'manual_review', 'dead_letter', or 'all'
@@ -342,6 +353,7 @@ export async function GET(request: NextRequest) {
       needs_manual_review: row.needs_manual_review,
       manual_review_reasons: row.manual_review_reasons || [],
       extracted_data: row.parsed_data,
+      ocr_text: row.ocr_text ?? null,
       case_id: row.case_id,
       ocr_confidence: row.ocr_confidence,
       extraction_method: row.extraction_method,
@@ -382,6 +394,10 @@ export async function PATCH(request: NextRequest) {
     const rateLimited = await applyRateLimit(request, { maxRequests: 60 });
     if (rateLimited) return rateLimited;
 
+    const authResult = await requireRole(request, [...INTERNAL_STAFF_ROLES]);
+    if (authResult instanceof NextResponse) return authResult;
+    const actor = authResult.user.email;
+
     const body = await request.json();
     const { id, action, extracted_data, reject_reason } = body as {
       id: string;
@@ -418,7 +434,7 @@ export async function PATCH(request: NextRequest) {
           break;
       }
 
-      await logAuditEvent(null, `efax_triage_${action}`, 'csr', {
+      await logAuditEvent(null, `efax_triage_${action}`, actor, {
         efax_queue_id: id,
         demo: true,
       });
@@ -444,6 +460,29 @@ export async function PATCH(request: NextRequest) {
 
     switch (action) {
       case 'promote': {
+        // Idempotency: if this row has already been promoted (case_id set
+        // or status === 'case_created'), return the existing case without
+        // creating a duplicate. Prevents double-click double-create and
+        // keeps the action safe to retry.
+        if (row.case_id || row.status === 'case_created') {
+          let existingCaseNumber: string | null = null;
+          if (row.case_id) {
+            const { data: existing } = await supabase
+              .from('cases')
+              .select('case_number')
+              .eq('id', row.case_id)
+              .maybeSingle();
+            existingCaseNumber = (existing as { case_number?: string } | null)?.case_number ?? null;
+          }
+          return NextResponse.json({
+            success: true,
+            action: 'promote',
+            already_promoted: true,
+            case_id: row.case_id,
+            case_number: existingCaseNumber,
+          });
+        }
+
         // Create a case from the extracted data
         const data = extracted_data || row.parsed_data || {};
         const casePayload = {
@@ -502,7 +541,7 @@ export async function PATCH(request: NextRequest) {
           })
           .eq('id', id);
 
-        await logAuditEvent(newCase.id, 'efax_triage_promote', 'csr', {
+        await logAuditEvent(newCase.id, 'efax_triage_promote', actor, {
           efax_queue_id: id,
           case_number: newCase.case_number,
         });
@@ -527,7 +566,7 @@ export async function PATCH(request: NextRequest) {
           })
           .eq('id', id);
 
-        await logAuditEvent(null, 'efax_triage_reject', 'csr', {
+        await logAuditEvent(null, 'efax_triage_reject', actor, {
           efax_queue_id: id,
           reason: reject_reason || 'No reason provided',
         });
@@ -554,7 +593,7 @@ export async function PATCH(request: NextRequest) {
           })
           .eq('id', id);
 
-        await logAuditEvent(null, 'efax_triage_retry', 'csr', {
+        await logAuditEvent(null, 'efax_triage_retry', actor, {
           efax_queue_id: id,
         });
 
@@ -581,7 +620,7 @@ export async function PATCH(request: NextRequest) {
           })
           .eq('id', id);
 
-        await logAuditEvent(null, 'efax_triage_update_data', 'csr', {
+        await logAuditEvent(null, 'efax_triage_update_data', actor, {
           efax_queue_id: id,
         });
 

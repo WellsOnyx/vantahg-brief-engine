@@ -13,6 +13,60 @@ export default function DeterminationLetterPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Email-send state. Lives on the page so a successful send updates
+  // the local `caseData.status` to 'delivered' without a refetch.
+  const [sending, setSending] = useState(false);
+  const [sendBanner, setSendBanner] = useState<
+    | { kind: 'success'; message: string }
+    | { kind: 'error'; message: string }
+    | null
+  >(null);
+
+  async function handleSendDetermination() {
+    if (!caseData) return;
+    const recipientHint = (caseData as unknown as { client?: { contact_email?: string | null } })
+      .client?.contact_email;
+    const confirmMsg = recipientHint
+      ? `Email the determination letter PDF to ${recipientHint}?`
+      : 'Email the determination letter to the TPA on record?';
+    if (typeof window !== 'undefined' && !window.confirm(confirmMsg)) return;
+
+    setSending(true);
+    setSendBanner(null);
+    try {
+      const res = await fetch(`/api/cases/${id}/send-determination-email`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json();
+      if (!res.ok || data?.ok === false) {
+        setSendBanner({
+          kind: 'error',
+          message: data?.message || data?.error || `Send failed (${res.status})`,
+        });
+      } else if (data?.already_delivered) {
+        setSendBanner({
+          kind: 'success',
+          message: `This case is already marked delivered (recipient: ${data.recipient_email}). No re-send was performed.`,
+        });
+      } else {
+        setSendBanner({
+          kind: 'success',
+          message: `Sent to ${data.recipient_email}. Message id: ${data.messageId ?? 'n/a'}`,
+        });
+        setCaseData((prev) => (prev ? { ...prev, status: 'delivered' } : prev));
+      }
+    } catch (err) {
+      setSendBanner({
+        kind: 'error',
+        message: err instanceof Error ? err.message : 'Network error',
+      });
+    } finally {
+      setSending(false);
+    }
+  }
+
   useEffect(() => {
     fetch(`/api/cases/${id}`)
       .then((res) => {
@@ -80,21 +134,53 @@ export default function DeterminationLetterPage() {
 
   return (
     <div className="max-w-4xl mx-auto">
-      {/* Print controls */}
-      <div className="no-print flex items-center justify-between px-8 py-4 border-b border-border bg-surface">
+      {/* Action bar */}
+      <div className="no-print flex items-center justify-between px-8 py-4 border-b border-border bg-surface flex-wrap gap-3">
         <Link href={`/cases/${id}`} className="text-sm text-muted hover:text-navy">
           &larr; Back to Case
         </Link>
-        <button
-          onClick={() => window.print()}
-          className="inline-flex items-center gap-2 bg-navy text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-navy-light transition-colors"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-          </svg>
-          Print Letter
-        </button>
+        <div className="flex items-center gap-3 flex-wrap">
+          {caseData.status === 'delivered' && (
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">
+              Delivered
+            </span>
+          )}
+          <button
+            onClick={handleSendDetermination}
+            disabled={sending}
+            className="inline-flex items-center gap-2 border border-navy text-navy px-4 py-2 rounded-lg text-sm font-medium hover:bg-navy/5 transition-colors disabled:opacity-50"
+          >
+            {sending && (
+              <span className="w-3 h-3 border-2 border-navy/30 border-t-navy rounded-full animate-spin" />
+            )}
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l9 6 9-6M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+            {caseData.status === 'delivered' ? 'Re-send to TPA' : 'Send to TPA'}
+          </button>
+          <button
+            onClick={() => window.print()}
+            className="inline-flex items-center gap-2 bg-navy text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-navy-light transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+            </svg>
+            Print Letter
+          </button>
+        </div>
       </div>
+
+      {sendBanner && (
+        <div
+          className={`no-print mx-8 mt-4 rounded-lg border p-3 text-sm ${
+            sendBanner.kind === 'success'
+              ? 'bg-green-50 border-green-200 text-green-800'
+              : 'bg-red-50 border-red-200 text-red-800'
+          }`}
+        >
+          {sendBanner.message}
+        </div>
+      )}
 
       {/* Letter content */}
       <div className="px-8 py-10 bg-white min-h-screen">

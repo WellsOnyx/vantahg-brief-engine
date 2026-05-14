@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
           approved_at: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000).toISOString(),
           approved_by: 'jonah@wellsonyx.com',
         },
-      ]);
+      ], { headers: { 'X-Demo-Mode': 'true' } });
     }
 
     const { searchParams } = new URL(request.url);

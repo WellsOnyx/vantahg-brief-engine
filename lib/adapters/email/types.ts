@@ -27,6 +27,19 @@ export interface SendEmailParams {
   html?: string;
   /** Optional From override. Defaults to env-configured address. */
   from?: string;
+  /** Optional file attachments (PDFs, etc.). Adapter implementations
+   *  are responsible for encoding on the wire (base64 for SMTP, raw
+   *  bytes for SES sendRawEmail, etc.). */
+  attachments?: EmailAttachment[];
+}
+
+export interface EmailAttachment {
+  /** File name as it appears in the recipient's mail client. */
+  filename: string;
+  /** Raw bytes. Adapters encode as the transport requires. */
+  content: Buffer;
+  /** MIME type, e.g. 'application/pdf'. Defaults to 'application/octet-stream'. */
+  contentType?: string;
 }
 
 export interface SendEmailResult {

@@ -24,6 +24,15 @@ export default function QualityPage() {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'audits'>('dashboard');
 
+  // "New audit" modal — the only piece of the URAC flow that was
+  // missing a UI entry point. Endpoint + dashboard already existed.
+  const [showNewAuditModal, setShowNewAuditModal] = useState(false);
+  const [newAuditCaseId, setNewAuditCaseId] = useState('');
+  const [newAuditAuditorId, setNewAuditAuditorId] = useState('');
+  const [newAuditAuditedStaffId, setNewAuditAuditedStaffId] = useState('');
+  const [newAuditSubmitting, setNewAuditSubmitting] = useState(false);
+  const [newAuditError, setNewAuditError] = useState<string | null>(null);
+
   const { selectedClientId } = useTenantScope();
 
   // Audits re-fetch when scope changes; metrics + staff are tenant-agnostic
@@ -82,7 +91,7 @@ export default function QualityPage() {
   return (
     <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-8 gap-4 flex-wrap">
         <div>
           <div className="flex items-center gap-3">
             <h1 className="font-[family-name:var(--font-dm-serif)] text-3xl text-navy">Quality Assurance</h1>
@@ -90,7 +99,131 @@ export default function QualityPage() {
           </div>
           <p className="text-muted mt-1">URAC compliance monitoring, audit history, and per-staff quality trends</p>
         </div>
+        <button
+          onClick={() => {
+            setNewAuditCaseId('');
+            setNewAuditAuditorId('');
+            setNewAuditAuditedStaffId('');
+            setNewAuditError(null);
+            setShowNewAuditModal(true);
+          }}
+          className="inline-flex items-center gap-2 bg-navy text-gold px-4 py-2 rounded-lg text-sm font-semibold hover:bg-navy-light transition-colors shadow-sm"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.5v15m7.5-7.5h-15" />
+          </svg>
+          New audit
+        </button>
       </div>
+
+      {showNewAuditModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="bg-surface rounded-xl border border-border shadow-xl w-full max-w-md p-6">
+            <h2 className="font-[family-name:var(--font-dm-serif)] text-xl text-navy mb-1">Start a new quality audit</h2>
+            <p className="text-xs text-muted mb-5">
+              The auditing RN scores criteria, documentation, SLA, and determination
+              after submitting. URAC requires a random sample of nursing-tier work.
+            </p>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-muted mb-1">Case ID</label>
+                <input
+                  type="text"
+                  value={newAuditCaseId}
+                  onChange={(e) => setNewAuditCaseId(e.target.value)}
+                  placeholder="UUID of the case to audit"
+                  className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-white font-mono"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-muted mb-1">Auditor (RN)</label>
+                <select
+                  value={newAuditAuditorId}
+                  onChange={(e) => setNewAuditAuditorId(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-white"
+                >
+                  <option value="">Select an RN…</option>
+                  {staff
+                    .filter((s) => s.role?.toLowerCase().includes('rn'))
+                    .map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name} ({s.role})
+                      </option>
+                    ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-muted mb-1">Staff audited (LPN)</label>
+                <select
+                  value={newAuditAuditedStaffId}
+                  onChange={(e) => setNewAuditAuditedStaffId(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-white"
+                >
+                  <option value="">Select an LPN…</option>
+                  {staff
+                    .filter((s) => s.role?.toLowerCase().includes('lpn'))
+                    .map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name} ({s.role})
+                      </option>
+                    ))}
+                </select>
+              </div>
+              {newAuditError && (
+                <div className="rounded-md bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-700">
+                  {newAuditError}
+                </div>
+              )}
+            </div>
+            <div className="flex items-center justify-end gap-2 mt-6">
+              <button
+                onClick={() => setShowNewAuditModal(false)}
+                className="px-4 py-2 rounded-lg border border-border text-sm text-muted hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                disabled={
+                  newAuditSubmitting ||
+                  !newAuditCaseId.trim() ||
+                  !newAuditAuditorId ||
+                  !newAuditAuditedStaffId
+                }
+                onClick={async () => {
+                  setNewAuditSubmitting(true);
+                  setNewAuditError(null);
+                  try {
+                    const res = await fetch('/api/quality/audits', {
+                      method: 'POST',
+                      headers: { 'content-type': 'application/json' },
+                      body: JSON.stringify({
+                        case_id: newAuditCaseId.trim(),
+                        auditor_id: newAuditAuditorId,
+                        audited_staff_id: newAuditAuditedStaffId,
+                      }),
+                    });
+                    const data = await res.json().catch(() => ({}));
+                    if (!res.ok) {
+                      setNewAuditError(data?.error || `Failed (${res.status})`);
+                      return;
+                    }
+                    setShowNewAuditModal(false);
+                    setActiveTab('audits');
+                    fetchAudits();
+                  } catch {
+                    setNewAuditError('Network error');
+                  } finally {
+                    setNewAuditSubmitting(false);
+                  }
+                }}
+                className="px-4 py-2 rounded-lg bg-navy text-gold text-sm font-semibold hover:bg-navy-light transition-colors shadow-sm disabled:opacity-50"
+              >
+                {newAuditSubmitting ? 'Creating…' : 'Create audit'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex gap-1 mb-6 bg-surface rounded-lg border border-border p-1 w-fit">
@@ -235,7 +368,11 @@ export default function QualityPage() {
                 </thead>
                 <tbody>
                   {audits.map((audit) => (
-                    <tr key={audit.id} className="border-b border-border hover:bg-gray-50/70 transition-colors">
+                    <tr
+                      key={audit.id}
+                      onClick={() => { window.location.href = `/quality/${audit.id}`; }}
+                      className="border-b border-border hover:bg-gray-50/70 transition-colors cursor-pointer"
+                    >
                       <td className="px-5 py-3 text-muted text-xs whitespace-nowrap">{new Date(audit.created_at).toLocaleDateString()}</td>
                       <td className="px-5 py-3 font-medium">{getStaffName(audit.auditor_id)}</td>
                       <td className="px-5 py-3">

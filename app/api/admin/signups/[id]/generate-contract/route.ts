@@ -68,7 +68,7 @@ export async function POST(
         demo: true,
         message: 'Contract generated (demo mode — no PDF persisted).',
         rendered_pdf_path: `demo/${id}/generated.pdf`,
-      });
+      }, { headers: { 'X-Demo-Mode': 'true' } });
     }
 
     const raw = await request.json().catch(() => ({}));

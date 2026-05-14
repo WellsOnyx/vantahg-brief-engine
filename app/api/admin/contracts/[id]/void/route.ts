@@ -39,7 +39,7 @@ export async function POST(
     const reason = parsed.success ? (parsed.data.reason ?? 'Admin-initiated cancel') : 'Admin-initiated cancel';
 
     if (isDemoMode()) {
-      return NextResponse.json({ success: true, demo: true });
+      return NextResponse.json({ success: true, demo: true }, { headers: { 'X-Demo-Mode': 'true' } });
     }
 
     const supabase = getServiceClient();

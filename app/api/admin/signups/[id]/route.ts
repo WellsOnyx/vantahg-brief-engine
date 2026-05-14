@@ -33,7 +33,7 @@ export async function GET(
       if (!row) {
         return NextResponse.json({ error: 'Signup not found' }, { status: 404 });
       }
-      return NextResponse.json(row);
+      return NextResponse.json(row, { headers: { 'X-Demo-Mode': 'true' } });
     }
 
     const supabase = getServiceClient();

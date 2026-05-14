@@ -46,6 +46,11 @@ export class SmtpEmailAdapter implements EmailAdapter {
         subject: params.subject,
         text: params.text,
         html: params.html ?? defaultHtml(params.subject, params.text),
+        attachments: params.attachments?.map((a) => ({
+          filename: a.filename,
+          content: a.content,
+          contentType: a.contentType ?? 'application/octet-stream',
+        })),
       });
       return { ok: true, messageId: info.messageId ?? `smtp-${Date.now()}` };
     } catch (err) {

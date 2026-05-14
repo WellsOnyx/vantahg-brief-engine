@@ -7,6 +7,7 @@ import { logAuditEvent } from '@/lib/audit';
 import { apiError } from '@/lib/api-error';
 import { getRequestContext } from '@/lib/security';
 import { nextIncompleteStep, type OnboardingData } from '@/lib/onboarding/types';
+import { sendKickoffInvite } from '@/lib/notifications/kickoff-invite';
 
 export const dynamic = 'force-dynamic';
 
@@ -217,6 +218,18 @@ export async function PATCH(request: NextRequest) {
       },
       getRequestContext(request),
     );
+
+    // Fire-and-forget the kickoff calendar invite on completion. A failed
+    // send must not block the onboarding response — the helper is
+    // idempotent (tracks invite_sent_at on onboarding_data.kickoff) so a
+    // future retry endpoint can re-attempt safely.
+    if (body.complete && newStatus === 'completed') {
+      sendKickoffInvite(resolved.signupId, { actor: resolved.userEmail }).catch(
+        (err) => {
+          console.warn('[onboarding] kickoff invite send failed', err);
+        },
+      );
+    }
 
     return NextResponse.json({
       success: true,

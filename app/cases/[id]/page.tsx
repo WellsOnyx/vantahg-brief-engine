@@ -718,14 +718,7 @@ export default function CaseDetailPage() {
             {caseData.submitted_documents?.length ? (
               <ul className="space-y-2 text-sm">
                 {caseData.submitted_documents.map((doc, i) => (
-                  <li key={i} className="flex items-center gap-2">
-                    <svg className="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    <a href={doc} target="_blank" rel="noopener noreferrer" className="text-navy hover:underline truncate">
-                      Document {i + 1}
-                    </a>
-                  </li>
+                  <DocumentRow key={i} caseId={id} path={doc} index={i} />
                 ))}
               </ul>
             ) : (
@@ -812,4 +805,75 @@ export default function CaseDetailPage() {
       <CopilotSidebar caseData={caseData} />
     </div>
   );
+}
+
+/**
+ * One row in the case Documents card. Storage paths like
+ *   cases/<caseId>/20260513T140000-clin-notes.pdf
+ * are not directly browseable — they live in a private S3/Supabase
+ * bucket. Clicking "Download" calls the signed-URL endpoint and
+ * opens the resulting time-bound URL in a new tab.
+ */
+function DocumentRow({ caseId, path, index }: { caseId: string; path: string; index: number }) {
+  const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const displayName = filenameFromPath(path) || `Document ${index + 1}`;
+
+  async function handleClick(e: React.MouseEvent) {
+    e.preventDefault();
+    setStatus('loading');
+    setErrorMsg(null);
+    try {
+      const res = await fetch(
+        `/api/cases/${caseId}/documents/sign?path=${encodeURIComponent(path)}`,
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.available || !data?.url) {
+        setStatus('error');
+        setErrorMsg(data?.error || data?.message || `Failed (${res.status})`);
+        return;
+      }
+      window.open(data.url, '_blank', 'noopener,noreferrer');
+      setStatus('idle');
+    } catch {
+      setStatus('error');
+      setErrorMsg('Network error');
+    }
+  }
+
+  return (
+    <li className="flex items-center gap-2">
+      <svg className="w-4 h-4 text-muted flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+      <button
+        type="button"
+        onClick={handleClick}
+        disabled={status === 'loading'}
+        className="text-navy hover:underline truncate text-left disabled:opacity-50"
+        title={path}
+      >
+        {status === 'loading' ? 'Generating link…' : displayName}
+      </button>
+      {status === 'error' && errorMsg && (
+        <span className="text-xs text-red-600 ml-2">{errorMsg}</span>
+      )}
+    </li>
+  );
+}
+
+/**
+ * Pull a friendly filename out of a storage path. Storage paths from
+ * the uploader look like:
+ *   cases/<caseId>/<UTC-yyyymmddThhmmss>-<safe-filename>
+ * We strip everything up through the leading timestamp so reviewers
+ * see "clin-notes.pdf" instead of the raw key.
+ */
+function filenameFromPath(path: string): string {
+  const tail = path.split('/').pop() ?? path;
+  // Match the timestamp prefix we emit at upload time: 8 digits, T,
+  // 6 digits, dash. Strip it; fall back to the whole tail if absent.
+  const stripped = tail.replace(/^\d{8}T\d{6}-/, '');
+  return stripped;
 }

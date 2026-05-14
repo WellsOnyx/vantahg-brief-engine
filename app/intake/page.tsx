@@ -49,6 +49,7 @@ interface TriageQueueItem {
   needs_manual_review: boolean;
   manual_review_reasons: string[];
   extracted_data: Record<string, unknown> | null;
+  ocr_text: string | null;
   case_id: string | null;
   ocr_confidence: number | null;
   extraction_method: string | null;
@@ -186,6 +187,11 @@ export default function IntakePage() {
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [triageSuccessMessage, setTriageSuccessMessage] = useState<string | null>(null);
 
+  // Source-fax preview state (signed-URL fetched on demand from /document)
+  const [previewState, setPreviewState] = useState<'idle' | 'loading' | 'ready' | 'unavailable' | 'error'>('idle');
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewMessage, setPreviewMessage] = useState<string | null>(null);
+
   // Filters
   const [filterChannel, setFilterChannel] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
@@ -271,6 +277,33 @@ export default function IntakePage() {
     setShowRejectDialog(false);
     setRejectReason('');
     setTriageSuccessMessage(null);
+    setPreviewState('idle');
+    setPreviewUrl(null);
+    setPreviewMessage(null);
+  }
+
+  async function loadDocumentPreview(itemId: string) {
+    setPreviewState('loading');
+    setPreviewMessage(null);
+    try {
+      const res = await fetch(`/api/intake/efax/queue/${itemId}/document`);
+      const data = await res.json();
+      if (!res.ok) {
+        setPreviewState('error');
+        setPreviewMessage(data?.error || `Request failed (${res.status})`);
+        return;
+      }
+      if (data?.available && data?.url) {
+        setPreviewUrl(data.url as string);
+        setPreviewState('ready');
+      } else {
+        setPreviewState('unavailable');
+        setPreviewMessage(data?.message || 'Document is not available for this item.');
+      }
+    } catch {
+      setPreviewState('error');
+      setPreviewMessage('Network request failed.');
+    }
   }
 
   function updateEditingField(field: string, value: unknown) {
@@ -323,6 +356,9 @@ export default function IntakePage() {
           setTriageItems((prev) => prev.filter((i) => i.id !== selectedTriageItem.id));
           setSelectedTriageItem(null);
           setEditingData(null);
+          setPreviewState('idle');
+          setPreviewUrl(null);
+          setPreviewMessage(null);
           // Refresh stats
           fetchTriageData();
         }
@@ -692,7 +728,7 @@ export default function IntakePage() {
                 ].map((f) => (
                   <button
                     key={f.key}
-                    onClick={() => { setTriageFilter(f.key); setSelectedTriageItem(null); setEditingData(null); }}
+                    onClick={() => { setTriageFilter(f.key); setSelectedTriageItem(null); setEditingData(null); setPreviewState('idle'); setPreviewUrl(null); setPreviewMessage(null); }}
                     className={`text-xs px-3 py-1.5 rounded-md font-medium transition-colors ${
                       triageFilter === f.key
                         ? 'bg-navy text-white'
@@ -743,7 +779,7 @@ export default function IntakePage() {
                 <div className="space-y-4">
                   {/* Back button */}
                   <button
-                    onClick={() => { setSelectedTriageItem(null); setEditingData(null); setTriageSuccessMessage(null); }}
+                    onClick={() => { setSelectedTriageItem(null); setEditingData(null); setTriageSuccessMessage(null); setPreviewState('idle'); setPreviewUrl(null); setPreviewMessage(null); }}
                     className="inline-flex items-center gap-1.5 text-sm font-medium text-gold-dark hover:text-gold transition-colors"
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -857,6 +893,67 @@ export default function IntakePage() {
                       <p className="text-sm font-medium">{triageSuccessMessage}</p>
                     </div>
                   )}
+
+                  {/* Source Fax preview — load on demand */}
+                  <div className="bg-surface rounded-xl border border-border shadow-sm overflow-hidden">
+                    <div className="px-5 py-4 border-b border-border flex items-center justify-between gap-3 flex-wrap">
+                      <div>
+                        <h3 className="font-semibold text-navy">Source Fax</h3>
+                        <p className="text-xs text-muted mt-0.5">
+                          Review the original document before editing extracted data.
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {previewState === 'ready' && previewUrl && (
+                          <a
+                            href={previewUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs font-medium text-gold-dark hover:text-gold transition-colors"
+                          >
+                            Open in new tab ↗
+                          </a>
+                        )}
+                        <button
+                          onClick={() => loadDocumentPreview(selectedTriageItem.id)}
+                          disabled={previewState === 'loading'}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border text-xs font-medium text-navy hover:bg-gray-50 transition-colors disabled:opacity-50"
+                        >
+                          {previewState === 'loading' && (
+                            <span className="w-3 h-3 border-2 border-navy/20 border-t-navy rounded-full animate-spin" />
+                          )}
+                          {previewState === 'ready' ? 'Reload Preview' : 'Load Preview'}
+                        </button>
+                      </div>
+                    </div>
+                    <div className="p-5">
+                      {previewState === 'idle' && (
+                        <p className="text-sm text-muted">
+                          Click <span className="font-medium text-navy">Load Preview</span> to fetch a short-lived signed URL and embed the source PDF.
+                        </p>
+                      )}
+                      {previewState === 'loading' && (
+                        <p className="text-sm text-muted">Generating signed URL…</p>
+                      )}
+                      {previewState === 'unavailable' && (
+                        <p className="text-sm text-amber-700">
+                          {previewMessage || 'Document is not available for this item.'}
+                        </p>
+                      )}
+                      {previewState === 'error' && (
+                        <p className="text-sm text-red-600">
+                          Error: {previewMessage || 'Failed to load preview.'}
+                        </p>
+                      )}
+                      {previewState === 'ready' && previewUrl && (
+                        <iframe
+                          src={previewUrl}
+                          title="Source fax document"
+                          className="w-full h-[600px] rounded-lg border border-border"
+                        />
+                      )}
+                    </div>
+                  </div>
 
                   {/* Side-by-side panels */}
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -1218,6 +1315,34 @@ export default function IntakePage() {
                           </div>
                         </div>
                       )}
+
+                      {/* Raw OCR text — collapsed by default, opens on click */}
+                      <details className="bg-surface rounded-xl border border-border shadow-sm overflow-hidden group">
+                        <summary className="px-5 py-4 border-b border-border cursor-pointer flex items-center justify-between hover:bg-gray-50 transition-colors list-none">
+                          <div>
+                            <h3 className="font-semibold text-navy">Raw OCR Text</h3>
+                            <p className="text-xs text-muted mt-0.5">
+                              {selectedTriageItem.ocr_text
+                                ? `${selectedTriageItem.ocr_text.length} characters extracted`
+                                : 'No OCR text captured'}
+                            </p>
+                          </div>
+                          <svg className="w-4 h-4 text-muted transform transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                          </svg>
+                        </summary>
+                        <div className="p-5">
+                          {selectedTriageItem.ocr_text && selectedTriageItem.ocr_text.length > 0 ? (
+                            <pre className="text-xs font-mono whitespace-pre-wrap break-words text-foreground bg-gray-50 rounded-lg p-4 max-h-96 overflow-y-auto">
+                              {selectedTriageItem.ocr_text}
+                            </pre>
+                          ) : (
+                            <p className="text-sm text-muted italic">
+                              OCR returned no text. The source PDF may be image-only without an embedded text layer, blank, or unreadable.
+                            </p>
+                          )}
+                        </div>
+                      </details>
                     </div>
                   </div>
                 </div>
