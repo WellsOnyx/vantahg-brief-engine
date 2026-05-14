@@ -368,7 +368,11 @@ export default function QualityPage() {
                 </thead>
                 <tbody>
                   {audits.map((audit) => (
-                    <tr key={audit.id} className="border-b border-border hover:bg-gray-50/70 transition-colors">
+                    <tr
+                      key={audit.id}
+                      onClick={() => { window.location.href = `/quality/${audit.id}`; }}
+                      className="border-b border-border hover:bg-gray-50/70 transition-colors cursor-pointer"
+                    >
                       <td className="px-5 py-3 text-muted text-xs whitespace-nowrap">{new Date(audit.created_at).toLocaleDateString()}</td>
                       <td className="px-5 py-3 font-medium">{getStaffName(audit.auditor_id)}</td>
                       <td className="px-5 py-3">
