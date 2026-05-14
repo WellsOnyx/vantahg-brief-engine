@@ -202,6 +202,44 @@ What it takes to deliver real kickoff invites in prod:
    determination delivery — same email adapter).
 3. v3 container rebuild + Fargate force-new-deployment.
 
+**Real PDF upload on case submission (backlog item from STATE.md tail):**
+- `56759cc` — feat: `POST /api/cases/[id]/documents` multipart upload
+  endpoint. Auth-gated via requireAuth + assertCaseAccess (TPA can
+  only upload to cases their tenant owns). Per-file validation:
+  PDF-only, 10 MB cap, 5-file cap per request. Returns
+  `{ accepted: [...], rejected: [...] }` so partial-success is the
+  normal shape, not an error. Stores via the existing storage
+  adapter to `efax-documents` bucket at
+  `cases/<caseId>/<UTC-yyyymmddThhmmss>-<safe-filename>`. Note:
+  reuses `efax-documents` bucket instead of provisioning a new
+  `case-documents` logical bucket — semantically slightly off but
+  avoids an infra change. Audit-logs `case_documents_uploaded`
+  with counts + bytes_total (never the filenames, which may include
+  PHI).
+- `07c0afb` — feat: CaseUploadForm now accepts up to 5 PDFs per
+  submission via a two-phase submit (Phase 1: JSON POST to /api/cases
+  creates the case; Phase 2: multipart POST to the documents endpoint
+  with the selected files). A failed Phase 2 does NOT roll back the
+  case — the user can re-attach from the case detail page. UI shows
+  per-file MB counts, transitions the submit button copy through
+  Submitting → Uploading N file(s), and surfaces accepted/rejected
+  counts inline with per-rejection reason + detail.
+- `71ee3e6` — test: 6 Vitest cases. Auth gate (prod 401 / dev 200 +
+  X-Demo-Mode), empty / oversized request 400s, non-PDF rejection
+  shape (storage adapter never called), happy path with adapter
+  bytes + bucket + path-prefix assertions + submitted_documents
+  append.
+
+What still needs desktop work to fully ship this:
+1. v3 container rebuild + Fargate force-new-deployment.
+2. **Optional but recommended**: the case detail page at
+   `app/cases/[id]/page.tsx` does not yet render submitted_documents
+   with signed-URL download links — uploads work, but reviewers can't
+   see them in-product yet. Add a "Documents" card that calls a
+   future `GET /api/cases/[id]/documents/[path]/sign` endpoint (or
+   reuse the storage adapter's signedUrl pattern from the eFax
+   triage `/document` endpoint). Tracked as a "What's next" item.
+
 ---
 
 > ## 🆕 Resuming as a fresh Claude thread? Do this:
