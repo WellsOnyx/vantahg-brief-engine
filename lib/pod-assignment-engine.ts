@@ -2,6 +2,7 @@ import { getServiceClient } from '@/lib/supabase';
 import { logAuditEvent } from '@/lib/audit';
 import { isDemoMode, getDemoCases, getDemoStaff, getDemoPods } from '@/lib/demo-mode';
 import { autoAssignReviewer } from '@/lib/assignment-engine';
+import { pickLpnByScore, scoreLpnForCase } from '@/lib/delivery/lpn-scoring';
 import type { Case, Staff, Pod, LpnDetermination, RnDetermination } from '@/lib/types';
 
 // ============================================================================
@@ -114,13 +115,17 @@ export async function assignToPod(caseId: string): Promise<PodAssignmentResult> 
     return { assigned: false, reason: 'All LPNs at capacity' };
   }
 
-  // Sort by load (lowest first), then turnaround speed
-  lpnWithLoad.sort((a, b) => {
-    if (a.activeCount !== b.activeCount) return a.activeCount - b.activeCount;
-    return (a.avg_turnaround_hours ?? 999) - (b.avg_turnaround_hours ?? 999);
-  });
-
-  const selectedLpn = lpnWithLoad[0];
+  // SLA-aware LPN selection. The legacy sort (load asc, turnaround
+  // asc) under-weights speed when a case is approaching its
+  // deadline. pickLpnByScore picks the LPN MOST LIKELY to complete
+  // the case before its turnaround_deadline, with a light tiebreaker
+  // toward lower load. Falls back to the legacy ordering when the
+  // case has no SLA deadline. See lib/delivery/lpn-scoring.ts.
+  const selectedLpn = pickLpnByScore(lpnWithLoad, caseData);
+  if (!selectedLpn) {
+    return { assigned: false, reason: 'No scoreable LPN in pod' };
+  }
+  const selectedScore = scoreLpnForCase(selectedLpn, caseData);
 
   // 5. Assign to pod and LPN
   const { error: updateError } = await supabase
@@ -143,6 +148,11 @@ export async function assignToPod(caseId: string): Promise<PodAssignmentResult> 
     lpn_id: selectedLpn.id,
     lpn_name: selectedLpn.name,
     service_category: serviceCategory,
+    // Scoring trail — lets ops investigate why this LPN was picked
+    // when reviewing a missed SLA. Tested in lpn-scoring.test.ts.
+    sla_score: selectedScore.score,
+    sla_slack_hours: selectedScore.slack_hours,
+    expected_completion_hours: selectedScore.expected_completion_hours,
   });
 
   return {
