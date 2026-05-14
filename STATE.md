@@ -232,13 +232,34 @@ What it takes to deliver real kickoff invites in prod:
 
 What still needs desktop work to fully ship this:
 1. v3 container rebuild + Fargate force-new-deployment.
-2. **Optional but recommended**: the case detail page at
-   `app/cases/[id]/page.tsx` does not yet render submitted_documents
-   with signed-URL download links — uploads work, but reviewers can't
-   see them in-product yet. Add a "Documents" card that calls a
-   future `GET /api/cases/[id]/documents/[path]/sign` endpoint (or
-   reuse the storage adapter's signedUrl pattern from the eFax
-   triage `/document` endpoint). Tracked as a "What's next" item.
+
+**Submitted-documents download view (closes the loop from real-PDF upload):**
+- `afdb476` — feat: `GET /api/cases/[id]/documents/sign?path=<...>`
+  mints a 5-min signed URL via the storage adapter (same
+  `efax-documents` bucket as the uploader). Two-stage path guard:
+  the path must start with `cases/<caseId>/` (no traversal, no
+  cross-case access by prefix) AND must appear in
+  `submitted_documents[]` for the row (membership check — a TPA
+  who guesses the upload-time path pattern still gets a 404).
+  Both bad-path branches return identical 404s so the response
+  never leaks whether a file exists elsewhere; both fire a
+  `security:document_sign_*` audit event so investigations have
+  a trail. Happy path audit-logs `case_document_viewed`.
+- The case detail page Documents card is now click-to-download:
+  each entry renders as a button that fetches a fresh signed URL
+  and opens it in a new tab. Filenames display stripped of the
+  upload-timestamp prefix (`clin-notes.pdf` instead of the raw
+  `20260513T140000-clin-notes.pdf`). Loading / error states render
+  inline; the full storage path remains in the button's title
+  attribute for debugging.
+- `9a2a361` — test: 7 Vitest cases. Path-validation branches are
+  the highest-stakes assertions in the suite — they're the line
+  between "TPA reviews their own upload" and "TPA peeks at a
+  sibling case's upload" within their own tenant. Tests cover
+  401 prod demo, dev demo no-op shape, missing `path` 400,
+  cross-case prefix 404, `..` traversal 404, well-shaped path
+  not-in-membership 404, and the happy-path signed-URL +
+  audit-log assertions.
 
 ---
 
