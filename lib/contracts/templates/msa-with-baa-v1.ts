@@ -170,7 +170,7 @@ export const MSA_WITH_BAA_V1: ContractTemplate = {
 
     // VantaUM-side, admin overrides at generate time
     { key: 'vantaum_signer_name', label: 'VantaUM signer name', source: 'override', format: 'text', required: true, defaultValue: 'Jonathan Arias' },
-    { key: 'vantaum_signer_title', label: 'VantaUM signer title', source: 'override', format: 'text', required: true, defaultValue: 'Chief Executive Officer' },
+    { key: 'vantaum_signer_title', label: 'VantaUM signer title', source: 'override', format: 'text', required: true, defaultValue: 'Co-Chair, COO, and General Counsel' },
     { key: 'vantaum_address', label: 'VantaUM principal address', source: 'override', format: 'address', required: true, defaultValue: '[VantaUM principal office address]' },
     { key: 'notice_address_vantaum', label: 'VantaUM notice address', source: 'override', format: 'address', required: true, defaultValue: '[VantaUM notice address]' },
     { key: 'contracted_sla_hours', label: 'Contracted SLA (hours)', source: 'override', format: 'integer', required: true, defaultValue: '48' },
