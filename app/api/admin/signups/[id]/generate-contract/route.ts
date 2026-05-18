@@ -29,16 +29,27 @@ export const dynamic = 'force-dynamic';
  * the response includes the list of missing keys so the admin can fix
  * the signup row or pass them as overrides.
  *
+ * For admin-injected language (ROADMAP item 4, option B):
+ *   - Use the top-level `injections` object for text that should appear
+ *     ONLY in the predefined "Additional Provisions" section of the locked
+ *     approved framework.
+ *   - The core MSA + BAA legal text (Florida governance, Jonathan Arias
+ *     as Co-Chair/COO/General Counsel, all standard sections) remains
+ *     immutable.
+ *   - Injections are stored on the contract row for full auditability.
+ *
  * Body (optional):
  *   {
- *     template_slug?: string;          // defaults to 'msa-with-baa'
- *     overrides?: Record<string, string>;
+ *     template_slug?: string;
+ *     overrides?: Record<string, string>;      // variable substitutions (SLA, addresses, signer details, etc.)
+ *     injections?: Record<string, string>;     // clause text for predefined sections only (e.g. "additional_provisions")
  *   }
  */
 
 const BodySchema = z.object({
   template_slug: z.string().optional(),
   overrides: z.record(z.string(), z.string()).optional(),
+  injections: z.record(z.string(), z.string()).optional(), // admin clauses for the predefined "Additional Provisions" section only
 }).optional().default({});
 
 const BUCKET = 'signup-contracts';
@@ -77,7 +88,10 @@ export async function POST(
       return NextResponse.json({ error: 'Invalid body' }, { status: 400 });
     }
     const slug = parsed.data.template_slug ?? 'msa-with-baa';
-    const overrides = parsed.data.overrides ?? {};
+    const overrides = {
+      ...parsed.data.overrides,
+      ...parsed.data.injections,
+    };
 
     const template = getActiveTemplate(slug);
     if (!template) {
@@ -244,6 +258,8 @@ export async function POST(
     // contain TPA legal name, signer email, etc. Log only the keys that
     // were resolved so audit consumers can verify completeness without
     // leaking business contact info.
+    // For item 4 (option B) we also surface which injection keys were used.
+    const injectionKeys = parsed.data.injections ? Object.keys(parsed.data.injections) : [];
     await logAuditEvent(
       null,
       'contract_generated',
@@ -254,6 +270,7 @@ export async function POST(
         template_slug: template.slug,
         template_version: template.version,
         resolved_keys: Object.keys(resolved.values),
+        injected_sections: injectionKeys,
         rendered_bytes: pdfBuffer.byteLength,
       },
       getRequestContext(request),

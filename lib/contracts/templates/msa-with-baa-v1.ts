@@ -3,14 +3,17 @@ import type { ContractTemplate } from '../types';
 /**
  * VantaUM Master Services Agreement (Combined with BAA) — v1
  *
- * IMPORTANT: The legal text below is a PLACEHOLDER scaffold that
- * exercises the variable resolver and renderer end-to-end. It is NOT
- * lawyer-reviewed. Real production contracts must replace this body
- * with attorney-drafted language before being sent to TPAs.
+ * Per the approved framework (Florida governance, Jonathan Arias as
+ * "Co-Chair, COO, and General Counsel").
  *
- * Anywhere you see `[[PLACEHOLDER: ...]]` is intentionally flagged for
- * replacement. The {{variable}} tokens are real and will be filled in
- * by the resolver from the signup_request + admin overrides.
+ * ADMIN LANGUAGE INJECTION (ROADMAP item 4, option B):
+ *   - The core legal text is LOCKED.
+ *   - The ONLY place an admin may inject additional clauses is via the
+ *     `additional_provisions` key (passed in `injections` or `overrides`
+ *     to /generate-contract). It renders exclusively inside the
+ *     "Additional Provisions" section (conditional block below).
+ *   - All other [[PLACEHOLDER]] areas and standard sections remain
+ *     immutable in this template version.
  */
 
 const BODY = `# Master Services Agreement
@@ -122,6 +125,18 @@ The term of this BAA commences on the Effective Date and continues until the ter
 
 The obligations of VantaUM under sections A.3(a)–(c) and A.5 of this BAA shall survive its termination.
 
+{{#additional_provisions}}
+
+---
+
+## Additional Provisions
+
+The following additional terms and conditions are incorporated into this Agreement by the mutual written agreement of the parties. These provisions were supplied by an authorized representative of VantaUM at the time of contract generation and form an integral part of the executed document.
+
+{{additional_provisions}}
+
+{{/additional_provisions}}
+
 ---
 
 # Signatures
@@ -170,12 +185,15 @@ export const MSA_WITH_BAA_V1: ContractTemplate = {
 
     // VantaUM-side, admin overrides at generate time
     { key: 'vantaum_signer_name', label: 'VantaUM signer name', source: 'override', format: 'text', required: true, defaultValue: 'Jonathan Arias' },
-    { key: 'vantaum_signer_title', label: 'VantaUM signer title', source: 'override', format: 'text', required: true, defaultValue: 'Chief Executive Officer' },
+    { key: 'vantaum_signer_title', label: 'VantaUM signer title', source: 'override', format: 'text', required: true, defaultValue: 'Co-Chair, COO, and General Counsel' },
     { key: 'vantaum_address', label: 'VantaUM principal address', source: 'override', format: 'address', required: true, defaultValue: '[VantaUM principal office address]' },
     { key: 'notice_address_vantaum', label: 'VantaUM notice address', source: 'override', format: 'address', required: true, defaultValue: '[VantaUM notice address]' },
     { key: 'contracted_sla_hours', label: 'Contracted SLA (hours)', source: 'override', format: 'integer', required: true, defaultValue: '48' },
     { key: 'initial_term_months', label: 'Initial term length (months)', source: 'override', format: 'integer', required: true, defaultValue: '12' },
     { key: 'breach_notification_hours', label: 'Breach notification window (hours)', source: 'override', format: 'integer', required: true, defaultValue: '24' },
+
+    // Admin-injected language (OPTION B — only into this predefined section; core framework remains locked)
+    { key: 'additional_provisions', label: 'Additional Provisions (admin-injected clauses)', source: 'override', format: 'text', required: false, hint: 'Optional. Text entered here appears ONLY in the dedicated "Additional Provisions" section before signatures. The rest of the approved MSA+Baa framework is immutable.' },
 
     // Computed
     { key: 'effective_date', label: 'Effective date', source: 'computed', format: 'date', required: true, hint: 'Defaults to today (the date the contract is generated).' },
