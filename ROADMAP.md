@@ -93,14 +93,19 @@ local main                  b9feb8c  ← stale, 6 commits behind origin
 
 ### Phase 0 — Reconciliation & Backup (Monday, 30 min)
 **Owner:** Claude  
-**Status:** IN PROGRESS
+**Status:** ✅ COMPLETE 2026-05-18
 
 - [x] Back up unpushed work to origin as `claude/backup-*` branches
 - [x] Run ground-truth audit (prod URLs, ECR, ECS, secrets vault, SES, RDS schema)
 - [x] Write this ROADMAP.md
-- [ ] Push ROADMAP.md to a backup branch on origin (so it survives compaction)
-- [ ] Reconcile branches: cherry-pick backup commits onto fresh branch off origin/main
-- [ ] Open PR for reconciliation; merge to main
+- [x] Push ROADMAP.md to backup branch `claude/roadmap-20260518` (survives compaction)
+- [x] Branch reconciliation: **NO MERGE NEEDED.** Origin/main already contains all the substantive code:
+  - `lib/auth-guard.ts` — prod-mode auth bypass fix present ✅
+  - `__tests__/lib/auth-guard.test.ts` — 3 prod-mode tests present ✅
+  - `infra-aws/rds-migrations/019_practices.sql` — present ✅
+  - `infra-aws/rds-migrations/020_meow_billing.sql` — present ✅
+  - Only diff vs backup branch was STATE.md commentary; replaced by this doc
+- [x] **Real gap = deployment, not code.** Origin/main has everything. Nothing's been built/deployed since 2026-05-12.
 
 ### Phase 1 — Wire AWS to Serve Current Code (Monday, 2-3h)
 **Owner:** Claude + Jonah (Jonah owns secrets vault)
