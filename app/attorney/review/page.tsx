@@ -145,12 +145,11 @@ export default function AttorneyReviewQueuePage() {
         ) : (
           <div className="space-y-3">
             {cases.map((c) => (
-              <Link
+              <div
                 key={c.id}
-                href={`/cases/${c.id}`}
-                className="block bg-surface rounded-xl border border-border p-5 hover:border-navy/30 transition-all group"
+                className="bg-surface rounded-xl border border-border p-5 hover:border-navy/30 transition-all"
               >
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                   <div className="min-w-0">
                     <div className="flex items-center gap-3 flex-wrap">
                       <span className="font-mono text-sm font-semibold text-navy">{c.case_number}</span>
@@ -165,19 +164,26 @@ export default function AttorneyReviewQueuePage() {
                     )}
                   </div>
 
-                  <div className="flex items-center gap-4 text-sm">
+                  <div className="flex items-center gap-3">
                     <SlaTracker 
-                      deadline={c.turnaround_deadline || undefined} 
+                      deadline={c.turnaround_deadline ?? undefined} 
                       createdAt={c.created_at} 
                     />
-                    <div className="text-right text-xs text-muted">
-                      Submitted<br />
-                      {new Date(c.created_at).toLocaleDateString()}
-                    </div>
-                    <div className="text-navy group-hover:translate-x-0.5 transition">→</div>
+                    <Link
+                      href={`/cases/${c.id}`}
+                      className="px-3 py-1.5 text-sm border border-border rounded-lg hover:bg-gray-50"
+                    >
+                      View Details
+                    </Link>
+                    <Link
+                      href={`/attorney/cases/${c.id}/determine`}
+                      className="px-3 py-1.5 text-sm bg-navy text-white rounded-lg hover:bg-navy-light"
+                    >
+                      Determine
+                    </Link>
                   </div>
                 </div>
-              </Link>
+              </div>
             ))}
           </div>
         )}

@@ -5,9 +5,9 @@ import { getTimeRemaining, formatTimeRemaining, getSlaStatus } from '@/lib/sla-c
 import type { UrgencyLevel } from '@/lib/sla-calculator';
 
 interface SlaTrackerProps {
-  deadline: string | Date;
+  deadline?: string | Date | null;
   compact?: boolean;
-  createdAt?: string | Date;
+  createdAt?: string | Date | null;
 }
 
 const urgencyStyles: Record<UrgencyLevel, {
