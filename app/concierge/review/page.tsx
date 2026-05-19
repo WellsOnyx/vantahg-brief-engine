@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { StatusBadge } from '@/components/StatusBadge';
 import { SlaTracker } from '@/components/SlaTracker';
+import { VerificationScore } from '@/components/FactCheckBadge';
+import type { FactCheckResult } from '@/lib/types';
 
 /**
  * Dedicated Concierge Review Queue
@@ -29,6 +31,7 @@ interface ReviewQueueCase {
   client_name: string | null;
   created_at: string;
   turnaround_deadline: string | null;
+  fact_check?: FactCheckResult | null;
 }
 
 export default function ConciergeReviewQueuePage() {
@@ -211,6 +214,15 @@ export default function ConciergeReviewQueuePage() {
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${sla.tone}`}>
                           {sla.label}
                         </span>
+
+                        {/* AI Automation Layer (Track B/C): Quality signal from deterministic fact-check.
+                            Helps concierges prioritize which brief_ready cases need their required-reasoning validation first.
+                            Does NOT replace the human reasoning gate — still mandatory regardless of score. */}
+                        {c.fact_check && (
+                          <div className="flex items-center gap-1.5" title={`AI Fact-Check Score: ${c.fact_check.overall_score} (${c.fact_check.overall_status})`}>
+                            <VerificationScore score={c.fact_check.overall_score} status={c.fact_check.overall_status} />
+                          </div>
+                        )}
 
                         {/* Primary actions — Validate (Phase 2) + full detail */}
                         <div className="flex items-center gap-2 ml-1">

@@ -408,6 +408,24 @@ function runConsistencyChecks(brief: AIBrief): ConsistencyCheck[] {
     });
   }
 
+  // 5. Complexity-confidence coherence (AI Automation Layer — Track B enhancement)
+  // Helps surface cases where the brief's self-reported certainty may not match clinical complexity for the human reviewer gate.
+  const complexity = brief.procedure_analysis.complexity_level;
+  const unableCountForCoherence = brief.criteria_match.criteria_unable_to_assess.length;
+  if (complexity === 'complex' && confidence === 'high' && (notMetCount > 0 || unableCountForCoherence > 1)) {
+    checks.push({
+      check: 'Complexity-confidence coherence',
+      passed: false,
+      detail: `Case marked complex with uncertainties or unmet criteria, yet confidence "high" — flag for deeper concierge validation`,
+    });
+  } else {
+    checks.push({
+      check: 'Complexity-confidence coherence',
+      passed: true,
+      detail: `Complexity "${complexity}" aligns appropriately with reported confidence for human review prioritization`,
+    });
+  }
+
   return checks;
 }
 

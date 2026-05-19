@@ -71,6 +71,15 @@ const DEMO_QUEUE = [
     client_name: 'Acme TPA',
     created_at: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
     turnaround_deadline: new Date(Date.now() + 22 * 3600 * 1000).toISOString(),
+    // Sample high-quality AI output for demo of Track B/C quality signal
+    fact_check: {
+      overall_score: 92,
+      overall_status: 'pass',
+      sections: [],
+      summary: { verified: 8, unverified: 1, flagged: 0 },
+      consistency_checks: [{ check: 'All checks', passed: true, detail: 'Coherent' }],
+      checked_at: new Date().toISOString(),
+    },
   },
 ];
 
@@ -124,7 +133,7 @@ export async function GET(request: NextRequest) {
 
     let query = supabase
       .from('cases')
-      .select('id, case_number, status, priority, patient_name, procedure_description, client_id, created_at, turnaround_deadline, clients(name)')
+      .select('id, case_number, status, priority, patient_name, procedure_description, client_id, created_at, turnaround_deadline, fact_check, clients(name)')
       .eq('assigned_concierge_id', concierge.id)
       .in('status', targetStatuses)
       .order('turnaround_deadline', { ascending: true, nullsFirst: false })
@@ -156,6 +165,9 @@ export async function GET(request: NextRequest) {
       client_name: (c.clients as { name?: string } | null)?.name ?? null,
       created_at: c.created_at,
       turnaround_deadline: c.turnaround_deadline,
+      // AI Automation Layer (Track C): include quality signal for review queue prioritization
+      // (fact_check is JSONB, safe; only shown in brief_ready context for human gate)
+      fact_check: c.fact_check ?? null,
     }));
 
     return NextResponse.json({ cases: shaped });

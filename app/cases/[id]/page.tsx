@@ -15,6 +15,7 @@ import { AppealContextBanner } from '@/components/AppealContextBanner';
 import { FileFirstAppealModal } from '@/components/FileFirstAppealModal';
 import { SlaTracker } from '@/components/SlaTracker';
 import { CopilotSidebar } from '@/components/chat/CopilotSidebar';
+import { useStreamingBrief } from '@/lib/hooks/use-streaming-brief';
 import type { Case, Reviewer, AuditLogEntry } from '@/lib/types';
 
 const SERVICE_CATEGORY_LABELS: Record<string, string> = {
@@ -59,6 +60,9 @@ export default function CaseDetailPage() {
   // Appeal flow state
   const [showAppealModal, setShowAppealModal] = useState(false);
   const [appealSuccessInfo, setAppealSuccessInfo] = useState<{ caseId: string; caseNumber: string } | null>(null);
+
+  // AI Automation Layer: Streaming brief for white-glove live generation UX (Track A)
+  const streamingBrief = useStreamingBrief();
 
   const fetchCase = useCallback(async () => {
     try {
@@ -162,15 +166,18 @@ export default function CaseDetailPage() {
 
   async function handleRegenerateBrief() {
     try {
-      await fetch('/api/generate-brief', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ case_id: id }),
-      });
+      setError(null);
+      // AI Automation: Use streaming path for production-grade live "AI at work" UX.
+      // The stream internally calls generate-brief (real or demo), persists to DB,
+      // then yields sections progressively. On completion we refetch authoritative state.
+      await streamingBrief.startStreaming(id);
+      // After stream finishes (hook sets isStreaming=false), sync the persisted brief+factCheck
+      // by refetching. This ensures full data (including any server-side enrichment) is authoritative.
       await fetchCase();
       await fetchAudit();
     } catch {
       setError('Failed to regenerate brief');
+      streamingBrief.reset();
     }
   }
 
@@ -416,9 +423,10 @@ export default function CaseDetailPage() {
           )}
           <button
             onClick={handleRegenerateBrief}
-            className="inline-flex items-center gap-2 bg-gold text-navy px-4 py-2 rounded-lg text-sm font-medium hover:bg-gold-light transition-colors"
+            disabled={streamingBrief.isStreaming}
+            className="inline-flex items-center gap-2 bg-gold text-navy px-4 py-2 rounded-lg text-sm font-medium hover:bg-gold-light transition-colors disabled:opacity-60"
           >
-            {caseData.ai_brief ? 'Regenerate Brief' : 'Generate Brief'}
+            {streamingBrief.isStreaming ? 'Streaming AI Brief…' : (caseData.ai_brief ? 'Regenerate Brief (Live)' : 'Generate Brief (Live)')}
           </button>
         </div>
       </div>
@@ -839,7 +847,63 @@ export default function CaseDetailPage() {
             </div>
           )}
 
-          {caseData.ai_brief && (
+          {/* AI Automation Layer (Track A): Live streaming brief preview — white-glove "watch the AI work" experience.
+              Reuses useStreamingBrief + stream route (which drives real generateBriefForCase + fact-check).
+              Shows progressive assembly with progress + current section. On completion, authoritative CaseBrief renders from DB. */}
+          {streamingBrief.isStreaming && (
+            <div className="bg-surface rounded-xl border border-border shadow-sm overflow-hidden animate-slide-up">
+              <div className="px-6 py-5 border-b border-border bg-gradient-to-r from-navy/[0.03] to-transparent flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-navy/10 flex items-center justify-center">
+                    <svg className="w-4 h-4 text-navy animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <div className="font-[family-name:var(--font-dm-serif)] text-xl text-navy">AI Clinical Brief — Live</div>
+                    <div className="text-xs text-muted mt-0.5">VantaUM intelligence assembling in real time • AI handles 95%, your review makes it defensible</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 text-sm">
+                  <div className="font-mono text-navy tabular-nums">{streamingBrief.progress}%</div>
+                  <div className="h-1.5 w-24 bg-gray-200 rounded-full overflow-hidden">
+                    <div className="h-full bg-navy transition-all" style={{ width: `${streamingBrief.progress}%` }} />
+                  </div>
+                  {streamingBrief.currentSection && (
+                    <span className="text-muted text-xs uppercase tracking-wider">Building: {streamingBrief.currentSection.replace(/_/g, ' ')}</span>
+                  )}
+                </div>
+              </div>
+              <div className="p-6 text-sm text-muted">
+                {Object.keys(streamingBrief.sections).length > 0 ? (
+                  <div className="space-y-4">
+                    {Object.entries(streamingBrief.sections).map(([key, val]) => (
+                      <div key={key} className="border-l-2 border-navy/30 pl-3">
+                        <div className="uppercase text-[10px] tracking-[1px] text-navy/70 mb-1">{key.replace(/_/g, ' ')}</div>
+                        <div className="text-navy/90 text-sm leading-relaxed">
+                          {typeof val === 'string' ? val : JSON.stringify(val).slice(0, 280) + (JSON.stringify(val).length > 280 ? '…' : '')}
+                        </div>
+                      </div>
+                    ))}
+                    {streamingBrief.factCheck && (
+                      <div className="mt-4 pt-4 border-t text-emerald-700 text-xs">Fact-check complete • Score: {streamingBrief.factCheck.overall_score} • Status: {streamingBrief.factCheck.overall_status}</div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-navy border-t-transparent" />
+                    Initializing AI clinical analysis...
+                  </div>
+                )}
+              </div>
+              <div className="px-6 py-3 bg-gray-50 border-t text-[11px] text-muted flex items-center justify-between">
+                <span>Streaming via secure internal pipeline • Full brief + deterministic fact-check persisted automatically</span>
+                <button onClick={() => streamingBrief.reset()} className="text-navy hover:underline">Cancel</button>
+              </div>
+            </div>
+          )}
+
+          {caseData.ai_brief && !streamingBrief.isStreaming && (
             <CaseBrief brief={caseData.ai_brief} caseNumber={caseData.case_number} factCheck={caseData.fact_check} />
           )}
 
