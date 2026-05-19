@@ -46,12 +46,15 @@ export interface Case {
   priority: CasePriority;
 
   // Top-level case classification (introduced for Payer IDR support)
-  case_type: CaseType; // 'um' | 'payer_idr'
+  case_type?: CaseType; // 'um' | 'payer_idr' — defaults to 'um' in most creation paths
+
+  // IDR attorney assignment (Task 5)
+  assigned_idr_attorney_id?: string | null;
 
   // IDR-specific fields (populated when case_type = 'payer_idr')
-  billed_amount_cents: number | null;
-  denial_reason: string | null;
-  is_out_of_network: boolean | null;
+  billed_amount_cents?: number | null;
+  denial_reason?: string | null;
+  is_out_of_network?: boolean | null;
 
   // Service classification (new medical-focused field)
   service_category: ServiceCategory | null;

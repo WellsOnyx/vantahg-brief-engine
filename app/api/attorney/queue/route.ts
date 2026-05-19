@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
         procedure_description,
         payer_name,
         case_type,
-        assigned_reviewer_id
+        assigned_idr_attorney_id
       `)
       .eq('case_type', 'payer_idr')
       .order('created_at', { ascending: false })
@@ -50,6 +50,11 @@ export async function GET(request: NextRequest) {
 
     if (status) {
       query = query.eq('status', status);
+    }
+
+    // If the user is an idr-attorney (not admin), only show cases assigned to them
+    if (authResult.user.role === 'idr-attorney') {
+      query = query.eq('assigned_idr_attorney_id', authResult.user.id);
     }
 
     const { data, error } = await query;

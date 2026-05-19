@@ -59,6 +59,7 @@ export const EDITABLE_FIELDS_BY_ROLE: Record<UserRole, ReadonlyArray<keyof Edita
   // needs to override they wear the admin hat.
   'delivery-lead': [],
   concierge: [],
+  'idr-attorney': [],
 };
 
 const PRIORITY_VALUES: ReadonlySet<string> = new Set<CasePriority>([

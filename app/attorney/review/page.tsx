@@ -166,7 +166,10 @@ export default function AttorneyReviewQueuePage() {
                   </div>
 
                   <div className="flex items-center gap-4 text-sm">
-                    <SlaTracker deadline={c.turnaround_deadline} createdAt={c.created_at} />
+                    <SlaTracker 
+                      deadline={c.turnaround_deadline || undefined} 
+                      createdAt={c.created_at} 
+                    />
                     <div className="text-right text-xs text-muted">
                       Submitted<br />
                       {new Date(c.created_at).toLocaleDateString()}
