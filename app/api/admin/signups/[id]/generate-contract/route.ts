@@ -103,7 +103,7 @@ export async function POST(
     }
 
     const supabase = getServiceClient();
-    const storage = getStorageAdapter();
+    const storage = await getStorageAdapter();
 
     // Load the signup_request row — needed both for the variable source
     // and to confirm the row still exists before we burn a storage write.

@@ -122,11 +122,6 @@ export interface Case {
    * lpn_review_notes / rn_review_notes / peer_to_peer_notes. */
   internal_notes?: string | null;
 
-  // Denial-specific fields
-  denial_reason: string | null;
-  denial_criteria_cited: string | null;
-  alternative_recommended: string | null;
-
   // Documents
   submitted_documents: string[];
 

@@ -124,7 +124,7 @@ export async function POST(
     }
 
     // Download the rendered PDF from storage (via adapter for Supabase/S3 dual-mode).
-    const storage = getStorageAdapter();
+    const storage = await getStorageAdapter();
     const dlResult = await storage.download(LOGICAL_BUCKET, contract.rendered_pdf_path);
     if (!dlResult.ok) {
       return apiError(new Error(`PDF download failed: ${dlResult.message}`), {

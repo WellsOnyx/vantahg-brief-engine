@@ -47,6 +47,7 @@ interface UploadedDoc {
   filename: string;
   storage_path: string;
   bytes: number;
+  category?: string; // IDR / document classification (e.g. 'clinical_notes', 'payer_letter', etc.)
 }
 
 interface RejectedDoc {
@@ -112,7 +113,7 @@ export async function POST(
   const denied = await assertCaseAccess(caseData, authResult.user, request);
   if (denied) return denied;
 
-  const adapter = getStorageAdapter();
+  const adapter = await getStorageAdapter();
   const accepted: UploadedDoc[] = [];
   const rejected: RejectedDoc[] = [];
 

@@ -41,7 +41,17 @@ const nextConfig: NextConfig = {
     '@dropbox/sign',
     '@aws-sdk/client-s3',
     '@aws-sdk/s3-request-presigner',
+    '@aws-sdk/client-dynamodb',
+    '@aws-sdk/lib-dynamodb',
+    '@aws-sdk/client-secrets-manager',
   ],
+
+  // Help the bundler with packages that have complex CJS/ESM or native code.
+  // This + the dynamic import pattern in the adapter factories is what finally
+  // makes Vercel (and the Fargate `npm run build`) reliable.
+  // Note: do not put packages in both transpilePackages and serverExternalPackages
+  // (Turbopack/Next 16 panics on overlap). We rely on serverExternalPackages +
+  // dynamic imports for the heavy optional deps.
   // Pin the trace root to this directory so the standalone bundle puts
   // server.js at the root of .next/standalone/ instead of nesting it
   // under the absolute path. Without this, builds inside a git worktree

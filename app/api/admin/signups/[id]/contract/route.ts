@@ -124,7 +124,7 @@ export async function POST(
     const path = buildStoragePath(id);
     const buffer = Buffer.from(await file.arrayBuffer());
 
-    const storage = getStorageAdapter();
+    const storage = await getStorageAdapter();
     const uploadResult = await storage.upload(LOGICAL_BUCKET, path, buffer, {
       contentType,
       upsert: false,
@@ -153,7 +153,7 @@ export async function POST(
       // The blob is uploaded but the row didn't get linked. Best-effort
       // cleanup so we don't leave orphan files in the bucket; log loudly
       // either way for manual reconciliation.
-      const storage = getStorageAdapter();
+      const storage = await getStorageAdapter();
       await storage.remove(LOGICAL_BUCKET, path).catch(() => undefined);
       await logAuditEvent(
         null,
@@ -239,7 +239,7 @@ export async function GET(
       return NextResponse.json({ error: 'No contract uploaded for this signup.' }, { status: 404 });
     }
 
-    const storage = getStorageAdapter();
+    const storage = await getStorageAdapter();
     const signedResult = await storage.signedUrl(
       LOGICAL_BUCKET,
       signup.contract_storage_path,
