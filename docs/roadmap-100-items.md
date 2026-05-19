@@ -46,9 +46,9 @@ This is the master prioritized list. Do not lose this again.
 20. Test full TPA signup → contract → signature → portal access flow end-to-end
 
 ## Later Phases (summary)
-21–45: Concierge Core Workflow (intake → determination → first appeal)
+✅ 21–45: Concierge Core Workflow (intake → determination → first appeal) — committed production-ready on claude/roadmap-20260518 (b793f95)
 46–65: AI Automation Layer
 66–80: Delivery Leadership & Operations
 81–100: Polish, Scale & V1 Hardening
 
-Last updated: 2026-05-18 (captured from user after compaction loss)
+Last updated: 2026-05-19 — 21-45 completed at full production bar per user directive (no lowering standards)
