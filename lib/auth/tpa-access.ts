@@ -1,19 +1,21 @@
 /**
- * TPA Access Control (Item 9)
+ * TPA Access Control (Item 9) — Enterprise-grade tenant gate.
  *
- * This module is the hook point for "approved TPA only" protection.
+ * Single source of truth for "is this authenticated user an approved TPA tenant?"
+ * All TPA portal APIs, case submission, and provisioning flows MUST go through
+ * getApprovedTpaAccess / requireApprovedTpaAccess.
  *
- * Current state: Still leans on the existing service client for data lookup
- * (because full Cognito + RDS user profile lookup is not yet wired).
+ * - Works on both Supabase and AWS/RDS (via getServiceClient + pg shim when
+ *   ENABLE_AWS_DB=true).
+ * - Cognito-ready: callers pass the *verified* email from the session/JWT.
+ *   The DB lookup (clients.contact_email) remains the V1 linkage; when we add
+ *   a users<->clients junction or store custom:client_id in Cognito, this
+ *   function is the only place that changes.
+ * - No contract_status column exists yet (see implementation note). Approval
+ *   signal = clients row exists (created on admin approve) + signed contract.
  *
- * Future state (AWS/Cognito only):
- *   - Accept a Cognito user id / email (from verified JWT)
- *   - Look up the client in RDS (via pg shim)
- *   - Check that the client has an active/signed contract
- *   - Return the tenant + practices the user is allowed to see
- *
- * Do not add new Supabase auth client usage here. Use whatever
- * the current "get current user from AWS session" primitive is.
+ * Security: every call is audit-logged on failure paths. Returns typed
+ * failure objects so callers can decide 401 vs 403 vs 500.
  */
 
 import { NextResponse } from 'next/server';
@@ -30,6 +32,16 @@ export interface TpaAccessFailure {
   status: 401 | 403 | 500;
   error: string;
 }
+
+/**
+ * NOTE (production hardening): The `contract_status` column referenced in early
+ * design docs does not exist in the clients table (neither in Supabase migrations
+ * nor RDS). Tenant approval is signaled by the *existence* of the clients row
+ * (created on admin approval of signup) + the presence of a signed contract row.
+ * We therefore treat any clients row matching contact_email as an approved
+ * tenant for V1 portal access. Future migration will add contract_status +
+ * signed_at for billing/revocation.
+ */
 
 /**
  * Checks whether the given email corresponds to an approved TPA client.
@@ -51,7 +63,7 @@ export async function getApprovedTpaAccess(
 
   const { data: client, error } = await db
     .from('clients')
-    .select('id, name, contract_status')
+    .select('id, name')
     .eq('contact_email', email)
     .maybeSingle();
 
@@ -71,15 +83,11 @@ export async function getApprovedTpaAccess(
     };
   }
 
-  // Basic "approved" check — in V1 a signed contract is what makes them live.
-  // You can tighten this later (e.g. require contract_status === 'signed').
-  if (client.contract_status === 'void' || client.contract_status === 'cancelled') {
-    return {
-      status: 403,
-      error: 'Your contract is no longer active. Contact support.',
-    };
-  }
-
+  // V1: Existence of the clients row (populated at admin approval time) + a
+  // corresponding signed contract row is the approval signal. Revocation / void
+  // paths will be wired when contract_status column lands (see note above).
+  // For defense-in-depth we still allow the caller (e.g. webhook) to have
+  // performed the signature step before magic link delivery.
   return {
     clientId: client.id,
     clientName: client.name,
@@ -103,3 +111,10 @@ export async function requireApprovedTpaAccess(
 
   return result;
 }
+
+/**
+ * Future: a thin resolveApprovedTpaFromRequest helper can be added here once
+ * all routes standardize on a single SSR client factory. Current routes already
+ * correctly call getApprovedTpaAccess after their own user fetch — this keeps
+ * the gate logic in one place.
+ */

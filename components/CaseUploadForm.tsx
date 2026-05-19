@@ -242,6 +242,10 @@ export default function CaseUploadForm({ scope, practiceOptions = [], onSuccess 
       } else if (caseId) {
         router.push(`/cases/${caseId}`);
       }
+
+      // Clear attachments after successful submission path (prevents carry-over on re-use of form instance)
+      setFiles([]);
+      setUploadFeedback(null);
     } catch {
       setError('Network error. Try again.');
     } finally {

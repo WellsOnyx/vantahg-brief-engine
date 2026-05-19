@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'No email on user' }, { status: 403 });
     }
 
-    // Item 9: Central "approved TPA" gate (will be swapped to Cognito + RDS later)
+    // Item 9: Central "approved TPA" gate (canonical, Cognito/RDS ready via getServiceClient shim)
     const access = await getApprovedTpaAccess(email, email);
     if ('status' in access) {
       return NextResponse.json({ error: access.error }, { status: access.status });
@@ -58,19 +58,8 @@ export async function GET(request: NextRequest) {
 
     const supabase = getServiceClient();
 
-    const { data: tpa, error: tpaErr } = await supabase
-      .from('clients')
-      .select('id, name')
-      .eq('id', access.clientId)
-      .single();
-
-    if (tpaErr || !tpa) {
-      return NextResponse.json(
-        { error: 'No TPA tenant linked to this account. Contact support.' },
-        { status: 403 },
-      );
-    }
-
+    // No re-query for name — access result already carries the canonical values.
+    // Practices + counts are tenant-scoped aggregates for the dashboard shell.
     const { data: practices } = await supabase
       .from('practices')
       .select('id, name, specialty, estimated_weekly_auths, active')

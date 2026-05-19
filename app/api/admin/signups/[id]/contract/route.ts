@@ -7,6 +7,7 @@ import { applyRateLimit } from '@/lib/rate-limit-middleware';
 import { logAuditEvent } from '@/lib/audit';
 import { apiError } from '@/lib/api-error';
 import { getRequestContext } from '@/lib/security';
+import { getStorageAdapter } from '@/lib/adapters/storage';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,7 +30,7 @@ export const dynamic = 'force-dynamic';
  * + signup_id.
  */
 
-const BUCKET = 'signup-contracts';
+const LOGICAL_BUCKET = 'signup-contracts' as const;
 const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10MB
 const ALLOWED_CONTENT_TYPES = new Set(['application/pdf']);
 const SIGNED_URL_TTL_SECONDS = 60;
@@ -49,7 +50,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const authResult = await requireRole(request, ['admin']);
+    const authResult = await requireRole(request, ['admin', 'ceo', 'slt']);
     if (authResult instanceof NextResponse) return authResult;
     const rateLimited = await applyRateLimit(request, { maxRequests: 20 });
     if (rateLimited) return rateLimited;
@@ -123,12 +124,13 @@ export async function POST(
     const path = buildStoragePath(id);
     const buffer = Buffer.from(await file.arrayBuffer());
 
-    const { error: uploadErr } = await supabase.storage
-      .from(BUCKET)
-      .upload(path, buffer, { contentType, upsert: false });
-
-    if (uploadErr) {
-      return apiError(uploadErr, {
+    const storage = getStorageAdapter();
+    const uploadResult = await storage.upload(LOGICAL_BUCKET, path, buffer, {
+      contentType,
+      upsert: false,
+    });
+    if (!uploadResult.ok) {
+      return apiError(new Error(`Storage upload failed: ${uploadResult.message}`), {
         operation: 'upload_signup_contract_storage',
         actor: authResult.user.email,
         requestContext: getRequestContext(request),
@@ -151,7 +153,8 @@ export async function POST(
       // The blob is uploaded but the row didn't get linked. Best-effort
       // cleanup so we don't leave orphan files in the bucket; log loudly
       // either way for manual reconciliation.
-      await supabase.storage.from(BUCKET).remove([path]).catch(() => undefined);
+      const storage = getStorageAdapter();
+      await storage.remove(LOGICAL_BUCKET, path).catch(() => undefined);
       await logAuditEvent(
         null,
         'security:signup_contract_link_failed',
@@ -236,12 +239,15 @@ export async function GET(
       return NextResponse.json({ error: 'No contract uploaded for this signup.' }, { status: 404 });
     }
 
-    const { data: signed, error: signErr } = await supabase.storage
-      .from(BUCKET)
-      .createSignedUrl(signup.contract_storage_path, SIGNED_URL_TTL_SECONDS);
+    const storage = getStorageAdapter();
+    const signedResult = await storage.signedUrl(
+      LOGICAL_BUCKET,
+      signup.contract_storage_path,
+      SIGNED_URL_TTL_SECONDS,
+    );
 
-    if (signErr || !signed?.signedUrl) {
-      return apiError(signErr ?? new Error('Signed URL creation returned no URL'), {
+    if (!signedResult.ok) {
+      return apiError(new Error(`Signed URL failed: ${signedResult.message}`), {
         operation: 'get_signup_contract_sign',
         actor: authResult.user.email,
         requestContext: getRequestContext(request),
@@ -258,7 +264,7 @@ export async function GET(
 
     return NextResponse.json({
       success: true,
-      url: signed.signedUrl,
+      url: signedResult.url,
       expires_in_seconds: SIGNED_URL_TTL_SECONDS,
     });
   } catch (err) {

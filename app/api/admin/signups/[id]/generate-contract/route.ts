@@ -12,6 +12,7 @@ import { getActiveTemplate } from '@/lib/contracts/registry';
 import { resolveTemplate } from '@/lib/contracts/resolver';
 import { renderContractPdf } from '@/lib/contracts/renderer';
 import { ensureTemplateInDb } from '@/lib/contracts/ensure-template';
+import { getStorageAdapter } from '@/lib/adapters/storage';
 
 export const dynamic = 'force-dynamic';
 
@@ -52,7 +53,7 @@ const BodySchema = z.object({
   injections: z.record(z.string(), z.string()).optional(), // admin clauses for the predefined "Additional Provisions" section only
 }).optional().default({});
 
-const BUCKET = 'signup-contracts';
+const LOGICAL_BUCKET = 'signup-contracts' as const;
 
 function buildStoragePath(signupId: string, templateSlug: string): string {
   const safeId = signupId.replace(/[^a-zA-Z0-9_-]/g, '_');
@@ -66,7 +67,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const authResult = await requireRole(request, ['admin']);
+    const authResult = await requireRole(request, ['admin', 'ceo', 'slt']);
     if (authResult instanceof NextResponse) return authResult;
     const rateLimited = await applyRateLimit(request, { maxRequests: 20 });
     if (rateLimited) return rateLimited;
@@ -102,6 +103,7 @@ export async function POST(
     }
 
     const supabase = getServiceClient();
+    const storage = getStorageAdapter();
 
     // Load the signup_request row — needed both for the variable source
     // and to confirm the row still exists before we burn a storage write.
@@ -151,16 +153,14 @@ export async function POST(
       });
     }
 
-    // Persist into storage.
+    // Persist into storage (via adapter for Supabase/S3 dual-mode AWS prod readiness).
     const storagePath = buildStoragePath(id, template.slug);
-    const { error: uploadErr } = await supabase.storage
-      .from(BUCKET)
-      .upload(storagePath, pdfBuffer, {
-        contentType: 'application/pdf',
-        upsert: false,
-      });
-    if (uploadErr) {
-      return apiError(uploadErr, {
+    const uploadResult = await storage.upload(LOGICAL_BUCKET, storagePath, pdfBuffer, {
+      contentType: 'application/pdf',
+      upsert: false,
+    });
+    if (!uploadResult.ok) {
+      return apiError(new Error(`Storage upload failed: ${uploadResult.message}`), {
         operation: 'generate_contract_upload',
         actor: authResult.user.email,
         requestContext: getRequestContext(request),
@@ -175,8 +175,8 @@ export async function POST(
       templateId = tid;
     } catch (err) {
       // Storage write already succeeded; remove the orphan file before
-      // surfacing the error.
-      await supabase.storage.from(BUCKET).remove([storagePath]).catch(() => undefined);
+      // surfacing the error (via adapter).
+      await storage.remove(LOGICAL_BUCKET, storagePath).catch(() => undefined);
       return apiError(err, {
         operation: 'generate_contract_ensure_template',
         actor: authResult.user.email,
@@ -201,7 +201,7 @@ export async function POST(
       .single();
 
     if (insertErr || !contractRow) {
-      await supabase.storage.from(BUCKET).remove([storagePath]).catch(() => undefined);
+      await storage.remove(LOGICAL_BUCKET, storagePath).catch(() => undefined);
       await logAuditEvent(
         null,
         'security:contract_insert_failed_after_render',

@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { StatusBadge } from '@/components/StatusBadge';
+import type { CaseStatus } from '@/lib/types';
 
 /**
  * TPA-facing portal dashboard.
@@ -25,7 +27,7 @@ interface TpaProfile {
 interface Case {
   id: string;
   case_number: string;
-  status: string;
+  status: CaseStatus | string;
   priority: string;
   patient_name: string | null;
   procedure_description: string | null;
@@ -38,31 +40,39 @@ export default function TpaPortalPage() {
   const [cases, setCases] = useState<Case[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  async function loadPortalData(isRefresh = false) {
+    if (isRefresh) setRefreshing(true);
+    try {
+      const [profRes, casesRes] = await Promise.all([
+        fetch('/api/tpa/me', { cache: 'no-store' }),
+        fetch('/api/cases?limit=20', { cache: 'no-store' }),
+      ]);
+      if (!profRes.ok) {
+        if (profRes.status === 401) setError('Please sign in to access the TPA portal.');
+        else if (profRes.status === 403) setError('Your account does not have TPA access.');
+        else setError(`Could not load portal (${profRes.status}).`);
+        return;
+      }
+      setProfile((await profRes.json()) as TpaProfile);
+      if (casesRes.ok) {
+        const data = await casesRes.json();
+        setCases(Array.isArray(data) ? data : (data.cases ?? []));
+      }
+      setLastUpdated(new Date());
+      setError(null);
+    } catch {
+      setError('Network error. Try again.');
+    } finally {
+      setLoading(false);
+      if (isRefresh) setRefreshing(false);
+    }
+  }
 
   useEffect(() => {
-    (async () => {
-      try {
-        const [profRes, casesRes] = await Promise.all([
-          fetch('/api/tpa/me', { cache: 'no-store' }),
-          fetch('/api/cases?limit=20', { cache: 'no-store' }),
-        ]);
-        if (!profRes.ok) {
-          if (profRes.status === 401) setError('Please sign in to access the TPA portal.');
-          else if (profRes.status === 403) setError('Your account does not have TPA access.');
-          else setError(`Could not load portal (${profRes.status}).`);
-          return;
-        }
-        setProfile((await profRes.json()) as TpaProfile);
-        if (casesRes.ok) {
-          const data = await casesRes.json();
-          setCases(Array.isArray(data) ? data : (data.cases ?? []));
-        }
-      } catch {
-        setError('Network error. Try again.');
-      } finally {
-        setLoading(false);
-      }
-    })();
+    loadPortalData();
   }, []);
 
   if (loading) {
@@ -95,13 +105,28 @@ export default function TpaPortalPage() {
             <p className="text-sm text-muted mt-2">
               {profile.case_counts.active} active {profile.case_counts.active === 1 ? 'case' : 'cases'} across {profile.practices.length} {profile.practices.length === 1 ? 'practice' : 'practices'} in your network.
             </p>
+            {lastUpdated && (
+              <p className="text-[11px] text-muted mt-0.5">
+                Updated {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </p>
+            )}
           </div>
-          <Link
-            href="/portal/tpa/submit"
-            className="bg-navy text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-navy/90"
-          >
-            Submit authorization →
-          </Link>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => loadPortalData(true)}
+              disabled={refreshing}
+              className="text-xs px-3 py-1.5 rounded-lg border border-border text-muted hover:text-navy hover:border-navy/40 disabled:opacity-50"
+              title="Refresh dashboard data"
+            >
+              {refreshing ? 'Refreshing…' : 'Refresh'}
+            </button>
+            <Link
+              href="/portal/tpa/submit"
+              className="bg-navy text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-navy/90"
+            >
+              Submit authorization →
+            </Link>
+          </div>
         </header>
 
         <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -115,7 +140,7 @@ export default function TpaPortalPage() {
           <section className="lg:col-span-2 bg-surface rounded-xl border border-border shadow-sm p-5">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-bold text-navy">My Cases</h2>
-              <Link href="/cases" className="text-sm text-navy underline">View all →</Link>
+              <span className="text-xs text-muted">Recent submissions (scoped to your tenant)</span>
             </div>
             {cases.length === 0 ? (
               <p className="text-sm text-muted py-8 text-center">
@@ -133,7 +158,7 @@ export default function TpaPortalPage() {
                           <p className="font-semibold text-navy truncate">{c.patient_name ?? '(no name)'}</p>
                           <p className="text-xs text-muted truncate">{c.procedure_description ?? '—'}</p>
                         </div>
-                        <StatusBadge status={c.status} />
+                        <StatusBadge status={c.status as CaseStatus} />
                       </div>
                     </Link>
                   </li>
@@ -181,23 +206,3 @@ function Stat({ label, value }: { label: string; value: string }) {
   );
 }
 
-function StatusBadge({ status }: { status: string }) {
-  const styles: Record<string, string> = {
-    intake: 'bg-gray-100 text-gray-700 border-gray-200',
-    processing: 'bg-blue-50 text-blue-700 border-blue-200',
-    brief_ready: 'bg-purple-50 text-purple-700 border-purple-200',
-    lpn_review: 'bg-amber-50 text-amber-700 border-amber-200',
-    rn_review: 'bg-orange-50 text-orange-700 border-orange-200',
-    md_review: 'bg-indigo-50 text-indigo-700 border-indigo-200',
-    pend_missing_info: 'bg-yellow-50 text-yellow-700 border-yellow-200',
-    delivered: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  };
-
-  const label = status.replace(/_/g, ' ').toUpperCase();
-
-  return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border ${styles[status] || 'bg-gray-100 text-gray-700 border-gray-200'}`}>
-      {label}
-    </span>
-  );
-}

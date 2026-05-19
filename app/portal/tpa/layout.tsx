@@ -2,11 +2,13 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { createBrowserClient } from '@/lib/supabase-browser';
 
-// Basic TPA Portal Shell (Item 8)
-// Fully AWS/Cognito friendly — zero Supabase usage in the shell.
-// Protection expected via middleware + future Cognito-aware checks.
-// Data (user, cases, practices) loaded by pages via APIs.
+// Hardened TPA Portal Shell (Item 8) — production-grade navigation + logout
+// - Zero server DB in the chrome itself (data via API calls from children)
+// - Cognito path: when auth adapter + middleware cut over, this shell
+//   remains unchanged; only the session primitives in /login + middleware change.
+// - Proper sign-out that clears the Supabase (or future Cognito) session.
 
 export default function TpaPortalLayout({
   children,
@@ -69,18 +71,29 @@ function TpaHeader() {
           })}
         </nav>
 
-        {/* Right side — user area (ready for Cognito) */}
+        {/* Right side — user area (Cognito-ready) */}
         <div className="flex items-center gap-4 text-sm">
           <div className="hidden sm:flex items-center gap-2 text-muted">
             <span className="text-xs text-muted">TPA User</span>
           </div>
 
-          <Link
-            href="/login"
+          <button
+            onClick={async () => {
+              try {
+                const browser = createBrowserClient();
+                if (browser) {
+                  await browser.auth.signOut();
+                }
+              } catch {
+                // swallow — we still want to redirect even if adapter not present
+              } finally {
+                window.location.href = '/login';
+              }
+            }}
             className="rounded-lg border border-border px-3 py-1.5 text-sm text-muted hover:text-navy hover:border-navy/40 transition-colors"
           >
             Sign out
-          </Link>
+          </button>
 
           {/* Mobile placeholder */}
           <div className="md:hidden text-muted cursor-pointer">☰</div>
