@@ -99,15 +99,19 @@ export async function PATCH(
       });
     }
 
-    // Audit
+    // Audit - Task 11: Basic audit logging for attorney decisions and rationale
     await logAuditEvent(
       caseId,
       'attorney_determination_made',
       authResult.user.email,
       {
         determination: body.determination,
-        rationale_length: body.rationale.trim().length,
+        rationale: body.rationale.trim(),
+        denial_reason: body.denial_reason || null,
         case_type: 'payer_idr',
+        attorney_id: authResult.user.id,
+        attorney_email: authResult.user.email,
+        previous_status: existingCase.status,
       },
       getRequestContext(request)
     );
