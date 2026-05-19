@@ -160,6 +160,18 @@ export default function AttorneyDeterminePage() {
           <IDRDocuments caseId={caseId} />
         </div>
 
+        {/* External Review Outcomes (P2P / IRO) - Task 13 */}
+        <div className="mt-8 bg-surface rounded-xl border border-border p-6 md:p-8">
+          <h2 className="text-lg font-semibold text-navy mb-2">External Review Outcomes</h2>
+          <p className="text-sm text-muted mb-4">
+            Record outcomes from Peer-to-Peer (P2P) or Independent Review Organization (IRO) reviews for this IDR case (for future tracking and reporting).
+          </p>
+
+          <div className="text-sm text-muted">
+            Outcomes can be recorded via the <code>external_outcomes</code> field on the case (added in migration 026). A dedicated UI will be expanded later.
+          </div>
+        </div>
+
         <div className="mt-6 text-xs text-muted">
           Your determination and rationale will be permanently recorded and visible to the TPA and internal teams.
         </div>
