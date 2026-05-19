@@ -260,6 +260,8 @@ export async function POST(request: NextRequest) {
       intake_channel: body.intake_channel || 'portal',
       intake_confirmation_sent: false,
       submission_fingerprint: fingerprint,
+      // Explicitly default to 'um' until Payer IDR intake (Task 2) is built
+      case_type: 'um',
     };
 
     const { data, error } = await supabase

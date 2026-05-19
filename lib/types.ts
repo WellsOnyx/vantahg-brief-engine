@@ -35,6 +35,7 @@ export type FacilityType = 'inpatient' | 'outpatient' | 'asc' | 'office' | 'home
 
 /** @deprecated Use ServiceCategory instead. Kept for backward compatibility during migration. */
 export type CaseVertical = 'dental' | 'vision' | 'medical';
+export type CaseType = 'um' | 'payer_idr';
 
 export interface Case {
   id: string;
@@ -43,6 +44,9 @@ export interface Case {
   case_number: string;
   status: CaseStatus;
   priority: CasePriority;
+
+  // Top-level case classification (introduced for Payer IDR support)
+  case_type: CaseType; // 'um' | 'payer_idr'
 
   // Service classification (new medical-focused field)
   service_category: ServiceCategory | null;
@@ -455,6 +459,7 @@ export interface QueueMeta {
 export type { ChatMessage, ChatMode, StreamChunk, ChatRequest } from './chat/types';
 
 export interface CaseFormData {
+  case_type?: CaseType; // defaults to 'um' when omitted
   service_category: ServiceCategory;
   priority: CasePriority;
   review_type: ReviewType;
