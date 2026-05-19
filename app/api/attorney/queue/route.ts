@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth-guard';
+import { requireAuth, requireRole } from '@/lib/auth-guard';
 import { applyRateLimit } from '@/lib/rate-limit-middleware';
 import { getServiceClient } from '@/lib/supabase';
 import { apiError } from '@/lib/api-error';
@@ -16,7 +16,8 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET(request: NextRequest) {
   try {
-    const authResult = await requireAuth(request);
+    // Require IDR Attorney role (or admin for now during development)
+    const authResult = await requireRole(request, ['idr-attorney', 'admin']);
     if (authResult instanceof NextResponse) return authResult;
 
     const rateLimited = await applyRateLimit(request, { maxRequests: 100 });

@@ -13,7 +13,8 @@ export type UserRole =
   | 'practice-lead'
   | 'slt'
   | 'delivery-lead'
-  | 'concierge';
+  | 'concierge'
+  | 'idr-attorney';   // External partner attorneys handling Payer IDR cases (Phase 2B)
 
 /**
  * Roles considered "internal staff" — admin + organizational + exec views.
@@ -23,6 +24,13 @@ export type UserRole =
 export const INTERNAL_STAFF_ROLES: ReadonlyArray<UserRole> = [
   'admin', 'reviewer', 'builder', 'ceo', 'practice-lead', 'slt', 'delivery-lead', 'concierge',
 ];
+
+/**
+ * Roles that can act as external IDR Attorneys.
+ * These users will primarily work in the dedicated /attorney/* surfaces
+ * and should have limited access compared to internal clinical roles.
+ */
+export const IDR_ATTORNEY_ROLES: ReadonlyArray<UserRole> = ['idr-attorney'];
 
 export function isInternalStaff(role: UserRole | null | undefined): boolean {
   if (!role) return false;
