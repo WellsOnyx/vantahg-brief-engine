@@ -27,7 +27,7 @@ export interface TpaAccessResult {
 }
 
 export interface TpaAccessFailure {
-  status: 401 | 403;
+  status: 401 | 403 | 500;
   error: string;
 }
 
