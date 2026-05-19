@@ -282,10 +282,21 @@ export async function POST(request: NextRequest) {
               fullName: signup.signer_name ?? signup.primary_contact_name,
               clientId: contract.client_id ?? null,
               signupId: signup.id,
-              redirectPath: '/client/cases',
+              redirectPath: '/portal/tpa',
             },
             siteUrl,
           );
+
+          // Ensure the user has the 'client' role so they can access the TPA portal
+          if (provisionResult.userId) {
+            await supabase
+              .from('user_profiles')
+              .upsert({
+                id: provisionResult.userId,
+                role: 'client',
+                client_id: contract.client_id ?? null,
+              }, { onConflict: 'id' });
+          }
 
           await logAuditEvent(null, 'contract_all_signed', 'hellosign-webhook', {
             contract_id: contract.id,

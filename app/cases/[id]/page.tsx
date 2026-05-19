@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { CaseBrief } from '@/components/CaseBrief';
 import { StatusBadge, PriorityBadge } from '@/components/StatusBadge';
@@ -9,6 +9,10 @@ import { AuditTimeline } from '@/components/AuditTimeline';
 import { ReviewerPanel } from '@/components/ReviewerPanel';
 import { DeterminationForm } from '@/components/DeterminationForm';
 import type { DeterminationFields } from '@/components/DeterminationForm';
+import { ConciergeValidationForm } from '@/components/ConciergeValidationForm';
+import { AppealHandoffBanner } from '@/components/AppealHandoffBanner';
+import { AppealContextBanner } from '@/components/AppealContextBanner';
+import { FileFirstAppealModal } from '@/components/FileFirstAppealModal';
 import { SlaTracker } from '@/components/SlaTracker';
 import { CopilotSidebar } from '@/components/chat/CopilotSidebar';
 import type { Case, Reviewer, AuditLogEntry } from '@/lib/types';
@@ -41,6 +45,7 @@ const FACILITY_TYPE_LABELS: Record<string, string> = {
 
 export default function CaseDetailPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const id = params.id as string;
 
   const [caseData, setCaseData] = useState<Case | null>(null);
@@ -48,7 +53,12 @@ export default function CaseDetailPage() {
   const [auditLog, setAuditLog] = useState<AuditLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [submittingDetermination, setSubmittingDetermination] = useState(false);
+  const [submittingValidation, setSubmittingValidation] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Appeal flow state
+  const [showAppealModal, setShowAppealModal] = useState(false);
+  const [appealSuccessInfo, setAppealSuccessInfo] = useState<{ caseId: string; caseNumber: string } | null>(null);
 
   const fetchCase = useCallback(async () => {
     try {
@@ -94,6 +104,19 @@ export default function CaseDetailPage() {
     }
     loadAll();
   }, [fetchCase, fetchAudit]);
+
+  // Auto-open / scroll to concierge validation when arriving from review queue (?action=validate)
+  useEffect(() => {
+    if (searchParams?.get('action') === 'validate' && caseData?.status === 'brief_ready') {
+      const el = document.getElementById('concierge-validation');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // brief highlight
+        el.classList.add('ring-2', 'ring-emerald-400/70', 'ring-offset-2');
+        setTimeout(() => el.classList.remove('ring-2', 'ring-emerald-400/70', 'ring-offset-2'), 1800);
+      }
+    }
+  }, [searchParams, caseData?.status]);
 
   async function handleAssignReviewer(reviewerId: string) {
     try {
@@ -149,6 +172,45 @@ export default function CaseDetailPage() {
     } catch {
       setError('Failed to regenerate brief');
     }
+  }
+
+  // Phase 2: Lighter concierge validation gate — required reasoning before routing to clinical tiers
+  async function handleConciergeValidation(payload: { rationale: string; flags: string[] }) {
+    setSubmittingValidation(true);
+    try {
+      const res = await fetch(`/api/cases/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'lpn_review',
+          concierge_validation_rationale: payload.rationale,
+          validation_flags: payload.flags,
+          updated_by: 'concierge',
+        }),
+      });
+      if (!res.ok) {
+        throw new Error('Validation submission failed');
+      }
+      await fetchCase();
+      await fetchAudit();
+      setError(null);
+    } catch {
+      setError('Failed to submit concierge validation. Please try again.');
+    } finally {
+      setSubmittingValidation(false);
+    }
+  }
+
+  // First Appeal trigger + success handler (updates local state + refetches for fresh data + banners)
+  function openAppealModal() {
+    setShowAppealModal(true);
+  }
+
+  function handleAppealSuccess(appealCaseId: string, appealCaseNumber: string) {
+    setAppealSuccessInfo({ caseId: appealCaseId, caseNumber: appealCaseNumber });
+    // Refetch to pick up appeal_status on original and any other updates
+    void fetchCase();
+    void fetchAudit();
   }
 
   if (loading) {
@@ -280,7 +342,7 @@ export default function CaseDetailPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
         <div>
           <div className="flex items-center gap-3 mb-1">
             <Link href="/" className="text-muted hover:text-navy text-sm">&larr; Dashboard</Link>
@@ -360,6 +422,28 @@ export default function CaseDetailPage() {
           </button>
         </div>
       </div>
+
+      {/* Appeal Handoff / Context Banners (clean bidirectional navigation) */}
+      {caseData.review_type === 'appeal' && (
+        <div className="mb-6">
+          <AppealContextBanner
+            originalCaseId={caseData.appeal_of_case_id}
+            originalCaseNumber={caseData.case_number ? caseData.case_number.replace(/-APPEAL/i, '') : undefined}
+            originalDetermination={caseData.determination}
+            originalDeterminationAt={caseData.determination_at}
+          />
+        </div>
+      )}
+
+      {!!caseData.appeal_status && !caseData.appeal_of_case_id && (
+        <div className="mb-6">
+          <AppealHandoffBanner
+            appealCaseNumber={`${caseData.case_number}-APPEAL`}
+            appealStatus={caseData.appeal_status}
+            appealCaseId={(caseData as any).resolved_appeal_case_id || undefined}
+          />
+        </div>
+      )}
 
       {error && (
         <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-800 text-sm">
@@ -699,6 +783,19 @@ export default function CaseDetailPage() {
                 </svg>
                 Request Peer-to-Peer
               </button>
+
+              {/* File First Appeal — production end-to-end with required reasoning (Phase 3) */}
+              {!caseData.appeal_status && (
+                <button
+                  onClick={openAppealModal}
+                  className="mt-3 w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-purple-700 text-white text-sm font-semibold hover:bg-purple-800 transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                  </svg>
+                  File First Appeal (Provide Required Justification)
+                </button>
+              )}
             </div>
           )}
 
@@ -746,6 +843,45 @@ export default function CaseDetailPage() {
             <CaseBrief brief={caseData.ai_brief} caseNumber={caseData.case_number} factCheck={caseData.fact_check} />
           )}
 
+          {/* Lighter Concierge Validation Gate — shown precisely when AI brief is ready for human review */}
+          {caseData.status === 'brief_ready' && caseData.ai_brief && (
+            <div id="concierge-validation">
+              <ConciergeValidationForm
+                onSubmit={handleConciergeValidation}
+                isSubmitting={submittingValidation}
+                caseNumber={caseData.case_number}
+              />
+            </div>
+          )}
+
+          {/* Concierge Validation Summary (read-only, surfaced from audit trail for transparency) */}
+          {caseData.status !== 'brief_ready' && (() => {
+            const validationEvent = auditLog.find((e) => e.action === 'concierge_brief_validated');
+            if (!validationEvent) return null;
+            const details = (validationEvent.details as any) || {};
+            return (
+              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-5">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-6 h-6 rounded-full bg-emerald-600 flex items-center justify-center">
+                    <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 10l7-7m0 0l7 7" />
+                    </svg>
+                  </div>
+                  <span className="font-semibold text-emerald-800 text-sm uppercase tracking-wider">Concierge Brief Validation Complete</span>
+                </div>
+                <p className="text-sm text-emerald-900 leading-relaxed">{details.rationale || 'Validation recorded.'}</p>
+                {details.flags?.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {details.flags.map((f: string, i: number) => (
+                      <span key={i} className="inline-block text-[10px] px-2 py-0.5 bg-white border border-emerald-200 rounded text-emerald-700">{f.replace(/_/g, ' ')}</span>
+                    ))}
+                  </div>
+                )}
+                <p className="text-[11px] text-emerald-700 mt-2">Recorded in audit • Routed to clinical review pipeline</p>
+              </div>
+            );
+          })()}
+
           {!caseData.ai_brief && caseData.status === 'intake' && (
             <div className="bg-surface border border-border rounded-lg p-8 text-center">
               <svg className="w-12 h-12 mx-auto mb-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -786,8 +922,20 @@ export default function CaseDetailPage() {
             </div>
           ) : caseData.ai_brief && caseData.assigned_reviewer_id ? (
             <div className="bg-surface rounded-lg border border-border p-6">
-              <h3 className="font-[family-name:var(--font-dm-serif)] text-xl text-navy mb-4">Submit Determination</h3>
-              <DeterminationForm onSubmit={handleDetermination} isSubmitting={submittingDetermination} />
+              <h3 className="font-[family-name:var(--font-dm-serif)] text-xl text-navy mb-4">
+                Submit Determination {caseData.review_type === 'appeal' ? '(Appeal Review)' : ''}
+              </h3>
+              {caseData.review_type === 'appeal' && (
+                <p className="text-xs text-purple-700 mb-4 -mt-2">
+                  This is an appeal review. Provide your independent re-evaluation. You were not the original denying reviewer.
+                </p>
+              )}
+              <DeterminationForm 
+                onSubmit={handleDetermination} 
+                isSubmitting={submittingDetermination} 
+                isAppeal={caseData.review_type === 'appeal'}
+                originalDetermination={caseData.review_type === 'appeal' ? 'see original context banner' : undefined}
+              />
             </div>
           ) : null}
 
@@ -803,6 +951,17 @@ export default function CaseDetailPage() {
 
       {/* AI Copilot Sidebar */}
       <CopilotSidebar caseData={caseData} />
+
+      {/* First Appeal Modal — full end-to-end intake with required reasoning */}
+      <FileFirstAppealModal
+        isOpen={showAppealModal}
+        onClose={() => setShowAppealModal(false)}
+        caseId={id}
+        caseNumber={caseData.case_number}
+        determination={caseData.determination}
+        determinationAt={caseData.determination_at}
+        onSuccess={handleAppealSuccess}
+      />
     </div>
   );
 }

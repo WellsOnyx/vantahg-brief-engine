@@ -224,13 +224,16 @@ export async function POST(request: NextRequest) {
         });
 
         // Background brief generation (non-blocking)
-        generateBriefForCase(data).then(async (brief) => {
-          if (brief) {
+        generateBriefForCase(data, { client: (data as any).client ?? null }).then(async (result) => {
+          if (result) {
+            const { brief, factCheck } = result;
             await supabase
               .from('cases')
               .update({
                 ai_brief: brief,
                 ai_brief_generated_at: new Date().toISOString(),
+                fact_check: factCheck,
+                fact_check_at: new Date().toISOString(),
                 status: 'brief_ready',
               })
               .eq('id', data.id);
@@ -241,7 +244,11 @@ export async function POST(request: NextRequest) {
             });
           }
         }).catch((err) => {
-          console.error(`Background brief generation failed for case ${caseNumber}:`, err);
+          const errorKind = err instanceof Error ? err.name : typeof err;
+          logAuditEvent(data.id, 'background_brief_generation_failed', 'system', {
+            error_kind: errorKind,
+            batch_upload: true,
+          }).catch(() => { /* already logged inside logAuditEvent */ });
         });
 
         results.case_numbers.push(caseNumber);

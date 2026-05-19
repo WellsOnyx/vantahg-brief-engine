@@ -372,7 +372,20 @@ export default function CaseUploadForm({ scope, practiceOptions = [], onSuccess 
               {files.map((f, i) => (
                 <li key={`${f.name}-${i}`} className="flex items-center justify-between text-xs text-muted bg-gray-50 rounded px-3 py-1.5">
                   <span className="font-mono truncate mr-3">{f.name}</span>
-                  <span className="flex-shrink-0">{(f.size / 1024 / 1024).toFixed(2)} MB</span>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span>{(f.size / 1024 / 1024).toFixed(2)} MB</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const next = files.filter((_, idx) => idx !== i);
+                        setFiles(next);
+                      }}
+                      className="text-red-600 hover:text-red-700 px-1"
+                      aria-label={`Remove ${f.name}`}
+                    >
+                      ✕
+                    </button>
+                  </div>
                 </li>
               ))}
             </ul>
@@ -380,8 +393,8 @@ export default function CaseUploadForm({ scope, practiceOptions = [], onSuccess 
         </Field>
 
         <Field
-          label="Document description (fallback)"
-          hint="Only needed when you can't attach a PDF — your concierge will follow up to collect the docs."
+          label="Document description (optional)"
+          hint="Describe the supporting documents. If you attached PDFs above, this is additional context. If you couldn't attach files, describe what the concierge should request."
         >
           <textarea
             value={form.documents_description}

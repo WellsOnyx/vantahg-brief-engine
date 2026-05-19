@@ -6,6 +6,10 @@ import { createServerClient } from '@supabase/ssr';
 // real pages that should remain reachable without auth.
 const PUBLIC_PAGE_PREFIXES = ['/login', '/signup', '/welcome', '/demo', '/site'];
 
+// Protected portal paths — these require an authenticated + approved TPA / Provider
+const TPA_PORTAL_PREFIX = '/portal/tpa';
+const PROVIDER_PORTAL_PREFIX = '/portal/provider';
+
 // Public API endpoints. STRICT matching — `/api/intake/efax/queue` is a
 // CSR-only triage surface that must NOT be reachable just because it
 // shares the `/api/intake/efax` prefix. Webhooks self-authenticate via
@@ -87,6 +91,12 @@ export async function middleware(request: NextRequest) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = '/login';
     loginUrl.searchParams.set('redirect', pathname + request.nextUrl.search);
+
+    // Special handling for portal paths (Item 9)
+    if (pathname.startsWith(TPA_PORTAL_PREFIX) || pathname.startsWith(PROVIDER_PORTAL_PREFIX)) {
+      loginUrl.searchParams.set('reason', 'portal_access_required');
+    }
+
     return NextResponse.redirect(loginUrl);
   }
 

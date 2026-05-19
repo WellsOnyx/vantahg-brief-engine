@@ -114,7 +114,7 @@ export default function TpaPortalPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <section className="lg:col-span-2 bg-surface rounded-xl border border-border shadow-sm p-5">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-navy">Recent cases</h2>
+              <h2 className="text-lg font-bold text-navy">My Cases</h2>
               <Link href="/cases" className="text-sm text-navy underline">View all →</Link>
             </div>
             {cases.length === 0 ? (
@@ -133,9 +133,7 @@ export default function TpaPortalPage() {
                           <p className="font-semibold text-navy truncate">{c.patient_name ?? '(no name)'}</p>
                           <p className="text-xs text-muted truncate">{c.procedure_description ?? '—'}</p>
                         </div>
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border bg-blue-50 text-blue-800 border-blue-200">
-                          {c.status}
-                        </span>
+                        <StatusBadge status={c.status} />
                       </div>
                     </Link>
                   </li>
@@ -180,5 +178,26 @@ function Stat({ label, value }: { label: string; value: string }) {
       <p className="text-[11px] uppercase tracking-wide text-muted font-semibold">{label}</p>
       <p className="text-xl font-bold text-navy mt-1">{value}</p>
     </div>
+  );
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const styles: Record<string, string> = {
+    intake: 'bg-gray-100 text-gray-700 border-gray-200',
+    processing: 'bg-blue-50 text-blue-700 border-blue-200',
+    brief_ready: 'bg-purple-50 text-purple-700 border-purple-200',
+    lpn_review: 'bg-amber-50 text-amber-700 border-amber-200',
+    rn_review: 'bg-orange-50 text-orange-700 border-orange-200',
+    md_review: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+    pend_missing_info: 'bg-yellow-50 text-yellow-700 border-yellow-200',
+    delivered: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  };
+
+  const label = status.replace(/_/g, ' ').toUpperCase();
+
+  return (
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border ${styles[status] || 'bg-gray-100 text-gray-700 border-gray-200'}`}>
+      {label}
+    </span>
   );
 }

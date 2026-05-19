@@ -59,11 +59,23 @@ export async function GET(request: NextRequest) {
       .select('*, reviewer:reviewers(*), client:clients(*)')
       .order('created_at', { ascending: false });
 
-    if (status) {
-      query = query.eq('status', status);
-    }
+    // Item 13: Enforce tenant scoping for TPA (client) users
+    if (authResult.user.role === 'client') {
+      // Resolve the user's actual client
+      const { data: clientRow } = await supabase
+        .from('clients')
+        .select('id')
+        .eq('contact_email', authResult.user.email)
+        .maybeSingle();
 
-    if (clientId) {
+      if (clientRow) {
+        query = query.eq('client_id', clientRow.id);
+      } else {
+        // No client linked → return empty list
+        return NextResponse.json([]);
+      }
+    } else if (clientId) {
+      // Internal staff can still filter by client_id
       query = query.eq('client_id', clientId);
     }
 
@@ -133,6 +145,56 @@ export async function POST(request: NextRequest) {
     const supabase = getServiceClient();
     const body = await request.json();
 
+    // === Item 12: Proper tenant scoping on case creation ===
+    let effectiveClientId = body.client_id;
+    let effectivePracticeId = body.practice_id || null;
+
+    if (authResult.user.role === 'client') {
+      // TPA users: force their own client and validate practice
+      const { data: clientRow, error: clientErr } = await supabase
+        .from('clients')
+        .select('id')
+        .eq('contact_email', authResult.user.email)
+        .maybeSingle();
+
+      if (clientErr || !clientRow) {
+        return NextResponse.json(
+          { error: 'No approved client tenant associated with your account' },
+          { status: 403 }
+        );
+      }
+
+      effectiveClientId = clientRow.id;
+
+      if (effectivePracticeId) {
+        const { data: practice } = await supabase
+          .from('practices')
+          .select('id, client_id')
+          .eq('id', effectivePracticeId)
+          .single();
+
+        if (!practice || practice.client_id !== effectiveClientId) {
+          return NextResponse.json(
+            { error: 'Selected practice does not belong to your organization' },
+            { status: 403 }
+          );
+        }
+      }
+    } else {
+      // Internal staff (admin, reviewer, etc.): validate that the provided client exists
+      if (effectiveClientId) {
+        const { data: clientExists } = await supabase
+          .from('clients')
+          .select('id')
+          .eq('id', effectiveClientId)
+          .maybeSingle();
+
+        if (!clientExists) {
+          return NextResponse.json({ error: 'Invalid client_id' }, { status: 400 });
+        }
+      }
+    }
+
     // Generate case_number based on service_category (or fall back to vertical for backward compat)
     const categoryPrefix = (body.service_category || body.vertical || 'GENERAL').toUpperCase().replace(/\s+/g, '-');
     const prefix = `VUM-${categoryPrefix}`;
@@ -190,6 +252,8 @@ export async function POST(request: NextRequest) {
 
     const caseData = {
       ...body,
+      client_id: effectiveClientId,
+      practice_id: effectivePracticeId,
       case_number: caseNumber,
       status: body.status || 'intake',
       authorization_number: authNumber,
@@ -217,6 +281,9 @@ export async function POST(request: NextRequest) {
       case_number: caseNumber,
       service_category: body.service_category,
       vertical: body.vertical,
+      client_id: effectiveClientId,
+      practice_id: effectivePracticeId,
+      submitted_by_role: authResult.user.role,
     });
 
     // Send intake confirmation to provider
@@ -227,13 +294,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Trigger brief generation in the background (non-blocking, with client criteria context)
-    generateBriefForCase(data, { client: data.client ?? null }).then(async (brief) => {
-      if (brief) {
+    generateBriefForCase(data, { client: data.client ?? null }).then(async (result) => {
+      if (result) {
+        const { brief, factCheck } = result;
         await supabase
           .from('cases')
           .update({
             ai_brief: brief,
             ai_brief_generated_at: new Date().toISOString(),
+            fact_check: factCheck,
+            fact_check_at: new Date().toISOString(),
             status: 'brief_ready',
           })
           .eq('id', data.id);

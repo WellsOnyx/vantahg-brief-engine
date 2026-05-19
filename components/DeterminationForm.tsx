@@ -15,6 +15,10 @@ export interface DeterminationFields {
 interface DeterminationFormProps {
   onSubmit: (fields: DeterminationFields) => Promise<void>;
   isSubmitting: boolean;
+  /** When true (on appeal cases), renders appeal-specific guidance and adjusted placeholder for the second-look rationale. */
+  isAppeal?: boolean;
+  /** For appeal cases, surface the original determination for context in the form header/guidance. */
+  originalDetermination?: string | null;
 }
 
 const DENIAL_REASONS = [
@@ -111,7 +115,7 @@ const determinationOptions = [
 
 const MAX_CHARS = 2000;
 
-export function DeterminationForm({ onSubmit, isSubmitting }: DeterminationFormProps) {
+export function DeterminationForm({ onSubmit, isSubmitting, isAppeal = false, originalDetermination }: DeterminationFormProps) {
   const [determination, setDetermination] = useState('');
   const [rationale, setRationale] = useState('');
   const [denialReason, setDenialReason] = useState('');
@@ -245,16 +249,21 @@ export function DeterminationForm({ onSubmit, isSubmitting }: DeterminationFormP
         <div>
           <label htmlFor="rationale" className="block text-sm font-semibold text-foreground mb-1.5">
             Clinical Rationale <span className="text-red-500">*</span>
+            {isAppeal && <span className="ml-2 text-[10px] uppercase tracking-wider text-purple-700 font-semibold">(Appeal Review — different reviewer)</span>}
           </label>
           <p className="text-xs text-muted mb-2">
-            Provide the clinical reasoning supporting your determination. This will be included in the determination letter.
+            {isAppeal
+              ? 'As the appeal reviewer (different from the original denier), explain why the prior determination should be upheld or overturned. Reference the original rationale, any new information, re-evaluation of criteria, and why your decision is clinically appropriate.'
+              : 'Provide the clinical reasoning supporting your determination. This will be included in the determination letter.'}
           </p>
           <textarea
             id="rationale"
             value={rationale}
             onChange={(e) => setRationale(e.target.value.slice(0, MAX_CHARS))}
             rows={5}
-            placeholder="Describe the clinical rationale for your determination, referencing applicable guidelines, criteria met/unmet, and supporting documentation..."
+            placeholder={isAppeal
+              ? "As appeal reviewer: I have re-reviewed the original denial for [reason]. New information [X] supports overturning because... / The criteria were correctly applied and denial is upheld because..."
+              : "Describe the clinical rationale for your determination, referencing applicable guidelines, criteria met/unmet, and supporting documentation..."}
             className="w-full px-4 py-3 text-sm border border-border rounded-xl bg-white resize-y"
           />
           <div className="flex justify-between items-center mt-2">

@@ -1,14 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceClient } from '@/lib/supabase';
 import { isDemoMode, getDemoClients } from '@/lib/demo-mode';
-import { requireRole } from '@/lib/auth-guard';
+import { requireRole, INTERNAL_STAFF_ROLES } from '@/lib/auth-guard';
 import { applyRateLimit } from '@/lib/rate-limit-middleware';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
-    const authResult = await requireRole(request, ['admin']);
+    // Allow internal staff (concierges, reviewers, admins) to list clients for
+    // attribution during intake triage / case promotion from eFax/email.
+    // POST creation remains admin-only.
+    const authResult = await requireRole(request, [...INTERNAL_STAFF_ROLES]);
     if (authResult instanceof NextResponse) return authResult;
     const rateLimited = await applyRateLimit(request, { maxRequests: 200 });
     if (rateLimited) return rateLimited;

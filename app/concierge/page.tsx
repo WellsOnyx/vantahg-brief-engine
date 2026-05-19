@@ -151,12 +151,21 @@ export default function ConciergePage() {
               {' '}across {profile.active_clients.length} {profile.active_clients.length === 1 ? 'TPA' : 'TPAs'}.
             </p>
           </div>
-          <button
-            onClick={() => void load()}
-            className="bg-white border border-border text-navy px-4 py-2 rounded-lg text-sm font-medium hover:border-navy/40"
-          >
-            Refresh
-          </button>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/concierge/review"
+              className="inline-flex items-center gap-2 bg-navy text-gold px-4 py-2 rounded-lg text-sm font-semibold hover:bg-navy-light transition-colors shadow-sm"
+            >
+              AI Brief Review Queue
+              <span className="text-xs opacity-75">→</span>
+            </Link>
+            <button
+              onClick={() => void load()}
+              className="bg-white border border-border text-navy px-4 py-2 rounded-lg text-sm font-medium hover:border-navy/40"
+            >
+              Refresh
+            </button>
+          </div>
         </header>
 
         {/* Stats row */}

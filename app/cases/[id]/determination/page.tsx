@@ -353,10 +353,11 @@ export default function DeterminationLetterPage() {
               Appeal Rights
             </h3>
             <p className="text-blue-900">
-              You have the right to appeal this determination. To initiate an appeal or request a
-              peer-to-peer review with the reviewing physician, please contact VantaUM within 30 days
-              of this notice. Peer-to-peer reviews are available for all denied or partially approved cases.
+              You have the right to appeal this determination. Open the case workspace to file a first appeal with your required clinical justification (or request peer-to-peer). All appeals receive independent review by a different physician.
             </p>
+            <Link href={`/cases/${params?.id ?? ''}`} className="inline-block mt-3 text-sm font-semibold text-blue-700 hover:text-blue-900 underline">
+              Go to Case Workspace → File Appeal or Request P2P
+            </Link>
           </div>
         )}
 

@@ -7,6 +7,7 @@ import { applyRateLimit } from '@/lib/rate-limit-middleware';
 import { logAuditEvent } from '@/lib/audit';
 import { apiError } from '@/lib/api-error';
 import { getRequestContext } from '@/lib/security';
+import { getApprovedTpaAccess } from '@/lib/auth/tpa-access';
 
 export const dynamic = 'force-dynamic';
 
@@ -36,14 +37,11 @@ async function resolveTpa(): Promise<{ id: string; email: string } | null> {
   const ssr = await createServerClient();
   const { data: userData } = await ssr.auth.getUser();
   if (!userData?.user?.email) return null;
-  const supabase = getServiceClient();
-  const { data: tpa } = await supabase
-    .from('clients')
-    .select('id')
-    .eq('contact_email', userData.user.email)
-    .maybeSingle();
-  if (!tpa) return null;
-  return { id: tpa.id, email: userData.user.email };
+
+  const access = await getApprovedTpaAccess(userData.user.email, userData.user.email);
+  if ('status' in access) return null;
+
+  return { id: access.clientId, email: access.email };
 }
 
 export async function GET(request: NextRequest) {

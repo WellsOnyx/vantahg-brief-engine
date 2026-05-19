@@ -187,6 +187,14 @@ export default function IntakePage() {
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [triageSuccessMessage, setTriageSuccessMessage] = useState<string | null>(null);
 
+  // Concierge attribution + required reasoning for promote (tenant scoping + audit trail)
+  const [availableClients, setAvailableClients] = useState<Array<{ id: string; name: string }>>([]);
+  const [selectedClientForTriage, setSelectedClientForTriage] = useState('');
+  const [reviewNotes, setReviewNotes] = useState('');
+
+  // Rich handoff state after successful promote (for clean transition into review layer)
+  const [lastPromoted, setLastPromoted] = useState<{ caseNumber: string; caseId?: string } | null>(null);
+
   // Source-fax preview state (signed-URL fetched on demand from /document)
   const [previewState, setPreviewState] = useState<'idle' | 'loading' | 'ready' | 'unavailable' | 'error'>('idle');
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -265,11 +273,26 @@ export default function IntakePage() {
       .catch(() => {});
   }, []);
 
+  // Fetch clients for concierge attribution in triage (staff/concierge role)
+  const fetchClientsForTriage = useCallback(async () => {
+    try {
+      const res = await fetch('/api/clients');
+      if (res.ok) {
+        const list = await res.json();
+        const normalized = (Array.isArray(list) ? list : (list.clients || [])).map((c: any) => ({ id: c.id, name: c.name || c.contact_email || 'Unnamed Client' }));
+        setAvailableClients(normalized);
+      }
+    } catch {
+      // Non-fatal; selector can be empty or manual entry in future
+    }
+  }, []);
+
   useEffect(() => {
     if (activeTab === 'triage') {
       fetchTriageData();
+      fetchClientsForTriage();
     }
-  }, [activeTab, fetchTriageData]);
+  }, [activeTab, fetchTriageData, fetchClientsForTriage]);
 
   function selectTriageItem(item: TriageQueueItem) {
     setSelectedTriageItem(item);
@@ -277,9 +300,13 @@ export default function IntakePage() {
     setShowRejectDialog(false);
     setRejectReason('');
     setTriageSuccessMessage(null);
+    setLastPromoted(null); // clear prior handoff CTA when starting new triage item
     setPreviewState('idle');
     setPreviewUrl(null);
     setPreviewMessage(null);
+    // Reset attribution + reasoning for this item
+    setSelectedClientForTriage('');
+    setReviewNotes('');
   }
 
   async function loadDocumentPreview(itemId: string) {
@@ -334,6 +361,23 @@ export default function IntakePage() {
       if (action === 'reject') {
         payload.reject_reason = rejectReason || 'Rejected during CSR triage';
       }
+      if (action === 'promote') {
+        // Enforce client attribution + capture required concierge reasoning for this promote
+        if (!selectedClientForTriage) {
+          setTriageSuccessMessage('Error: Please select the responsible client (TPA) for tenant scoping before promoting.');
+          setTriageActionLoading(false);
+          return;
+        }
+        const trimmedNotes = (reviewNotes || '').trim();
+        if (trimmedNotes.length < 15) {
+          setTriageSuccessMessage('Error: Please provide substantive review reasoning (≥15 characters) — this is captured for audit defensibility and human accountability per the AI 95% + human review standard.');
+          setTriageActionLoading(false);
+          return;
+        }
+        payload.client_id = selectedClientForTriage;
+        payload.review_notes = trimmedNotes;
+        // practice_id can be added here in future when we have per-client practice picker
+      }
 
       const res = await fetch('/api/intake/efax/queue', {
         method: 'PATCH',
@@ -359,8 +403,15 @@ export default function IntakePage() {
           setPreviewState('idle');
           setPreviewUrl(null);
           setPreviewMessage(null);
+          setReviewNotes('');
+          setSelectedClientForTriage('');
           // Refresh stats
           fetchTriageData();
+
+          // Capture for post-promote handoff CTA into the Concierge Review Queue (brief_ready)
+          if (action === 'promote' && result.case_number) {
+            setLastPromoted({ caseNumber: result.case_number, caseId: result.case_id });
+          }
         }
       } else {
         const err = await res.json();
@@ -411,6 +462,15 @@ export default function IntakePage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          {/* Direct handoff link to the AI Brief Review Queue (production handoff surface) */}
+          <Link
+            href="/concierge/review"
+            className="inline-flex items-center gap-2 bg-teal-600 text-white px-3 py-2 rounded-lg font-semibold text-sm hover:bg-teal-700 transition-colors shadow-sm"
+            title="Jump to cases with AI briefs ready for concierge validation (required reasoning gate)"
+          >
+            Review Queue
+            <span className="text-teal-200">→</span>
+          </Link>
           <Link
             href="/upload"
             className="inline-flex items-center gap-2 bg-white border border-border text-navy px-4 py-2 rounded-lg font-medium text-sm hover:bg-gray-50 transition-colors"
@@ -767,6 +827,40 @@ export default function IntakePage() {
                 </div>
               )}
 
+              {/* Clean handoff CTA after promote — direct to Review Queue (AI Brief Review) or case for white-glove follow-through */}
+              {lastPromoted && (
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-emerald-800">Handoff complete — Case {lastPromoted.caseNumber} promoted to AI brief generation.</p>
+                    <p className="text-xs text-emerald-700 mt-0.5">The case will appear in the Concierge Review Queue once the brief + fact-check complete (AI 95% layer). Review with reasoning required before clinical routing.</p>
+                  </div>
+                  <div className="flex gap-2 shrink-0">
+                    <Link
+                      href="/concierge/review"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 transition"
+                      onClick={() => setLastPromoted(null)}
+                    >
+                      Open Review Queue →
+                    </Link>
+                    {lastPromoted.caseId && (
+                      <Link
+                        href={`/cases/${lastPromoted.caseId}`}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-emerald-300 text-emerald-800 text-xs font-medium hover:bg-white transition"
+                        onClick={() => setLastPromoted(null)}
+                      >
+                        View Case
+                      </Link>
+                    )}
+                    <button
+                      onClick={() => setLastPromoted(null)}
+                      className="text-xs text-emerald-700 underline px-1"
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {triageLoading ? (
                 <div className="bg-surface rounded-xl border border-border shadow-sm p-8">
                   <div className="flex items-center justify-center gap-3">
@@ -844,6 +938,61 @@ export default function IntakePage() {
                           Promote to Case
                         </button>
                       </div>
+                    </div>
+                  </div>
+
+                  {/* Concierge Attribution & Required Reasoning (white-glove, tenant-scoped, audit-defensible) */}
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 space-y-4">
+                    <div>
+                      <h3 className="text-sm font-semibold text-amber-900">Concierge Review &amp; Attribution</h3>
+                      <p className="text-xs text-amber-700 mt-0.5">
+                        Select the responsible TPA/client. This sets tenant scoping (client_id / practice_id) and routes oversight to their assigned concierge. Capture your reasoning for the clinical record.
+                      </p>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-medium text-amber-800 mb-1">Responsible Client (TPA) — required for promote</label>
+                        <select
+                          value={selectedClientForTriage}
+                          onChange={(e) => setSelectedClientForTriage(e.target.value)}
+                          className="w-full px-3 py-2 text-sm border border-amber-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-gold/50"
+                          disabled={triageActionLoading}
+                        >
+                          <option value="">— Select client / TPA —</option>
+                          {availableClients.map((c) => (
+                            <option key={c.id} value={c.id}>{c.name}</option>
+                          ))}
+                        </select>
+                        {availableClients.length === 0 && (
+                          <p className="text-[10px] text-amber-600 mt-1">Loading clients… (or none available in demo)</p>
+                        )}
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-amber-800 mb-1">Practice / Physician Office (optional for V1)</label>
+                        <input
+                          type="text"
+                          value={reviewNotes.includes('practice:') ? '' : '' /* placeholder for future practice picker */}
+                          onChange={() => {}}
+                          placeholder="Practice name or ID (optional)"
+                          className="w-full px-3 py-2 text-sm border border-amber-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-gold/50"
+                          disabled
+                        />
+                        <p className="text-[10px] text-amber-600 mt-0.5">Future: per-practice routing. Leave blank for now.</p>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-amber-800 mb-1">Your Review Notes / Reasoning (captured in audit + case notes — required for promote)</label>
+                      <textarea
+                        value={reviewNotes}
+                        onChange={(e) => setReviewNotes(e.target.value)}
+                        placeholder="E.g., 'Patient name manually corrected from OCR. Procedure codes confirmed against cover sheet. Low confidence on DOB but member ID matches.'"
+                        className="w-full px-3 py-2 text-sm border border-amber-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-gold/50"
+                        rows={3}
+                        disabled={triageActionLoading}
+                      />
+                      <p className="text-[10px] text-amber-700 mt-0.5">This becomes part of the permanent clinical/audit trail. Be concise but specific.</p>
                     </div>
                   </div>
 

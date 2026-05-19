@@ -127,6 +127,18 @@ export function getDemoCase(id: string): Case | null {
   return caseData;
 }
 
+/**
+ * Mutates a demo case in-memory (for PATCH / updates in demo mode only).
+ * Enables realistic end-to-end flows (status changes, validation, determinations, appeals)
+ * without requiring a live database. Safe no-op if ID not found.
+ */
+export function updateDemoCase(id: string, updates: Partial<Case>): void {
+  const idx = demoCases.findIndex((c) => c.id === id);
+  if (idx !== -1) {
+    demoCases[idx] = { ...demoCases[idx], ...updates } as Case;
+  }
+}
+
 // ============================================================================
 // Reviewers
 // ============================================================================

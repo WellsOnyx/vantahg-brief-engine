@@ -125,6 +125,10 @@ export interface Case {
   lpn_review_at: string | null;
   lpn_determination: LpnDetermination | null;
 
+  // Concierge human validation gate (AI brief review before clinical tiers)
+  // Note: persisted via audit events (concierge_brief_validated) for V1 — no dedicated columns to avoid schema changes.
+  // (Fields intentionally omitted from concrete demo data and DB to honor "no unnecessary migrations" invariant.)
+
   // RN review
   rn_review_notes: string | null;
   rn_review_at: string | null;
