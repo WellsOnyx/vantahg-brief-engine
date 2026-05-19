@@ -452,3 +452,41 @@ export async function notifyIntakeConfirmation(
     body: `This confirms receipt of your authorization request.\n\nAuthorization Number: ${authorizationNumber}\nCase Reference: ${caseNumber}\n\nYour request is being processed. You may check the status at ${baseUrl}/portal\n\nIf you have questions, contact us at (602) 555-0100.`,
   });
 }
+
+/**
+ * Notify an external IDR Attorney that they have been assigned a new Payer IDR case.
+ * (Task 9)
+ */
+export async function notifyIdrAttorneyAssigned(
+  caseId: string,
+  attorneyId: string,
+  caseNumber: string,
+): Promise<void> {
+  if (isDemoMode()) {
+    console.log(`[NOTIFICATION] idr_attorney_assigned | Case: ${caseNumber} → Attorney: ${attorneyId}`);
+    return;
+  }
+
+  const supabase = getServiceClient();
+
+  const { data: attorney } = await supabase
+    .from('user_profiles')
+    .select('name, email')
+    .eq('id', attorneyId)
+    .single();
+
+  if (!attorney?.email) return;
+
+  const baseUrl = process.env.NEXTAUTH_URL || process.env.VERCEL_URL || 'http://localhost:3000';
+  const attorneyQueueUrl = `${baseUrl}/attorney/review`;
+
+  await sendNotification({
+    type: 'new_case_assigned', // reusing existing type for now; can add 'idr_attorney_assigned' later
+    recipient_email: attorney.email,
+    recipient_name: attorney.name,
+    case_number: caseNumber,
+    case_id: caseId,
+    subject: `New Payer IDR Case Assigned: ${caseNumber}`,
+    body: `You have been assigned a new Payer IDR case.\n\nCase: ${caseNumber}\n\nPlease log in to the Attorney Portal to review the case and submit your determination:\n${attorneyQueueUrl}\n\nIf you have any questions, contact your VantaUM administrator.`,
+  });
+}

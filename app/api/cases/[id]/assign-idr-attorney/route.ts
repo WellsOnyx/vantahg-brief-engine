@@ -5,6 +5,7 @@ import { getServiceClient } from '@/lib/supabase';
 import { apiError } from '@/lib/api-error';
 import { logAuditEvent } from '@/lib/audit';
 import { getRequestContext } from '@/lib/security';
+import { notifyIdrAttorneyAssigned } from '@/lib/notifications';
 
 export const dynamic = 'force-dynamic';
 
@@ -109,6 +110,11 @@ export async function PATCH(
       },
       getRequestContext(request)
     );
+
+    // Fire-and-forget notification to the newly assigned attorney (Task 9)
+    if (attorneyId) {
+      notifyIdrAttorneyAssigned(caseId, attorneyId, existingCase.case_number).catch(() => {});
+    }
 
     return NextResponse.json({ success: true });
   } catch (err) {
