@@ -274,6 +274,26 @@ export interface AIBrief {
     additional_info_needed: string[];
     state_specific_requirements: string[];
   };
+  /**
+   * Optional metadata attached by the self-improvement engine (multi-pass critique/revision).
+   * Never emitted by the model in the primary tool call; populated server-side after
+   * final fact-check. Persisted inside the ai_brief JSONB column (no schema migration).
+   * Increases clinical defensibility by making the AI's own improvement process auditable.
+   */
+  generation_metadata?: {
+    passes_completed: number;
+    self_improvement_applied: boolean;
+    initial_fact_check_score?: number;
+    final_fact_check_score?: number;
+    revisions?: Array<{
+      pass: number;
+      issues_addressed: string[];
+      sections_revised: string[];
+      score_before: number;
+      score_after: number;
+      critique_summary?: string;
+    }>;
+  };
 }
 
 // ── Fact-Check / Verification Types ─────────────────────────────────────────
@@ -310,6 +330,12 @@ export interface FactCheckResult {
   };
   consistency_checks: ConsistencyCheck[];
   checked_at: string;
+  /** Clinically defensible gate: when true, the concierge or clinical reviewer MUST explicitly acknowledge
+   * review of the fact-check output (via required reasoning in validation form) before status can advance.
+   * AI proposes; human reasoning makes it defensible. Populated deterministically from score/flags/fidelity. */
+  human_review_recommended: boolean;
+  /** Actionable, PHI-safe reasons surfaced to the human reviewer explaining why acknowledgment is required. */
+  review_reasons: string[];
 }
 
 // ── Staff & Pod Types ────────────────────────────────────────────────────────

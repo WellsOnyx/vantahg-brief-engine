@@ -166,6 +166,16 @@ export function CaseBrief({ brief, caseNumber, factCheck }: CaseBriefProps) {
             {factCheck && (
               <VerificationScore score={factCheck.overall_score} status={factCheck.overall_status} />
             )}
+            {/* Self-Improvement Badge — surfaces the multi-pass clinical reasoning loop (AI Automation Layer) */}
+            {(brief as any).generation_metadata?.self_improvement_applied && (
+              <div
+                className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold border bg-emerald-100 text-emerald-800 border-emerald-300"
+                title={`AI performed ${(brief as any).generation_metadata.passes_completed} self-critique passes before surfacing for human validation. Final score lift: +${((brief as any).generation_metadata.final_fact_check_score ?? 0) - ((brief as any).generation_metadata.initial_fact_check_score ?? 0)} pts.`}
+              >
+                <span>✧</span>
+                <span>Self-refined • {(brief as any).generation_metadata.passes_completed} passes</span>
+              </div>
+            )}
             <button
               onClick={() => window.print()}
               className="btn btn-secondary text-xs py-1.5 px-3"
@@ -542,6 +552,46 @@ export function CaseBrief({ brief, caseNumber, factCheck }: CaseBriefProps) {
             <VerificationSummary factCheck={factCheck} />
           </>
         )}
+
+        {/* AI Self-Improvement Log — transparent audit artifact from the multi-pass reasoning engine.
+            Only rendered when the generation_metadata is present (production self-critique path).
+            This is part of making the "AI 95%" clinically defensible before the mandatory human gate. */}
+        {/* eslint-disable @typescript-eslint/no-explicit-any */}
+        {(brief as any).generation_metadata?.self_improvement_applied && (
+          <>
+            <SectionDivider />
+            <details className="group rounded-xl border border-emerald-200 bg-emerald-50/40 px-4 py-3 text-sm">
+              <summary className="flex cursor-pointer items-center justify-between font-semibold text-emerald-800 select-none">
+                <span className="flex items-center gap-2">
+                  <span className="text-emerald-600">✧</span>
+                  AI Self-Improvement Log ({(brief as any).generation_metadata.passes_completed} passes)
+                  <span className="text-[10px] font-normal text-emerald-700/70">
+                    +{((brief as any).generation_metadata.final_fact_check_score ?? 0) - ((brief as any).generation_metadata.initial_fact_check_score ?? 0)}pt defensibility lift
+                  </span>
+                </span>
+                <span className="text-emerald-600 group-open:rotate-180 transition">⌄</span>
+              </summary>
+              <div className="mt-3 space-y-3 border-t border-emerald-200/70 pt-3 text-emerald-900">
+                <div className="text-[11px] uppercase tracking-wider text-emerald-700/80">Structured clinical reasoning loop (pre-human validation)</div>
+                {(brief as any).generation_metadata.revisions?.map((rev: any, idx: number) => (
+                  <div key={idx} className="rounded-lg bg-white/70 p-3 text-xs border border-emerald-100">
+                    <div className="font-semibold text-emerald-800 mb-1">Pass {rev.pass}: {rev.critique_summary || 'Targeted revision for clinical defensibility'}</div>
+                    <div className="text-emerald-700 mb-1">Score: {rev.score_before} → {rev.score_after}</div>
+                    {rev.issues_addressed?.length > 0 && (
+                      <ul className="list-disc pl-4 space-y-0.5 text-emerald-800">
+                        {rev.issues_addressed.slice(0, 4).map((issue: string, i: number) => (
+                          <li key={i}>{issue}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                ))}
+                <div className="text-[10px] text-emerald-700/70 pt-1">This log is persisted with the brief in the permanent case audit trail.</div>
+              </div>
+            </details>
+          </>
+        )}
+        {/* eslint-enable @typescript-eslint/no-explicit-any */}
 
         {/* Disclaimer */}
         <div className="mt-6 pt-4 border-t border-border">

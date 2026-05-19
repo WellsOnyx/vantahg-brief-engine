@@ -34,6 +34,8 @@ export type StreamChunkType =
   | 'tool_use'
   | 'tool_result'
   | 'brief_section'
+  | 'brief_pass'
+  | 'refinement_update'
   | 'error'
   | 'done';
 
@@ -47,6 +49,13 @@ export interface StreamChunk {
   briefSection?: string;
   briefContent?: unknown;
   error?: string;
+  /** For brief_pass / refinement_update events in the self-improvement pipeline */
+  passNumber?: number;
+  message?: string;
+  issues?: string[];
+  sectionsRevised?: string[];
+  scoreBefore?: number;
+  scoreAfter?: number;
 }
 
 // ── Extraction State ────────────────────────────────────────────────────────

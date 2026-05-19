@@ -14,7 +14,7 @@ import { isDemoMode } from '@/lib/demo-mode';
 import { logAuditEvent } from '@/lib/audit';
 import { applyRateLimit } from '@/lib/rate-limit-middleware';
 import { requireRole, INTERNAL_STAFF_ROLES } from '@/lib/auth-guard';
-import { generateBriefForCase } from '@/lib/generate-brief';
+import { generateBriefForCase, persistBriefResult } from '@/lib/generate-brief';
 import { assignToPod } from '@/lib/pod-assignment-engine';
 import { notifyLpnCaseAssigned } from '@/lib/notifications';
 
@@ -612,20 +612,10 @@ export async function PATCH(request: NextRequest) {
             if (fullCaseRow) {
               const result = await generateBriefForCase(fullCaseRow as any, { client: (fullCaseRow as any).client ?? null });
               if (result) {
-                const { brief, factCheck } = result;
-                await supabase
-                  .from('cases')
-                  .update({
-                    ai_brief: brief,
-                    ai_brief_generated_at: new Date().toISOString(),
-                    fact_check: factCheck,
-                    fact_check_at: new Date().toISOString(),
-                    status: 'brief_ready',
-                  })
-                  .eq('id', newCase.id);
-
-                await logAuditEvent(newCase.id, 'brief_generated', 'system', {
-                  generated_from_triage_promote: true,
+                // Centralized fact-check persistence (guarantees alongside every brief, including triage path)
+                await persistBriefResult(newCase.id, result, supabase, {
+                  generatedFrom: 'triage_promote',
+                  auditContext: { generated_from_triage_promote: true },
                 });
 
                 const podResult = await assignToPod(newCase.id);

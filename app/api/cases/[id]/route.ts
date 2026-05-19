@@ -114,11 +114,15 @@ export async function PATCH(
       }
 
       // Special concierge validation gate (no column needed; rationale captured in audit)
+      // Fact-check ack also captured for full defensibility trail in demo.
       if (body.concierge_validation_rationale) {
         await logAuditEvent(id, 'concierge_brief_validated', actor, {
           rationale: body.concierge_validation_rationale,
           flags: body.validation_flags ?? [],
           validated_at: new Date().toISOString(),
+          fact_check_acknowledged: body.fact_check_acknowledged ?? null,
+          fact_check_review_notes: body.fact_check_review_notes ?? null,
+          fact_check_enforced: !!(body.fact_check_acknowledged || body.fact_check_review_notes),
         }, requestContext);
         // Do not attempt to persist concierge_* fields to demo shape unless present
         delete demoUpdates.concierge_validation_rationale;
@@ -138,6 +142,10 @@ export async function PATCH(
         await logAuditEvent(id, 'determination_made', actor, {
           determination: body.determination,
           rationale: body.determination_rationale || null,
+          // AI Automation Layer (Track A): capture explicit human review of denial/appeal risk signals (required reasoning gate)
+          ai_risk_acknowledged: body.ai_risk_acknowledged || false,
+          ai_risk_notes: body.ai_risk_notes || null,
+          risk_signal_present: !!(body.ai_risk_acknowledged || body.ai_risk_notes),
         }, requestContext);
       }
 
@@ -161,14 +169,21 @@ export async function PATCH(
 
     // Special concierge validation gate — always log rich audit (rationale is the human reasoning)
     // Do NOT include in DB update to avoid schema dependency; lives in audit payload.
+    // Extended for Fact-Check & Verification Hardening: capture explicit acknowledgment of automated verification (multi-source + fidelity).
     if (body.concierge_validation_rationale) {
       await logAuditEvent(id, 'concierge_brief_validated', actor, {
         rationale: body.concierge_validation_rationale,
         flags: body.validation_flags ?? [],
         validated_at: new Date().toISOString(),
+        // Fact-check acknowledgment fields (only sent when gate was active; human reasoning on verification output)
+        fact_check_acknowledged: body.fact_check_acknowledged ?? null,
+        fact_check_review_notes: body.fact_check_review_notes ?? null,
+        fact_check_enforced: !!(body.fact_check_acknowledged || body.fact_check_review_notes),
       }, requestContext);
       delete updates.concierge_validation_rationale;
       delete updates.validation_flags;
+      delete updates.fact_check_acknowledged;
+      delete updates.fact_check_review_notes;
     }
 
     const { data, error } = await supabase
@@ -207,6 +222,10 @@ export async function PATCH(
       await logAuditEvent(id, 'determination_made', actor, {
         determination: body.determination,
         rationale: body.determination_rationale || null,
+        // AI Automation Layer (Track A): capture explicit human review of denial/appeal risk signals (required reasoning gate)
+        ai_risk_acknowledged: body.ai_risk_acknowledged || false,
+        ai_risk_notes: body.ai_risk_notes || null,
+        risk_signal_present: !!(body.ai_risk_acknowledged || body.ai_risk_notes),
       }, requestContext);
 
       // Auto-deliver to client for final determinations (non-blocking)

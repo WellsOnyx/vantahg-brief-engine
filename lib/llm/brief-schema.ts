@@ -25,6 +25,22 @@ const RecommendationEnum = z.enum(['approve', 'deny', 'pend', 'peer_to_peer_reco
 const ConfidenceEnum = z.enum(['high', 'medium', 'low']);
 const ComplexityEnum = z.enum(['routine', 'moderate', 'complex']);
 
+// Self-improvement metadata (populated server-side after final fact-check; model never emits it in tool calls)
+const GenerationMetadataSchema = z.object({
+  passes_completed: z.number().int().min(1),
+  self_improvement_applied: z.boolean(),
+  initial_fact_check_score: z.number().optional(),
+  final_fact_check_score: z.number().optional(),
+  revisions: z.array(z.object({
+    pass: z.number().int(),
+    issues_addressed: z.array(z.string()),
+    sections_revised: z.array(z.string()),
+    score_before: z.number(),
+    score_after: z.number(),
+    critique_summary: z.string().optional(),
+  })).optional(),
+}).optional();
+
 export const AIBriefSchema = z.object({
   clinical_question: z.string().min(1),
   patient_summary: z.string().min(1),
@@ -66,7 +82,9 @@ export const AIBriefSchema = z.object({
     additional_info_needed: z.array(z.string()),
     state_specific_requirements: z.array(z.string()),
   }),
-});
+  // Optional — only present after our self-critique engine augments the validated model output
+  generation_metadata: GenerationMetadataSchema,
+}).passthrough(); // Allow future additive fields without breaking stored briefs
 
 export type ValidatedAIBrief = z.infer<typeof AIBriefSchema>;
 
@@ -169,6 +187,43 @@ export const BRIEF_TOOL_INPUT_SCHEMA = {
     'reviewer_action',
   ],
 } as const;
+
+// ── Self-Critique Tool (structured clinical reasoning loop) ─────────────────
+// Used in multi-pass improvement. Model explicitly surfaces weaknesses before
+// the revision pass. Output is never persisted as the brief; used only to
+// drive the subsequent revised brief generation + rich audit trail.
+export const BRIEF_CRITIQUE_TOOL_NAME = 'record_brief_critique';
+
+export const BRIEF_CRITIQUE_TOOL_SCHEMA = {
+  type: 'object',
+  properties: {
+    issues_identified: {
+      type: 'array',
+      items: { type: 'string' },
+      description: 'Specific, actionable clinical defensibility or evidence issues in the draft (e.g., "criteria_met #3 only weakly supported by cited guideline; no mention of conservative weight-loss trial for BMI 34")',
+    },
+    sections_recommended_for_revision: {
+      type: 'array',
+      items: { type: 'string', enum: ['diagnosis_analysis', 'procedure_analysis', 'criteria_match', 'documentation_review', 'ai_recommendation', 'reviewer_action'] },
+    },
+    critique_summary: {
+      type: 'string',
+      description: 'Concise 1-2 sentence clinical reasoning summary of why the draft needs improvement before human review.',
+    },
+    recommended_fixes: {
+      type: 'array',
+      items: { type: 'string' },
+    },
+  },
+  required: ['issues_identified', 'sections_recommended_for_revision', 'critique_summary', 'recommended_fixes'],
+} as const;
+
+export interface BriefCritique {
+  issues_identified: string[];
+  sections_recommended_for_revision: string[];
+  critique_summary: string;
+  recommended_fixes: string[];
+}
 
 // ── Validation helper ──────────────────────────────────────────────────────
 

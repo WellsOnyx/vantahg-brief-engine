@@ -90,9 +90,11 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Log audit event
+    // Log audit event (now carries self-improvement metadata via the brief object itself)
     await logAuditEvent(case_id, 'brief_generated', 'system', {
       triggered_manually: true,
+      passes: (brief as any)?.generation_metadata?.passes_completed ?? 1,
+      self_improved: (brief as any)?.generation_metadata?.self_improvement_applied ?? false,
     });
 
     // Auto-assign a reviewer now that brief is ready (non-blocking)

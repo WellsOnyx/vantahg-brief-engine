@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceClient } from '@/lib/supabase';
 import { logAuditEvent } from '@/lib/audit';
-import { generateBriefForCase } from '@/lib/generate-brief';
+import { generateBriefForCase, persistBriefResult } from '@/lib/generate-brief';
 import { autoAssignReviewer } from '@/lib/assignment-engine';
 import { notifyCaseAssigned } from '@/lib/notifications';
 import { assignToPod } from '@/lib/pod-assignment-engine';
@@ -296,20 +296,9 @@ export async function POST(request: NextRequest) {
     // Trigger brief generation in the background (non-blocking, with client criteria context)
     generateBriefForCase(data, { client: data.client ?? null }).then(async (result) => {
       if (result) {
-        const { brief, factCheck } = result;
-        await supabase
-          .from('cases')
-          .update({
-            ai_brief: brief,
-            ai_brief_generated_at: new Date().toISOString(),
-            fact_check: factCheck,
-            fact_check_at: new Date().toISOString(),
-            status: 'brief_ready',
-          })
-          .eq('id', data.id);
-
-        await logAuditEvent(data.id, 'brief_generated', 'system', {
-          generated_automatically: true,
+        // Centralized persistence guarantees fact_check always travels with ai_brief
+        await persistBriefResult(data.id, result, supabase, {
+          generatedFrom: 'case_create',
         });
 
         // Assign to pod (LPN → RN → MD nursing tier workflow)

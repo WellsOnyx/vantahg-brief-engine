@@ -17,6 +17,7 @@ import type {
 } from './types';
 import { medicalCriteria } from './medical-criteria';
 import { findKnownGuideline, isRecognizedRegulatoryFormat } from './known-guidelines';
+import { analyzeTwoMidnightRule } from './two-midnight-rule';
 
 // ── Code Format Validators ──────────────────────────────────────────────────
 
@@ -318,6 +319,121 @@ function verifyRecommendation(brief: AIBrief): SectionVerification {
   return { section: 'Recommendation & Reviewer Action', claims, flags };
 }
 
+// ── Multi-Source Verification: Two-Midnight + Data Fidelity (AI Automation Layer hardening) ──
+
+function verifyTwoMidnight(brief: AIBrief, caseData: Case): SectionVerification {
+  const claims: ClaimVerification[] = [];
+  const flags: string[] = [];
+
+  const tm = analyzeTwoMidnightRule(caseData);
+  const rec = brief.ai_recommendation.recommendation;
+
+  if (tm.applies) {
+    claims.push({
+      claim: `Two-Midnight Rule applies (classification: ${tm.payer_classification})`,
+      status: 'verified',
+      source: 'CMS Two-Midnight Rule (42 CFR §412.3)',
+      explanation: 'Medicare FFS or MA plan subject to 2-midnight standard. Brief must support expected LOS and medical necessity for inpatient.',
+    });
+    if (rec === 'approve' && tm.inpatient_only_procedure) {
+      claims.push({
+        claim: 'Inpatient-only procedure per 2-midnight context',
+        status: 'verified',
+        source: 'CMS Two-Midnight + Inpatient-Only List',
+        explanation: 'Procedure flagged as typically inpatient; supports approval recommendation when documentation present.',
+      });
+    }
+    if (tm.warnings && tm.warnings.length > 0) {
+      flags.push(`2-midnight warnings: ${tm.warnings.slice(0, 1).join('; ')}`);
+    }
+  } else if (tm.is_medicare_advantage) {
+    claims.push({
+      claim: 'Medicare Advantage plan — 2-midnight applies via plan rules',
+      status: 'verified',
+      source: 'CMS Two-Midnight Rule',
+      explanation: 'MA uses 2-midnight but with plan-specific medical policy overlay.',
+    });
+  } else {
+    claims.push({
+      claim: 'Two-Midnight Rule does not govern (commercial / other payer)',
+      status: 'verified',
+      source: 'CMS Two-Midnight Rule',
+      explanation: 'Subject to plan-specific criteria (InterQual/MCG or client policy) rather than 2-midnight.',
+    });
+  }
+
+  return { section: 'Two-Midnight Rule & Level of Care', claims, flags };
+}
+
+function verifyDataFidelity(brief: AIBrief, caseData: Case): SectionVerification {
+  const claims: ClaimVerification[] = [];
+  const flags: string[] = [];
+
+  // Procedure code fidelity — catch hallucinated codes not in the actual request
+  const caseProc = new Set((caseData.procedure_codes || []).map((c) => c.trim().toUpperCase()));
+  for (const codeEntry of brief.procedure_analysis.codes) {
+    const code = codeEntry.split(/[\s\-–—]/)[0].trim().toUpperCase();
+    if (isValidMedicalCode(code)) {
+      if (caseProc.size > 0 && !caseProc.has(code)) {
+        claims.push({
+          claim: `Brief cites procedure ${code}`,
+          status: 'flagged',
+          source: null,
+          explanation: 'Code appears in AI brief but was not present in submitted case procedure_codes — hallucination risk',
+        });
+        flags.push(`Hallucinated procedure code: ${code} (absent from case intake)`);
+      } else {
+        claims.push({
+          claim: `Brief procedure ${code} matches submitted request`,
+          status: 'verified',
+          source: 'Case intake fidelity',
+          explanation: 'Direct 1:1 match to provider-submitted codes',
+        });
+      }
+    }
+  }
+
+  // Diagnosis fidelity
+  if (brief.diagnosis_analysis?.primary_diagnosis) {
+    const briefDx = brief.diagnosis_analysis.primary_diagnosis.split(/[\s\-–—]/)[0].trim().toUpperCase();
+    const caseDx = (caseData.diagnosis_codes || []).map((d) => d.trim().toUpperCase());
+    if (caseDx.length > 0) {
+      const matches = caseDx.some((c) => c === briefDx || c.startsWith(briefDx) || briefDx.startsWith(c));
+      if (matches) {
+        claims.push({
+          claim: `Primary diagnosis ${briefDx} aligns with case`,
+          status: 'verified',
+          source: 'Case intake fidelity',
+          explanation: 'Diagnosis in brief is supported by submitted diagnosis_codes',
+        });
+      } else {
+        claims.push({
+          claim: `Primary diagnosis ${briefDx}`,
+          status: 'flagged',
+          source: null,
+          explanation: 'Brief primary diagnosis does not match or derive from case diagnosis codes — possible hallucination or over-extrapolation',
+        });
+        flags.push(`Diagnosis mismatch: brief cites ${briefDx} not supported by case ICD-10 list`);
+      }
+    }
+  }
+
+  // Missing documentation fidelity (does brief over- or under- flag vs what we know is absent)
+  const caseMissing = (caseData as any).missing_clinical_info || [];
+  const briefMissing = brief.documentation_review.missing_documentation || [];
+  if (briefMissing.length > 0 && caseMissing.length === 0) {
+    // brief flagged gaps but case record shows none — still ok, but note
+    claims.push({
+      claim: 'Brief surfaced documentation gaps beyond explicit case record',
+      status: 'unverified',
+      source: 'Clinical judgment',
+      explanation: 'AI identified additional gaps; concierge should confirm against full fax/PDFs',
+    });
+  }
+
+  return { section: 'Data Fidelity & Hallucination Guard', claims, flags };
+}
+
 // ── Consistency Checks ──────────────────────────────────────────────────────
 
 function runConsistencyChecks(brief: AIBrief): ConsistencyCheck[] {
@@ -440,6 +556,8 @@ export function factCheckBrief(
     verifyProcedureCodes(brief, caseData),
     verifyDocumentation(brief),
     verifyRecommendation(brief),
+    verifyTwoMidnight(brief, caseData),
+    verifyDataFidelity(brief, caseData),
   ];
 
   const consistencyChecks = runConsistencyChecks(brief);
@@ -489,6 +607,25 @@ export function factCheckBrief(
     overall_status = 'warning';
   }
 
+  // Human review gate computation (AI proposes, human must acknowledge)
+  const reviewReasons: string[] = [];
+  if (score < 75) reviewReasons.push(`Verification score ${score} below clinical review threshold (75)`);
+  if (flagged > 0) reviewReasons.push(`${flagged} item(s) flagged for potential hallucination or unverifiable claim`);
+  if (failedChecks > 0) reviewReasons.push(`${failedChecks} internal consistency check(s) failed`);
+  if (totalFlags > 2) reviewReasons.push('High volume of verification flags — elevated hallucination/missing-data risk');
+
+  // Always recommend explicit review if any fidelity or 2-midnight flags surfaced in new sections
+  const fidelitySection = sections.find((s) => s.section.includes('Fidelity'));
+  const tmSection = sections.find((s) => s.section.includes('Two-Midnight'));
+  if (fidelitySection && fidelitySection.flags.length > 0) {
+    reviewReasons.push('Data fidelity issues detected between brief and source case record');
+  }
+  if (tmSection && tmSection.flags.length > 0) {
+    reviewReasons.push('Two-Midnight / level-of-care mismatch risk flagged');
+  }
+
+  const human_review_recommended = reviewReasons.length > 0 || overall_status !== 'pass';
+
   return {
     overall_score: score,
     overall_status,
@@ -496,5 +633,7 @@ export function factCheckBrief(
     summary: { verified, unverified, flagged },
     consistency_checks: consistencyChecks,
     checked_at: new Date().toISOString(),
+    human_review_recommended,
+    review_reasons: reviewReasons,
   };
 }

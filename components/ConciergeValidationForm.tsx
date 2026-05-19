@@ -1,11 +1,21 @@
 'use client';
 
 import { useState } from 'react';
+import type { FactCheckResult } from '@/lib/types';
+import { VerificationScore } from './FactCheckBadge';
 
 interface ConciergeValidationFormProps {
-  onSubmit: (payload: { rationale: string; flags: string[] }) => Promise<void>;
+  onSubmit: (payload: {
+    rationale: string;
+    flags: string[];
+    /** Fact-check human acknowledgment (only populated when factCheck present and requires review) */
+    fact_check_acknowledged?: boolean;
+    fact_check_review_notes?: string;
+  }) => Promise<void>;
   isSubmitting: boolean;
   caseNumber?: string;
+  /** When provided, surfaces the automated verification quality and (when warranted) enforces explicit human acknowledgment before validation can proceed. */
+  factCheck?: FactCheckResult | null;
 }
 
 /**
@@ -25,16 +35,30 @@ const VALIDATION_FLAGS = [
   { key: 'needs_deeper_review', label: 'Recommend deeper clinical scrutiny' },
 ];
 
-export function ConciergeValidationForm({ onSubmit, isSubmitting, caseNumber }: ConciergeValidationFormProps) {
+export function ConciergeValidationForm({ onSubmit, isSubmitting, caseNumber, factCheck }: ConciergeValidationFormProps) {
   const [rationale, setRationale] = useState('');
   const [selectedFlags, setSelectedFlags] = useState<string[]>([]);
   const [error, setError] = useState('');
+
+  // Fact-check human review gate (AI Automation Layer — required acknowledgment when quality issues present)
+  const [factCheckAck, setFactCheckAck] = useState(false);
+  const [factCheckNotes, setFactCheckNotes] = useState('');
+  const FACT_CHECK_MIN = 20;
+  const needsFactCheckAck =
+    !!factCheck &&
+    (factCheck.human_review_recommended || factCheck.overall_status !== 'pass' || (factCheck.summary?.flagged ?? 0) > 0);
 
   const MIN_CHARS = 30;
   const MAX_CHARS = 1200;
 
   const charCount = rationale.trim().length;
-  const isValid = charCount >= MIN_CHARS && charCount <= MAX_CHARS;
+  const fcNotesCount = factCheckNotes.trim().length;
+  const factCheckNotesValid = !needsFactCheckAck || (factCheckAck && fcNotesCount >= FACT_CHECK_MIN);
+
+  const isValid =
+    charCount >= MIN_CHARS &&
+    charCount <= MAX_CHARS &&
+    factCheckNotesValid;
 
   const toggleFlag = (key: string) => {
     setSelectedFlags((prev) =>
@@ -52,10 +76,15 @@ export function ConciergeValidationForm({ onSubmit, isSubmitting, caseNumber }: 
     }
 
     try {
-      await onSubmit({
+      const payload: any = {
         rationale: rationale.trim(),
         flags: selectedFlags,
-      });
+      };
+      if (needsFactCheckAck) {
+        payload.fact_check_acknowledged = factCheckAck;
+        payload.fact_check_review_notes = factCheckNotes.trim();
+      }
+      await onSubmit(payload);
     } catch (err) {
       setError('Failed to submit validation. Please try again.');
     }
@@ -77,8 +106,7 @@ export function ConciergeValidationForm({ onSubmit, isSubmitting, caseNumber }: 
               Validate AI Clinical Brief
             </h3>
             <p className="text-sm text-emerald-800 mt-1">
-              AI handled extraction and brief generation. Your required reasoning is the first human quality gate.
-              <span className="font-semibold"> This makes the process defensible.</span>
+              AI handled 95% (extraction + brief + deterministic multi-source fact-check). Your required reasoning — including explicit fact-check acknowledgment when quality flags are raised — is the human gate that makes every determination clinically defensible.
             </p>
             {caseNumber && (
               <p className="text-xs text-muted font-mono mt-1">Case {caseNumber}</p>
@@ -129,6 +157,66 @@ export function ConciergeValidationForm({ onSubmit, isSubmitting, caseNumber }: 
             </div>
           </div>
         </div>
+
+        {/* Fact-Check Quality Gate — surfaces AI verification, requires explicit human acknowledgment when warranted */}
+        {factCheck && (
+          <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-4 space-y-3">
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5">
+                <VerificationScore score={factCheck.overall_score} status={factCheck.overall_status} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="font-semibold text-amber-900 text-sm">Automated Fact-Check Report</div>
+                <p className="text-xs text-amber-800 mt-0.5 leading-snug">
+                  Deterministic cross-verification against medical criteria DB, recognized guidelines, CMS Two-Midnight Rule, and source case data fidelity.
+                  {needsFactCheckAck ? ' Your explicit review is required before routing.' : ' Quality is strong; review recommended for defensibility.'}
+                </p>
+                {factCheck.review_reasons && factCheck.review_reasons.length > 0 && (
+                  <ul className="mt-2 text-[11px] text-amber-900 list-disc ml-4">
+                    {factCheck.review_reasons.slice(0, 3).map((r, i) => (
+                      <li key={i}>{r}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+
+            {needsFactCheckAck && (
+              <div className="pt-2 border-t border-amber-200 space-y-3">
+                <label className="flex items-start gap-2 text-sm text-amber-900 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={factCheckAck}
+                    onChange={(e) => setFactCheckAck(e.target.checked)}
+                    disabled={isSubmitting}
+                    className="mt-0.5 accent-amber-600"
+                  />
+                  <span className="font-medium">
+                    I have personally reviewed the full fact-check report (including flagged items, consistency failures, and data-fidelity warnings). I confirm no critical hallucinations, fabricated citations, or omitted key clinical data that would invalidate the brief.
+                  </span>
+                </label>
+
+                <div>
+                  <label htmlFor="fc-notes" className="block text-xs font-semibold text-amber-900 mb-1">
+                    Fact-Check Review Notes <span className="text-red-600">*</span> (what specifically did you verify or clarify?)
+                  </label>
+                  <textarea
+                    id="fc-notes"
+                    value={factCheckNotes}
+                    onChange={(e) => setFactCheckNotes(e.target.value.slice(0, 800))}
+                    rows={2}
+                    placeholder="Verified that flagged 'unrecognized guideline' was actually the client's custom policy excerpt in the fax. Fidelity section confirmed all codes match intake. 2-midnight flags noted but documentation supports inpatient."
+                    className="w-full px-3 py-2 text-xs border border-amber-300 rounded-lg bg-white resize-y focus:outline-none focus:ring-1 focus:ring-amber-500/40"
+                    disabled={isSubmitting}
+                  />
+                  <div className="text-[10px] text-amber-700 mt-1">
+                    Minimum {FACT_CHECK_MIN} characters of explicit reasoning required when fact-check issues present.
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Optional structured flags for clean handoff to clinical team */}
         <div>

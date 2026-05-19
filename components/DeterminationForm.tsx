@@ -10,6 +10,9 @@ export interface DeterminationFields {
   alternative_recommended?: string;
   modification_details?: string;
   p2p_reason?: string;
+  // AI Automation Layer (Track A): human acknowledgment of AI denial/appeal risk signals (required for high-risk)
+  ai_risk_acknowledged?: boolean;
+  ai_risk_notes?: string;
 }
 
 interface DeterminationFormProps {
@@ -19,6 +22,18 @@ interface DeterminationFormProps {
   isAppeal?: boolean;
   /** For appeal cases, surface the original determination for context in the form header/guidance. */
   originalDetermination?: string | null;
+  /** AI Automation Layer (Track A): precomputed denial strength + appeal likelihood signal from lib/denial-strength (or live fetch).
+   *  When present on deny/partial, renders prominent explainable risk banner + required human acknowledgment gate.
+   *  Never auto-blocks legitimate clinical judgment; only forces explicit review of the signal.
+   */
+  denialRiskSignal?: {
+    score: number;
+    grade?: string;
+    appeal_likelihood?: number;
+    appeal_risk_grade?: string;
+    appeal_risk_assessment?: string;
+    factors_summary?: string; // top factors or recommendations
+  };
 }
 
 const DENIAL_REASONS = [
@@ -115,7 +130,7 @@ const determinationOptions = [
 
 const MAX_CHARS = 2000;
 
-export function DeterminationForm({ onSubmit, isSubmitting, isAppeal = false, originalDetermination }: DeterminationFormProps) {
+export function DeterminationForm({ onSubmit, isSubmitting, isAppeal = false, originalDetermination, denialRiskSignal }: DeterminationFormProps) {
   const [determination, setDetermination] = useState('');
   const [rationale, setRationale] = useState('');
   const [denialReason, setDenialReason] = useState('');
@@ -124,6 +139,10 @@ export function DeterminationForm({ onSubmit, isSubmitting, isAppeal = false, or
   const [modificationDetails, setModificationDetails] = useState('');
   const [p2pReason, setP2pReason] = useState('');
   const [error, setError] = useState('');
+
+  // AI Automation Layer (Track A): human risk acknowledgment state (enforced on high-risk denials)
+  const [aiRiskAcknowledged, setAiRiskAcknowledged] = useState(false);
+  const [aiRiskNotes, setAiRiskNotes] = useState('');
 
   const showDenialFields = determination === 'deny' || determination === 'partial_approve';
   const showModifyFields = determination === 'modify';
@@ -154,6 +173,20 @@ export function DeterminationForm({ onSubmit, isSubmitting, isAppeal = false, or
       return;
     }
 
+    // AI Automation Layer (Track A): Enforce explicit human review of denial/appeal risk signals
+    // when the signal is provided (from precomputed or live denial-strength engine).
+    // This is the mandatory human reasoning gate — AI signal informs, human owns the decision.
+    const risk = denialRiskSignal;
+    const isHighRiskDenial = showDenialFields && risk && ((risk.appeal_likelihood != null && risk.appeal_likelihood >= 55) || (risk.score != null && risk.score < 70));
+    if (isHighRiskDenial && !aiRiskAcknowledged) {
+      setError('You must acknowledge review of the AI denial strength & appeal likelihood signals before submitting a high-risk denial. This ensures clinical defensibility.');
+      return;
+    }
+    if (isHighRiskDenial && aiRiskNotes.trim().length < 10) {
+      setError('Please add a brief note on how your rationale addresses the flagged AI risk factors (min 10 chars).');
+      return;
+    }
+
     await onSubmit({
       determination,
       rationale: rationale.trim(),
@@ -167,6 +200,11 @@ export function DeterminationForm({ onSubmit, isSubmitting, isAppeal = false, or
       }),
       ...(showP2pFields && {
         p2p_reason: p2pReason.trim() || undefined,
+      }),
+      // Pass AI risk acknowledgment (lives in audit via parent; no schema bloat)
+      ...(isHighRiskDenial && {
+        ai_risk_acknowledged: aiRiskAcknowledged,
+        ai_risk_notes: aiRiskNotes.trim() || undefined,
       }),
     });
   };
@@ -293,6 +331,62 @@ export function DeterminationForm({ onSubmit, isSubmitting, isAppeal = false, or
         {/* Denial-specific fields (deny or partial_approve) */}
         {showDenialFields && (
           <div className="space-y-4 overflow-hidden animate-slide-up">
+            {/* AI Automation Layer (Track A): Denial Strength + Appeal Likelihood Signal Banner
+                White-glove decision support for the human reviewer. AI 95% analysis presented as explainable signal.
+                Mandatory explicit acknowledgment gate when risk is elevated — required reasoning, never auto-decision.
+                Reuses the production denial-strength engine + new computeAppealLikelihood. */}
+            {denialRiskSignal && (
+              <div className="rounded-xl border-2 border-amber-300 bg-amber-50/80 p-4 mb-2">
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 text-amber-600">⚠️</div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-amber-900">
+                      AI Denial Strength &amp; Appeal Likelihood Signal
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-200 text-amber-800 font-mono">95% AI • Human Judgment Required</span>
+                    </div>
+                    <div className="mt-1 text-xs text-amber-800">
+                      Denial Strength: <span className="font-semibold">{denialRiskSignal.score}</span> ({denialRiskSignal.grade || '—'})
+                      {denialRiskSignal.appeal_likelihood != null && (
+                        <> • Appeal Likelihood: <span className="font-semibold">{denialRiskSignal.appeal_likelihood}</span> ({denialRiskSignal.appeal_risk_grade || '—'})</>
+                      )}
+                    </div>
+                    {denialRiskSignal.appeal_risk_assessment && (
+                      <p className="mt-1 text-[12px] text-amber-900 leading-snug">{denialRiskSignal.appeal_risk_assessment}</p>
+                    )}
+                    {denialRiskSignal.factors_summary && (
+                      <p className="mt-1 text-[11px] text-amber-700 font-mono bg-amber-100/60 px-2 py-1 rounded">{denialRiskSignal.factors_summary}</p>
+                    )}
+                    <p className="mt-2 text-[11px] text-amber-700">This signal informs your clinical decision. Your explicit rationale (below) must address any flagged risks. The final determination is 100% yours.</p>
+                  </div>
+                </div>
+
+                {/* Required human reasoning gate for elevated risk */}
+                {((denialRiskSignal.appeal_likelihood != null && denialRiskSignal.appeal_likelihood >= 55) || (denialRiskSignal.score != null && denialRiskSignal.score < 70)) && (
+                  <div className="mt-3 pt-3 border-t border-amber-200">
+                    <label className="flex items-start gap-2 cursor-pointer text-sm font-medium text-amber-900">
+                      <input
+                        type="checkbox"
+                        checked={aiRiskAcknowledged}
+                        onChange={(e) => setAiRiskAcknowledged(e.target.checked)}
+                        className="mt-1 accent-amber-600"
+                        required
+                      />
+                      <span>I have reviewed the AI denial strength and appeal likelihood signals above. My clinical rationale specifically addresses the identified risk factors.</span>
+                    </label>
+                    <div className="mt-2">
+                      <textarea
+                        value={aiRiskNotes}
+                        onChange={(e) => setAiRiskNotes(e.target.value)}
+                        rows={2}
+                        placeholder="Brief note: e.g., 'Addressed gap X by noting Y from submitted records; P2P recommended to strengthen.' (required for high-risk)"
+                        className="w-full text-xs px-3 py-2 border border-amber-300 rounded-lg bg-white resize-y"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="border-l-4 border-red-400 pl-4 space-y-4">
               <div>
                 <label htmlFor="denial-reason" className="block text-sm font-semibold text-foreground mb-1.5">

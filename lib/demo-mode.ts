@@ -304,21 +304,46 @@ export function getDemoBrief(caseId: string): { case: Case; brief: AIBrief } | n
     },
   };
 
+  // Attach realistic self-improvement metadata (simulates the production multi-pass engine)
+  const demoBriefWithMetadata: AIBrief = {
+    ...cpapBrief,
+    generation_metadata: {
+      passes_completed: 2,
+      self_improvement_applied: true,
+      initial_fact_check_score: 71,
+      final_fact_check_score: 89,
+      revisions: [
+        {
+          pass: 2,
+          issues_addressed: [
+            'criteria_unable_to_assess contained items that could be resolved from submitted face-to-face note',
+            'conservative_alternatives list was incomplete for BMI 34 patient (missing structured weight management referral)',
+            'ai_recommendation.rationale did not explicitly address 90-day compliance education requirement',
+          ],
+          sections_revised: ['criteria_match', 'documentation_review', 'ai_recommendation'],
+          score_before: 71,
+          score_after: 89,
+          critique_summary: 'Draft met core medical necessity but had 3 addressable defensibility gaps that the self-critique loop resolved before surfacing to concierge validation gate.',
+        },
+      ],
+    },
+  };
+
   // Return the case with the brief applied and fact-checked
   const briefCase: Case = {
     ...caseData,
-    ai_brief: cpapBrief,
+    ai_brief: demoBriefWithMetadata,
     ai_brief_generated_at: new Date().toISOString(),
     status: 'brief_ready',
   };
-  const factCheck = factCheckBrief(cpapBrief, briefCase);
+  const factCheck = factCheckBrief(demoBriefWithMetadata, briefCase);
   const updatedCase: Case = {
     ...briefCase,
     fact_check: factCheck,
     fact_check_at: new Date().toISOString(),
   };
 
-  return { case: updatedCase, brief: cpapBrief };
+  return { case: updatedCase, brief: demoBriefWithMetadata };
 }
 
 // ============================================================================
