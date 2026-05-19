@@ -30,6 +30,18 @@ const nextConfig: NextConfig = {
   // Vercel ignores this setting (their build pipeline uses its own
   // output mode) so it's safe to leave on for both deploy targets.
   output: 'standalone',
+
+  // Prevent Next.js from trying to bundle these server-only packages.
+  // They are heavy, have native / CJS-only code, or are only meant for
+  // Node.js runtime (not Edge / client bundles). This fixes Vercel
+  // build failures for pg, nodemailer, Dropbox Sign, AWS SDK, etc.
+  serverExternalPackages: [
+    'pg',
+    'nodemailer',
+    '@dropbox/sign',
+    '@aws-sdk/client-s3',
+    '@aws-sdk/s3-request-presigner',
+  ],
   // Pin the trace root to this directory so the standalone bundle puts
   // server.js at the root of .next/standalone/ instead of nesting it
   // under the absolute path. Without this, builds inside a git worktree
