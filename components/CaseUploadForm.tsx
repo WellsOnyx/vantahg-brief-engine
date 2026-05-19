@@ -34,6 +34,7 @@ export interface CaseUploadFormProps {
   scope: CaseUploadFormScope;
   practiceOptions?: PracticeOption[];
   onSuccess?: (caseId: string, caseNumber: string) => void;
+  caseType?: 'um' | 'payer_idr'; // defaults to 'um'
 }
 
 type Priority = 'standard' | 'urgent' | 'expedited';
@@ -49,6 +50,11 @@ interface FormState {
   priority: Priority;
   practice_id: string;
   documents_description: string;  // free text — backup when the user has no PDF to attach
+
+  // IDR-specific fields (only relevant when caseType === 'payer_idr')
+  billed_amount: string;          // dollars, converted to cents on submit
+  denial_reason: string;
+  is_out_of_network: boolean;
 }
 
 interface UploadFeedback {
@@ -69,7 +75,7 @@ const SERVICE_CATEGORIES = [
   'Other',
 ];
 
-export default function CaseUploadForm({ scope, practiceOptions = [], onSuccess }: CaseUploadFormProps) {
+export default function CaseUploadForm({ scope, practiceOptions = [], onSuccess, caseType = 'um' }: CaseUploadFormProps) {
   const router = useRouter();
   const [form, setForm] = useState<FormState>({
     patient_name: '',
@@ -82,6 +88,9 @@ export default function CaseUploadForm({ scope, practiceOptions = [], onSuccess 
     priority: 'standard',
     practice_id: scope.practice_id ?? (practiceOptions[0]?.id ?? ''),
     documents_description: '',
+    billed_amount: '',
+    denial_reason: '',
+    is_out_of_network: false,
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -169,6 +178,16 @@ export default function CaseUploadForm({ scope, practiceOptions = [], onSuccess 
           internal_notes: form.documents_description.trim()
             ? `Documents (from portal): ${form.documents_description.trim()}`
             : null,
+
+          // IDR-specific data (only sent when relevant)
+          ...(caseType === 'payer_idr' && {
+            case_type: 'payer_idr',
+            billed_amount_cents: form.billed_amount
+              ? Math.round(parseFloat(form.billed_amount) * 100)
+              : null,
+            denial_reason: form.denial_reason.trim() || null,
+            is_out_of_network: form.is_out_of_network,
+          }),
         }),
       });
 
@@ -340,6 +359,44 @@ export default function CaseUploadForm({ scope, practiceOptions = [], onSuccess 
           </Field>
         </div>
       </Section>
+
+      {caseType === 'payer_idr' && (
+        <Section title="Payer IDR Details">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Field label="Billed Amount (USD)" hint="Total amount billed on the claim">
+              <input
+                type="number"
+                step="0.01"
+                value={form.billed_amount}
+                onChange={(e) => update('billed_amount', e.target.value)}
+                className="w-full bg-white border border-border rounded-lg px-3 py-2 text-sm"
+                placeholder="1250.00"
+              />
+            </Field>
+            <Field label="Out of Network?">
+              <div className="flex items-center h-10">
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={form.is_out_of_network}
+                    onChange={(e) => update('is_out_of_network', e.target.checked)}
+                  />
+                  <span>Provider was out-of-network</span>
+                </label>
+              </div>
+            </Field>
+          </div>
+          <Field label="Denial Reason" hint="Why was the claim denied?">
+            <textarea
+              value={form.denial_reason}
+              onChange={(e) => update('denial_reason', e.target.value)}
+              rows={3}
+              className="w-full bg-white border border-border rounded-lg px-3 py-2 text-sm"
+              placeholder="Not medically necessary per policy XYZ-123..."
+            />
+          </Field>
+        </Section>
+      )}
 
       {!scope.practice_id && practiceOptions.length > 0 && (
         <Section title="Submitting on behalf of">

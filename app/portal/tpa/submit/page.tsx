@@ -15,6 +15,7 @@ export default function TpaSubmitPage() {
   const [profile, setProfile] = useState<TpaProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<{ caseId: string; caseNumber: string } | null>(null);
+  const [submissionType, setSubmissionType] = useState<'um' | 'payer_idr'>('um');
 
   useEffect(() => {
     (async () => {
@@ -97,6 +98,39 @@ export default function TpaSubmitPage() {
         </header>
 
         <section className="bg-surface rounded-xl border border-border shadow-sm p-6 md:p-8">
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-foreground mb-2">Submission Type</label>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setSubmissionType('um')}
+                className={`px-4 py-2 rounded-lg border text-sm font-medium transition ${
+                  submissionType === 'um'
+                    ? 'bg-navy text-white border-navy'
+                    : 'bg-white text-foreground border-border hover:bg-gray-50'
+                }`}
+              >
+                Utilization Management (UM)
+              </button>
+              <button
+                type="button"
+                onClick={() => setSubmissionType('payer_idr')}
+                className={`px-4 py-2 rounded-lg border text-sm font-medium transition ${
+                  submissionType === 'payer_idr'
+                    ? 'bg-navy text-white border-navy'
+                    : 'bg-white text-foreground border-border hover:bg-gray-50'
+                }`}
+              >
+                Payer IDR
+              </button>
+            </div>
+            <p className="text-xs text-muted mt-1.5">
+              {submissionType === 'payer_idr'
+                ? 'Submit a commercial payment dispute for attorney-led review.'
+                : 'Submit a standard prior authorization or medical necessity request.'}
+            </p>
+          </div>
+
           <CaseUploadForm
             scope={{ client_id: profile.tpa.id }}
             practiceOptions={profile.practices}
@@ -104,6 +138,7 @@ export default function TpaSubmitPage() {
               // Stay inside the TPA portal for a better experience
               setSuccess({ caseId, caseNumber });
             }}
+            caseType={submissionType}
           />
         </section>
 

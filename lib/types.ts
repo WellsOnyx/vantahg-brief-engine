@@ -48,6 +48,11 @@ export interface Case {
   // Top-level case classification (introduced for Payer IDR support)
   case_type: CaseType; // 'um' | 'payer_idr'
 
+  // IDR-specific fields (populated when case_type = 'payer_idr')
+  billed_amount_cents: number | null;
+  denial_reason: string | null;
+  is_out_of_network: boolean | null;
+
   // Service classification (new medical-focused field)
   service_category: ServiceCategory | null;
   review_type: ReviewType | null;
@@ -463,6 +468,11 @@ export interface CaseFormData {
   service_category: ServiceCategory;
   priority: CasePriority;
   review_type: ReviewType;
+
+  // Optional IDR fields (used when case_type = 'payer_idr')
+  billed_amount_cents?: number;
+  denial_reason?: string;
+  is_out_of_network?: boolean;
   patient_name: string;
   patient_dob: string;
   patient_member_id: string;
