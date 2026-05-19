@@ -1,4 +1,7 @@
-export type CaseStatus = 'intake' | 'processing' | 'brief_ready' | 'lpn_review' | 'rn_review' | 'md_review' | 'pend_missing_info' | 'determination_made' | 'delivered';
+export type CaseStatus = 
+  | 'intake' | 'processing' | 'brief_ready' | 'lpn_review' | 'rn_review' | 'md_review' | 'pend_missing_info' | 'determination_made' | 'delivered'
+  // Payer IDR statuses (Task 8)
+  | 'submitted' | 'under_attorney_review' | 'attorney_determined' | 'closed';
 export type CasePriority = 'standard' | 'urgent' | 'expedited';
 export type ServiceCategory =
   | 'imaging'

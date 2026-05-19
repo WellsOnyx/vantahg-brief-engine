@@ -86,7 +86,7 @@ export async function PATCH(
       .from('cases')
       .update({
         determination: determinationPayload,
-        status: 'determination_made', // We can refine this in Task 8
+        status: 'attorney_determined',
         updated_at: new Date().toISOString(),
       })
       .eq('id', caseId);
