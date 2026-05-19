@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { DeterminationForm } from '@/components/DeterminationForm';
 import type { DeterminationFields } from '@/components/DeterminationForm';
+import { IDRDocuments } from '@/components/IDRDocuments';
 
 interface IdrCase {
   id: string;
@@ -149,8 +150,14 @@ export default function AttorneyDeterminePage() {
           <DeterminationForm
             onSubmit={handleSubmit}
             isSubmitting={submitting}
-            // We can later pass IDR-specific guidance or options here
           />
+        </div>
+
+        {/* Document Management for IDR cases */}
+        <div className="mt-8 bg-surface rounded-xl border border-border p-6 md:p-8">
+          <h2 className="text-lg font-semibold text-navy mb-4">Case Documents</h2>
+
+          <IDRDocuments caseId={caseId} />
         </div>
 
         <div className="mt-6 text-xs text-muted">
