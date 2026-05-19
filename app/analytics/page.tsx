@@ -37,6 +37,11 @@ const STATUS_LABELS: Record<CaseStatus, string> = {
   pend_missing_info: 'Pending Info',
   determination_made: 'Determination',
   delivered: 'Delivered',
+  // IDR statuses (Task 8)
+  submitted: 'Submitted',
+  under_attorney_review: 'Under Attorney Review',
+  attorney_determined: 'Attorney Determined',
+  closed: 'Closed',
 };
 
 const STATUS_COLORS: Record<CaseStatus, string> = {
@@ -49,6 +54,11 @@ const STATUS_COLORS: Record<CaseStatus, string> = {
   pend_missing_info: 'bg-amber-500',
   determination_made: 'bg-teal-500',
   delivered: 'bg-emerald-600',
+  // IDR statuses
+  submitted: 'bg-indigo-500',
+  under_attorney_review: 'bg-violet-500',
+  attorney_determined: 'bg-purple-600',
+  closed: 'bg-gray-600',
 };
 
 const DETERMINATION_LABELS: Record<string, string> = {
@@ -162,6 +172,11 @@ function computeMetrics(cases: Case[], reviewers: Reviewer[]) {
     pend_missing_info: 0,
     determination_made: 0,
     delivered: 0,
+    // IDR statuses
+    submitted: 0,
+    under_attorney_review: 0,
+    attorney_determined: 0,
+    closed: 0,
   };
   cases.forEach((c) => {
     if (statusMap[c.status] !== undefined) {

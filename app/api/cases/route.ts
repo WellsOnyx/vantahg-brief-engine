@@ -95,6 +95,21 @@ export async function GET(request: NextRequest) {
       query = query.eq('review_type', reviewType);
     }
 
+    // Support filtering by the new top-level case_type (um vs payer_idr)
+    // IMPORTANT: Tenant scoping for client-role users is applied *before* this filter,
+    // so a TPA can never see another tenant's IDR cases even if they pass case_type=payer_idr.
+    const caseType = searchParams.get('case_type');
+    if (caseType) {
+      query = query.eq('case_type', caseType);
+
+      // Extra audit for observability on IDR queries by TPAs (security monitoring)
+      if (authResult.user.role === 'client' && caseType === 'payer_idr') {
+        logAuditEvent(null, 'tpa_idr_case_list_accessed', authResult.user.email, {
+          case_type: 'payer_idr',
+        }, getRequestContext(request)).catch(() => {});
+      }
+    }
+
     if (assignedReviewerId) {
       query = query.eq('assigned_reviewer_id', assignedReviewerId);
     }

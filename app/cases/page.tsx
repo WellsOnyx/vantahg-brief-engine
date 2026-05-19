@@ -27,6 +27,11 @@ const statusLabels: Record<CaseStatus, string> = {
   pend_missing_info: 'Pending Info',
   determination_made: 'Determination Made',
   delivered: 'Delivered',
+  // IDR statuses
+  submitted: 'Submitted',
+  under_attorney_review: 'Under Attorney Review',
+  attorney_determined: 'Attorney Determined',
+  closed: 'Closed',
 };
 
 const priorityLabels: Record<CasePriority, string> = {
