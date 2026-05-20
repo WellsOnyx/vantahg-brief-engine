@@ -588,3 +588,45 @@ export async function notifyContractFullyExecuted(contractId: string): Promise<v
       `The TPA can now access /portal/tpa and submit their first authorization.`,
   });
 }
+
+/**
+ * Notify the TPA signer that their contract has been sent for signature via Dropbox Sign.
+ * This provides a VantaUM-branded heads-up on top of the (sometimes generic-looking) HelloSign email.
+ * Closes Phase 1 item #17.
+ */
+export async function notifyContractSentForSignature(signupId: string): Promise<void> {
+  if (isDemoMode()) {
+    console.log(`[NOTIFICATION] contract_sent_for_signature | signup=${signupId}`);
+    return;
+  }
+
+  const supabase = getServiceClient();
+
+  const { data: signup } = await supabase
+    .from('signup_requests')
+    .select('id, legal_name, signer_name, signer_email, primary_contact_name, primary_contact_email')
+    .eq('id', signupId)
+    .maybeSingle();
+
+  if (!signup) return;
+
+  const recipientEmail = signup.signer_email || signup.primary_contact_email;
+  if (!recipientEmail) return;
+
+  const company = signup.legal_name || 'your organization';
+  const baseUrl = process.env.NEXTAUTH_URL || process.env.VERCEL_URL || 'http://localhost:3000';
+  const loginUrl = `${baseUrl}/login`;
+
+  await sendNotification({
+    type: 'contract_sent_for_signature',
+    recipient_email: recipientEmail,
+    subject: `Action Required: Sign your VantaUM MSA + BAA for ${company}`,
+    body:
+      `Hello,\n\n` +
+      `Your Master Services Agreement and Business Associate Agreement for ${company} has been prepared and sent for your signature via Dropbox Sign.\n\n` +
+      `Please check your inbox (and spam folder) for the email from Dropbox Sign. The link will allow you to review and sign the documents electronically.\n\n` +
+      `Once you sign, Jonathan Arias (Co-Chair, COO & General Counsel) will counter-sign, and you will receive a fully executed copy along with access to the VantaUM TPA portal.\n\n` +
+      `If you have any questions, reply to this email or contact your VantaUM representative.\n\n` +
+      `Login: ${loginUrl}`,
+  });
+}
