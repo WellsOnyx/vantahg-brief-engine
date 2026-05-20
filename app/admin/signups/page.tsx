@@ -5,8 +5,9 @@ import Link from 'next/link';
 import { createBrowserClient } from '@/lib/supabase-browser';
 
 /**
- * Admin signups review list. Read-only in this PR — action buttons
- * (approve / reject / upload contract) come in subsequent pieces.
+ * Admin review screen for TPA signup requests (Item 5).
+ * Default view is the pending review queue. Jonathan and authorized admins
+ * use this to evaluate incoming TPAs before approval and contract generation.
  */
 
 type Status = 'pending_review' | 'approved' | 'rejected' | 'signed' | 'live';
@@ -52,7 +53,7 @@ const FILTER_OPTIONS: Array<{ value: Status | ''; label: string }> = [
 
 export default function AdminSignupsPage() {
   const [rows, setRows] = useState<SignupRow[] | null>(null);
-  const [filter, setFilter] = useState<Status | ''>('');
+  const [filter, setFilter] = useState<Status | ''>('pending_review'); // Default to pending review queue for item 5 (admin review screen)
   const [error, setError] = useState<string | null>(null);
   const [accessChecked, setAccessChecked] = useState(false);
   const [hasAccess, setHasAccess] = useState(false);
@@ -88,7 +89,7 @@ export default function AdminSignupsPage() {
         if (!cancelled) {
           setHasAccess(true);
           setAccessChecked(true);
-          await load('');
+          await load('pending_review');
         }
         return;
       }
@@ -110,7 +111,7 @@ export default function AdminSignupsPage() {
       if (!cancelled) {
         setHasAccess(allowed);
         setAccessChecked(true);
-        if (allowed) await load('');
+        if (allowed) await load('pending_review');
       }
     }
     init();
@@ -148,11 +149,11 @@ export default function AdminSignupsPage() {
       <div className="mb-8 flex flex-col md:flex-row md:items-end md:justify-between gap-3">
         <div>
           <h1 className="font-[family-name:var(--font-dm-serif)] text-3xl md:text-4xl text-navy">
-            Signup Requests
+            TPA Signup Review
           </h1>
           <p className="text-muted mt-1 text-lg">
             {total === 0 ? 'No submissions yet.' : `${total} submission${total === 1 ? '' : 's'}`}
-            {pendingCount > 0 && filter !== 'pending_review' && (
+            {pendingCount > 0 && (
               <span className="ml-2 text-amber-700 font-medium">
                 · {pendingCount} pending review
               </span>
@@ -217,7 +218,10 @@ export default function AdminSignupsPage() {
               </thead>
               <tbody className="divide-y divide-border">
                 {rows.map((row) => (
-                  <tr key={row.id} className="hover:bg-gray-50">
+                  <tr
+                    key={row.id}
+                    className={`hover:bg-gray-50 ${row.status === 'pending_review' ? 'bg-amber-50/40' : ''}`}
+                  >
                     <Td>
                       <div className="font-medium text-navy">{row.legal_name}</div>
                       {row.dba && <div className="text-[11px] text-muted mt-0.5">dba {row.dba}</div>}

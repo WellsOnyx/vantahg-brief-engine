@@ -7,6 +7,7 @@ import { AuthStack } from '../lib/auth-stack';
 import { EmailStack } from '../lib/email-stack';
 import { ComputeStack } from '../lib/compute-stack';
 import { CronStack } from '../lib/cron-stack';
+import { BuildStack } from '../lib/build-stack';
 
 /**
  * CDK app entrypoint.
@@ -74,4 +75,27 @@ new CronStack(app, `${appName}-cron`, {
   env,
   envName,
   albDnsName: computeStack.loadBalancer.loadBalancerDnsName,
+});
+
+// BuildStack provides the arm64 CodeBuild project so we are never dependent
+// on a local machine for producing verified arm64 container images.
+//
+// `githubConnectionArn` references a CodeConnections GitHub connection that
+// must be created once per account+region via the Developer Tools console
+// (Settings → Connections → Create connection → GitHub). Set the ARN via the
+// VANTAUM_GITHUB_CONNECTION_ARN env var so the value is not committed.
+new BuildStack(app, `${appName}-build`, {
+  env,
+  envName,
+  appRepositoryName: `${appName}-app`,
+  githubOwner: 'WellsOnyx',
+  githubRepo: 'vantahg-brief-engine',
+  defaultBranch: process.env.VANTAUM_BUILD_DEFAULT_BRANCH ?? 'claude/roadmap-20260518',
+  githubConnectionArn:
+    process.env.VANTAUM_GITHUB_CONNECTION_ARN ??
+    (() => {
+      throw new Error(
+        'VANTAUM_GITHUB_CONNECTION_ARN must be set. Create a CodeConnections GitHub connection in the Developer Tools console (Settings → Connections), copy its ARN, and export it before running cdk deploy.',
+      );
+    })(),
 });

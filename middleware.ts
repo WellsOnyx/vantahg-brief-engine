@@ -1,10 +1,15 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
+import { isDemoMode } from '@/lib/demo-mode';
 
 // Public marketing / auth-flow page prefixes. `startsWith` semantics are
 // intentional here because routes like `/signup-tpa` and `/demo-tour` are
 // real pages that should remain reachable without auth.
 const PUBLIC_PAGE_PREFIXES = ['/login', '/signup', '/welcome', '/demo', '/site'];
+
+// Protected portal paths — these require an authenticated + approved TPA / Provider
+const TPA_PORTAL_PREFIX = '/portal/tpa';
+const PROVIDER_PORTAL_PREFIX = '/portal/provider';
 
 // Public API endpoints. STRICT matching — `/api/intake/efax/queue` is a
 // CSR-only triage surface that must NOT be reachable just because it
@@ -16,6 +21,8 @@ const PUBLIC_EXACT = new Set([
   '/api/external/submit',
   '/api/intake/efax', // generic webhook (HMAC-protected, see app/api/intake/efax/route.ts)
   '/api/intake/email', // email intake webhook
+  '/api/auth/callback', // Cognito magic-link landing — user is unauthenticated by definition
+  '/api/auth/request-magic-link', // unauthenticated by definition; rate-limited internally
 ]);
 
 // Public API prefixes whose sub-paths are themselves public. The trailing
@@ -53,9 +60,24 @@ export async function middleware(request: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '';
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '';
 
-  // If no Supabase config (demo mode), allow all requests
+  // Fail-closed when auth config is missing.
+  // Demo mode (NEXT_PUBLIC_DEMO_MODE=true) is the only legitimate empty-config state and is
+  // explicitly opted into. Outside demo mode, missing config means the deploy is broken — block
+  // protected routes rather than silently allowing them through.
   if (!supabaseUrl || !supabaseAnonKey) {
-    return response;
+    if (isDemoMode()) {
+      return response;
+    }
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.json(
+        { error: 'auth_unavailable', detail: 'Authentication backend is not configured on this deployment.' },
+        { status: 503 },
+      );
+    }
+    const errorUrl = request.nextUrl.clone();
+    errorUrl.pathname = '/login';
+    errorUrl.searchParams.set('reason', 'auth_unavailable');
+    return NextResponse.redirect(errorUrl);
   }
 
   const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
@@ -87,6 +109,12 @@ export async function middleware(request: NextRequest) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = '/login';
     loginUrl.searchParams.set('redirect', pathname + request.nextUrl.search);
+
+    // Special handling for portal paths (Item 9)
+    if (pathname.startsWith(TPA_PORTAL_PREFIX) || pathname.startsWith(PROVIDER_PORTAL_PREFIX)) {
+      loginUrl.searchParams.set('reason', 'portal_access_required');
+    }
+
     return NextResponse.redirect(loginUrl);
   }
 

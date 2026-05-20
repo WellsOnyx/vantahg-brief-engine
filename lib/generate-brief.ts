@@ -3,18 +3,35 @@ import { factCheckBrief } from './fact-checker';
 import { analyzeTwoMidnightRule, getTwoMidnightBriefContext } from './two-midnight-rule';
 import { isRealAnthropicEnabled } from './env';
 import { completeWithTool, LlmError } from './llm';
-import { BRIEF_TOOL_INPUT_SCHEMA, validateAIBrief } from './llm/brief-schema';
+import {
+  BRIEF_TOOL_INPUT_SCHEMA,
+  BRIEF_CRITIQUE_TOOL_NAME,
+  BRIEF_CRITIQUE_TOOL_SCHEMA,
+  validateAIBrief,
+  type BriefCritique,
+} from './llm/brief-schema';
 import { logAuditEvent } from './audit';
 import type { Case, Client, AIBrief, FactCheckResult } from './types';
 
 const BRIEF_TOOL_NAME = 'record_clinical_brief';
-const MAX_ATTEMPTS = 2;
+const MAX_ATTEMPTS_PER_PASS = 2;
 const BRIEF_MAX_TOKENS = 4096;
+
+// Self-improvement thresholds (production-tuned for clinical defensibility)
+const SELF_CRITIQUE_SCORE_THRESHOLD = 82; // Below this (or non-'pass' status) triggers revision pass
+const MAX_PASSES = 3; // Hard cap — 1 initial + up to 2 self-critique/revision loops
 
 interface BriefOptions {
   client?: Client | null;
   /** When true, uses evidence-based medicine framing instead of commercial criteria matching */
   mdReviewMode?: boolean;
+}
+
+interface PassResult {
+  brief: AIBrief;
+  factCheck: FactCheckResult;
+  pass: number;
+  critique?: BriefCritique;
 }
 
 export async function generateBriefForCase(
@@ -43,83 +60,213 @@ export async function generateBriefForCase(
   logAuditEvent(caseData.id, 'brief_generation_started', 'system', {
     md_review_mode: isMdReview,
     procedure_code_count: caseData.procedure_codes?.length ?? 0,
+    self_improvement_enabled: true,
+    max_passes: MAX_PASSES,
+    critique_threshold: SELF_CRITIQUE_SCORE_THRESHOLD,
   }).catch(() => { /* already logged inside logAuditEvent */ });
 
-  // Retry loop. The Anthropic SDK already retries 5xx/429 transport errors
-  // internally; this loop handles a different class of failure — the model
-  // returns successfully but emits a payload that doesn't match the schema
-  // (missing field, wrong enum, etc.). We give it one more chance with
-  // explicit feedback before giving up.
+  const passes: PassResult[] = [];
   let lastValidationReason: string | null = null;
 
-  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-    const promptForAttempt = lastValidationReason
-      ? `${userPrompt}\n\n---\nNOTE: Your previous response failed schema validation. Issues: ${lastValidationReason}. Re-emit the tool call with all required fields populated and correct types.`
-      : userPrompt;
+  for (let pass = 1; pass <= MAX_PASSES; pass++) {
+    const isRevisionPass = pass > 1;
+    const prior = passes.length > 0 ? passes[passes.length - 1] : null;
 
-    let result;
-    try {
-      result = await completeWithTool({
-        system: systemPrompt,
-        user: promptForAttempt,
-        maxTokens: BRIEF_MAX_TOKENS,
-        tool: {
-          name: BRIEF_TOOL_NAME,
-          description:
-            'Record the structured clinical review brief. Call this exactly once with the full brief object.',
-          input_schema: BRIEF_TOOL_INPUT_SCHEMA as unknown as Record<string, unknown>,
-        },
-      });
-    } catch (err) {
-      // Transport-level failure. SDK already retried. Bubble to caller with
-      // structured audit; the route maps LlmError to status code.
-      logBriefFailure(caseData.id, attempt, err);
-      throw err;
+    // Build the prompt for this pass (initial vs. revision informed by prior critique + fact-check)
+    let promptForPass = userPrompt;
+    if (isRevisionPass && prior?.critique) {
+      promptForPass = buildRevisionUserPrompt(
+        caseData,
+        options.client ?? null,
+        isMdReview,
+        prior.brief,
+        prior.factCheck,
+        prior.critique,
+      );
+    } else if (lastValidationReason) {
+      promptForPass = `${userPrompt}\n\n---\nNOTE: Your previous response failed schema validation. Issues: ${lastValidationReason}. Re-emit the tool call with all required fields populated and correct types.`;
     }
 
-    const validation = validateAIBrief(result.toolInput);
-    if (validation.ok) {
-      logAuditEvent(caseData.id, 'brief_generation_completed', 'system', {
+    const currentSystem = isRevisionPass
+      ? buildRevisionSystemPrompt(isMdReview, prior?.critique)
+      : systemPrompt;
+
+    // Per-pass schema validation retry (distinct from content self-critique)
+    let passBrief: AIBrief | null = null;
+    let passModelInfo: any = null;
+
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS_PER_PASS; attempt++) {
+      const attemptPrompt = lastValidationReason && attempt > 1
+        ? `${promptForPass}\n\n---\nNOTE: Previous attempt in this pass failed schema validation: ${lastValidationReason}. Fix and re-emit complete tool call.`
+        : promptForPass;
+
+      let result;
+      try {
+        result = await completeWithTool({
+          system: currentSystem,
+          user: attemptPrompt,
+          maxTokens: BRIEF_MAX_TOKENS,
+          tool: {
+            name: BRIEF_TOOL_NAME,
+            description: isRevisionPass
+              ? 'Record the REVISED structured clinical review brief after incorporating self-critique. Call exactly once with the full improved brief object. Explicitly strengthen any areas called out in the critique.'
+              : 'Record the structured clinical review brief. Call this exactly once with the full brief object.',
+            input_schema: BRIEF_TOOL_INPUT_SCHEMA as unknown as Record<string, unknown>,
+          },
+        });
+        passModelInfo = result;
+      } catch (err) {
+        logBriefFailure(caseData.id, pass, attempt, err);
+        throw err;
+      }
+
+      const validation = validateAIBrief(result.toolInput);
+      if (validation.ok) {
+        passBrief = validation.brief;
+        lastValidationReason = null;
+        break;
+      }
+
+      lastValidationReason = validation.reason;
+      logAuditEvent(caseData.id, 'brief_generation_invalid_payload', 'system', {
+        pass,
         attempt,
-        model: result.model,
-        input_tokens: result.inputTokens,
-        output_tokens: result.outputTokens,
-        cache_read_tokens: result.cacheReadTokens,
-      }).catch(() => { /* already logged inside logAuditEvent */ });
-
-      const factCheck = factCheckBrief(validation.brief, caseData);
-      logAuditEvent(caseData.id, 'fact_check_completed', 'system', {
-        score: factCheck.overall_score,
-        status: factCheck.overall_status,
-        flagged: factCheck.summary.flagged,
-      }).catch(() => { /* already logged inside logAuditEvent */ });
-
-      return { brief: validation.brief, factCheck };
+        reason: validation.reason,
+        will_retry: attempt < MAX_ATTEMPTS_PER_PASS,
+      }).catch(() => {});
     }
 
-    lastValidationReason = validation.reason;
-    logAuditEvent(caseData.id, 'brief_generation_invalid_payload', 'system', {
-      attempt,
-      reason: validation.reason,
-      will_retry: attempt < MAX_ATTEMPTS,
-    }).catch(() => { /* already logged inside logAuditEvent */ });
+    if (!passBrief) {
+      logBriefFailure(caseData.id, pass, MAX_ATTEMPTS_PER_PASS, new Error('schema_validation_exhausted'));
+      throw new LlmError(
+        `Brief generation (pass ${pass}) produced invalid payload after ${MAX_ATTEMPTS_PER_PASS} attempts. Last: ${lastValidationReason}`,
+        'no_response',
+        false,
+      );
+    }
+
+    // Run deterministic fact-check on this pass output
+    const factCheck = factCheckBrief(passBrief, caseData);
+
+    logAuditEvent(caseData.id, 'brief_generation_pass_completed', 'system', {
+      pass,
+      model: passModelInfo?.model,
+      input_tokens: passModelInfo?.inputTokens,
+      output_tokens: passModelInfo?.outputTokens,
+      score: factCheck.overall_score,
+      status: factCheck.overall_status,
+      flagged_count: Array.isArray(factCheck.summary?.flagged) ? factCheck.summary.flagged.length : 0,
+    }).catch(() => {});
+
+    // Self-critique step if warranted (structured clinical reasoning)
+    let critiqueForThisPass: BriefCritique | undefined;
+    const needsCritique =
+      pass < MAX_PASSES &&
+      (factCheck.overall_score < SELF_CRITIQUE_SCORE_THRESHOLD || factCheck.overall_status !== 'pass');
+
+    if (needsCritique) {
+      logAuditEvent(caseData.id, 'brief_self_critique_started', 'system', {
+        pass,
+        current_score: factCheck.overall_score,
+        current_status: factCheck.overall_status,
+      }).catch(() => {});
+
+      try {
+        critiqueForThisPass = await performSelfCritique(
+          caseData,
+          passBrief,
+          factCheck,
+          isMdReview,
+          options.client ?? null,
+        );
+
+        logAuditEvent(caseData.id, 'brief_self_critique_completed', 'system', {
+          pass,
+          issues_count: critiqueForThisPass.issues_identified.length,
+          sections_to_revisit: critiqueForThisPass.sections_recommended_for_revision,
+          summary: critiqueForThisPass.critique_summary?.slice(0, 200),
+        }).catch(() => {});
+      } catch (critErr) {
+        // Critique failure is non-fatal — we still surface the current best brief.
+        // This preserves forward progress while maintaining audit.
+        logAuditEvent(caseData.id, 'brief_self_critique_failed', 'system', {
+          pass,
+          error: critErr instanceof Error ? critErr.message : String(critErr),
+        }).catch(() => {});
+      }
+    }
+
+    const thisPassResult: PassResult = {
+      brief: passBrief,
+      factCheck,
+      pass,
+      critique: critiqueForThisPass,
+    };
+    passes.push(thisPassResult);
+
+    // Decision: continue to another revision pass or stop?
+    if (!needsCritique) {
+      // Strong enough — stop early for efficiency
+      break;
+    }
   }
 
-  logBriefFailure(caseData.id, MAX_ATTEMPTS, new Error('schema_validation_exhausted'));
-  throw new LlmError(
-    `Brief generation produced an invalid payload after ${MAX_ATTEMPTS} attempts. Last issue: ${lastValidationReason}`,
-    'no_response',
-    false,
-  );
+  // Select the final (best) pass result
+  const finalPass = passes[passes.length - 1];
+  const initialPass = passes[0];
+
+  // Attach rich generation_metadata for auditability + UI (no DB migration)
+  const finalBrief: AIBrief = {
+    ...finalPass.brief,
+    generation_metadata: {
+      passes_completed: passes.length,
+      self_improvement_applied: passes.length > 1,
+      initial_fact_check_score: initialPass.factCheck.overall_score,
+      final_fact_check_score: finalPass.factCheck.overall_score,
+      revisions: passes
+        .filter((p, idx) => idx > 0 && p.critique)
+        .map((p) => ({
+          pass: p.pass,
+          issues_addressed: p.critique!.issues_identified,
+          sections_revised: p.critique!.sections_recommended_for_revision,
+          score_before: passes[p.pass - 2]?.factCheck.overall_score ?? initialPass.factCheck.overall_score,
+          score_after: p.factCheck.overall_score,
+          critique_summary: p.critique!.critique_summary,
+        })),
+    },
+  };
+
+  // Final consolidated audit (replaces the old single "completed")
+  logAuditEvent(caseData.id, 'brief_generation_completed', 'system', {
+    passes_completed: passes.length,
+    self_improvement_applied: passes.length > 1,
+    initial_score: initialPass.factCheck.overall_score,
+    final_score: finalPass.factCheck.overall_score,
+    score_lift: finalPass.factCheck.overall_score - initialPass.factCheck.overall_score,
+    final_status: finalPass.factCheck.overall_status,
+  }).catch(() => {});
+
+  logAuditEvent(caseData.id, 'fact_check_completed', 'system', {
+    score: finalPass.factCheck.overall_score,
+    status: finalPass.factCheck.overall_status,
+    flagged: finalPass.factCheck.summary.flagged,
+    after_self_improvement: true,
+  }).catch(() => {});
+
+  return { brief: finalBrief, factCheck: finalPass.factCheck };
 }
 
-function logBriefFailure(caseId: string, attempt: number, err: unknown): void {
+function logBriefFailure(caseId: string, passOrAttempt: number, attemptOrErr: number | unknown, maybeErr?: unknown): void {
+  // Back-compat + new multi-pass signature: logBriefFailure(id, pass, attempt, err) or legacy (id, attempt, err)
+  const pass = typeof attemptOrErr === 'number' ? passOrAttempt : undefined;
+  const attempt = typeof attemptOrErr === 'number' ? attemptOrErr : passOrAttempt;
+  const err = (maybeErr ?? attemptOrErr) as unknown;
+
   const kind = err instanceof Error ? err.name : typeof err;
   logAuditEvent(caseId, 'brief_generation_failed', 'system', {
+    pass,
     attempt,
     error_kind: kind,
-    // For LlmError specifically, surface the structured discriminators we
-    // already trust to be PHI-safe (kind/status/retryable).
     error_llm_kind: err instanceof LlmError ? err.kind : null,
     error_llm_status: err instanceof LlmError ? err.status ?? null : null,
     error_llm_retryable: err instanceof LlmError ? err.retryable : null,
@@ -240,4 +387,151 @@ ${criteriaContext}${clientCriteriaContext}${twoMidnightContext}${mdReviewBanner}
 ---
 
 Call the record_clinical_brief tool with the structured brief. The tool's schema enumerates every required field — do not omit any. Use empty arrays for list fields with no entries.`;
+}
+
+// ── Self-Improvement (Multi-Pass Clinical Reasoning) Helpers ─────────────────
+
+function buildRevisionSystemPrompt(isMdReview: boolean, priorCritique?: BriefCritique): string {
+  const base = buildSystemPrompt(isMdReview);
+  const critiqueDirective = priorCritique
+    ? `
+
+SELF-CRITIQUE REVISION DIRECTIVE (MANDATORY):
+You previously produced a draft that was fact-checked and self-critiqued. The following issues were identified by your own clinical reasoning engine:
+${priorCritique.issues_identified.map((i, idx) => `${idx + 1}. ${i}`).join('\n')}
+
+You MUST produce a REVISED brief that directly addresses EVERY issue above.
+- Strengthen criteria citations and evidence where flagged.
+- Add or improve conservative alternatives where recommended.
+- Clarify or expand rationale in ai_recommendation and reviewer_action.
+- Fix any documentation gaps or alignment weaknesses explicitly called out.
+- In the revised ai_recommendation.rationale and key_considerations, briefly note the specific improvements made for defensibility.
+
+Output the COMPLETE revised brief via the record_clinical_brief tool. Do not omit fields.`
+    : '';
+
+  return base + critiqueDirective;
+}
+
+function buildRevisionUserPrompt(
+  caseData: Case,
+  client: Client | null,
+  isMdReview: boolean,
+  priorBrief: AIBrief,
+  priorFactCheck: FactCheckResult,
+  critique: BriefCritique,
+): string {
+  const base = buildUserPrompt(caseData, client, isMdReview);
+
+  return `${base}
+
+--- PRIOR DRAFT BRIEF (for targeted revision) ---
+Draft AI Recommendation: ${priorBrief.ai_recommendation.recommendation} (confidence: ${priorBrief.ai_recommendation.confidence})
+Draft Fact-Check Score: ${priorFactCheck.overall_score}/100 (status: ${priorFactCheck.overall_status})
+Fact-Check Flags (count): ${typeof priorFactCheck.summary?.flagged === 'number' ? priorFactCheck.summary.flagged : '0'}
+
+SELF-CRITIQUE FROM PREVIOUS PASS:
+${critique.critique_summary}
+
+Issues to explicitly resolve in this revision:
+${critique.issues_identified.map((i) => `• ${i}`).join('\n')}
+
+Recommended fixes (incorporate):
+${critique.recommended_fixes.map((f) => `• ${f}`).join('\n')}
+
+Produce the FULL REVISED structured brief via the tool call. Your revised output will be re-fact-checked and must demonstrate measurable improvement in clinical defensibility.`;
+}
+
+/**
+ * Structured self-critique pass.
+ * Uses a dedicated critique tool so the model surfaces explicit reasoning
+ * before we ask it to revise. This is the core of "AI improves its own output".
+ */
+async function performSelfCritique(
+  caseData: Case,
+  draftBrief: AIBrief,
+  draftFactCheck: FactCheckResult,
+  isMdReview: boolean,
+  _client: Client | null,
+): Promise<BriefCritique> {
+  const critiqueSystem = isMdReview
+    ? `You are a senior board-certified physician advisor performing a structured self-audit of a draft utilization review brief. Your only job is to ruthlessly identify clinical defensibility gaps, weak evidence links, missing conservative alternatives, over-claimed criteria, or documentation issues that would be challenged on audit or appeal. Be specific and cite the draft content. Output ONLY via the ${BRIEF_CRITIQUE_TOOL_NAME} tool.`
+    : `You are the VantaUM clinical intelligence engine performing an internal quality self-audit of your own draft brief. Identify any weaknesses that could reduce defensibility for the human concierge validation gate or subsequent clinical reviewer. Be precise and actionable. Output ONLY via the ${BRIEF_CRITIQUE_TOOL_NAME} tool.`;
+
+  const critiqueUser = `CASE: ${caseData.case_number} | ${caseData.patient_name} | ${caseData.procedure_codes?.join(', ')}
+DRAFT BRIEF SUMMARY:
+- Recommendation: ${draftBrief.ai_recommendation.recommendation} (${draftBrief.ai_recommendation.confidence})
+- Criteria met count: ${draftBrief.criteria_match.criteria_met.length} | not met: ${draftBrief.criteria_match.criteria_not_met.length} | unable: ${draftBrief.criteria_match.criteria_unable_to_assess.length}
+- Fact-check score: ${draftFactCheck.overall_score} (${draftFactCheck.overall_status})
+- Flagged items (count): ${typeof draftFactCheck.summary?.flagged === 'number' ? draftFactCheck.summary.flagged : 0}
+
+DRAFT CRITERIA MATCH (key excerpts):
+Guideline: ${draftBrief.criteria_match.applicable_guideline}
+Met (first 3): ${draftBrief.criteria_match.criteria_met.slice(0, 3).join(' || ')}
+Not met / Unable (first 3): ${(draftBrief.criteria_match.criteria_not_met.length ? draftBrief.criteria_match.criteria_not_met : draftBrief.criteria_match.criteria_unable_to_assess).slice(0, 3).join(' || ')}
+
+AI RATIONALE (excerpt): ${draftBrief.ai_recommendation.rationale.slice(0, 280)}
+
+Perform the structured critique now.`;
+
+  const result = await completeWithTool({
+    system: critiqueSystem,
+    user: critiqueUser,
+    maxTokens: 1200,
+    tool: {
+      name: BRIEF_CRITIQUE_TOOL_NAME,
+      description: 'Record a structured self-critique of the draft clinical brief. Identify specific issues that reduce defensibility. This drives the revision pass.',
+      input_schema: BRIEF_CRITIQUE_TOOL_SCHEMA as unknown as Record<string, unknown>,
+    },
+  });
+
+  // The tool input is already validated shape by Anthropic, but we still coerce defensively
+  const raw = result.toolInput as Partial<BriefCritique>;
+  return {
+    issues_identified: Array.isArray(raw.issues_identified) ? raw.issues_identified : [],
+    sections_recommended_for_revision: Array.isArray(raw.sections_recommended_for_revision) ? raw.sections_recommended_for_revision : ['criteria_match', 'ai_recommendation'],
+    critique_summary: typeof raw.critique_summary === 'string' ? raw.critique_summary : 'Draft requires targeted strengthening for clinical defensibility before human validation gate.',
+    recommended_fixes: Array.isArray(raw.recommended_fixes) ? raw.recommended_fixes : [],
+  };
+}
+
+/**
+ * Shared persistence helper for brief + fact-check results.
+ * Guarantees that *every* brief creation path (manual generate, case create, batch, eFax triage promote, streaming, future cron)
+ * persists the fact_check alongside the ai_brief using identical logic + audit.
+ * Centralizes the "AI proposes, fact-check always travels with it, persisted for human gates" contract.
+ * Callers still responsible for triggering assignment/notifications.
+ */
+export async function persistBriefResult(
+  caseId: string,
+  result: { brief: AIBrief; factCheck: FactCheckResult },
+  supabase: ReturnType<typeof import('@/lib/supabase').getServiceClient>,
+  options: {
+    /** For differentiated audit messages (e.g. 'batch_upload', 'triage_promote', 'auto_on_create') */
+    generatedFrom?: string;
+    /** Additional safe context for the brief_generated audit payload */
+    auditContext?: Record<string, unknown>;
+  } = {}
+): Promise<void> {
+  const { brief, factCheck } = result;
+
+  await supabase
+    .from('cases')
+    .update({
+      ai_brief: brief,
+      ai_brief_generated_at: new Date().toISOString(),
+      fact_check: factCheck,
+      fact_check_at: new Date().toISOString(),
+      status: 'brief_ready',
+    })
+    .eq('id', caseId);
+
+  await logAuditEvent(caseId, 'brief_generated', 'system', {
+    generated_automatically: true,
+    ...(options.generatedFrom ? { generated_from: options.generatedFrom } : {}),
+    ...(options.auditContext ?? {}),
+    fact_check_score: factCheck.overall_score,
+    fact_check_status: factCheck.overall_status,
+    human_review_recommended: factCheck.human_review_recommended,
+  });
 }

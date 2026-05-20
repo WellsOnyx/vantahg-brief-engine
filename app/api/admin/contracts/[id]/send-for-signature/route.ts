@@ -7,6 +7,7 @@ import { logAuditEvent } from '@/lib/audit';
 import { apiError } from '@/lib/api-error';
 import { getRequestContext } from '@/lib/security';
 import { sendForSignature } from '@/lib/contracts/hellosign-client';
+import { getStorageAdapter } from '@/lib/adapters/storage';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,14 +31,14 @@ export const dynamic = 'force-dynamic';
 const VANTAUM_SIGNER_NAME = 'Jonathan Arias';
 const VANTAUM_SIGNER_EMAIL = 'jonathan@wellsonyx.com';
 
-const BUCKET = 'signup-contracts';
+const LOGICAL_BUCKET = 'signup-contracts' as const;
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const authResult = await requireRole(request, ['admin']);
+    const authResult = await requireRole(request, ['admin', 'ceo', 'slt']);
     if (authResult instanceof NextResponse) return authResult;
     const rateLimited = await applyRateLimit(request, { maxRequests: 20 });
     if (rateLimited) return rateLimited;
@@ -122,18 +123,17 @@ export async function POST(
       );
     }
 
-    // Download the rendered PDF from storage.
-    const { data: pdfBlob, error: dlErr } = await supabase.storage
-      .from(BUCKET)
-      .download(contract.rendered_pdf_path);
-    if (dlErr || !pdfBlob) {
-      return apiError(dlErr ?? new Error('Empty PDF blob'), {
+    // Download the rendered PDF from storage (via adapter for Supabase/S3 dual-mode).
+    const storage = await getStorageAdapter();
+    const dlResult = await storage.download(LOGICAL_BUCKET, contract.rendered_pdf_path);
+    if (!dlResult.ok) {
+      return apiError(new Error(`PDF download failed: ${dlResult.message}`), {
         operation: 'send_for_signature_download_pdf',
         actor: authResult.user.email,
         requestContext: getRequestContext(request),
       });
     }
-    const pdfBuffer = Buffer.from(await pdfBlob.arrayBuffer());
+    const pdfBuffer = dlResult.bytes;
 
     // Send to Dropbox Sign (or stub in demo mode — the wrapper handles that).
     let envelope: { signatureRequestId: string; demo: boolean };
@@ -211,6 +211,19 @@ export async function POST(
       },
       getRequestContext(request),
     );
+
+    // Item 17: Fire-and-forget email to TPA signer (basic notification)
+    // In production this should use a proper template + the email adapter
+    if (!envelope.demo) {
+      import('@/lib/adapters/email').then(({ getEmailAdapter }) => {
+        const email = getEmailAdapter();
+        email.send({
+          to: tpaSignerEmail,
+          subject: `Action Required: Sign your VantaUM MSA + BAA`,
+          text: `Please sign the VantaUM Master Services Agreement for ${signup.legal_name}. Link: ${process.env.NEXT_PUBLIC_APP_URL || 'https://app.vantaum.com'}/login`,
+        }).catch(() => {});
+      });
+    }
 
     return NextResponse.json({
       success: true,

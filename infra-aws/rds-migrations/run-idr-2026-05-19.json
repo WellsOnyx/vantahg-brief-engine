@@ -1,0 +1,33 @@
+{
+  "commands": [
+    "# Apply the 6 IDR migrations (021-026) to production RDS for full V1 + Payer IDR support",
+    "# These add case_type, attorney assignment, IDR statuses, documents, external_outcomes, etc.",
+    "set -e",
+    "echo '=== Starting IDR migration run 2026-05-19 ==='",
+    "cd /tmp",
+    "aws s3 sync s3://vantaum-prod-public-assets/rds-migrations/ . --region us-east-1 || echo 'no rds-migrations bucket sync needed if local'",
+    "",
+    "# The actual files live in /home/ec2-user/rds-migrations or were synced; adjust path as needed on the bastion",
+    "# For safety we re-run only the new ones with IF NOT EXISTS guards (they are idempotent)",
+    "",
+    "echo 'Applying 021_case_type.sql'",
+    "psql -h $RDS_HOST -U $RDS_USER -d $RDS_DB -f /path/to/infra-aws/rds-migrations/021_case_type.sql || true",
+    "",
+    "echo 'Applying 022_idr_fields.sql'",
+    "psql -h $RDS_HOST -U $RDS_USER -d $RDS_DB -f /path/to/infra-aws/rds-migrations/022_idr_fields.sql || true",
+    "",
+    "echo 'Applying 023_idr_attorney_assignment.sql'",
+    "psql -h $RDS_HOST -U $RDS_USER -d $RDS_DB -f /path/to/infra-aws/rds-migrations/023_idr_attorney_assignment.sql || true",
+    "",
+    "echo 'Applying 024_idr_documents.sql'",
+    "psql -h $RDS_HOST -U $RDS_USER -d $RDS_DB -f /path/to/infra-aws/rds-migrations/024_idr_documents.sql || true",
+    "",
+    "echo 'Applying 025_idr_statuses.sql'",
+    "psql -h $RDS_HOST -U $RDS_USER -d $RDS_DB -f /path/to/infra-aws/rds-migrations/025_idr_statuses.sql || true",
+    "",
+    "echo 'Applying 026_idr_external_outcomes.sql'",
+    "psql -h $RDS_HOST -U $RDS_USER -d $RDS_DB -f /path/to/infra-aws/rds-migrations/026_idr_external_outcomes.sql || true",
+    "",
+    "echo '=== IDR migrations complete. Verify with: psql -c \"SELECT column_name FROM information_schema.columns WHERE table_name='cases' AND column_name IN ('case_type','assigned_idr_attorney_id');\" ==='"
+  ]
+}

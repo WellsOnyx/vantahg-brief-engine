@@ -21,7 +21,7 @@ export interface ProvisionTpaUserParams {
   /**
    * Where the magic link should land the user after they click. Should
    * be a path under our domain so the signed-in session gets persisted
-   * by middleware. Defaults to /client/cases.
+   * by middleware. Defaults to the TPA portal.
    */
   redirectPath?: string;
 }
@@ -63,7 +63,7 @@ export async function provisionTpaUserAndMagicLink(
     return { userId: null, magicLink: null, demo: false, error: 'Email required' };
   }
 
-  const redirectPath = params.redirectPath ?? '/client/cases';
+  const redirectPath = params.redirectPath ?? '/portal/tpa';
   const redirectTo = `${siteUrl.replace(/\/$/, '')}${redirectPath.startsWith('/') ? redirectPath : `/${redirectPath}`}`;
 
   const adapter = getAuthAdapter();

@@ -282,10 +282,60 @@ export async function POST(request: NextRequest) {
               fullName: signup.signer_name ?? signup.primary_contact_name,
               clientId: contract.client_id ?? null,
               signupId: signup.id,
-              redirectPath: '/client/cases',
+              redirectPath: '/portal/tpa',
             },
             siteUrl,
           );
+
+          // Ensure the user has the 'client' role so they can access the TPA portal
+          if (provisionResult.userId) {
+            await supabase
+              .from('user_profiles')
+              .upsert({
+                id: provisionResult.userId,
+                role: 'client',
+                client_id: contract.client_id ?? null,
+              }, { onConflict: 'id' });
+          }
+
+          // Post-signature tenant hardening (Item 19): mark the client as contract live
+          // using the existing onboarding_status column (no contract_status column yet).
+          // This gives a reliable signal for future admin/audit views and any
+          // revocation flows. Non-fatal if it fails.
+          if (contract.client_id) {
+            const { error: clientLiveErr } = await supabase
+              .from('clients')
+              .update({ onboarding_status: 'live' })
+              .eq('id', contract.client_id);
+            if (clientLiveErr) {
+              await logAuditEvent(null, 'security:client_live_status_update_failed', 'hellosign-webhook', {
+                contract_id: contract.id,
+                client_id: contract.client_id,
+                error: clientLiveErr.message,
+              }, getRequestContext(request));
+            }
+          }
+
+          // Item 18 hardening: Branded confirmation email to TPA that contract is fully executed
+          // and portal access is provisioned (closes the E2E notification loop beyond HelloSign + magic link).
+          // Fire-and-forget using the email adapter; non-fatal.
+          if (signup) {
+            const recipient = signup.signer_email ?? signup.primary_contact_email;
+            import('@/lib/adapters/email').then(({ getEmailAdapter }) => {
+              const email = getEmailAdapter();
+              email
+                .send({
+                  to: recipient,
+                  subject: `Welcome to VantaUM — Your contract is signed and portal access is ready`,
+                  text:
+                    `Thank you for signing the VantaUM MSA + BAA for ${signup.primary_contact_name || 'your organization'}. ` +
+                    `Your account has been provisioned. Please check your email for the secure login link (or use the one from Dropbox Sign) ` +
+                    `and visit https://app.vantaum.com/portal/tpa to submit your first authorization request. ` +
+                    `A concierge has been auto-assigned to support your team. We look forward to partnering with you.`,
+                })
+                .catch(() => {});
+            }).catch(() => {});
+          }
 
           await logAuditEvent(null, 'contract_all_signed', 'hellosign-webhook', {
             contract_id: contract.id,
@@ -295,6 +345,7 @@ export async function POST(request: NextRequest) {
             provision_error: provisionResult.error ?? null,
             // Never log the magic link itself — it's a credential.
             magic_link_generated: !!provisionResult.magicLink,
+            client_marked_live: !!contract.client_id,
           }, getRequestContext(request));
         } else {
           await logAuditEvent(null, 'contract_all_signed_no_signup', 'hellosign-webhook', {

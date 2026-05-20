@@ -32,8 +32,9 @@ export async function GET(
       if (!demoCase) {
         return NextResponse.json({ error: 'Case not found' }, { status: 404 });
       }
-      if (demoCase.determination !== 'deny' && demoCase.determination !== 'partial_approve') {
-        return NextResponse.json({ error: 'Case is not a denial — denial strength scoring only applies to denied cases' }, { status: 400 });
+      const isPreviewDemo = request.nextUrl.searchParams.get('preview') === '1' || request.nextUrl.searchParams.get('preview') === 'true';
+      if (!isPreviewDemo && demoCase.determination !== 'deny' && demoCase.determination !== 'partial_approve') {
+        return NextResponse.json({ error: 'Case is not a denial — denial strength scoring only applies to denied cases (use ?preview=1 for pre-decision signal)' }, { status: 400 });
       }
       const result = scoreDenialStrength(demoCase);
       return NextResponse.json(result);
@@ -59,21 +60,28 @@ export async function GET(
       });
     }
 
-    if (caseData.determination !== 'deny' && caseData.determination !== 'partial_approve') {
+    // Support pre-determination "preview" scoring for human reviewers (AI signal only — no side effects).
+    // Used in DeterminationForm to surface risk *before* the human commits the denial.
+    // When ?preview=1, we bypass the determination check and still return full computed signal.
+    const isPreview = request.nextUrl.searchParams.get('preview') === '1' || request.nextUrl.searchParams.get('preview') === 'true';
+
+    if (!isPreview && caseData.determination !== 'deny' && caseData.determination !== 'partial_approve') {
       return NextResponse.json(
-        { error: 'Case is not a denial — denial strength scoring only applies to denied cases' },
+        { error: 'Case is not a denial — denial strength scoring only applies to denied cases (use ?preview=1 for pre-decision signal)' },
         { status: 400 }
       );
     }
 
     const result = scoreDenialStrength(caseData);
 
-    // Store the score on the case
+    // Store the core score/grade (existing columns). Appeal likelihood is a live computed signal (JSONB/audit friendly, no new columns to avoid bloat).
+    // Returned in response for immediate human reviewer consumption in determination flows.
     await supabase
       .from('cases')
       .update({
         denial_strength_score: result.score,
         denial_strength_grade: result.grade,
+        // Optional: could JSONB-extend internal_notes or ai_brief with full appeal_likelihood later if volume justifies.
       })
       .eq('id', id);
 

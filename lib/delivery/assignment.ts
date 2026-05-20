@@ -146,3 +146,124 @@ function extractExpectedWeeklyAuths(row: unknown): number {
   const v = (obj as { expected_weekly_auths?: unknown }).expected_weekly_auths;
   return typeof v === 'number' && Number.isFinite(v) ? v : 0;
 }
+
+// ============================================================================
+// Reassignment tooling (for Delivery Leads)
+// ============================================================================
+
+export interface ReassignResult {
+  ok: boolean;
+  message: string;
+  new_assignment_id?: string;
+  cases_updated?: number;
+}
+
+export interface ReassignParams {
+  client_id: string;
+  to_concierge_id: string;
+  assigned_by: string;
+  reason?: string;
+  /** If provided, only affect this specific case (future V2 per-case override) */
+  case_id?: string;
+}
+
+/**
+ * Reassign a client (or specific case) from its current concierge to a new one.
+ * 
+ * - Deactivates the prior active client_concierge_assignment for the scope.
+ * - Creates a fresh active assignment to the target concierge.
+ * - For open cases belonging to the client, updates assigned_concierge_id (and concierge_assigned_at).
+ * - Always writes an audit_log entry for traceability (DL authority action).
+ *
+ * This is the control surface that lets Delivery Leads correct load without
+ * waiting for the next auto-assign cycle. Low-friction by design.
+ */
+export async function reassignClientToConcierge(
+  supabase: SupabaseClient,
+  params: ReassignParams,
+): Promise<ReassignResult> {
+  const { client_id, to_concierge_id, assigned_by, reason, case_id } = params;
+
+  // 1. Find and deactivate any active assignment for this client (whole-client V1)
+  const { data: currentAssignments } = await supabase
+    .from('client_concierge_assignments')
+    .select('id, concierge_id')
+    .eq('client_id', client_id)
+    .eq('active', true)
+    .limit(5);
+
+  const current = (currentAssignments ?? [])[0] as { id: string; concierge_id: string } | undefined;
+
+  if (current && current.concierge_id === to_concierge_id) {
+    return { ok: true, message: 'Client is already assigned to the target concierge.' };
+  }
+
+  if (current) {
+    const { error: deactErr } = await supabase
+      .from('client_concierge_assignments')
+      .update({ active: false, updated_at: new Date().toISOString() })
+      .eq('id', current.id);
+    if (deactErr) {
+      return { ok: false, message: `Failed to deactivate prior assignment: ${deactErr.message}` };
+    }
+  }
+
+  // 2. Create the new active assignment
+  const { data: newAssign, error: insErr } = await supabase
+    .from('client_concierge_assignments')
+    .insert({
+      client_id,
+      concierge_id: to_concierge_id,
+      practice_id: null,
+      assigned_by,
+      active: true,
+    })
+    .select('id')
+    .single();
+
+  if (insErr || !newAssign) {
+    return { ok: false, message: `Failed to create new assignment: ${insErr?.message ?? 'unknown'}` };
+  }
+
+  // 3. Update open cases for the client to point to new concierge (unless a specific case_id is targeted)
+  let casesUpdated = 0;
+  const openStatuses = ['intake', 'processing', 'brief_ready', 'lpn_review', 'rn_review', 'md_review', 'pend_missing_info'];
+  let caseQuery = supabase
+    .from('cases')
+    .update({
+      assigned_concierge_id: to_concierge_id,
+      concierge_assigned_at: new Date().toISOString(),
+    })
+    .eq('client_id', client_id)
+    .in('status', openStatuses);
+
+  if (case_id) {
+    caseQuery = caseQuery.eq('id', case_id);
+  }
+
+  const { data: updatedCases, error: caseErr } = await caseQuery.select('id');
+  if (!caseErr && updatedCases) {
+    casesUpdated = updatedCases.length;
+  }
+
+  // 4. Audit the action (defensible trail) — fire-and-forget, never block the reassignment UX
+  supabase.from('audit_log').insert({
+    case_id: case_id || null,
+    action: 'dl_client_reassigned',
+    actor: assigned_by,
+    details: {
+      client_id,
+      from_concierge_id: current?.concierge_id ?? null,
+      to_concierge_id,
+      reason: reason || 'Manual rebalance by Delivery Lead',
+      cases_updated: casesUpdated,
+    },
+  }).then(() => {}, () => {/* non-fatal audit failure */});
+
+  return {
+    ok: true,
+    message: `Reassigned. ${casesUpdated} open case(s) updated to new concierge.`,
+    new_assignment_id: (newAssign as { id: string }).id,
+    cases_updated: casesUpdated,
+  };
+}

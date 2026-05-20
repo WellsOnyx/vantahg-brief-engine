@@ -1,4 +1,7 @@
-export type CaseStatus = 'intake' | 'processing' | 'brief_ready' | 'lpn_review' | 'rn_review' | 'md_review' | 'pend_missing_info' | 'determination_made' | 'delivered';
+export type CaseStatus = 
+  | 'intake' | 'processing' | 'brief_ready' | 'lpn_review' | 'rn_review' | 'md_review' | 'pend_missing_info' | 'determination_made' | 'delivered'
+  // Payer IDR statuses (Task 8)
+  | 'submitted' | 'under_attorney_review' | 'attorney_determined' | 'closed';
 export type CasePriority = 'standard' | 'urgent' | 'expedited';
 export type ServiceCategory =
   | 'imaging'
@@ -35,6 +38,7 @@ export type FacilityType = 'inpatient' | 'outpatient' | 'asc' | 'office' | 'home
 
 /** @deprecated Use ServiceCategory instead. Kept for backward compatibility during migration. */
 export type CaseVertical = 'dental' | 'vision' | 'medical';
+export type CaseType = 'um' | 'payer_idr';
 
 export interface Case {
   id: string;
@@ -43,6 +47,19 @@ export interface Case {
   case_number: string;
   status: CaseStatus;
   priority: CasePriority;
+
+  // Top-level case classification (introduced for Payer IDR support)
+  case_type?: CaseType; // 'um' | 'payer_idr' — defaults to 'um' in most creation paths
+
+  // IDR attorney assignment (Task 5)
+  assigned_idr_attorney_id?: string | null;
+
+  // IDR-specific fields (populated when case_type = 'payer_idr')
+  billed_amount_cents?: number | null;
+  is_out_of_network?: boolean | null;
+
+  // External review outcomes (P2P / IRO) - Task 13
+  external_outcomes?: Record<string, any> | null;
 
   // Service classification (new medical-focused field)
   service_category: ServiceCategory | null;
@@ -99,15 +116,15 @@ export interface Case {
   determination_at: string | null;
   determined_by: string | null;
 
+  // Denial details (populated on determination; read directly in some UI surfaces)
+  denial_reason?: string | null;
+  denial_criteria_cited?: string | null;
+  alternative_recommended?: string | null;
+
   /** Free-text admin/reviewer notes. Mutated only via /api/cases/[id]/edit
    * with diff-based audit (migration 010). Distinct from the tier-specific
    * lpn_review_notes / rn_review_notes / peer_to_peer_notes. */
   internal_notes?: string | null;
-
-  // Denial-specific fields
-  denial_reason: string | null;
-  denial_criteria_cited: string | null;
-  alternative_recommended: string | null;
 
   // Documents
   submitted_documents: string[];
@@ -124,6 +141,10 @@ export interface Case {
   lpn_review_notes: string | null;
   lpn_review_at: string | null;
   lpn_determination: LpnDetermination | null;
+
+  // Concierge human validation gate (AI brief review before clinical tiers)
+  // Note: persisted via audit events (concierge_brief_validated) for V1 — no dedicated columns to avoid schema changes.
+  // (Fields intentionally omitted from concrete demo data and DB to honor "no unnecessary migrations" invariant.)
 
   // RN review
   rn_review_notes: string | null;
@@ -270,6 +291,26 @@ export interface AIBrief {
     additional_info_needed: string[];
     state_specific_requirements: string[];
   };
+  /**
+   * Optional metadata attached by the self-improvement engine (multi-pass critique/revision).
+   * Never emitted by the model in the primary tool call; populated server-side after
+   * final fact-check. Persisted inside the ai_brief JSONB column (no schema migration).
+   * Increases clinical defensibility by making the AI's own improvement process auditable.
+   */
+  generation_metadata?: {
+    passes_completed: number;
+    self_improvement_applied: boolean;
+    initial_fact_check_score?: number;
+    final_fact_check_score?: number;
+    revisions?: Array<{
+      pass: number;
+      issues_addressed: string[];
+      sections_revised: string[];
+      score_before: number;
+      score_after: number;
+      critique_summary?: string;
+    }>;
+  };
 }
 
 // ── Fact-Check / Verification Types ─────────────────────────────────────────
@@ -306,6 +347,12 @@ export interface FactCheckResult {
   };
   consistency_checks: ConsistencyCheck[];
   checked_at: string;
+  /** Clinically defensible gate: when true, the concierge or clinical reviewer MUST explicitly acknowledge
+   * review of the fact-check output (via required reasoning in validation form) before status can advance.
+   * AI proposes; human reasoning makes it defensible. Populated deterministically from score/flags/fidelity. */
+  human_review_recommended: boolean;
+  /** Actionable, PHI-safe reasons surfaced to the human reviewer explaining why acknowledgment is required. */
+  review_reasons: string[];
 }
 
 // ── Staff & Pod Types ────────────────────────────────────────────────────────
@@ -425,9 +472,15 @@ export interface QueueMeta {
 export type { ChatMessage, ChatMode, StreamChunk, ChatRequest } from './chat/types';
 
 export interface CaseFormData {
+  case_type?: CaseType; // defaults to 'um' when omitted
   service_category: ServiceCategory;
   priority: CasePriority;
   review_type: ReviewType;
+
+  // Optional IDR fields (used when case_type = 'payer_idr')
+  billed_amount_cents?: number;
+  denial_reason?: string;
+  is_out_of_network?: boolean;
   patient_name: string;
   patient_dob: string;
   patient_member_id: string;

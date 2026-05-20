@@ -300,7 +300,7 @@ class QueryBuilder<T = Record<string, unknown>> implements QueryChain<T> {
 
   private async execute(): Promise<SbResult<T>> {
     try {
-      const pool = getPool();
+      const pool = await getPool();
       const params: unknown[] = [];
 
       let sql = '';
@@ -465,7 +465,7 @@ class StorageBucketShim implements SbStorageBucket {
     body: Buffer | Blob | ArrayBuffer | Uint8Array,
     opts?: { contentType?: string; upsert?: boolean },
   ): ReturnType<SbStorageBucket['upload']> {
-    const adapter = getStorageAdapter();
+    const adapter = await getStorageAdapter();
     let bytes: Buffer;
     if (Buffer.isBuffer(body)) bytes = body;
     else if (body instanceof Uint8Array) bytes = Buffer.from(body);
@@ -484,7 +484,7 @@ class StorageBucketShim implements SbStorageBucket {
   }
 
   async download(path: string): ReturnType<SbStorageBucket['download']> {
-    const adapter = getStorageAdapter();
+    const adapter = await getStorageAdapter();
     const r = await adapter.download(this.bucket, path);
     if (!r.ok) return { data: null, error: { message: r.message } };
     // Return a Blob to match supabase-js. Node 22 has global Blob.
@@ -493,14 +493,14 @@ class StorageBucketShim implements SbStorageBucket {
   }
 
   async createSignedUrl(path: string, ttlSeconds: number): ReturnType<SbStorageBucket['createSignedUrl']> {
-    const adapter = getStorageAdapter();
+    const adapter = await getStorageAdapter();
     const r = await adapter.signedUrl(this.bucket, path, ttlSeconds);
     if (!r.ok) return { data: null, error: { message: r.message } };
     return { data: { signedUrl: r.url }, error: null };
   }
 
   async remove(paths: string[]): ReturnType<SbStorageBucket['remove']> {
-    const adapter = getStorageAdapter();
+    const adapter = await getStorageAdapter();
     const errors: string[] = [];
     for (const p of paths) {
       const r = await adapter.remove(this.bucket, p);

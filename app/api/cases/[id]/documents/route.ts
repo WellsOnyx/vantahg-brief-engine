@@ -47,6 +47,7 @@ interface UploadedDoc {
   filename: string;
   storage_path: string;
   bytes: number;
+  category?: string; // IDR / document classification (e.g. 'clinical_notes', 'payer_letter', etc.)
 }
 
 interface RejectedDoc {
@@ -112,7 +113,7 @@ export async function POST(
   const denied = await assertCaseAccess(caseData, authResult.user, request);
   if (denied) return denied;
 
-  const adapter = getStorageAdapter();
+  const adapter = await getStorageAdapter();
   const accepted: UploadedDoc[] = [];
   const rejected: RejectedDoc[] = [];
 
@@ -150,15 +151,37 @@ export async function POST(
       continue;
     }
 
-    accepted.push({ filename: file.name, storage_path: result.path, bytes: result.bytes });
+    const category = formData.get('category')?.toString() || undefined;
+
+    accepted.push({
+      filename: file.name,
+      storage_path: result.path,
+      bytes: result.bytes,
+      ...(category ? { category } : {}),
+    });
   }
 
   if (accepted.length > 0) {
     const existing = (caseData as { submitted_documents?: string[] | null }).submitted_documents ?? [];
     const next = [...existing, ...accepted.map((a) => a.storage_path)];
+
+    // Also populate the new rich documents structure (for IDR and future)
+    const existingDocs = (caseData as { documents?: any[] | null }).documents ?? [];
+    const newDocs = accepted.map((a) => ({
+      storage_path: a.storage_path,
+      filename: a.filename,
+      category: a.category ?? null,
+      bytes: a.bytes,
+      uploaded_at: new Date().toISOString(),
+      uploaded_by: authResult.user.email,
+    }));
+
     await supabase
       .from('cases')
-      .update({ submitted_documents: next })
+      .update({
+        submitted_documents: next,
+        documents: [...existingDocs, ...newDocs],
+      })
       .eq('id', caseId);
 
     await logAuditEvent(

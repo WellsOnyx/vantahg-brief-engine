@@ -12,6 +12,11 @@ const statusConfig: Record<CaseStatus, { label: string; icon: string }> = {
   pend_missing_info: { label: 'Pending Info', icon: '\u25CF' },
   determination_made: { label: 'Determination Made', icon: '\u2713' },
   delivered: { label: 'Delivered', icon: '\u2713' },
+  // Payer IDR statuses (Task 8)
+  submitted: { label: 'Submitted', icon: '\u25CF' },
+  under_attorney_review: { label: 'Under Attorney Review', icon: '\u231B' },
+  attorney_determined: { label: 'Attorney Determined', icon: '\u2713' },
+  closed: { label: 'Closed', icon: '\u2713' },
 };
 
 interface StatusBadgeProps {

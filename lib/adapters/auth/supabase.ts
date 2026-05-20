@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { createServerClient as _createSsrClient } from '@supabase/ssr';
 import { getServiceClient } from '@/lib/supabase';
 import type {
   AuthAdminAdapter,
@@ -6,6 +7,7 @@ import type {
   CreateUserResult,
   CreateUserError,
   UserSummary,
+  SessionUser,
 } from './types';
 
 /**
@@ -16,6 +18,19 @@ import type {
  * it returns a fresh link for the existing user. We use that fact to
  * implement `createUserWithMagicLink` in one round-trip.
  */
+
+function parseCookieHeader(header: string): { name: string; value: string }[] {
+  if (!header) return [];
+  return header
+    .split(';')
+    .map((c) => c.trim())
+    .filter(Boolean)
+    .map((c) => {
+      const eq = c.indexOf('=');
+      if (eq < 0) return { name: c, value: '' };
+      return { name: c.slice(0, eq), value: decodeURIComponent(c.slice(eq + 1)) };
+    });
+}
 
 export class SupabaseAuthAdapter implements AuthAdminAdapter {
   private readonly _client: SupabaseClient | null;
@@ -79,6 +94,42 @@ export class SupabaseAuthAdapter implements AuthAdminAdapter {
         message: err instanceof Error ? err.message : 'Unknown error',
       };
     }
+  }
+
+  async getSessionUser(requestOrHeaders: Request | Headers): Promise<SessionUser | null> {
+    const url =
+      process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '';
+    const anonKey =
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '';
+    if (!url || !anonKey) return null;
+
+    const cookieHeader =
+      requestOrHeaders instanceof Headers
+        ? requestOrHeaders.get('cookie') ?? ''
+        : requestOrHeaders.headers.get('cookie') ?? '';
+    const cookies = parseCookieHeader(cookieHeader);
+
+    const ssr = _createSsrClient(url, anonKey, {
+      cookies: {
+        getAll() {
+          return cookies;
+        },
+        setAll() {
+          // In API route context we cannot mutate request cookies on the way
+          // back. Session refresh, if needed, is handled by the middleware.
+        },
+      },
+    });
+
+    const { data, error } = await ssr.auth.getUser();
+    if (error || !data?.user) return null;
+    const meta = (data.user.user_metadata ?? {}) as Record<string, unknown>;
+    const roleRaw = meta.role;
+    return {
+      id: data.user.id,
+      email: (data.user.email ?? '').toLowerCase().trim(),
+      role: typeof roleRaw === 'string' && roleRaw.length > 0 ? roleRaw : undefined,
+    };
   }
 
   async getUserByEmail(email: string): Promise<UserSummary | null> {

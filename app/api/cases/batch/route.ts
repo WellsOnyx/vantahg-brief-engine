@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceClient } from '@/lib/supabase';
 import { logAuditEvent } from '@/lib/audit';
-import { generateBriefForCase } from '@/lib/generate-brief';
+import { generateBriefForCase, persistBriefResult } from '@/lib/generate-brief';
 import { isDemoMode } from '@/lib/demo-mode';
 import type { ServiceCategory, CasePriority, ReviewType, FacilityType } from '@/lib/types';
 import { requireRole } from '@/lib/auth-guard';
@@ -223,25 +223,20 @@ export async function POST(request: NextRequest) {
           batch_upload: true,
         });
 
-        // Background brief generation (non-blocking)
-        generateBriefForCase(data).then(async (brief) => {
-          if (brief) {
-            await supabase
-              .from('cases')
-              .update({
-                ai_brief: brief,
-                ai_brief_generated_at: new Date().toISOString(),
-                status: 'brief_ready',
-              })
-              .eq('id', data.id);
-
-            await logAuditEvent(data.id, 'brief_generated', 'system', {
-              generated_automatically: true,
-              batch_upload: true,
+        // Background brief generation (non-blocking) — uses centralized persistence for fact-check guarantee
+        generateBriefForCase(data, { client: (data as any).client ?? null }).then(async (result) => {
+          if (result) {
+            await persistBriefResult(data.id, result, supabase, {
+              generatedFrom: 'batch_upload',
+              auditContext: { batch_upload: true },
             });
           }
         }).catch((err) => {
-          console.error(`Background brief generation failed for case ${caseNumber}:`, err);
+          const errorKind = err instanceof Error ? err.name : typeof err;
+          logAuditEvent(data.id, 'background_brief_generation_failed', 'system', {
+            error_kind: errorKind,
+            batch_upload: true,
+          }).catch(() => { /* already logged inside logAuditEvent */ });
         });
 
         results.case_numbers.push(caseNumber);

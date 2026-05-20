@@ -1,5 +1,14 @@
-import { SignatureRequestApi } from '@dropbox/sign';
 import { getHelloSignConfig, isRealHelloSignEnabled } from '@/lib/env';
+
+// Lazy loader for the heavy Dropbox Sign SDK so the production bundler
+// (Vercel and Docker) never tries to resolve it unless real e-sign is enabled.
+let _DropboxSign: any = null;
+async function getDropboxSign() {
+  if (!_DropboxSign) {
+    _DropboxSign = await import('@dropbox/sign');
+  }
+  return _DropboxSign;
+}
 
 /**
  * Thin typed wrapper around the Dropbox Sign (formerly HelloSign) SDK.
@@ -58,8 +67,9 @@ export interface SendForSignatureResult {
  *
  * Separated from `sendForSignature` so tests can inject a mock client.
  */
-export function buildHelloSignClient(apiKey: string): SignatureRequestApi {
-  const api = new SignatureRequestApi();
+export async function buildHelloSignClient(apiKey: string): Promise<HelloSignClient> {
+  const mod = await getDropboxSign();
+  const api = new mod.SignatureRequestApi();
   // SDK uses HTTP Basic with username=apiKey, password empty.
   api.username = apiKey;
   return api;
@@ -73,9 +83,19 @@ export function buildHelloSignClient(apiKey: string): SignatureRequestApi {
  * stub id with a deterministic shape (`demo-sig-${contractId}`) so tests
  * and local dev can exercise the rest of the flow without network access.
  */
+/**
+ * Minimal interface for the parts of the Dropbox Sign client we actually use.
+ * This keeps us decoupled from the exact SDK version while still giving
+ * strong typing for the real path.
+ */
+export interface HelloSignClient {
+  username: string;
+  signatureRequestSend: (args: any) => Promise<{ body: { signatureRequest?: { signatureRequestId?: string } } }>;
+}
+
 export async function sendForSignature(
   params: SendForSignatureParams,
-  injectedClient?: SignatureRequestApi,
+  injectedClient?: HelloSignClient,
 ): Promise<SendForSignatureResult> {
   if (!isRealHelloSignEnabled()) {
     return {
@@ -85,7 +105,7 @@ export async function sendForSignature(
   }
 
   const config = getHelloSignConfig();
-  const client = injectedClient ?? buildHelloSignClient(config.apiKey);
+  const client = injectedClient ?? (await buildHelloSignClient(config.apiKey));
 
   // Order signers by `order` field — Dropbox Sign signs in array index order
   // when signing_options.order = true.

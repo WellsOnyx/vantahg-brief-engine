@@ -17,7 +17,10 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.74.0",
+    "@aws-sdk/client-cognito-identity-provider": "^3.1050.0",
+    "@aws-sdk/client-dynamodb": "^3.1050.0",
     "@aws-sdk/client-s3": "^3.1045.0",
+    "@aws-sdk/lib-dynamodb": "^3.1050.0",
     "@aws-sdk/s3-request-presigner": "^3.1045.0",
     "@dropbox/sign": "^1.10.0",
     "@sentry/nextjs": "^10.39.0",
@@ -26,6 +29,7 @@
     "@types/pg": "^8.20.0",
     "drizzle-kit": "^0.31.10",
     "drizzle-orm": "^0.45.2",
+    "jose": "^6.2.3",
     "jspdf": "^4.1.0",
     "jspdf-autotable": "^5.0.7",
     "next": "16.1.6",

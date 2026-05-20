@@ -6,9 +6,10 @@ import Link from 'next/link';
 import { createBrowserClient } from '@/lib/supabase-browser';
 
 /**
- * Admin signup detail. Shows captured prospect data + the action panel
- * (approve / reject) + contract upload. Admin / executive / builder
- * roles only — non-staff hits a friendly access-denied frame.
+ * Admin signup detail view — part of the core review screen (Item 5).
+ * Shows all data submitted via /signup-tpa, review trail, approve/reject controls,
+ * and contract status. This is the primary place Jonathan reviews new TPA requests.
+ * Contract generation actions are present but will be enhanced in item 6.
  */
 
 type Status = 'pending_review' | 'approved' | 'rejected' | 'signed' | 'live';
@@ -199,13 +200,26 @@ export default function AdminSignupDetailPage() {
         <ActionPanel row={row} onUpdate={(updated) => setRow(updated)} />
       </div>
 
+      {/* Review focus banner — item 5 (admin review screen) */}
+      {row.status === 'pending_review' && (
+        <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-5 py-4 text-amber-900">
+          <div className="font-semibold text-sm tracking-wide">Review this TPA signup request</div>
+          <p className="text-sm mt-1 text-amber-800">
+            Verify the details below, set the PEPM rate if needed, then approve or reject. Approved TPAs will move to contract generation and portal access.
+          </p>
+        </div>
+      )}
+
       {/* Sections */}
       <div className="space-y-6">
         <Section title="Company">
           <Field label="Legal name" value={row.legal_name} />
           <Field label="DBA" value={row.dba} />
           <Field label="Entity state" value={row.entity_state} />
-          <Field label="Address" value={formatAddress(row)} />
+          <Field label="Street address" value={row.street_address} />
+          <Field label="City" value={row.city} />
+          <Field label="State" value={row.state} />
+          <Field label="ZIP" value={row.zip} />
         </Section>
 
         <Section title="Primary contact">
@@ -500,6 +514,9 @@ function ContractPanel({ row, onUpdate }: { row: SignupRow; onUpdate: (next: Sig
   const [sending, setSending] = useState(false);
   const [missingVars, setMissingVars] = useState<string[] | null>(null);
 
+  // Item 6: Admin-provided additional clauses for the predefined injection section
+  const [additionalProvisions, setAdditionalProvisions] = useState('');
+
   async function sendForSignature() {
     if (!row.latest_contract) {
       setError('No generated contract to send. Generate the MSA first.');
@@ -525,7 +542,7 @@ function ContractPanel({ row, onUpdate }: { row: SignupRow; onUpdate: (next: Sig
       setSuccess(
         data.demo
           ? 'Sent for signature (demo mode — no real email).'
-          : 'Sent for signature. TPA signer will receive the email shortly.',
+          : 'Sent for signature. The TPA signer will receive the Dropbox Sign email. Jonathan Arias will counter-sign second.',
       );
     } catch {
       setError('Network error. Try again.');
@@ -540,10 +557,17 @@ function ContractPanel({ row, onUpdate }: { row: SignupRow; onUpdate: (next: Sig
     setMissingVars(null);
     setGenerating(true);
     try {
+      const injections = additionalProvisions.trim()
+        ? { additional_provisions: additionalProvisions.trim() }
+        : undefined;
+
       const res = await fetch(`/api/admin/signups/${row.id}/generate-contract`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ template_slug: 'msa-with-baa' }),
+        body: JSON.stringify({
+          template_slug: 'msa-with-baa',
+          ...(injections && { injections }),
+        }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -554,7 +578,20 @@ function ContractPanel({ row, onUpdate }: { row: SignupRow; onUpdate: (next: Sig
         return;
       }
       if (data.signup) onUpdate(data.signup as SignupRow);
-      setSuccess('Contract generated from template.');
+
+      const injectedText = additionalProvisions.trim();
+      setSuccess(
+        injectedText
+          ? 'Contract generated with additional provisions.'
+          : 'Contract generated from template.'
+      );
+
+      // After a clean generation with no injection, clear the field.
+      // If text was provided, leave it visible so the admin can see exactly
+      // what went into the Additional Provisions section before sending.
+      if (!injectedText) {
+        setAdditionalProvisions('');
+      }
     } catch {
       setError('Network error. Try again.');
     } finally {
@@ -635,6 +672,28 @@ function ContractPanel({ row, onUpdate }: { row: SignupRow; onUpdate: (next: Sig
               value={row.contract_uploaded_at ? new Date(row.contract_uploaded_at).toLocaleString() : null}
             />
           </dl>
+
+          {row.latest_contract?.status === 'generated' && (
+            <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-800">
+              <strong>Ready to send.</strong> The contract (including any Additional Provisions) is generated and stored.
+              Click <span className="font-semibold">“Send for signature”</span> below to email it to the TPA signer.
+              Jonathan Arias will receive it for counter-signature after they sign.
+            </div>
+          )}
+
+          {/* Item 6: Additional Provisions (available on regenerate too) */}
+          <div>
+            <label className="block text-sm font-medium text-navy mb-1.5">
+              Additional Provisions <span className="text-muted font-normal">(optional — for regenerate)</span>
+            </label>
+            <textarea
+              value={additionalProvisions}
+              onChange={(e) => setAdditionalProvisions(e.target.value)}
+              placeholder="Enter any specific additional clauses... (will only appear in the dedicated Additional Provisions section)"
+              className="w-full min-h-[100px] rounded-lg border border-border bg-white p-3 text-sm font-mono placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-navy"
+            />
+          </div>
+
           <div className="flex flex-wrap gap-2">
             <button
               onClick={viewContract}
@@ -674,11 +733,28 @@ function ContractPanel({ row, onUpdate }: { row: SignupRow; onUpdate: (next: Sig
           <SignatureStatusRow contract={row.latest_contract} onSend={sendForSignature} sending={sending} signupId={row.id} />
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-4">
           <p className="text-sm text-muted">
-            No contract on file. Either generate the standard VantaUM MSA-with-BAA from the
-            template (uses the captured signup data), or upload a custom signed PDF.
+            No contract on file. Generate the standard VantaUM MSA-with-BAA from the
+            template (uses the captured signup data + any additional provisions below), or upload a custom signed PDF.
           </p>
+
+          {/* Item 6: Additional Provisions injection textarea */}
+          <div>
+            <label className="block text-sm font-medium text-navy mb-1.5">
+              Additional Provisions <span className="text-muted font-normal">(optional)</span>
+            </label>
+            <textarea
+              value={additionalProvisions}
+              onChange={(e) => setAdditionalProvisions(e.target.value)}
+              placeholder="Enter any specific additional clauses or paragraphs Jonathan wants to include. This text will appear ONLY in the dedicated 'Additional Provisions' section of the locked template. The rest of the approved Florida-governed MSA + BAA framework remains unchanged."
+              className="w-full min-h-[120px] rounded-lg border border-border bg-white p-3 text-sm font-mono placeholder:text-muted focus:outline-none focus:ring-1 focus:ring-navy"
+            />
+            <p className="mt-1 text-[11px] text-muted">
+              This is the only place admin-injected language is accepted (per the approved framework).
+            </p>
+          </div>
+
           <div className="flex flex-wrap gap-2 items-center">
             <button
               onClick={generateContract}

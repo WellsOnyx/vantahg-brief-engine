@@ -1,4 +1,4 @@
-import type { Case } from './types';
+import type { Case, AIBrief, FactCheckResult } from './types';
 
 /**
  * Denial Strength Scoring Engine
@@ -29,6 +29,12 @@ export interface DenialStrengthScore {
   factors: DenialFactor[];
   overall_assessment: string;
   recommendations: string[];
+  /** AI-generated appeal likelihood signal (0-100). Higher = greater risk the denial will be appealed and potentially overturned.
+   *  Computed from denial documentation quality + AI brief/fact-check coherence. Pure signal for human reviewer — never auto-decides.
+   */
+  appeal_likelihood?: number;
+  appeal_risk_grade?: 'low' | 'medium' | 'high' | 'very_high';
+  appeal_risk_assessment?: string;
 }
 
 export interface DenialFactor {
@@ -214,5 +220,144 @@ export function scoreDenialStrength(caseData: Case): DenialStrengthScore {
         ? 'This denial has significant weaknesses. Based on industry data (80%+ overturn rate), denials at this score level are frequently overturned.'
         : 'This denial is critically under-documented. Issuing it in this form will almost certainly result in an overturned appeal and wasted physician review time.';
 
-  return { score, grade, factors, overall_assessment, recommendations };
+  // === AI Automation Layer (Track A): Compute appeal likelihood signal (explainable, for human reviewers only) ===
+  // Reuses the denial factors + pulls from AI brief + fact-check for predictive risk (pre- or post-determination).
+  // Deterministic primary logic (no LLM dependency for core signal; future enhancement can layer nuance).
+  const appealContext = {
+    aiBrief: (caseData as any).ai_brief as AIBrief | undefined,
+    factCheck: (caseData as any).fact_check as FactCheckResult | undefined,
+  };
+  const appealSignal = computeAppealLikelihood(appealContext.aiBrief, appealContext.factCheck, {
+    denial_strength: score,
+    missing_docs_count: (appealContext.aiBrief?.documentation_review?.missing_documentation?.length ?? 0),
+    unable_count: (appealContext.aiBrief?.criteria_match?.criteria_unable_to_assess?.length ?? 0),
+    not_met_count: (appealContext.aiBrief?.criteria_match?.criteria_not_met?.length ?? 0),
+    complexity: appealContext.aiBrief?.procedure_analysis?.complexity_level,
+    confidence: appealContext.aiBrief?.ai_recommendation?.confidence,
+    p2p_offered: (caseData as any).peer_to_peer_status != null,
+  });
+
+  return {
+    score,
+    grade,
+    factors,
+    overall_assessment,
+    recommendations,
+    appeal_likelihood: appealSignal.likelihood,
+    appeal_risk_grade: appealSignal.risk_grade,
+    appeal_risk_assessment: appealSignal.assessment,
+  };
+}
+
+/**
+ * Compute appeal likelihood (0-100) as an AI-generated signal for human reviewers.
+ * Higher score = higher predicted risk that this denial/partial will be appealed and may be overturned.
+ * Primary: deterministic rules on brief coherence, documentation gaps, AI confidence vs outcome, complexity.
+ * Designed to be called from scoreDenialStrength or standalone pre-determination for routing/prioritization.
+ * Always explainable via factors. Never used for automatic denial or routing decisions.
+ */
+export function computeAppealLikelihood(
+  aiBrief?: AIBrief | null,
+  factCheck?: FactCheckResult | null,
+  context: {
+    denial_strength?: number;
+    missing_docs_count?: number;
+    unable_count?: number;
+    not_met_count?: number;
+    complexity?: 'routine' | 'moderate' | 'complex';
+    confidence?: 'high' | 'medium' | 'low';
+    p2p_offered?: boolean;
+  } = {}
+): {
+  likelihood: number;
+  risk_grade: 'low' | 'medium' | 'high' | 'very_high';
+  factors: Array<{ name: string; impact: number; detail: string }>;
+  assessment: string;
+} {
+  const factors: Array<{ name: string; impact: number; detail: string }> = [];
+  let likelihood = 30; // baseline moderate risk
+
+  // Factor: Documentation gaps from AI brief (high impact on appeal success)
+  const missing = context.missing_docs_count ?? aiBrief?.documentation_review?.missing_documentation?.length ?? 0;
+  if (missing > 2) {
+    likelihood += 25;
+    factors.push({ name: 'Multiple documentation gaps', impact: 25, detail: `${missing} items flagged missing by AI — providers often supply these on appeal, leading to overturn.` });
+  } else if (missing > 0) {
+    likelihood += 12;
+    factors.push({ name: 'Documentation gaps', impact: 12, detail: 'Some documentation gaps identified; strengthens appeal potential.' });
+  } else {
+    factors.push({ name: 'Documentation complete', impact: -10, detail: 'No gaps per AI review — lowers appeal success odds.' });
+    likelihood -= 10;
+  }
+
+  // Factor: Criteria unable to assess (uncertainty = appeal opportunity)
+  const unable = context.unable_count ?? aiBrief?.criteria_match?.criteria_unable_to_assess?.length ?? 0;
+  if (unable >= 3) {
+    likelihood += 20;
+    factors.push({ name: 'High uncertainty in criteria', impact: 20, detail: 'Multiple "unable to assess" — reviewer may have missed key facts; appeal often succeeds with more records.' });
+  } else if (unable > 0) {
+    likelihood += 8;
+    factors.push({ name: 'Some criteria uncertainty', impact: 8, detail: 'Partial uncertainty in AI analysis creates opening for provider to supply clarifying info.' });
+  }
+
+  // Factor: Criteria not met count vs denial strength
+  const notMet = context.not_met_count ?? aiBrief?.criteria_match?.criteria_not_met?.length ?? 0;
+  if (notMet === 0 && (context.denial_strength ?? 0) < 60) {
+    likelihood += 15;
+    factors.push({ name: 'Weak denial with few explicit fails', impact: 15, detail: 'Denial issued despite limited "not met" citations — vulnerable on appeal.' });
+  }
+
+  // Factor: Complexity + confidence mismatch (from fact-checker coherence)
+  const complexity = context.complexity ?? aiBrief?.procedure_analysis?.complexity_level;
+  const confidence = context.confidence ?? aiBrief?.ai_recommendation?.confidence;
+  if (complexity === 'complex' && confidence === 'high') {
+    likelihood += 12;
+    factors.push({ name: 'Complex case with high AI confidence', impact: 12, detail: 'Complex clinical scenario marked high-confidence by AI — human reviewers should scrutinize; appeals often cite nuance missed.' });
+  } else if (complexity === 'complex') {
+    likelihood += 8;
+    factors.push({ name: 'Complex case', impact: 8, detail: 'High clinical complexity increases chance of successful appeal with specialist input.' });
+  }
+
+  // Factor: Low AI confidence on a denial path
+  if (confidence === 'low') {
+    likelihood += 18;
+    factors.push({ name: 'Low AI confidence', impact: 18, detail: 'AI itself expressed low confidence — strong signal for provider to challenge.' });
+  }
+
+  // Factor: P2P not offered (state compliance + good faith)
+  if (!context.p2p_offered) {
+    likelihood += 10;
+    factors.push({ name: 'P2P opportunity not documented', impact: 10, detail: 'Many jurisdictions require or expect peer-to-peer before final denial; omission is common appeal ground.' });
+  }
+
+  // Factor: Strong denial strength reduces likelihood
+  if ((context.denial_strength ?? 0) >= 85) {
+    likelihood -= 20;
+    factors.push({ name: 'Strong documentation per denial strength', impact: -20, detail: 'High denial strength score indicates detailed criteria citation + rationale — statistically lower overturn risk.' });
+  } else if ((context.denial_strength ?? 0) >= 70) {
+    likelihood -= 8;
+    factors.push({ name: 'Solid denial documentation', impact: -8, detail: 'Good denial strength lowers (but does not eliminate) appeal risk.' });
+  }
+
+  // Clamp and grade
+  likelihood = Math.max(5, Math.min(95, Math.round(likelihood)));
+
+  const risk_grade: 'low' | 'medium' | 'high' | 'very_high' =
+    likelihood >= 75 ? 'very_high' :
+    likelihood >= 55 ? 'high' :
+    likelihood >= 35 ? 'medium' : 'low';
+
+  const assessment = risk_grade === 'low'
+    ? 'Low predicted appeal risk. Denial is well-supported; low likelihood of successful challenge.'
+    : risk_grade === 'medium'
+      ? 'Moderate appeal risk. Standard provider pushback possible; ensure rationale is patient-specific.'
+      : risk_grade === 'high'
+        ? 'High appeal likelihood. Significant vulnerabilities or uncertainty. Strongly consider additional review or info request before final denial.'
+        : 'Very high appeal risk. Multiple red flags (gaps, uncertainty, weak citations). Re-review or pend recommended. Issuing in current form likely to be overturned.';
+
+  if (factors.length === 0) {
+    factors.push({ name: 'Balanced profile', impact: 0, detail: 'No strong aggravating or mitigating signals from AI analysis.' });
+  }
+
+  return { likelihood, risk_grade, factors, assessment };
 }

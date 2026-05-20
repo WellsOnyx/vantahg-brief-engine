@@ -10,6 +10,13 @@ import {
   calcRevenue, calcAuths, calcHeadcount, calcDeliveryCost, calcConstellationPL,
 } from './constants';
 
+/**
+ * Recharts is intentionally a normal client dependency for the internal
+ * ops dashboard. It is deliberately excluded from serverExternalPackages
+ * (see next.config.ts) and the page is marked 'use client'. This is the
+ * production-correct pattern for heavy client-only charting libraries.
+ */
+
 // ── Formatters ────────────────────────────────────────────────────────────────
 
 const fmt$ = (n: number, compact = true) =>

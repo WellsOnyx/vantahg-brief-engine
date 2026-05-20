@@ -253,12 +253,23 @@ function nextFieldResponse(extracted: Partial<CaseFormData>): DemoResponse {
   return readyToSubmitResponse(extracted);
 }
 
-// ── Demo Brief Streaming ────────────────────────────────────────────────────
+// ── Demo Brief Streaming (with Self-Improvement Simulation) ──────────────────
 
 /**
  * Stream a demo AI brief section by section.
+ * Enhanced for AI Automation Layer: simulates the production multi-pass
+ * self-critique / structured clinical reasoning loop so the concierge sees
+ * the AI improving its own output in real time before the human gate.
  */
 export async function* getDemoBriefStream(): AsyncGenerator<StreamChunk> {
+  // Pass 1: Initial draft
+  yield {
+    type: 'brief_pass',
+    passNumber: 1,
+    message: 'Pass 1/2 — Initial clinical analysis & draft brief',
+  };
+  await delay(300);
+
   const sections = [
     { name: 'clinical_question', text: 'Generating clinical question analysis...' },
     { name: 'patient_summary', text: 'Analyzing patient demographics and history...' },
@@ -272,15 +283,68 @@ export async function* getDemoBriefStream(): AsyncGenerator<StreamChunk> {
 
   for (let i = 0; i < sections.length; i++) {
     yield { type: 'text', content: `\n\n**${sections[i].text}**\n\n` };
-    await delay(400 + Math.random() * 300);
+    await delay(280 + Math.random() * 220);
 
     yield {
       type: 'brief_section',
       briefSection: sections[i].name,
       briefContent: getDemoBriefSection(sections[i].name),
     };
-    await delay(200);
+    await delay(160);
   }
+
+  // Simulate fact-check of pass 1 (lower score)
+  yield {
+    type: 'refinement_update',
+    passNumber: 1,
+    message: 'Pass 1 fact-check complete • Score 71/100 • 3 addressable issues flagged for self-critique',
+    scoreBefore: 71,
+    scoreAfter: 71,
+  };
+  await delay(450);
+
+  // Pass 2: Self-critique + revision (the key new UX)
+  yield {
+    type: 'brief_pass',
+    passNumber: 2,
+    message: 'Pass 2/2 — Self-critique & structured revision for clinical defensibility',
+  };
+  await delay(280);
+
+  yield {
+    type: 'refinement_update',
+    passNumber: 2,
+    message: 'AI self-critique: identified 3 issues (incomplete conservative alternatives, unresolved unable-to-assess items, missing compliance education in rationale)',
+    issues: [
+      'criteria_unable_to_assess contained items resolvable from face-to-face note',
+      'conservative_alternatives list incomplete for BMI 34',
+      'ai_recommendation.rationale missing 90-day compliance education',
+    ],
+    sectionsRevised: ['criteria_match', 'documentation_review', 'ai_recommendation'],
+  };
+  await delay(520);
+
+  // Re-yield improved sections (demo shows the "after" state)
+  const revisedSections = ['criteria_match', 'documentation_review', 'ai_recommendation'];
+  for (const sec of revisedSections) {
+    yield { type: 'text', content: `\n\n**Refining ${sec.replace(/_/g, ' ')} based on self-critique...**\n\n` };
+    await delay(220);
+    yield {
+      type: 'brief_section',
+      briefSection: sec,
+      briefContent: getDemoBriefSection(sec), // In real demo the values are already the improved ones
+    };
+    await delay(140);
+  }
+
+  yield {
+    type: 'refinement_update',
+    passNumber: 2,
+    message: 'Revision complete • Final fact-check 89/100 (+18 lift) • Ready for concierge validation gate',
+    scoreBefore: 71,
+    scoreAfter: 89,
+  };
+  await delay(300);
 
   yield { type: 'done' };
 }

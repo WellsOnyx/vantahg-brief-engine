@@ -37,6 +37,11 @@ const STATUS_LABELS: Record<CaseStatus, string> = {
   pend_missing_info: 'Pending Info',
   determination_made: 'Determination',
   delivered: 'Delivered',
+  // IDR statuses (Task 8)
+  submitted: 'Submitted',
+  under_attorney_review: 'Under Attorney Review',
+  attorney_determined: 'Attorney Determined',
+  closed: 'Closed',
 };
 
 const STATUS_COLORS: Record<CaseStatus, string> = {
@@ -49,6 +54,11 @@ const STATUS_COLORS: Record<CaseStatus, string> = {
   pend_missing_info: 'bg-amber-500',
   determination_made: 'bg-teal-500',
   delivered: 'bg-emerald-600',
+  // IDR statuses
+  submitted: 'bg-indigo-500',
+  under_attorney_review: 'bg-violet-500',
+  attorney_determined: 'bg-purple-600',
+  closed: 'bg-gray-600',
 };
 
 const DETERMINATION_LABELS: Record<string, string> = {
@@ -162,12 +172,50 @@ function computeMetrics(cases: Case[], reviewers: Reviewer[]) {
     pend_missing_info: 0,
     determination_made: 0,
     delivered: 0,
+    // IDR statuses
+    submitted: 0,
+    under_attorney_review: 0,
+    attorney_determined: 0,
+    closed: 0,
   };
   cases.forEach((c) => {
     if (statusMap[c.status] !== undefined) {
       statusMap[c.status]++;
     }
   });
+
+  // === Payer IDR Reporting (Task 12) ===
+  const idrCases = cases.filter(c => c.case_type === 'payer_idr');
+  const idrTotal = idrCases.length;
+
+  const idrStatusMap: Record<CaseStatus, number> = {
+    submitted: 0,
+    under_attorney_review: 0,
+    attorney_determined: 0,
+    closed: 0,
+    // include others as 0 for type safety
+    intake: 0, processing: 0, brief_ready: 0, lpn_review: 0, rn_review: 0,
+    md_review: 0, pend_missing_info: 0, determination_made: 0, delivered: 0,
+  };
+  idrCases.forEach((c) => {
+    if (idrStatusMap[c.status] !== undefined) {
+      idrStatusMap[c.status]++;
+    }
+  });
+
+  // Simple average turnaround for determined IDR cases (created_at → determination timestamp if available)
+  let idrAvgTurnaroundDays = 0;
+  const determinedIdr = idrCases.filter(c => c.determination && (c.status === 'attorney_determined' || c.status === 'closed'));
+  if (determinedIdr.length > 0) {
+    const totalDays = determinedIdr.reduce((sum, c) => {
+      const created = new Date(c.created_at).getTime();
+      // Use determination.determined_at if present, else updated_at
+      const det = (c.determination as any)?.determined_at || c.updated_at;
+      const determined = new Date(det).getTime();
+      return sum + (determined - created) / (1000 * 60 * 60 * 24);
+    }, 0);
+    idrAvgTurnaroundDays = totalDays / determinedIdr.length;
+  }
 
   // Determination outcomes
   const determinationMap: Record<string, number> = {};
@@ -265,6 +313,10 @@ function computeMetrics(cases: Case[], reviewers: Reviewer[]) {
       casesAtRisk: casesAtRisk.length,
       totalActiveCases: activeCasesWithDeadlines.length,
     },
+    // Payer IDR Reporting (Task 12)
+    idrTotal,
+    idrAvgTurnaroundDays: Math.round(idrAvgTurnaroundDays * 10) / 10,
+    idrStatusMap,
   };
 }
 
@@ -487,6 +539,48 @@ export default function AnalyticsPage() {
                   ))}
                 </div>
               )}
+            </div>
+          </div>
+
+          {/* Payer IDR Reporting (Task 12) */}
+          <div className="bg-surface rounded-xl border border-border shadow-sm overflow-hidden mb-8">
+            <div className="px-6 py-4 border-b border-border bg-purple-50/30">
+              <div className="flex items-center gap-3">
+                <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 01-2-2v-2" />
+                </svg>
+                <h3 className="font-semibold text-lg text-navy">Payer IDR Reporting</h3>
+              </div>
+            </div>
+            <div className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                  <div className="text-sm text-muted">Total IDR Cases</div>
+                  <div className="text-3xl font-bold text-purple-700 mt-1">{metrics.idrTotal}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-muted">Avg Days to Determination</div>
+                  <div className="text-3xl font-bold text-purple-700 mt-1">
+                    {metrics.idrAvgTurnaroundDays} <span className="text-base font-normal">days</span>
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm text-muted mb-2">IDR by Status</div>
+                  <div className="space-y-1 text-sm">
+                    {Object.entries(metrics.idrStatusMap)
+                      .filter(([, count]) => count > 0)
+                      .map(([status, count]) => (
+                        <div key={status} className="flex justify-between">
+                          <span className="capitalize">{status.replace(/_/g, ' ')}</span>
+                          <span className="font-medium">{count}</span>
+                        </div>
+                      ))}
+                    {Object.values(metrics.idrStatusMap).every(c => c === 0) && (
+                      <div className="text-muted italic">No IDR cases yet</div>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 

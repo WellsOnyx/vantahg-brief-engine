@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceClient } from '@/lib/supabase';
-import { createServerClient } from '@/lib/supabase-server';
+import { getAuthAdapter } from '@/lib/adapters/auth';
 import { isDemoMode } from '@/lib/demo-mode';
 import { applyRateLimit } from '@/lib/rate-limit-middleware';
 import { apiError } from '@/lib/api-error';
@@ -15,9 +15,13 @@ export const dynamic = 'force-dynamic';
  * assigned to them, sorted by SLA urgency (overdue first, then
  * approaching deadline, then everything else by created_at desc).
  *
+ * Supports optional ?status=brief_ready (or any valid CaseStatus) to power
+ * the dedicated Concierge Review Queue (cases ready for human review of the
+ * AI-generated clinical brief). When omitted, returns the broader personal queue.
+ *
  * Pure work-list endpoint - no PHI beyond what's already in the cases
- * table for the case_number, patient_name (masked at display layer if
- * needed), and procedure description.
+ * table for the case_number, patient_name, and procedure description.
+ * All access is strictly scoped to the concierge's assigned client tenants.
  */
 
 const ACTIVE_STATUSES = ['intake', 'processing', 'brief_ready', 'lpn_review', 'rn_review', 'md_review', 'pend_missing_info'];
@@ -56,6 +60,27 @@ const DEMO_QUEUE = [
     created_at: new Date(Date.now() - 4 * 3600 * 1000).toISOString(),
     turnaround_deadline: new Date(Date.now() + 18 * 3600 * 1000).toISOString(),
   },
+  // Dedicated review-ready demo item (brief_ready = AI brief complete, concierge human review gate)
+  {
+    id: 'demo-case-q-review-1',
+    case_number: 'VUM-2026-00139',
+    status: 'brief_ready',
+    priority: 'standard',
+    patient_name: 'J. Kim',
+    procedure_description: 'Outpatient knee MRI (CPT 73721)',
+    client_name: 'Acme TPA',
+    created_at: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
+    turnaround_deadline: new Date(Date.now() + 22 * 3600 * 1000).toISOString(),
+    // Sample high-quality AI output for demo of Track B/C quality signal
+    fact_check: {
+      overall_score: 92,
+      overall_status: 'pass',
+      sections: [],
+      summary: { verified: 8, unverified: 1, flagged: 0 },
+      consistency_checks: [{ check: 'All checks', passed: true, detail: 'Coherent' }],
+      checked_at: new Date().toISOString(),
+    },
+  },
 ];
 
 export async function GET(request: NextRequest) {
@@ -64,19 +89,29 @@ export async function GET(request: NextRequest) {
     if (rateLimited) return rateLimited;
 
     if (isDemoMode()) {
-      return NextResponse.json({ cases: DEMO_QUEUE });
+      // Respect status / review_ready filters in demo mode for the new concierge review queue
+      const requestedStatus = request.nextUrl.searchParams.get('status');
+      const reviewReadyOnly = request.nextUrl.searchParams.get('review_ready') === 'true';
+
+      let filtered = DEMO_QUEUE;
+      if (requestedStatus) {
+        filtered = DEMO_QUEUE.filter((c) => c.status === requestedStatus);
+      } else if (reviewReadyOnly) {
+        filtered = DEMO_QUEUE.filter((c) => c.status === 'brief_ready');
+      }
+      return NextResponse.json({ cases: filtered });
     }
 
-    const ssr = await createServerClient();
-    const { data: userData, error: userErr } = await ssr.auth.getUser();
-    if (userErr || !userData?.user) {
+    const sessionUser = await getAuthAdapter().getSessionUser(request);
+    if (!sessionUser) {
       return NextResponse.json({ error: 'Unauthenticated' }, { status: 401 });
     }
+    const userData = { user: { id: sessionUser.id, email: sessionUser.email } };
 
     const supabase = getServiceClient();
     const { data: concierge } = await supabase
       .from('concierges')
-      .select('id')
+      .select('id, client_ids')
       .eq('user_id', userData.user.id)
       .maybeSingle();
 
@@ -84,13 +119,33 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Not linked to a concierge record' }, { status: 403 });
     }
 
-    const { data: cases, error } = await supabase
+    // Support dedicated "ready for human review" queue via ?status=brief_ready
+    // (or any specific status). Default = broad personal active queue.
+    const requestedStatus = request.nextUrl.searchParams.get('status');
+    const reviewReadyOnly = request.nextUrl.searchParams.get('review_ready') === 'true';
+
+    let targetStatuses = ACTIVE_STATUSES;
+    if (requestedStatus && ACTIVE_STATUSES.includes(requestedStatus as any)) {
+      targetStatuses = [requestedStatus as any];
+    } else if (reviewReadyOnly) {
+      targetStatuses = ['brief_ready'];
+    }
+
+    let query = supabase
       .from('cases')
-      .select('id, case_number, status, priority, patient_name, procedure_description, client_id, created_at, turnaround_deadline, clients(name)')
+      .select('id, case_number, status, priority, patient_name, procedure_description, client_id, created_at, turnaround_deadline, fact_check, clients(name)')
       .eq('assigned_concierge_id', concierge.id)
-      .in('status', ACTIVE_STATUSES)
+      .in('status', targetStatuses)
       .order('turnaround_deadline', { ascending: true, nullsFirst: false })
       .limit(50);
+
+    // Extra tenant safety: if the concierge record carries explicit client_ids, further restrict
+    // (defense in depth — the assigned_concierge_id + RLS should already enforce, but explicit filter helps)
+    if (concierge.client_ids && Array.isArray(concierge.client_ids) && concierge.client_ids.length > 0) {
+      query = query.in('client_id', concierge.client_ids);
+    }
+
+    const { data: cases, error } = await query;
 
     if (error) {
       return apiError(error, {
@@ -110,6 +165,9 @@ export async function GET(request: NextRequest) {
       client_name: (c.clients as { name?: string } | null)?.name ?? null,
       created_at: c.created_at,
       turnaround_deadline: c.turnaround_deadline,
+      // AI Automation Layer (Track C): include quality signal for review queue prioritization
+      // (fact_check is JSONB, safe; only shown in brief_ready context for human gate)
+      fact_check: c.fact_check ?? null,
     }));
 
     return NextResponse.json({ cases: shaped });

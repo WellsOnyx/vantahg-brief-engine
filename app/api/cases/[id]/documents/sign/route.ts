@@ -96,7 +96,7 @@ export async function GET(
     return NextResponse.json({ error: 'Document not found' }, { status: 404 });
   }
 
-  const adapter = getStorageAdapter();
+  const adapter = await getStorageAdapter();
   const signed = await adapter.signedUrl(BUCKET, path, SIGNED_URL_TTL_SECONDS);
   if (!signed.ok) {
     return NextResponse.json(

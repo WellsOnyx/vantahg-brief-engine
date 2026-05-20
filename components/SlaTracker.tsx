@@ -5,9 +5,9 @@ import { getTimeRemaining, formatTimeRemaining, getSlaStatus } from '@/lib/sla-c
 import type { UrgencyLevel } from '@/lib/sla-calculator';
 
 interface SlaTrackerProps {
-  deadline: string | Date;
+  deadline?: string | Date | null;
   compact?: boolean;
-  createdAt?: string | Date;
+  createdAt?: string | Date | null;
 }
 
 const urgencyStyles: Record<UrgencyLevel, {
@@ -67,23 +67,30 @@ export function SlaTracker({ deadline, compact = false, createdAt }: SlaTrackerP
     return () => clearInterval(interval);
   }, []);
 
-  const timeRemaining = useMemo(() => getTimeRemaining(deadline), [deadline, now]);
+  // Production-grade defensive normalization.
+  // deadline can legitimately be null/undefined on some IDR and legacy cases.
+  const effectiveDeadline: Date | null = useMemo(() => {
+    if (!deadline) return null;
+    return deadline instanceof Date ? deadline : new Date(deadline);
+  }, [deadline]);
+
+  const timeRemaining = useMemo(() => getTimeRemaining(effectiveDeadline), [effectiveDeadline, now]);
   const formatted = useMemo(() => formatTimeRemaining(timeRemaining), [timeRemaining]);
-  const status = useMemo(() => getSlaStatus(deadline), [deadline, now]);
+  const status = useMemo(() => getSlaStatus(effectiveDeadline), [effectiveDeadline, now]);
   const style = urgencyStyles[timeRemaining.urgencyLevel];
 
-  // Calculate progress for full mode
+  // Calculate progress for full mode (also defensive)
   const progress = useMemo(() => {
-    if (!createdAt) return null;
+    if (!createdAt || !effectiveDeadline) return null;
     const created = new Date(createdAt).getTime();
-    const deadlineMs = new Date(deadline).getTime();
+    const deadlineMs = effectiveDeadline.getTime();
     const nowMs = now.getTime();
     const total = deadlineMs - created;
     if (total <= 0) return 100;
     const elapsed = nowMs - created;
     const pct = Math.min(100, Math.max(0, (elapsed / total) * 100));
     return Math.round(pct);
-  }, [createdAt, deadline, now]);
+  }, [createdAt, effectiveDeadline, now]);
 
   // ── Compact Mode: pill badge ──
   if (compact) {

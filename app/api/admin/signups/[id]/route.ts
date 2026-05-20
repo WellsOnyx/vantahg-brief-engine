@@ -4,6 +4,7 @@ import { isDemoMode } from '@/lib/demo-mode';
 import { requireRole } from '@/lib/auth-guard';
 import { applyRateLimit } from '@/lib/rate-limit-middleware';
 import { apiError } from '@/lib/api-error';
+import { logAuditEvent } from '@/lib/audit';
 import { getRequestContext } from '@/lib/security';
 
 export const dynamic = 'force-dynamic';
@@ -59,13 +60,25 @@ export async function GET(
     // We expose only the fields the UI needs; the raw variable_values
     // contain TPA contact info that doesn't need to round-trip to the
     // browser.
-    const { data: latestContract } = await supabase
+    const { data: latestContract, error: contractErr } = await supabase
       .from('contracts')
       .select('id, status, hellosign_signature_request_id, sent_at, signed_at, generated_at')
       .eq('signup_id', id)
       .order('generated_at', { ascending: false, nullsFirst: false })
       .limit(1)
       .maybeSingle();
+
+    if (contractErr) {
+      // Non-fatal for the detail view; log for ops visibility (transient DB
+      // hiccup shouldn't break admin review).
+      await logAuditEvent(
+        null,
+        'security:signup_latest_contract_query_failed',
+        authResult.user.email,
+        { signup_id: id, error_code: contractErr.code ?? null },
+        getRequestContext(request),
+      ).catch(() => {});
+    }
 
     return NextResponse.json({ ...data, latest_contract: latestContract ?? null });
   } catch (err) {

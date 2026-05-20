@@ -14,6 +14,9 @@ import { isDemoMode } from '@/lib/demo-mode';
 import { logAuditEvent } from '@/lib/audit';
 import { applyRateLimit } from '@/lib/rate-limit-middleware';
 import { requireRole, INTERNAL_STAFF_ROLES } from '@/lib/auth-guard';
+import { generateBriefForCase, persistBriefResult } from '@/lib/generate-brief';
+import { assignToPod } from '@/lib/pod-assignment-engine';
+import { notifyLpnCaseAssigned } from '@/lib/notifications';
 
 export const dynamic = 'force-dynamic';
 
@@ -399,11 +402,16 @@ export async function PATCH(request: NextRequest) {
     const actor = authResult.user.email;
 
     const body = await request.json();
-    const { id, action, extracted_data, reject_reason } = body as {
+    const { id, action, extracted_data, reject_reason, client_id, practice_id, review_notes } = body as {
       id: string;
       action: 'promote' | 'reject' | 'retry_ocr' | 'update_data';
       extracted_data?: Record<string, unknown>;
       reject_reason?: string;
+      /** Required for promote on non-portal channels to enforce tenant scoping */
+      client_id?: string;
+      practice_id?: string | null;
+      /** Required reasoning from concierge/CSR for audit defensibility (min length enforced on promote) */
+      review_notes?: string;
     };
 
     if (!id || !action) {
@@ -483,9 +491,42 @@ export async function PATCH(request: NextRequest) {
           });
         }
 
-        // Create a case from the extracted data
+        // Create a case from the extracted data (now with full tenant scoping + lifecycle)
         const data = extracted_data || row.parsed_data || {};
-        const casePayload = {
+
+        // Enforce tenant scoping for eFax (and future channels): concierge must attribute
+        // the intake to a known client. practice_id optional (V1 whole-client routing).
+        let effectiveClientId = client_id || null;
+        let effectivePracticeId = practice_id || null;
+        let assignedConciergeId: string | null = null;
+
+        if (effectiveClientId) {
+          const { data: clientExists } = await supabase
+            .from('clients')
+            .select('id')
+            .eq('id', effectiveClientId)
+            .maybeSingle();
+          if (!clientExists) {
+            return NextResponse.json({ error: 'Invalid client_id for triage attribution' }, { status: 400 });
+          }
+          // Route to the client's concierge for oversight (core of Concierge Core Workflow)
+          const { data: assignment } = await supabase
+            .from('client_concierge_assignments')
+            .select('concierge_id')
+            .eq('client_id', effectiveClientId)
+            .eq('active', true)
+            .maybeSingle();
+          assignedConciergeId = (assignment as { concierge_id?: string } | null)?.concierge_id || null;
+        } else {
+          // For V1, require explicit attribution during CSR triage (prevents unscoped cases)
+          return NextResponse.json({ error: 'client_id is required when promoting from triage (select the responsible TPA/client)' }, { status: 400 });
+        }
+
+        const reviewNoteText = review_notes && review_notes.trim().length > 0
+          ? review_notes.trim()
+          : 'Concierge reviewed and approved AI extraction during triage (no additional notes)';
+
+        const casePayload: Record<string, unknown> = {
           status: 'intake',
           priority: data.priority || 'standard',
           service_category: data.service_category || null,
@@ -512,6 +553,13 @@ export async function PATCH(request: NextRequest) {
           two_midnight_applies: false,
           authorization_number: row.authorization_number || null,
           submission_fingerprint: row.submission_fingerprint || null,
+          // Tenant scoping + concierge routing (key deliverable for this track)
+          client_id: effectiveClientId,
+          practice_id: effectivePracticeId,
+          assigned_concierge_id: assignedConciergeId,
+          concierge_assigned_at: assignedConciergeId ? new Date().toISOString() : null,
+          // Capture required human reasoning for clinical defensibility / audit
+          internal_notes: `CSR Triage Review by ${actor} (${new Date().toISOString()}): ${reviewNoteText}`,
         };
 
         const { data: newCase, error: caseError } = await supabase
@@ -541,10 +589,46 @@ export async function PATCH(request: NextRequest) {
           })
           .eq('id', id);
 
-        await logAuditEvent(newCase.id, 'efax_triage_promote', actor, {
+        // Rich audit event capturing the concierge's reasoning (defensible trail)
+        await logAuditEvent(newCase.id, 'concierge_intake_approved', actor, {
           efax_queue_id: id,
           case_number: newCase.case_number,
+          client_id: effectiveClientId,
+          practice_id: effectivePracticeId,
+          assigned_concierge_id: assignedConciergeId,
+          review_notes: reviewNoteText,
+          intake_channel: 'efax',
         });
+
+        // Fire-and-forget the AI brief + clinical pod routing (mirrors /api/cases POST for consistency)
+        // AI ~95%, human concierge approved the intake layer.
+        Promise.resolve().then(async () => {
+          try {
+            const { data: fullCaseRow } = await supabase
+              .from('cases')
+              .select('*, client:clients(*)')
+              .eq('id', newCase.id)
+              .single();
+            if (fullCaseRow) {
+              const result = await generateBriefForCase(fullCaseRow as any, { client: (fullCaseRow as any).client ?? null });
+              if (result) {
+                // Centralized fact-check persistence (guarantees alongside every brief, including triage path)
+                await persistBriefResult(newCase.id, result, supabase, {
+                  generatedFrom: 'triage_promote',
+                  auditContext: { generated_from_triage_promote: true },
+                });
+
+                const podResult = await assignToPod(newCase.id);
+                if (podResult.assigned && podResult.lpnId && podResult.podName) {
+                  notifyLpnCaseAssigned(newCase.id, podResult.lpnId, newCase.case_number, podResult.podName).catch(() => {});
+                }
+              }
+            }
+          } catch (lifecycleErr) {
+            const errKind = lifecycleErr instanceof Error ? lifecycleErr.message : String(lifecycleErr);
+            logAuditEvent(newCase.id, 'triage_promote_lifecycle_failed', 'system', { error: errKind }).catch(() => {});
+          }
+        }).catch(() => {});
 
         return NextResponse.json({
           success: true,

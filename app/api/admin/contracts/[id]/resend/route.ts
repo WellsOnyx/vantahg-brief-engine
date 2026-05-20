@@ -25,7 +25,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const authResult = await requireRole(request, ['admin']);
+    const authResult = await requireRole(request, ['admin', 'ceo', 'slt']);
     if (authResult instanceof NextResponse) return authResult;
     const rateLimited = await applyRateLimit(request, { maxRequests: 20 });
     if (rateLimited) return rateLimited;

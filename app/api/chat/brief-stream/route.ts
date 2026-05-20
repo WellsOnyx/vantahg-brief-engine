@@ -4,6 +4,7 @@ import { applyRateLimit } from '@/lib/rate-limit-middleware';
 import { isDemoMode } from '@/lib/demo-mode';
 import { getDemoBriefStream } from '@/lib/chat/demo-chat';
 import type { StreamChunk } from '@/lib/chat/types';
+import type { AIBrief } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -95,10 +96,65 @@ function createSSEStream(generator: AsyncGenerator<StreamChunk>): ReadableStream
 }
 
 /**
- * Given a completed brief, yield sections one at a time with delays.
+ * Given a completed brief (now potentially carrying generation_metadata from
+ * the multi-pass self-critique engine), yield rich progressive events:
+ *  - brief_pass / refinement_update events (the new self-improvement visibility)
+ *  - then the final sections + fact-check.
+ * This delivers the white-glove "watch the AI improve its own output" experience.
  */
 async function* streamBriefSections(briefData: Record<string, unknown>): AsyncGenerator<StreamChunk> {
-  const brief = briefData.brief || briefData;
+  const brief = (briefData.brief || briefData) as AIBrief & Record<string, unknown>;
+  const meta = brief.generation_metadata;
+
+  // If self-improvement occurred, surface the pass/refinement narrative first
+  if (meta?.self_improvement_applied && meta.revisions?.length) {
+    yield {
+      type: 'brief_pass',
+      passNumber: 1,
+      message: `Pass 1/${meta.passes_completed} — Initial clinical analysis & draft`,
+    };
+    await delay(180);
+
+    yield {
+      type: 'refinement_update',
+      passNumber: 1,
+      message: `Pass 1 fact-check: ${meta.initial_fact_check_score ?? '?'} / 100`,
+      scoreBefore: meta.initial_fact_check_score,
+      scoreAfter: meta.initial_fact_check_score,
+    };
+    await delay(260);
+
+    for (const rev of meta.revisions) {
+      yield {
+        type: 'brief_pass',
+        passNumber: rev.pass,
+        message: `Pass ${rev.pass}/${meta.passes_completed} — Self-critique & structured revision`,
+      };
+      await delay(220);
+
+      yield {
+        type: 'refinement_update',
+        passNumber: rev.pass,
+        message: `Self-critique: ${rev.critique_summary || 'Addressed clinical defensibility gaps'}`,
+        issues: rev.issues_addressed,
+        sectionsRevised: rev.sections_revised,
+        scoreBefore: rev.score_before,
+        scoreAfter: rev.score_after,
+      };
+      await delay(380);
+    }
+
+    yield {
+      type: 'refinement_update',
+      passNumber: meta.passes_completed,
+      message: `Final fact-check ${meta.final_fact_check_score ?? '?'} / 100 (+${(meta.final_fact_check_score ?? 0) - (meta.initial_fact_check_score ?? 0)} lift) • Ready for concierge validation`,
+      scoreBefore: meta.initial_fact_check_score,
+      scoreAfter: meta.final_fact_check_score,
+    };
+    await delay(220);
+  }
+
+  // Now stream the authoritative final sections (the improved version)
   const sections = [
     'clinical_question',
     'patient_summary',
@@ -118,11 +174,11 @@ async function* streamBriefSections(briefData: Record<string, unknown>): AsyncGe
         briefSection: section,
         briefContent: content,
       };
-      await new Promise((resolve) => setTimeout(resolve, 150));
+      await delay(130);
     }
   }
 
-  // Send fact-check results if available
+  // Send fact-check + the full enriched brief metadata for the live preview
   if (briefData.factCheck) {
     yield {
       type: 'brief_section',
@@ -131,5 +187,18 @@ async function* streamBriefSections(briefData: Record<string, unknown>): AsyncGe
     };
   }
 
+  // Surface the generation metadata itself as a final summary event (UI can render the badge/log)
+  if (meta) {
+    yield {
+      type: 'brief_section',
+      briefSection: 'generation_metadata',
+      briefContent: meta,
+    };
+  }
+
   yield { type: 'done' };
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }

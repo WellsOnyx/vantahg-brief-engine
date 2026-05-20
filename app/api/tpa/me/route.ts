@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceClient } from '@/lib/supabase';
-import { createServerClient } from '@/lib/supabase-server';
+import { getAuthAdapter } from '@/lib/adapters/auth';
 import { isDemoMode } from '@/lib/demo-mode';
 import { applyRateLimit } from '@/lib/rate-limit-middleware';
 import { apiError } from '@/lib/api-error';
 import { getRequestContext } from '@/lib/security';
+import { getApprovedTpaAccess } from '@/lib/auth/tpa-access';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,44 +40,29 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(DEMO);
     }
 
-    const ssr = await createServerClient();
-    const { data: userData, error: userErr } = await ssr.auth.getUser();
-    if (userErr || !userData?.user) {
+    const sessionUser = await getAuthAdapter().getSessionUser(request);
+    if (!sessionUser) {
       return NextResponse.json({ error: 'Unauthenticated' }, { status: 401 });
     }
-    const email = userData.user.email ?? '';
+    const email = sessionUser.email;
     if (!email) {
       return NextResponse.json({ error: 'No email on user' }, { status: 403 });
     }
 
+    // Item 9: Central "approved TPA" gate (canonical, Cognito/RDS ready via getServiceClient shim)
+    const access = await getApprovedTpaAccess(email, email);
+    if ('status' in access) {
+      return NextResponse.json({ error: access.error }, { status: access.status });
+    }
+
     const supabase = getServiceClient();
 
-    // Look up the TPA by contact_email. V2 would use a clients_users
-    // junction so one email can map to multiple TPAs (rare for V1).
-    const { data: tpa, error: tpaErr } = await supabase
-      .from('clients')
-      .select('id, name')
-      .eq('contact_email', email)
-      .maybeSingle();
-
-    if (tpaErr) {
-      return apiError(tpaErr, {
-        operation: 'tpa_me_lookup',
-        actor: email,
-        requestContext: getRequestContext(request),
-      });
-    }
-    if (!tpa) {
-      return NextResponse.json(
-        { error: 'No TPA tenant linked to this account. Contact support.' },
-        { status: 403 },
-      );
-    }
-
+    // No re-query for name — access result already carries the canonical values.
+    // Practices + counts are tenant-scoped aggregates for the dashboard shell.
     const { data: practices } = await supabase
       .from('practices')
       .select('id, name, specialty, estimated_weekly_auths, active')
-      .eq('client_id', tpa.id)
+      .eq('client_id', access.clientId)
       .eq('active', true)
       .order('name', { ascending: true });
 
@@ -85,21 +71,21 @@ export async function GET(request: NextRequest) {
     const { count: totalCount } = await supabase
       .from('cases')
       .select('id', { count: 'exact', head: true })
-      .eq('client_id', tpa.id);
+      .eq('client_id', access.clientId);
     const { count: activeCount } = await supabase
       .from('cases')
       .select('id', { count: 'exact', head: true })
-      .eq('client_id', tpa.id)
+      .eq('client_id', access.clientId)
       .in('status', ACTIVE_STATUSES);
     const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0);
     const { count: monthCount } = await supabase
       .from('cases')
       .select('id', { count: 'exact', head: true })
-      .eq('client_id', tpa.id)
+      .eq('client_id', access.clientId)
       .gte('created_at', monthStart.toISOString());
 
     return NextResponse.json({
-      tpa: { id: tpa.id, name: tpa.name },
+      tpa: { id: access.clientId, name: access.clientName },
       practices: practices ?? [],
       case_counts: {
         total: totalCount ?? 0,
@@ -108,6 +94,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (err) {
+    console.error('[tpa_me] Unhandled error:', err);
     return apiError(err, {
       operation: 'tpa_me',
       actor: 'system',
