@@ -71,18 +71,32 @@ function LoginForm() {
     }
 
     if (useMagicLink) {
-      // Magic link users land back on / after the callback. The role-routing
-      // happens in middleware (or future callback handler). For now we just
-      // show the success message — the user clicks the email and the
-      // browser handles the redirect via Supabase's PKCE flow.
-      const { error } = await supabase.auth.signInWithOtp({ email });
-      if (error) {
-        setMessage({ type: 'error', text: error.message });
-      } else {
-        setMessage({
-          type: 'success',
-          text: 'Check your email for the magic link. Client users will land on My Cases after sign-in.',
+      // Provider-agnostic: POST to our auth adapter route. Under
+      // ENABLE_AWS_AUTH=true (production Fargate) this hits Cognito's
+      // custom auth flow; under Supabase it falls back to signInWithOtp.
+      // Either way the user gets an email with a link that lands on
+      // /api/auth/callback which sets the session cookie and redirects.
+      try {
+        const res = await fetch('/api/auth/request-magic-link', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email,
+            next: explicitRedirect ?? '/dashboard',
+          }),
         });
+        if (res.status === 429) {
+          setMessage({ type: 'error', text: 'Too many requests. Wait a minute and try again.' });
+        } else if (res.status >= 400 && res.status !== 202) {
+          setMessage({ type: 'error', text: 'Could not send the magic link. Check the email and try again.' });
+        } else {
+          setMessage({
+            type: 'success',
+            text: 'Check your email for the magic link. Click it to sign in.',
+          });
+        }
+      } catch {
+        setMessage({ type: 'error', text: 'Network error. Try again.' });
       }
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
