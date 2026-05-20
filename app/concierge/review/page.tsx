@@ -3,22 +3,22 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { StatusBadge } from '@/components/StatusBadge';
-import { SlaTracker } from '@/components/SlaTracker';
 import { VerificationScore } from '@/components/FactCheckBadge';
-import type { FactCheckResult } from '@/lib/types';
+import type { CaseStatus, FactCheckResult } from '@/lib/types';
 
 /**
  * Dedicated Concierge Review Queue
  *
  * Lives at /concierge/review.
- * Focused surface for cases where the AI clinical brief is ready for human review/validation
- * by the assigned concierge (status = brief_ready + assigned to this concierge).
+ * Focused surface for cases where the AI clinical brief is ready for human
+ * validation by the assigned concierge (status = brief_ready + assigned to
+ * this concierge).
  *
- * Philosophy: AI did 95% (extraction + brief). Concierge provides the first human gate with
- * required reasoning before the case routes to LPN/RN/MD clinical determination.
+ * Philosophy: AI did 95% (extraction + brief). Concierge provides the first
+ * human gate with required reasoning before the case routes to LPN/RN/MD
+ * clinical determination.
  *
  * Strict tenant scoping inherited from the concierge record + API.
- * Reuses existing patterns (StatusBadge, SlaTracker, concierge layout language).
  */
 
 interface ReviewQueueCase {
@@ -44,7 +44,6 @@ export default function ConciergeReviewQueuePage() {
     setLoading(true);
     setError(null);
     try {
-      // Use the enhanced concierge queue endpoint with review_ready filter
       const res = await fetch('/api/concierge/queue?review_ready=true', { cache: 'no-store' });
       if (!res.ok) {
         if (res.status === 401) {
@@ -75,103 +74,105 @@ export default function ConciergeReviewQueuePage() {
     setRefreshing(false);
   }
 
-  const emptyState = (
-    <div className="bg-surface rounded-xl border border-border p-12 text-center">
-      <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-emerald-50 flex items-center justify-center">
-        <svg className="w-8 h-8 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      </div>
-      <h3 className="font-[family-name:var(--font-dm-serif)] text-xl text-navy mb-2">Review queue is clear</h3>
-      <p className="text-sm text-muted max-w-md mx-auto">
-        No AI briefs are currently waiting for your human validation. New cases with completed briefs will appear here automatically.
-      </p>
-      <Link
-        href="/concierge"
-        className="inline-flex items-center gap-2 mt-6 text-sm font-medium text-navy hover:text-gold transition-colors"
-      >
-        ← Back to full concierge dashboard
-      </Link>
-    </div>
-  );
-
   return (
-    <div className="py-8 md:py-12 bg-background min-h-screen">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-3">
-              <Link href="/concierge" className="text-sm text-muted hover:text-navy transition-colors">
-                ← Concierge
-              </Link>
+    <div className="min-h-screen bg-background">
+      {/* ── Hero ──────────────────────────────────────────────── */}
+      <div className="bg-hero-subtle text-white">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-14">
+          <Link href="/concierge" className="text-xs text-white/60 hover:text-gold transition inline-flex items-center gap-1">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <polyline points="15 18 9 12 15 6" />
+            </svg>
+            Concierge dashboard
+          </Link>
+          <div className="mt-4 flex flex-wrap items-end justify-between gap-4 animate-fade-in">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.18em] text-gold font-semibold">Brief review queue</p>
+              <h1 className="font-[family-name:var(--font-display)] text-4xl md:text-5xl text-white mt-2 leading-tight">
+                AI brief, human gate.
+              </h1>
+              <div className="mt-3 h-[3px] w-16 bg-gold-gradient rounded-full" />
+              <p className="text-sm text-white/70 mt-4 max-w-2xl">
+                The AI handled the heavy lifting — extraction, criteria matching, brief drafting.
+                <span className="text-white"> Your reasoning is what makes it defensible.</span>
+              </p>
             </div>
-            <h1 className="font-[family-name:var(--font-dm-serif)] text-3xl md:text-4xl text-navy mt-1">
-              AI Brief Review Queue
-            </h1>
-            <p className="text-sm text-muted mt-2 max-w-2xl">
-              Cases where the AI has generated a clinical brief and is ready for your first human review.
-              Validate the brief with required reasoning, then route to clinical determination.
-              <span className="font-medium text-navy"> AI handled 95% — your reasoning makes it defensible.</span>
-            </p>
-          </div>
-          <button
-            onClick={handleRefresh}
-            disabled={refreshing}
-            className="inline-flex items-center gap-2 bg-white border border-border text-navy px-4 py-2 rounded-lg text-sm font-medium hover:border-navy/40 disabled:opacity-60"
-          >
-            {refreshing ? 'Refreshing…' : 'Refresh'}
-          </button>
-        </div>
-
-        {/* Stats bar (lightweight) */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          <div className="bg-surface rounded-xl border border-border px-4 py-3">
-            <p className="text-[11px] uppercase tracking-wide text-muted font-semibold">Waiting for your review</p>
-            <p className="text-3xl font-bold text-navy mt-1">{cases.length}</p>
-          </div>
-          <div className="bg-surface rounded-xl border border-border px-4 py-3">
-            <p className="text-[11px] uppercase tracking-wide text-muted font-semibold">Focus</p>
-            <p className="text-lg font-semibold text-navy mt-1">Brief Ready → Human Validation</p>
-          </div>
-          <div className="bg-surface rounded-xl border border-border px-4 py-3 hidden sm:block">
-            <p className="text-[11px] uppercase tracking-wide text-muted font-semibold">Next step</p>
-            <p className="text-sm text-muted mt-1">Capture your validation reasoning → Route to LPN/RN/MD</p>
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="text-xs px-3 py-2 rounded-lg border border-white/20 text-white/70 hover:text-white hover:border-white/40 disabled:opacity-50 transition"
+            >
+              {refreshing ? 'Refreshing…' : 'Refresh'}
+            </button>
           </div>
         </div>
+      </div>
 
-        {/* Error */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 -mt-10 space-y-6 pb-16">
+        {/* ── Stat strip ──────────────────────────────────────── */}
+        <section className="grid grid-cols-1 sm:grid-cols-3 gap-3 stagger-children">
+          <div className="card p-5 border-gold/30">
+            <p className="text-[10px] uppercase tracking-[0.12em] text-muted font-semibold">Waiting on you</p>
+            <p className="font-[family-name:var(--font-display)] text-4xl text-gold-dark mt-1">{cases.length}</p>
+            <p className="text-[11px] text-muted mt-1">briefs ready for human validation</p>
+          </div>
+          <div className="card p-5">
+            <p className="text-[10px] uppercase tracking-[0.12em] text-muted font-semibold">Focus mode</p>
+            <p className="text-sm font-semibold text-navy mt-2">Brief ready → Human validation</p>
+            <p className="text-[11px] text-muted mt-1">≥30 char reasoning required to advance</p>
+          </div>
+          <div className="card p-5">
+            <p className="text-[10px] uppercase tracking-[0.12em] text-muted font-semibold">Next step</p>
+            <p className="text-sm font-semibold text-navy mt-2">Route to LPN / RN / MD</p>
+            <p className="text-[11px] text-muted mt-1">Validation reasoning carries forward</p>
+          </div>
+        </section>
+
         {error && (
           <div className="rounded-lg bg-red-50 border border-red-200 text-red-800 px-4 py-3 text-sm">
             {error}
           </div>
         )}
 
-        {/* Main content */}
         {loading ? (
-          <div className="bg-surface rounded-xl border border-border p-8">
-            <div className="animate-pulse space-y-4">
+          <div className="card p-8">
+            <div className="space-y-4">
               {Array.from({ length: 4 }).map((_, i) => (
                 <div key={i} className="flex items-center justify-between border-b border-border pb-4 last:border-0 last:pb-0">
-                  <div className="space-y-2">
-                    <div className="h-4 w-32 bg-gray-200 rounded" />
-                    <div className="h-5 w-48 bg-gray-200 rounded" />
+                  <div className="space-y-2 flex-1">
+                    <div className="skeleton skeleton-text" style={{ width: '30%' }} />
+                    <div className="skeleton skeleton-heading" style={{ width: '60%' }} />
                   </div>
                   <div className="flex items-center gap-3">
-                    <div className="h-6 w-20 bg-gray-200 rounded-full" />
-                    <div className="h-6 w-16 bg-gray-200 rounded" />
+                    <div className="skeleton skeleton-badge" />
                   </div>
                 </div>
               ))}
             </div>
           </div>
         ) : cases.length === 0 ? (
-          emptyState
+          <div className="card p-12 text-center animate-fade-in">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-emerald-50 flex items-center justify-center">
+              <svg className="w-8 h-8 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h3 className="font-[family-name:var(--font-display)] text-2xl text-navy">Queue is clear</h3>
+            <p className="text-sm text-muted max-w-md mx-auto mt-2">
+              No AI briefs are currently waiting for your human validation. New cases with completed briefs will appear here automatically.
+            </p>
+            <Link
+              href="/concierge"
+              className="inline-flex items-center gap-2 mt-6 text-sm font-medium text-navy hover:text-gold-dark transition-colors"
+            >
+              ← Back to concierge dashboard
+            </Link>
+          </div>
         ) : (
-          <div className="bg-surface rounded-xl border border-border shadow-sm overflow-hidden">
-            <div className="px-5 py-3 border-b border-border bg-gray-50/60 text-xs font-semibold text-muted uppercase tracking-wider flex items-center justify-between">
-              <span>AI Briefs Ready for Concierge Human Review</span>
-              <span>{cases.length} case{cases.length === 1 ? '' : 's'}</span>
+          <div className="card overflow-hidden">
+            <div className="px-5 py-3 border-b border-border bg-navy/[0.02] text-[11px] font-semibold text-navy uppercase tracking-[0.14em] flex items-center justify-between">
+              <span>AI briefs ready for concierge validation</span>
+              <span className="text-muted">{cases.length} case{cases.length === 1 ? '' : 's'}</span>
             </div>
 
             <ul className="divide-y divide-border">
@@ -190,55 +191,56 @@ export default function ConciergeReviewQueuePage() {
                 return (
                   <li key={c.id} className="px-5 py-4 hover:bg-gold/[0.03] transition-colors group">
                     <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
-                      <div className="min-w-0">
+                      <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 text-sm">
                           <Link
                             href={`/cases/${c.id}`}
-                            className="font-mono font-semibold text-navy hover:text-gold-dark transition-colors"
+                            className="font-mono text-[11px] font-semibold text-muted hover:text-gold-dark transition-colors"
                           >
                             {c.case_number}
                           </Link>
-                          <span className="text-muted">·</span>
-                          <span className="text-muted text-xs">{c.client_name ?? '—'}</span>
+                          {c.client_name && (
+                            <>
+                              <span className="text-muted">·</span>
+                              <span className="text-muted text-xs">{c.client_name}</span>
+                            </>
+                          )}
                         </div>
-                        <div className="font-semibold text-foreground truncate mt-0.5">
+                        <p className="font-semibold text-navy truncate mt-0.5">
                           {c.patient_name || '(no patient name)'}
-                        </div>
-                        <div className="text-sm text-muted truncate mt-0.5">
+                        </p>
+                        <p className="text-sm text-muted truncate mt-0.5">
                           {c.procedure_description || '—'}
-                        </div>
+                        </p>
                       </div>
 
                       <div className="flex flex-wrap items-center gap-2 lg:gap-3 shrink-0">
-                        <StatusBadge status={c.status as any} />
+                        <StatusBadge status={c.status as CaseStatus} />
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${sla.tone}`}>
                           {sla.label}
                         </span>
 
-                        {/* AI Automation Layer (Track B/C): Quality signal from deterministic fact-check.
-                            Helps concierges prioritize which brief_ready cases need their required-reasoning validation first.
-                            Does NOT replace the human reasoning gate — still mandatory regardless of score. */}
                         {c.fact_check && (
                           <div className="flex items-center gap-1.5" title={`AI Fact-Check Score: ${c.fact_check.overall_score} (${c.fact_check.overall_status})`}>
                             <VerificationScore score={c.fact_check.overall_score} status={c.fact_check.overall_status} />
                           </div>
                         )}
 
-                        {/* Primary actions — Validate (Phase 2) + full detail */}
                         <div className="flex items-center gap-2 ml-1">
                           <Link
                             href={`/cases/${c.id}`}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-navy text-navy hover:bg-navy hover:text-white transition-all"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-border text-navy hover:border-navy/40 hover:bg-background transition-all"
                           >
-                            Open Case
+                            Open
                           </Link>
-                          {/* Placeholder for Phase 2 — will become real "Validate Brief" button */}
                           <Link
                             href={`/cases/${c.id}?action=validate`}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-navy text-gold hover:bg-navy-light transition-all"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-navy text-gold hover:bg-navy-light transition-all shadow-sm"
                           >
-                            Validate Brief
-                            <span className="text-[10px] opacity-75">→</span>
+                            Validate brief
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                              <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
+                            </svg>
                           </Link>
                         </div>
                       </div>
@@ -248,16 +250,14 @@ export default function ConciergeReviewQueuePage() {
               })}
             </ul>
 
-            <div className="px-5 py-3 text-[11px] text-muted bg-gray-50/40 border-t border-border">
-              These cases have completed AI clinical briefs. Your required reasoning here is the first human quality gate.
-              After validation the case routes to clinical review (LPN / RN / MD).
+            <div className="px-5 py-3 text-[11px] text-muted bg-navy/[0.02] border-t border-border">
+              These cases have completed AI briefs. Your reasoning here is the first human quality gate. After validation the case routes to clinical review (LPN / RN / MD).
             </div>
           </div>
         )}
 
-        {/* Helpful footer */}
-        <div className="text-center text-xs text-muted pt-4">
-          Powered by the same concierge queue API with <code>review_ready=true</code> filter • Tenant-scoped • All actions audited
+        <div className="text-center text-[11px] text-muted pt-4">
+          Powered by the concierge queue API · Tenant-scoped · All actions audited
         </div>
       </div>
     </div>
