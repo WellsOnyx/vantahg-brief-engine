@@ -21,7 +21,9 @@ export type NotificationType =
   | 'p2p_scheduled'
   | 'appeal_created'
   | 'intake_confirmation'
-  | 'quality_audit_assigned';
+  | 'quality_audit_assigned'
+  | 'contract_partially_signed'
+  | 'contract_fully_executed';
 
 export interface NotificationPayload {
   type: NotificationType;
@@ -488,5 +490,101 @@ export async function notifyIdrAttorneyAssigned(
     case_id: caseId,
     subject: `New Payer IDR Case Assigned: ${caseNumber}`,
     body: `You have been assigned a new Payer IDR case.\n\nCase: ${caseNumber}\n\nPlease log in to the Attorney Portal to review the case and submit your determination:\n${attorneyQueueUrl}\n\nIf you have any questions, contact your VantaUM administrator.`,
+  });
+}
+
+/**
+ * Notify admins (Jonah + ADMIN_NOTIFICATION_EMAIL) that the TPA signer
+ * completed their signature but the counter-signer (Jonathan Arias) hasn't
+ * signed yet. Closes the loop on Phase 1 item #18 — until now this event
+ * only audit-logged.
+ *
+ * Tenant context comes from the contract → signup_requests join. We do
+ * not surface customer PHI; only company name + contract id.
+ */
+export async function notifyContractPartiallySigned(contractId: string): Promise<void> {
+  if (isDemoMode()) {
+    console.log(`[NOTIFICATION] contract_partially_signed | contract=${contractId}`);
+    return;
+  }
+  const supabase = getServiceClient();
+
+  const { data: contract } = await supabase
+    .from('contracts')
+    .select('id, hellosign_signature_request_id, signup_id, signup_requests!contracts_signup_id_fkey(id, legal_name, primary_contact_email, signer_email)')
+    .eq('id', contractId)
+    .maybeSingle();
+
+  if (!contract) return;
+
+  // Supabase typed-array join. Cast through unknown — `!contracts_signup_id_fkey`
+  // is a 1:1 relationship at the DB level even though the generated types
+  // model it as an array.
+  const signupRaw = contract.signup_requests as unknown;
+  const signupArr = Array.isArray(signupRaw) ? signupRaw : signupRaw ? [signupRaw] : [];
+  const signup = (signupArr[0] ?? null) as
+    | { id: string; legal_name: string | null; primary_contact_email: string | null; signer_email: string | null }
+    | null;
+
+  const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL || process.env.SMTP_FROM_EMAIL || 'jonah@wellsonyx.com';
+  const company = signup?.legal_name ?? 'a new TPA';
+  const baseUrl = process.env.NEXTAUTH_URL || process.env.VERCEL_URL || 'http://localhost:3000';
+  const reviewUrl = signup?.id ? `${baseUrl}/admin/signups/${signup.id}` : `${baseUrl}/admin/signups`;
+
+  await sendNotification({
+    type: 'contract_partially_signed',
+    recipient_email: adminEmail,
+    subject: `${company} signed — your counter-signature is ready`,
+    body:
+      `The TPA signer for ${company} has completed their signature on the VantaUM MSA + BAA. ` +
+      `The Dropbox Sign envelope is now waiting for Jonathan Arias' counter-signature to finalize.\n\n` +
+      `Review the signup: ${reviewUrl}\n` +
+      `Envelope id: ${contract.hellosign_signature_request_id ?? '(unknown)'}\n\n` +
+      `Once you counter-sign, the TPA will be auto-provisioned with portal access.`,
+  });
+}
+
+/**
+ * Notify admins that the contract is fully executed (both signers complete).
+ * Sent in addition to the welcome email that goes to the TPA. Closes the
+ * loop on Phase 1 item #18.
+ */
+export async function notifyContractFullyExecuted(contractId: string): Promise<void> {
+  if (isDemoMode()) {
+    console.log(`[NOTIFICATION] contract_fully_executed | contract=${contractId}`);
+    return;
+  }
+  const supabase = getServiceClient();
+
+  const { data: contract } = await supabase
+    .from('contracts')
+    .select('id, client_id, hellosign_signature_request_id, signup_id, signup_requests!contracts_signup_id_fkey(id, legal_name, primary_contact_email, signer_email)')
+    .eq('id', contractId)
+    .maybeSingle();
+
+  if (!contract) return;
+
+  // Supabase typed-array join. Cast through unknown — `!contracts_signup_id_fkey`
+  // is a 1:1 relationship at the DB level even though the generated types
+  // model it as an array.
+  const signupRaw = contract.signup_requests as unknown;
+  const signupArr = Array.isArray(signupRaw) ? signupRaw : signupRaw ? [signupRaw] : [];
+  const signup = (signupArr[0] ?? null) as
+    | { id: string; legal_name: string | null; primary_contact_email: string | null; signer_email: string | null }
+    | null;
+
+  const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL || process.env.SMTP_FROM_EMAIL || 'jonah@wellsonyx.com';
+  const company = signup?.legal_name ?? 'a new TPA';
+
+  await sendNotification({
+    type: 'contract_fully_executed',
+    recipient_email: adminEmail,
+    subject: `MSA executed — ${company} is live on VantaUM`,
+    body:
+      `The MSA + BAA for ${company} is fully executed. ` +
+      `Tenant has been provisioned and a magic-link has been emailed to the TPA signer.\n\n` +
+      `Tenant client_id: ${contract.client_id ?? '(not linked)'}\n` +
+      `Envelope id: ${contract.hellosign_signature_request_id ?? '(unknown)'}\n\n` +
+      `The TPA can now access /portal/tpa and submit their first authorization.`,
   });
 }
