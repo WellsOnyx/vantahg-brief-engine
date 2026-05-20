@@ -1,0 +1,40 @@
+version: 0.2
+
+# AWS CodeBuild buildspec for the vantaum-prod-app container image.
+# Runs on aws/codebuild/amazonlinux-aarch64-standard:3.0 (native arm64).
+# Replaces local Docker builds — local Colima emulates amd64 and silently
+# produces wrong-arch images, which crashed Fargate on every prior deploy.
+
+env:
+  variables:
+    AWS_REGION: us-east-1
+    ECR_REGISTRY: 309921834034.dkr.ecr.us-east-1.amazonaws.com
+    ECR_REPO: vantaum-prod-app
+
+phases:
+  pre_build:
+    commands:
+      - echo "Logging into ECR..."
+      - aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$ECR_REGISTRY"
+      - SHA="${CODEBUILD_RESOLVED_SOURCE_VERSION:0:7}"
+      - echo "Resolved SHA short=$SHA"
+  build:
+    commands:
+      - echo "Building image (native arm64 host, no emulation)..."
+      - docker build --platform linux/arm64 -t "$ECR_REPO:build" .
+      - |
+        echo "Verifying architecture..."
+        ARCH=$(docker image inspect "$ECR_REPO:build" --format '{{.Architecture}}')
+        echo "Built image architecture: $ARCH"
+        if [ "$ARCH" != "arm64" ]; then
+          echo "FATAL: image is $ARCH, expected arm64. Refusing to push."
+          exit 1
+        fi
+      - docker tag "$ECR_REPO:build" "$ECR_REGISTRY/$ECR_REPO:$SHA"
+      - docker tag "$ECR_REPO:build" "$ECR_REGISTRY/$ECR_REPO:latest-arm64"
+  post_build:
+    commands:
+      - echo "Pushing tags $SHA and latest-arm64..."
+      - docker push "$ECR_REGISTRY/$ECR_REPO:$SHA"
+      - docker push "$ECR_REGISTRY/$ECR_REPO:latest-arm64"
+      - echo "Done. Image pushed for SHA=$SHA"
