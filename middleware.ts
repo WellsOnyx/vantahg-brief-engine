@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
+import { isDemoMode } from '@/lib/demo-mode';
 
 // Public marketing / auth-flow page prefixes. `startsWith` semantics are
 // intentional here because routes like `/signup-tpa` and `/demo-tour` are
@@ -57,9 +58,24 @@ export async function middleware(request: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '';
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '';
 
-  // If no Supabase config (demo mode), allow all requests
+  // Fail-closed when auth config is missing.
+  // Demo mode (NEXT_PUBLIC_DEMO_MODE=true) is the only legitimate empty-config state and is
+  // explicitly opted into. Outside demo mode, missing config means the deploy is broken — block
+  // protected routes rather than silently allowing them through.
   if (!supabaseUrl || !supabaseAnonKey) {
-    return response;
+    if (isDemoMode()) {
+      return response;
+    }
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.json(
+        { error: 'auth_unavailable', detail: 'Authentication backend is not configured on this deployment.' },
+        { status: 503 },
+      );
+    }
+    const errorUrl = request.nextUrl.clone();
+    errorUrl.pathname = '/login';
+    errorUrl.searchParams.set('reason', 'auth_unavailable');
+    return NextResponse.redirect(errorUrl);
   }
 
   const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
