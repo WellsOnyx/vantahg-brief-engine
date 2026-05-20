@@ -80,6 +80,6 @@ export async function rawQuery<T extends QueryResultRow = QueryResultRow>(
   params: unknown[] = [],
 ): Promise<T[]> {
   const pool = await getPool();
-  const result = await (pool as any).query<T>(sql, params as never[]);
+  const result: { rows: T[] } = await (pool as any).query(sql, params as never[]);
   return result.rows;
 }

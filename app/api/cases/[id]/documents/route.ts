@@ -151,13 +151,13 @@ export async function POST(
       continue;
     }
 
-    const category = formData.get('category')?.toString() || null;
+    const category = formData.get('category')?.toString() || undefined;
 
     accepted.push({
       filename: file.name,
       storage_path: result.path,
       bytes: result.bytes,
-      category,
+      ...(category ? { category } : {}),
     });
   }
 
@@ -170,7 +170,7 @@ export async function POST(
     const newDocs = accepted.map((a) => ({
       storage_path: a.storage_path,
       filename: a.filename,
-      category: a.category || null,
+      category: a.category ?? null,
       bytes: a.bytes,
       uploaded_at: new Date().toISOString(),
       uploaded_by: authResult.user.email,

@@ -56,7 +56,6 @@ export interface Case {
 
   // IDR-specific fields (populated when case_type = 'payer_idr')
   billed_amount_cents?: number | null;
-  denial_reason?: string | null;
   is_out_of_network?: boolean | null;
 
   // External review outcomes (P2P / IRO) - Task 13
@@ -116,6 +115,11 @@ export interface Case {
   determination_rationale: string | null;
   determination_at: string | null;
   determined_by: string | null;
+
+  // Denial details (populated on determination; read directly in some UI surfaces)
+  denial_reason?: string | null;
+  denial_criteria_cited?: string | null;
+  alternative_recommended?: string | null;
 
   /** Free-text admin/reviewer notes. Mutated only via /api/cases/[id]/edit
    * with diff-based audit (migration 010). Distinct from the tier-specific
