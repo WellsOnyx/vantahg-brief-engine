@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceClient } from '@/lib/supabase';
-import { createServerClient } from '@/lib/supabase-server';
+import { getAuthAdapter } from '@/lib/adapters/auth';
 import { isDemoMode } from '@/lib/demo-mode';
 import { applyRateLimit } from '@/lib/rate-limit-middleware';
 import { apiError } from '@/lib/api-error';
@@ -70,13 +70,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(DEMO_PROFILE);
     }
 
-    // Get the signed-in user.
-    const ssr = await createServerClient();
-    const { data: userData, error: userErr } = await ssr.auth.getUser();
-    if (userErr || !userData?.user) {
+    // Get the signed-in user via the auth adapter (Supabase or Cognito).
+    const sessionUser = await getAuthAdapter().getSessionUser(request);
+    if (!sessionUser) {
       return NextResponse.json({ error: 'Unauthenticated' }, { status: 401 });
     }
-    const userId = userData.user.id;
+    const userId = sessionUser.id;
 
     const supabase = getServiceClient();
     const { data: concierge, error: concErr } = await supabase
@@ -88,7 +87,7 @@ export async function GET(request: NextRequest) {
     if (concErr) {
       return apiError(concErr, {
         operation: 'concierge_me_lookup',
-        actor: userData.user.email ?? '(unknown)',
+        actor: sessionUser.email ?? '(unknown)',
         requestContext: getRequestContext(request),
       });
     }

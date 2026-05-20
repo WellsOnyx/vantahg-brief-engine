@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceClient } from '@/lib/supabase';
-import { createServerClient } from '@/lib/supabase-server';
+import { getAuthAdapter } from '@/lib/adapters/auth';
 import { isDemoMode } from '@/lib/demo-mode';
 import { applyRateLimit } from '@/lib/rate-limit-middleware';
 import { apiError } from '@/lib/api-error';
@@ -102,11 +102,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ cases: filtered });
     }
 
-    const ssr = await createServerClient();
-    const { data: userData, error: userErr } = await ssr.auth.getUser();
-    if (userErr || !userData?.user) {
+    const sessionUser = await getAuthAdapter().getSessionUser(request);
+    if (!sessionUser) {
       return NextResponse.json({ error: 'Unauthenticated' }, { status: 401 });
     }
+    const userData = { user: { id: sessionUser.id, email: sessionUser.email } };
 
     const supabase = getServiceClient();
     const { data: concierge } = await supabase

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceClient } from '@/lib/supabase';
-import { createServerClient } from '@/lib/supabase-server';
+import { getAuthAdapter } from '@/lib/adapters/auth';
 import { isDemoMode } from '@/lib/demo-mode';
 import { applyRateLimit } from '@/lib/rate-limit-middleware';
 import { apiError } from '@/lib/api-error';
@@ -40,12 +40,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(DEMO);
     }
 
-    const ssr = await createServerClient();
-    const { data: userData, error: userErr } = await ssr.auth.getUser();
-    if (userErr || !userData?.user) {
+    const sessionUser = await getAuthAdapter().getSessionUser(request);
+    if (!sessionUser) {
       return NextResponse.json({ error: 'Unauthenticated' }, { status: 401 });
     }
-    const email = userData.user.email ?? '';
+    const email = sessionUser.email;
     if (!email) {
       return NextResponse.json({ error: 'No email on user' }, { status: 403 });
     }
@@ -95,6 +94,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (err) {
+    console.error('[tpa_me] Unhandled error:', err);
     return apiError(err, {
       operation: 'tpa_me',
       actor: 'system',

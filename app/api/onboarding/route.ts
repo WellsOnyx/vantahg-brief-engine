@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerClient } from '@/lib/supabase-server';
+import { getAuthAdapter } from '@/lib/adapters/auth';
 import { getServiceClient } from '@/lib/supabase';
 import { isDemoMode } from '@/lib/demo-mode';
 import { applyRateLimit } from '@/lib/rate-limit-middleware';
@@ -35,7 +35,9 @@ interface PatchBody {
   complete?: boolean;
 }
 
-async function resolveSignupForUser(): Promise<
+async function resolveSignupForUser(
+  request: Request,
+): Promise<
   | { signupId: string; userEmail: string; demo: false }
   | { demo: true; signupId: string; userEmail: string }
   | { error: NextResponse }
@@ -44,14 +46,26 @@ async function resolveSignupForUser(): Promise<
     return { demo: true, signupId: 'demo-signup', userEmail: 'demo@vantaum.test' };
   }
 
-  const supabase = await createServerClient();
-  const { data: userData, error: userErr } = await supabase.auth.getUser();
-  if (userErr || !userData?.user) {
+  const sessionUser = await getAuthAdapter().getSessionUser(request);
+  if (!sessionUser?.email) {
     return { error: NextResponse.json({ error: 'Unauthenticated' }, { status: 401 }) };
   }
-  const user = userData.user;
-  const meta = (user.user_metadata ?? {}) as { signup_id?: unknown };
-  const signupId = typeof meta.signup_id === 'string' ? meta.signup_id : null;
+
+  // The signup_id used to live on Supabase user_metadata. To stay
+  // provider-agnostic (Cognito puts it on custom:signup_id, RDS doesn't
+  // have a notion of user_metadata at all), we look it up by email from
+  // signup_requests. The email→signup mapping is 1:1 by construction
+  // (provisionTpaUserAndMagicLink uses primary_contact_email as username).
+  const svc = getServiceClient();
+  const { data: signup } = await svc
+    .from('signup_requests')
+    .select('id')
+    .eq('primary_contact_email', sessionUser.email)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const signupId = signup?.id ?? null;
   if (!signupId) {
     return {
       error: NextResponse.json(
@@ -60,7 +74,7 @@ async function resolveSignupForUser(): Promise<
       ),
     };
   }
-  return { signupId, userEmail: user.email ?? '(no-email)', demo: false };
+  return { signupId, userEmail: sessionUser.email, demo: false };
 }
 
 export async function GET(request: NextRequest) {
@@ -68,7 +82,7 @@ export async function GET(request: NextRequest) {
     const rateLimited = await applyRateLimit(request, { maxRequests: 120 });
     if (rateLimited) return rateLimited;
 
-    const resolved = await resolveSignupForUser();
+    const resolved = await resolveSignupForUser(request);
     if ('error' in resolved) return resolved.error;
 
     if (resolved.demo) {
@@ -117,7 +131,7 @@ export async function PATCH(request: NextRequest) {
     const rateLimited = await applyRateLimit(request, { maxRequests: 60 });
     if (rateLimited) return rateLimited;
 
-    const resolved = await resolveSignupForUser();
+    const resolved = await resolveSignupForUser(request);
     if ('error' in resolved) return resolved.error;
 
     const body = (await request.json().catch(() => ({}))) as PatchBody;

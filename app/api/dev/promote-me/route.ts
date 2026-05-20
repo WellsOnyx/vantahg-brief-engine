@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerClient } from '@/lib/supabase-server';
+import { getAuthAdapter } from '@/lib/adapters/auth';
 import { getServiceClient } from '@/lib/supabase';
 import { isDemoMode } from '@/lib/demo-mode';
 import { logAuditEvent, logSecurityEvent } from '@/lib/audit';
@@ -40,20 +40,18 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Not available in demo mode' }, { status: 404 });
     }
 
-    // Resolve the authenticated user from the session cookie. The session
-    // client respects Supabase Auth — we trust auth.email from the JWT,
-    // never request input.
-    const session = await createServerClient();
-    const { data: { user } } = await session.auth.getUser();
-
-    if (!user) {
+    // Resolve the authenticated user via the auth adapter (Supabase or Cognito
+    // per ENABLE_AWS_AUTH). We trust the verified email from the session
+    // JWT, never request input.
+    const sessionUser = await getAuthAdapter().getSessionUser(request);
+    if (!sessionUser) {
       return NextResponse.json(
         { error: 'Sign in first at /login, then revisit this URL.' },
         { status: 401 },
       );
     }
-
-    const sessionEmail = (user.email ?? '').toLowerCase().trim();
+    const user = { id: sessionUser.id, email: sessionUser.email };
+    const sessionEmail = sessionUser.email;
 
     if (sessionEmail !== FOUNDER_EMAIL) {
       // Any other authenticated user trying this endpoint is a security-

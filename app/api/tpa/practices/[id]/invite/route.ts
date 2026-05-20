@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getServiceClient } from '@/lib/supabase';
-import { createServerClient } from '@/lib/supabase-server';
+import { getAuthAdapter } from '@/lib/adapters/auth';
 import { isDemoMode } from '@/lib/demo-mode';
 import { applyRateLimit } from '@/lib/rate-limit-middleware';
 import { logAuditEvent } from '@/lib/audit';
@@ -29,14 +29,13 @@ const Schema = z.object({
   role: z.enum(['admin', 'staff']).default('staff'),
 });
 
-async function resolveTpa(): Promise<{ id: string; email: string } | null> {
-  const ssr = await createServerClient();
-  const { data: userData } = await ssr.auth.getUser();
-  if (!userData?.user?.email) return null;
+async function resolveTpa(request: Request): Promise<{ id: string; email: string } | null> {
+  const sessionUser = await getAuthAdapter().getSessionUser(request);
+  if (!sessionUser?.email) return null;
 
   // Use the canonical Item 9 / approved-TPA gate (single source of truth,
   // includes future contract/revocation checks when column lands).
-  const access = await getApprovedTpaAccess(userData.user.email, userData.user.email);
+  const access = await getApprovedTpaAccess(sessionUser.email, sessionUser.email);
   if ('status' in access) return null;
 
   return { id: access.clientId, email: access.email };
@@ -69,7 +68,7 @@ export async function POST(
       });
     }
 
-    const tpa = await resolveTpa();
+    const tpa = await resolveTpa(request);
     if (!tpa) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const supabase = getServiceClient();

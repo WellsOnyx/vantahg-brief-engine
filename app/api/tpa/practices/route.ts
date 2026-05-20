@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getServiceClient } from '@/lib/supabase';
-import { createServerClient } from '@/lib/supabase-server';
+import { getAuthAdapter } from '@/lib/adapters/auth';
 import { isDemoMode } from '@/lib/demo-mode';
 import { applyRateLimit } from '@/lib/rate-limit-middleware';
 import { logAuditEvent } from '@/lib/audit';
@@ -33,12 +33,11 @@ const CreateSchema = z.object({
   estimated_weekly_auths: z.number().int().nonnegative().max(10_000).optional(),
 });
 
-async function resolveTpa(): Promise<{ id: string; email: string } | null> {
-  const ssr = await createServerClient();
-  const { data: userData } = await ssr.auth.getUser();
-  if (!userData?.user?.email) return null;
+async function resolveTpa(request: Request): Promise<{ id: string; email: string } | null> {
+  const sessionUser = await getAuthAdapter().getSessionUser(request);
+  if (!sessionUser?.email) return null;
 
-  const access = await getApprovedTpaAccess(userData.user.email, userData.user.email);
+  const access = await getApprovedTpaAccess(sessionUser.email, sessionUser.email);
   if ('status' in access) return null;
 
   return { id: access.clientId, email: access.email };
@@ -58,7 +57,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const tpa = await resolveTpa();
+    const tpa = await resolveTpa(request);
     if (!tpa) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const supabase = getServiceClient();
@@ -94,7 +93,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, demo: true, practice_id: 'demo-new' });
     }
 
-    const tpa = await resolveTpa();
+    const tpa = await resolveTpa(request);
     if (!tpa) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const raw = await request.json().catch(() => ({}));

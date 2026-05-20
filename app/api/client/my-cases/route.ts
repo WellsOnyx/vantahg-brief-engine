@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerClient } from '@/lib/supabase-server';
+import { getServiceClient } from '@/lib/supabase';
 import { requireAuth } from '@/lib/auth-guard';
 import { applyRateLimit } from '@/lib/rate-limit-middleware';
 import { isDemoMode, getDemoCases } from '@/lib/demo-mode';
@@ -58,15 +58,31 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(cases);
     }
 
-    const supabase = await createServerClient();
+    // Tenant scoping: previously this route relied on Supabase RLS to filter
+    // cases by client_id via the JWT email. RLS is going away with the
+    // Cognito + RDS cutover, so we now enforce the tenant filter explicitly
+    // in the route. Belt + suspenders during the migration window — RLS is
+    // still active under Supabase auth, this filter is the only guard under
+    // Cognito.
+    const supabase = getServiceClient();
 
-    // RLS enforces the tenant filter. We still SELECT only the fields the UI
-    // needs — projection is independent of authorization.
+    // Resolve client_id from the authenticated email. Same logic the RLS
+    // policy was running implicitly.
+    const { data: clientRow } = await supabase
+      .from('clients')
+      .select('id')
+      .eq('contact_email', authResult.user.email)
+      .maybeSingle();
+    if (!clientRow?.id) {
+      return NextResponse.json({ error: 'No client tenant linked to this account' }, { status: 403 });
+    }
+
     const { data, error } = await supabase
       .from('cases')
       .select(
         'id, case_number, status, priority, patient_name, patient_member_id, procedure_codes, procedure_description, created_at, turnaround_deadline, determination, determination_at, review_type, authorization_number, service_category, ai_brief_generated_at',
       )
+      .eq('client_id', clientRow.id)
       .order('created_at', { ascending: false })
       .limit(200);
 
