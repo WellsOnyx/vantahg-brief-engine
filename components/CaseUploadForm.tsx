@@ -281,7 +281,7 @@ export default function CaseUploadForm({ scope, practiceOptions = [], onSuccess,
               type="text"
               value={form.patient_name}
               onChange={(e) => update('patient_name', e.target.value)}
-              className="w-full bg-white border border-border rounded-lg px-3 py-2 text-sm"
+              className="w-full bg-white border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-navy/40"
             />
           </Field>
           <Field label="Date of birth">
@@ -289,7 +289,7 @@ export default function CaseUploadForm({ scope, practiceOptions = [], onSuccess,
               type="date"
               value={form.patient_dob}
               onChange={(e) => update('patient_dob', e.target.value)}
-              className="w-full bg-white border border-border rounded-lg px-3 py-2 text-sm"
+              className="w-full bg-white border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-navy/40"
             />
           </Field>
         </div>
@@ -298,7 +298,7 @@ export default function CaseUploadForm({ scope, practiceOptions = [], onSuccess,
             type="text"
             value={form.patient_member_id}
             onChange={(e) => update('patient_member_id', e.target.value)}
-            className="w-full bg-white border border-border rounded-lg px-3 py-2 text-sm"
+            className="w-full bg-white border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-navy/40"
             placeholder="Plan-assigned member identifier"
           />
         </Field>
@@ -311,7 +311,7 @@ export default function CaseUploadForm({ scope, practiceOptions = [], onSuccess,
             value={form.procedure_codes}
             onChange={(e) => update('procedure_codes', e.target.value)}
             required
-            className="w-full bg-white border border-border rounded-lg px-3 py-2 text-sm font-mono"
+            className="w-full bg-white border border-border rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:border-navy/40"
             placeholder="70553, 99213"
           />
         </Field>
@@ -320,42 +320,43 @@ export default function CaseUploadForm({ scope, practiceOptions = [], onSuccess,
             type="text"
             value={form.procedure_description}
             onChange={(e) => update('procedure_description', e.target.value)}
-            className="w-full bg-white border border-border rounded-lg px-3 py-2 text-sm"
+            className="w-full bg-white border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-navy/40"
             placeholder="MRI lumbar spine without contrast"
           />
         </Field>
-        <Field label="Clinical justification" hint="Why is this medically necessary?">
+        <div>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="text-sm font-medium text-navy">Clinical justification <span className="text-red-500">*</span></label>
+            <span className={`text-xs tabular-nums ${form.clinical_question.trim().length >= 80 ? 'text-emerald-600 font-medium' : 'text-muted'}`}>
+              {form.clinical_question.trim().length} / min 40 chars
+            </span>
+          </div>
           <textarea
             value={form.clinical_question}
             onChange={(e) => update('clinical_question', e.target.value)}
             required
             rows={4}
-            className="w-full bg-white border border-border rounded-lg px-3 py-2 text-sm"
-            placeholder="Patient presents with..."
+            className="w-full bg-white border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-navy/40"
+            placeholder="Patient has documented chronic low back pain for 8 weeks despite conservative PT and NSAIDs. MRI requested to evaluate for..."
           />
-        </Field>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <p className="text-[11px] text-muted mt-1.5">
+            Strong clinical detail produces dramatically better AI briefs and faster determinations.
+          </p>
+        </div>
+        <div>
           <Field label="Service category">
-            <select
+            <CategorySelector
               value={form.service_category}
-              onChange={(e) => update('service_category', e.target.value)}
-              className="w-full bg-white border border-border rounded-lg px-3 py-2 text-sm"
-            >
-              {SERVICE_CATEGORIES.map((c) => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
+              onChange={(v) => update('service_category', v)}
+            />
           </Field>
+        </div>
+        <div>
           <Field label="Priority">
-            <select
+            <PrioritySelector
               value={form.priority}
-              onChange={(e) => update('priority', e.target.value as Priority)}
-              className="w-full bg-white border border-border rounded-lg px-3 py-2 text-sm"
-            >
-              <option value="standard">Standard</option>
-              <option value="urgent">Urgent</option>
-              <option value="expedited">Expedited</option>
-            </select>
+              onChange={(v) => update('priority', v)}
+            />
           </Field>
         </div>
       </Section>
@@ -369,7 +370,7 @@ export default function CaseUploadForm({ scope, practiceOptions = [], onSuccess,
                 step="0.01"
                 value={form.billed_amount}
                 onChange={(e) => update('billed_amount', e.target.value)}
-                className="w-full bg-white border border-border rounded-lg px-3 py-2 text-sm"
+                className="w-full bg-white border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-navy/40"
                 placeholder="1250.00"
               />
             </Field>
@@ -391,7 +392,7 @@ export default function CaseUploadForm({ scope, practiceOptions = [], onSuccess,
               value={form.denial_reason}
               onChange={(e) => update('denial_reason', e.target.value)}
               rows={3}
-              className="w-full bg-white border border-border rounded-lg px-3 py-2 text-sm"
+              className="w-full bg-white border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-navy/40"
               placeholder="Not medically necessary per policy XYZ-123..."
             />
           </Field>
@@ -405,7 +406,7 @@ export default function CaseUploadForm({ scope, practiceOptions = [], onSuccess,
               value={form.practice_id}
               onChange={(e) => update('practice_id', e.target.value)}
               required
-              className="w-full bg-white border border-border rounded-lg px-3 py-2 text-sm"
+              className="w-full bg-white border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-navy/40"
             >
               <option value="">— Select practice —</option>
               {practiceOptions.map((p) => (
@@ -417,52 +418,70 @@ export default function CaseUploadForm({ scope, practiceOptions = [], onSuccess,
       )}
 
       <Section title="Clinical documents">
-        <Field
-          label="Attach PDFs"
-          hint="Up to 5 files, 10 MB each. PDF only. Uploaded after the case is created."
-        >
-          <input
-            type="file"
-            accept="application/pdf"
-            multiple
-            onChange={(e) => handleFilesPicked(e.target.files)}
-            className="block w-full text-sm text-foreground file:mr-3 file:py-2 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-navy/5 file:text-navy hover:file:bg-navy/10 cursor-pointer"
-          />
+        <div>
+          <div className="text-sm font-medium text-navy mb-1.5">Attach PDFs (optional but recommended)</div>
+          <div
+            onDragOver={(e) => { e.preventDefault(); }}
+            onDragEnter={(e) => { e.preventDefault(); }}
+            onDrop={(e) => {
+              e.preventDefault();
+              handleFilesPicked(e.dataTransfer.files);
+            }}
+            onClick={() => document.getElementById('pdf-input')?.click()}
+            className="group border-2 border-dashed border-border hover:border-navy/60 rounded-2xl bg-white px-6 py-8 text-center cursor-pointer transition-all active:scale-[0.995]"
+          >
+            <div className="mx-auto mb-3 w-10 h-10 rounded-full bg-navy/5 flex items-center justify-center text-navy group-hover:bg-navy/10 transition">
+              📄
+            </div>
+            <div className="text-sm font-semibold text-navy">Drop PDFs here or click to browse</div>
+            <div className="text-[12px] text-muted mt-1">Maximum 5 files • 10 MB each • PDF only</div>
+            <input
+              id="pdf-input"
+              type="file"
+              accept="application/pdf"
+              multiple
+              className="hidden"
+              onChange={(e) => handleFilesPicked(e.target.files)}
+            />
+          </div>
+
           {files.length > 0 && (
-            <ul className="mt-2 space-y-1">
+            <div className="mt-3 space-y-1.5">
               {files.map((f, i) => (
-                <li key={`${f.name}-${i}`} className="flex items-center justify-between text-xs text-muted bg-gray-50 rounded px-3 py-1.5">
-                  <span className="font-mono truncate mr-3">{f.name}</span>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <span>{(f.size / 1024 / 1024).toFixed(2)} MB</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const next = files.filter((_, idx) => idx !== i);
-                        setFiles(next);
-                      }}
-                      className="text-red-600 hover:text-red-700 px-1"
-                      aria-label={`Remove ${f.name}`}
-                    >
-                      ✕
-                    </button>
+                <div key={`${f.name}-${i}`} className="flex items-center justify-between rounded-xl border border-border bg-white px-4 py-2.5 text-sm">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="text-navy">📄</div>
+                    <div className="min-w-0">
+                      <div className="font-medium text-navy truncate">{f.name}</div>
+                      <div className="text-[11px] text-muted tabular-nums">{(f.size / 1024 / 1024).toFixed(1)} MB</div>
+                    </div>
                   </div>
-                </li>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = files.filter((_, idx) => idx !== i);
+                      setFiles(next);
+                    }}
+                    className="text-xs font-medium text-red-600 hover:text-red-700 px-3 py-1 rounded-md hover:bg-red-50"
+                  >
+                    Remove
+                  </button>
+                </div>
               ))}
-            </ul>
+            </div>
           )}
-        </Field>
+        </div>
 
         <Field
-          label="Document description (optional)"
-          hint="Describe the supporting documents. If you attached PDFs above, this is additional context. If you couldn't attach files, describe what the concierge should request."
+          label="Additional document notes (optional)"
+          hint="Any extra context for the clinical reviewer about the attached files."
         >
           <textarea
             value={form.documents_description}
             onChange={(e) => update('documents_description', e.target.value)}
             rows={2}
-            className="w-full bg-white border border-border rounded-lg px-3 py-2 text-sm"
-            placeholder="Sleep study report, face-to-face evaluation notes, insurance card"
+            className="w-full bg-white border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-navy/40"
+            placeholder="Face-to-face notes, recent imaging, sleep study report..."
           />
         </Field>
       </Section>
@@ -530,9 +549,13 @@ export default function CaseUploadForm({ scope, practiceOptions = [], onSuccess,
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section>
-      <h3 className="text-xs uppercase tracking-wide text-muted font-semibold mb-3">{title}</h3>
-      <div className="space-y-3">{children}</div>
+    <section className="bg-surface border border-border rounded-xl p-5 shadow-sm">
+      <div className="flex items-center gap-2 mb-4">
+        <div className="h-px flex-1 bg-gradient-to-r from-navy/10 to-transparent" />
+        <h3 className="text-[11px] uppercase tracking-[1.5px] text-navy font-semibold">{title}</h3>
+        <div className="h-px flex-1 bg-gradient-to-l from-navy/10 to-transparent" />
+      </div>
+      <div className="space-y-4">{children}</div>
     </section>
   );
 }
@@ -540,9 +563,58 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="text-xs text-navy font-medium block mb-1.5">{label}</label>
+      <label className="text-sm font-medium text-navy block mb-1.5">{label}</label>
       {children}
-      {hint && <p className="text-[11px] text-muted mt-1">{hint}</p>}
+      {hint && <p className="text-[11px] text-muted mt-1.5 leading-tight">{hint}</p>}
+    </div>
+  );
+}
+
+// Premium visual selectors for TPA intake
+function PrioritySelector({ value, onChange }: { value: Priority; onChange: (v: Priority) => void }) {
+  const options: { val: Priority; label: string; desc: string; tone: string }[] = [
+    { val: 'standard', label: 'Standard', desc: 'Normal turnaround', tone: 'border-border bg-white text-foreground' },
+    { val: 'urgent', label: 'Urgent', desc: 'Expedited review', tone: 'border-amber-300 bg-amber-50 text-amber-900' },
+    { val: 'expedited', label: 'Expedited', desc: 'Fastest possible', tone: 'border-red-300 bg-red-50 text-red-900' },
+  ];
+  return (
+    <div className="grid grid-cols-3 gap-2">
+      {options.map((opt) => (
+        <button
+          key={opt.val}
+          type="button"
+          onClick={() => onChange(opt.val)}
+          className={`rounded-xl border px-3 py-3 text-left transition-all active:scale-[0.985] ${
+            value === opt.val
+              ? 'border-navy bg-navy text-white shadow-sm'
+              : `${opt.tone} hover:border-navy/40`
+          }`}
+        >
+          <div className={`text-sm font-semibold ${value === opt.val ? 'text-white' : ''}`}>{opt.label}</div>
+          <div className={`text-[11px] mt-0.5 ${value === opt.val ? 'text-white/70' : 'text-muted'}`}>{opt.desc}</div>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function CategorySelector({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+      {SERVICE_CATEGORIES.map((cat) => (
+        <button
+          key={cat}
+          type="button"
+          onClick={() => onChange(cat)}
+          className={`rounded-xl border px-3 py-2 text-sm font-medium transition-all active:scale-[0.985] text-left ${
+            value === cat
+              ? 'border-navy bg-navy text-white shadow-sm'
+              : 'border-border bg-white text-foreground hover:border-navy/40'
+          }`}
+        >
+          {cat}
+        </button>
+      ))}
     </div>
   );
 }
