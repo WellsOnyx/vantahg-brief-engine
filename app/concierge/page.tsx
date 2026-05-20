@@ -2,14 +2,22 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import {
+  PageDashboard,
+  PageHero,
+  PageEyebrow,
+  PageSectionHeading,
+  StatCard,
+} from '@/components/layouts/PageLayouts';
 
 /**
  * Concierge front-line dashboard.
  *
- * Lives at /concierge. Three columns:
- *   - Me (lines, capacity)
- *   - My clients (TPAs I cover)
- *   - My queue (active cases)
+ * Lives at /concierge. Surface stack:
+ *   - Hero band (greeting + queue summary)
+ *   - 4-up stat strip (load / queue / overdue / TPAs covered)
+ *   - 8/4 body: queue on the left, capacity + lines + TPAs on the right
+ *   - Help footer reinforcing the "AI brief, human gate" value prop
  *
  * Loads /api/concierge/me and /api/concierge/queue in parallel.
  * Demo-mode safe.
@@ -74,14 +82,24 @@ function slaPill(deadline: string | null): { label: string; tone: string } {
   return { label: `${Math.round(hours)}h left`, tone: 'bg-emerald-50 text-emerald-800 border-emerald-200' };
 }
 
+function timeOfDayGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 5) return 'Up late';
+  if (hour < 12) return 'Good morning';
+  if (hour < 18) return 'Good afternoon';
+  return 'Good evening';
+}
+
 export default function ConciergePage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [queue, setQueue] = useState<QueueCase[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  async function load() {
-    setLoading(true);
+  async function load(isRefresh = false) {
+    if (isRefresh) setRefreshing(true);
+    else setLoading(true);
     setError(null);
     try {
       const [profRes, queueRes] = await Promise.all([
@@ -108,6 +126,7 @@ export default function ConciergePage() {
       setError('Network error. Try again.');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }
 
@@ -117,130 +136,146 @@ export default function ConciergePage() {
 
   if (loading) {
     return (
-      <div className="py-10 md:py-16 bg-background min-h-screen">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-muted">Loading concierge view...</div>
-      </div>
+      <PageDashboard
+        hero={<PageHero eyebrow="Concierge" title="Loading…" subtitle="Pulling your lines and queue." />}
+      >
+        <PageDashboard.Stats>
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="card p-4">
+              <div className="skeleton skeleton-text" />
+              <div className="skeleton skeleton-heading" />
+            </div>
+          ))}
+        </PageDashboard.Stats>
+      </PageDashboard>
     );
   }
 
-  if (error) {
+  if (error || !profile) {
     return (
-      <div className="py-10 md:py-16 bg-background min-h-screen">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="rounded-lg bg-red-50 border border-red-200 text-red-800 px-4 py-3 text-sm">{error}</div>
+      <PageDashboard
+        hero={
+          <PageHero
+            eyebrow="Concierge"
+            title="We hit a snag"
+            subtitle={error ?? 'Could not load the concierge view.'}
+          />
+        }
+      >
+        <div className="card p-6 text-center">
+          <button onClick={() => load(true)} className="btn btn-primary">
+            Try again
+          </button>
         </div>
-      </div>
+      </PageDashboard>
     );
   }
 
-  if (!profile) return null;
-
+  const firstName = profile.name.split(' ')[0] || profile.name;
   const utilPct = Math.min(100, Math.round((profile.weekly_load / Math.max(1, profile.weekly_cap)) * 100));
   const utilTone = utilPct >= 90 ? 'bg-red-500' : utilPct >= 75 ? 'bg-amber-500' : 'bg-emerald-500';
 
   return (
-    <div className="py-10 md:py-16 bg-background min-h-screen">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
-        <header className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <p className="text-xs uppercase tracking-wide text-muted font-semibold">Concierge</p>
-            <h1 className="text-3xl md:text-4xl font-bold text-navy mt-1">Good morning, {profile.name.split(' ')[0]}</h1>
-            <p className="text-sm text-muted mt-2 max-w-2xl">
+    <PageDashboard
+      hero={
+        <PageHero
+          eyebrow="Concierge"
+          title={`${timeOfDayGreeting()}, ${firstName}`}
+          subtitle={
+            <>
               {profile.cases_in_queue} active {profile.cases_in_queue === 1 ? 'case' : 'cases'} in your queue
-              {profile.cases_overdue > 0 && (<span className="text-red-700 font-semibold"> · {profile.cases_overdue} overdue</span>)}
-              {' '}across {profile.active_clients.length} {profile.active_clients.length === 1 ? 'TPA' : 'TPAs'}.
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Link
-              href="/concierge/review"
-              className="inline-flex items-center gap-2 bg-navy text-gold px-4 py-2 rounded-lg text-sm font-semibold hover:bg-navy-light transition-colors shadow-sm"
-            >
-              AI Brief Review Queue
-              <span className="text-xs opacity-75">→</span>
-            </Link>
-            <button
-              onClick={() => void load()}
-              className="bg-white border border-border text-navy px-4 py-2 rounded-lg text-sm font-medium hover:border-navy/40"
-            >
-              Refresh
-            </button>
-          </div>
-        </header>
-
-        {/* Stats row */}
-        <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <Stat label="Weekly load" value={`${profile.weekly_load} / ${profile.weekly_cap}`} sub={`${utilPct}% of cap`} />
-          <Stat label="In queue" value={profile.cases_in_queue.toString()} />
-          <Stat label="Overdue" value={profile.cases_overdue.toString()} tone={profile.cases_overdue > 0 ? 'warn' : 'ok'} />
-          <Stat label="TPAs covered" value={profile.active_clients.length.toString()} />
-        </section>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left: my lines + clients */}
-          <aside className="space-y-6 lg:col-span-1">
-            <section className="bg-surface rounded-xl border border-border shadow-sm p-5">
-              <h2 className="text-sm font-bold text-navy uppercase tracking-wide mb-3">My lines</h2>
-              <ul className="text-sm space-y-2">
-                <Line label="Phone" value={profile.ringcentral_phone ?? '—'} mono />
-                {profile.ringcentral_extension && <Line label="Ext" value={profile.ringcentral_extension} mono />}
-                <Line label="Email" value={profile.intake_email ?? '—'} mono />
-                <Line label="eFax" value={profile.intake_efax ?? '—'} mono />
-              </ul>
-            </section>
-
-            <section className="bg-surface rounded-xl border border-border shadow-sm p-5">
-              <h2 className="text-sm font-bold text-navy uppercase tracking-wide mb-3">My capacity</h2>
-              <p className="text-3xl font-bold text-navy">{utilPct}%</p>
-              <p className="text-xs text-muted mb-3">{profile.weekly_load} auths this week of {profile.weekly_cap} cap</p>
-              <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                <div className={`h-full ${utilTone} transition-all`} style={{ width: `${utilPct}%` }} />
-              </div>
-              {utilPct >= 90 && (
-                <p className="text-xs text-red-700 mt-3 font-semibold">Near cap. Flag your DL to redistribute.</p>
+              {profile.cases_overdue > 0 && (
+                <span className="text-red-300 font-semibold"> · {profile.cases_overdue} overdue</span>
               )}
-            </section>
-
-            <section className="bg-surface rounded-xl border border-border shadow-sm p-5">
-              <h2 className="text-sm font-bold text-navy uppercase tracking-wide mb-3">My TPAs</h2>
-              {profile.active_clients.length === 0 ? (
-                <p className="text-sm text-muted">No clients assigned yet.</p>
-              ) : (
-                <ul className="space-y-2">
-                  {profile.active_clients.map((c) => (
-                    <li key={c.id} className="text-sm">
-                      <p className="font-semibold text-navy">{c.name}</p>
-                      {c.contact_email && <p className="text-xs text-muted font-mono">{c.contact_email}</p>}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
-          </aside>
-
-          {/* Right: queue */}
-          <section className="lg:col-span-2 bg-surface rounded-xl border border-border shadow-sm p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-navy">My queue</h2>
-              <span className="text-xs text-muted">{queue.length} active</span>
+              {' '}across {profile.active_clients.length}{' '}
+              {profile.active_clients.length === 1 ? 'TPA' : 'TPAs'}.
+            </>
+          }
+          actions={
+            <div className="flex items-center gap-2">
+              <Link
+                href="/concierge/review"
+                className="inline-flex items-center gap-2 bg-gold text-navy px-4 py-2 rounded-lg text-sm font-semibold hover:bg-gold-light transition-colors shadow-sm"
+              >
+                Brief review queue
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                  <polyline points="12 5 19 12 12 19" />
+                </svg>
+              </Link>
+              <button
+                onClick={() => load(true)}
+                disabled={refreshing}
+                className="text-xs px-3 py-2 rounded-lg border border-white/20 text-white/70 hover:text-white hover:border-white/40 disabled:opacity-50 transition"
+              >
+                {refreshing ? 'Refreshing…' : 'Refresh'}
+              </button>
             </div>
+          }
+        />
+      }
+    >
+      {/* ── Stats ────────────────────────────────────────────── */}
+      <PageDashboard.Stats>
+        <StatCard
+          label="Weekly load"
+          value={`${profile.weekly_load} / ${profile.weekly_cap}`}
+          hint={`${utilPct}% of cap`}
+          accent={utilPct >= 75}
+        />
+        <StatCard label="In queue" value={profile.cases_in_queue} />
+        <StatCard
+          label="Overdue"
+          value={profile.cases_overdue}
+          accent={profile.cases_overdue > 0}
+        />
+        <StatCard label="TPAs covered" value={profile.active_clients.length} />
+      </PageDashboard.Stats>
+
+      {/* ── Body: queue + lines/capacity ─────────────────────── */}
+      <PageDashboard.Body
+        main={
+          <div className="card p-5 md:p-6">
+            <PageSectionHeading
+              hint={<span className="text-xs text-muted">{queue.length} active</span>}
+            >
+              My queue
+            </PageSectionHeading>
             {queue.length === 0 ? (
-              <p className="text-sm text-muted py-8 text-center">Nothing in your queue. Nice.</p>
+              <div className="text-center py-12">
+                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-emerald-50 mb-3">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                </div>
+                <p className="text-sm text-navy font-semibold">Nothing in your queue.</p>
+                <p className="text-xs text-muted mt-1">Nice. Take a breath.</p>
+              </div>
             ) : (
               <ul className="divide-y divide-border">
                 {queue.map((c) => {
                   const sla = slaPill(c.turnaround_deadline);
                   return (
                     <li key={c.id} className="py-3 first:pt-0 last:pb-0">
-                      <Link href={`/cases/${c.id}`} className="block hover:bg-background -mx-2 px-2 py-2 rounded-lg transition-colors">
+                      <Link
+                        href={`/cases/${c.id}`}
+                        className="block hover:bg-background -mx-2 px-2 py-2 rounded-lg transition-colors"
+                      >
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <div className="min-w-0">
-                            <p className="font-mono text-xs text-muted">{c.case_number} · {c.client_name ?? '—'}</p>
+                            <p className="font-mono text-[11px] text-muted">
+                              {c.case_number}
+                              {c.client_name && <span> · {c.client_name}</span>}
+                            </p>
                             <p className="font-semibold text-navy truncate">{c.patient_name ?? '(no name)'}</p>
                             <p className="text-xs text-muted truncate">{c.procedure_description ?? '—'}</p>
                           </div>
                           <div className="flex items-center gap-1.5 shrink-0">
-                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border ${STATUS_PILL[c.status] ?? 'bg-gray-50 text-gray-700 border-gray-200'}`}>
+                            <span
+                              className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border ${
+                                STATUS_PILL[c.status] ?? 'bg-gray-50 text-gray-700 border-gray-200'
+                              }`}
+                            >
                               {STATUS_LABEL[c.status] ?? c.status}
                             </span>
                             <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border ${sla.tone}`}>
@@ -254,21 +289,79 @@ export default function ConciergePage() {
                 })}
               </ul>
             )}
-          </section>
-        </div>
-      </div>
-    </div>
-  );
-}
+          </div>
+        }
+        aside={
+          <div className="space-y-4">
+            {/* Capacity */}
+            <div className="card p-5">
+              <PageEyebrow>Capacity</PageEyebrow>
+              <p className="font-[family-name:var(--font-display)] text-4xl text-navy mt-2">{utilPct}%</p>
+              <p className="text-xs text-muted">
+                {profile.weekly_load} of {profile.weekly_cap} auths this week
+              </p>
+              <div className="h-2 bg-border rounded-full overflow-hidden mt-3">
+                <div className={`h-full ${utilTone} transition-all`} style={{ width: `${utilPct}%` }} />
+              </div>
+              {utilPct >= 90 && (
+                <p className="text-xs text-red-700 mt-3 font-semibold">
+                  Near cap. Flag your DL to redistribute.
+                </p>
+              )}
+            </div>
 
-function Stat({ label, value, sub, tone }: { label: string; value: string; sub?: string; tone?: 'ok' | 'warn' }) {
-  const ringClass = tone === 'warn' ? 'border-red-200 bg-red-50' : 'border-border bg-surface';
-  return (
-    <div className={`rounded-xl border shadow-sm px-4 py-3 ${ringClass}`}>
-      <p className="text-[11px] uppercase tracking-wide text-muted font-semibold">{label}</p>
-      <p className={`text-xl font-bold mt-1 ${tone === 'warn' ? 'text-red-800' : 'text-navy'}`}>{value}</p>
-      {sub && <p className="text-[11px] text-muted mt-0.5">{sub}</p>}
-    </div>
+            {/* Lines */}
+            <div className="card p-5">
+              <PageEyebrow>My lines</PageEyebrow>
+              <ul className="text-sm space-y-2 mt-3">
+                <Line label="Phone" value={profile.ringcentral_phone ?? '—'} mono />
+                {profile.ringcentral_extension && (
+                  <Line label="Ext" value={profile.ringcentral_extension} mono />
+                )}
+                <Line label="Email" value={profile.intake_email ?? '—'} mono />
+                <Line label="eFax" value={profile.intake_efax ?? '—'} mono />
+              </ul>
+            </div>
+
+            {/* TPAs */}
+            <div className="card p-5">
+              <PageEyebrow>My TPAs</PageEyebrow>
+              {profile.active_clients.length === 0 ? (
+                <p className="text-sm text-muted mt-3">No clients assigned yet.</p>
+              ) : (
+                <ul className="space-y-3 mt-3">
+                  {profile.active_clients.map((c) => (
+                    <li key={c.id} className="flex items-start gap-3">
+                      <div className="mt-1 w-1.5 h-1.5 rounded-full bg-gold flex-shrink-0" />
+                      <div className="min-w-0">
+                        <p className="font-semibold text-navy text-sm leading-tight">{c.name}</p>
+                        {c.contact_email && (
+                          <p className="text-[11px] text-muted font-mono">{c.contact_email}</p>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        }
+      />
+
+      {/* ── Help moment ──────────────────────────────────────── */}
+      <PageDashboard.Help>
+        <PageEyebrow>How it works on your side</PageEyebrow>
+        <h3 className="font-[family-name:var(--font-display)] text-xl text-navy mt-2">
+          AI did 95%. Your reasoning is what makes it defensible.
+        </h3>
+        <p className="text-sm text-muted mt-2 max-w-2xl">
+          When a case lands in <span className="font-semibold text-navy">brief_ready</span>, the
+          AI has already extracted facts, matched InterQual/MCG criteria, and drafted the brief.
+          You validate — capture your reasoning (≥30 chars), flag concerns — and route to LPN/RN/MD.
+          Your gate is the one that holds in audit.
+        </p>
+      </PageDashboard.Help>
+    </PageDashboard>
   );
 }
 
