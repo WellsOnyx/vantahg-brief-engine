@@ -4,6 +4,7 @@ import type {
   CreateUserResult,
   CreateUserError,
   UserSummary,
+  SessionUser,
 } from './types';
 
 /**
@@ -72,5 +73,10 @@ export class CognitoAuthAdapter implements AuthAdminAdapter {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async getUserByEmail(_email: string): Promise<UserSummary | null> {
     throw NOT_IMPLEMENTED('getUserByEmail');
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async getSessionUser(_requestOrHeaders: Request | Headers): Promise<SessionUser | null> {
+    throw NOT_IMPLEMENTED('getSessionUser');
   }
 }

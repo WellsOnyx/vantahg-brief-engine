@@ -65,6 +65,23 @@ export interface UserSummary {
   createdAt: Date;
 }
 
+/**
+ * Minimal session user shape returned to API routes.
+ * Adapters MUST normalize provider-specific fields onto this contract.
+ *
+ * - `id` is the canonical user identifier (Supabase: auth.users.id;
+ *   Cognito: sub).
+ * - `email` is always lowercased and trimmed.
+ * - `role` is the application-level role (e.g. 'admin', 'tpa', 'idr-attorney').
+ *   Adapters read it from Supabase user_metadata.role OR Cognito custom:role,
+ *   whichever is non-empty.
+ */
+export interface SessionUser {
+  id: string;
+  email: string;
+  role?: string;
+}
+
 export interface AuthAdminAdapter {
   /**
    * Idempotently provisions a user and generates a magic link they can
@@ -77,4 +94,18 @@ export interface AuthAdminAdapter {
 
   /** Returns null when the email is not registered. */
   getUserByEmail(email: string): Promise<UserSummary | null>;
+
+  /**
+   * Returns the authenticated user for the current request based on cookies,
+   * or null if unauthenticated. Adapters handle provider-specific cookie
+   * verification (Supabase: sb-*-auth-token via @supabase/ssr; Cognito:
+   * id_token cookie verified against JWKS).
+   *
+   * Pass either a `NextRequest` (preferred — cookies + headers available) or
+   * a Headers object (server components). Most API routes pass the
+   * NextRequest they already have.
+   */
+  getSessionUser(
+    requestOrHeaders: Request | Headers,
+  ): Promise<SessionUser | null>;
 }

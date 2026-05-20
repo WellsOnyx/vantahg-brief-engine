@@ -18,4 +18,11 @@ export function setAuthAdapter(adapter: AuthAdminAdapter | null): void {
   if (!adapter) cached = null;
 }
 
-export type { AuthAdminAdapter, CreateUserParams, CreateUserResult, CreateUserError, UserSummary } from './types';
+export type {
+  AuthAdminAdapter,
+  CreateUserParams,
+  CreateUserResult,
+  CreateUserError,
+  UserSummary,
+  SessionUser,
+} from './types';
