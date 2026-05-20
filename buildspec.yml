@@ -1,40 +1,54 @@
+# buildspec.yml
+# Arm64 build for the VantaUM Next.js app.
+# Intended to be used by the arm64 CodeBuild project defined in infra-aws/lib/build-stack.ts
+#
+# This ensures we never again rely on a local machine (Colima, Docker Desktop, etc.)
+# to produce the architecture-critical container image.
+
 version: 0.2
-
-# AWS CodeBuild buildspec for the vantaum-prod-app container image.
-# Runs on aws/codebuild/amazonlinux-aarch64-standard:3.0 (native arm64).
-# Replaces local Docker builds — local Colima emulates amd64 and silently
-# produces wrong-arch images, which crashed Fargate on every prior deploy.
-
-env:
-  variables:
-    AWS_REGION: us-east-1
-    ECR_REGISTRY: 309921834034.dkr.ecr.us-east-1.amazonaws.com
-    ECR_REPO: vantaum-prod-app
 
 phases:
   pre_build:
     commands:
       - echo "Logging into ECR..."
-      - aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$ECR_REGISTRY"
-      - SHA="${CODEBUILD_RESOLVED_SOURCE_VERSION:0:7}"
-      - echo "Resolved SHA short=$SHA"
+      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $ECR_REPOSITORY_URI
+      - COMMIT_SHA=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c1-7)
+      # Default tag for the v5 arm64 cutover. Can be overridden via environment variable if needed.
+      - IMAGE_TAG=${IMAGE_TAG:-${COMMIT_SHA:-v5-arm64}}
+      - echo "Building for linux/arm64 with tag: $IMAGE_TAG"
+
   build:
     commands:
-      - echo "Building image (native arm64 host, no emulation)..."
-      - docker build --platform linux/arm64 -t "$ECR_REPO:build" .
+      - echo "Building Docker image for linux/arm64..."
+      - docker build --platform linux/arm64 -t $ECR_REPOSITORY_URI:$IMAGE_TAG .
+      # Verification gate — refuse to push wrong-arch images.
+      # This is the load-bearing line. CodeBuild's arm64 runtime should always
+      # produce arm64, but cross-platform trickery has burned us before:
+      # `--platform linux/arm64` is just a tag, not a guarantee. We inspect the
+      # actual image metadata and fail the build loudly if it isn't arm64.
       - |
-        echo "Verifying architecture..."
-        ARCH=$(docker image inspect "$ECR_REPO:build" --format '{{.Architecture}}')
+        ARCH=$(docker image inspect "$ECR_REPOSITORY_URI:$IMAGE_TAG" --format '{{.Architecture}}')
         echo "Built image architecture: $ARCH"
         if [ "$ARCH" != "arm64" ]; then
           echo "FATAL: image is $ARCH, expected arm64. Refusing to push."
           exit 1
         fi
-      - docker tag "$ECR_REPO:build" "$ECR_REGISTRY/$ECR_REPO:$SHA"
-      - docker tag "$ECR_REPO:build" "$ECR_REGISTRY/$ECR_REPO:latest-arm64"
+
   post_build:
     commands:
-      - echo "Pushing tags $SHA and latest-arm64..."
-      - docker push "$ECR_REGISTRY/$ECR_REPO:$SHA"
-      - docker push "$ECR_REGISTRY/$ECR_REPO:latest-arm64"
-      - echo "Done. Image pushed for SHA=$SHA"
+      - echo "Pushing image..."
+      - docker push $ECR_REPOSITORY_URI:$IMAGE_TAG
+      - echo "Successfully pushed arm64 image: $ECR_REPOSITORY_URI:$IMAGE_TAG"
+      # Write the image URI to an artifact file so downstream steps (or manual deploys) can consume it easily
+      - echo "IMAGE_URI=$ECR_REPOSITORY_URI:$IMAGE_TAG" > image.env
+      - echo "Build completed successfully."
+
+artifacts:
+  files:
+    - image.env
+  name: arm64-image-metadata
+
+cache:
+  paths:
+    - /root/.npm
+    - /root/.cache

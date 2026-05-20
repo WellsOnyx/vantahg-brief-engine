@@ -7,6 +7,7 @@ import { AuthStack } from '../lib/auth-stack';
 import { EmailStack } from '../lib/email-stack';
 import { ComputeStack } from '../lib/compute-stack';
 import { CronStack } from '../lib/cron-stack';
+import { BuildStack } from '../lib/build-stack';
 
 /**
  * CDK app entrypoint.
@@ -74,4 +75,12 @@ new CronStack(app, `${appName}-cron`, {
   env,
   envName,
   albDnsName: computeStack.loadBalancer.loadBalancerDnsName,
+});
+
+// BuildStack provides the arm64 CodeBuild project so we are never dependent
+// on a local machine for producing verified arm64 container images.
+new BuildStack(app, `${appName}-build`, {
+  env,
+  envName,
+  appRepositoryName: `${appName}-app`,
 });
