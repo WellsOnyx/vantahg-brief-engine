@@ -7,6 +7,7 @@ import {
   type AttributeType,
 } from '@aws-sdk/client-cognito-identity-provider';
 import { createRemoteJWKSet, jwtVerify, type JWTPayload } from 'jose';
+import { stashSession, consumeSession } from './session-stash';
 import type {
   AuthAdminAdapter,
   CreateUserParams,
@@ -145,11 +146,13 @@ export class CognitoAuthAdapter implements AuthAdminAdapter {
     }
 
     // Kick off the custom auth flow — create-auth-challenge Lambda will email
-    // the link `${APP_URL}/api/auth/callback?code=…&user=…`. We don't have
-    // access to the OTP, so we return a placeholder magicLink string; callers
-    // who need the link itself should pull from the user's inbox.
+    // the link `${APP_URL}/api/auth/callback?code=…&user=…`. AdminInitiateAuth
+    // returns an opaque `Session` token that we must hand back to Cognito
+    // along with the user's code at RespondToAuthChallenge time. We stash
+    // it now keyed by sub so /api/auth/callback can retrieve it.
+    let cognitoSession: string | undefined;
     try {
-      await client().send(
+      const initRes = await client().send(
         new AdminInitiateAuthCommand({
           UserPoolId: USER_POOL_ID,
           ClientId: CLIENT_ID,
@@ -157,6 +160,7 @@ export class CognitoAuthAdapter implements AuthAdminAdapter {
           AuthParameters: { USERNAME: email },
         }),
       );
+      cognitoSession = initRes.Session;
     } catch (err) {
       return {
         ok: false,
@@ -168,6 +172,15 @@ export class CognitoAuthAdapter implements AuthAdminAdapter {
     // Look up sub for the userId field. AdminCreateUser response usually
     // returns it but we conservatively re-fetch.
     const sub = await this.subForEmail(email);
+
+    if (cognitoSession && sub) {
+      try {
+        await stashSession(sub, cognitoSession, email);
+      } catch {
+        // Non-fatal: the user will get the email but redemption may fail.
+        // The next AdminInitiateAuth retry (or magic link re-send) will overwrite.
+      }
+    }
     return {
       ok: true,
       userId: sub ?? email,
@@ -233,9 +246,32 @@ export class CognitoAuthAdapter implements AuthAdminAdapter {
   }
 
   /**
-   * Caller-facing helper used by /api/auth/callback to redeem a challenge
-   * code from the magic-link email. Returns the session payload that
-   * should be set as the `vantaum_session` cookie, or an error.
+   * Caller-facing helper used by /api/auth/callback to redeem a magic-link
+   * click. Given the `sub` and `code` from the URL, we retrieve the stashed
+   * Cognito Session, hand it to RespondToAuthChallenge with the code as
+   * the ANSWER, and return the session payload to set as the
+   * `vantaum_session` cookie.
+   */
+  async redeemMagicLink(params: {
+    sub: string;
+    code: string;
+  }): Promise<{ ok: true; cookie: SessionCookiePayload } | { ok: false; message: string }> {
+    if (!CLIENT_ID) return { ok: false, message: 'COGNITO_CLIENT_ID not configured' };
+    const stashed = await consumeSession(params.sub);
+    if (!stashed?.session) {
+      return { ok: false, message: 'No active challenge for this user. Request a new magic link.' };
+    }
+    return this.respondToChallenge({
+      username: stashed.username,
+      session: stashed.session,
+      code: params.code,
+    });
+  }
+
+  /**
+   * Lower-level helper that wraps RespondToAuthChallenge directly. Most
+   * callers should use redeemMagicLink, which sources the Session token
+   * from the server-side stash.
    */
   async respondToChallenge(params: {
     username: string;

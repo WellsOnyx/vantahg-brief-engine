@@ -18,7 +18,9 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.74.0",
     "@aws-sdk/client-cognito-identity-provider": "^3.1050.0",
+    "@aws-sdk/client-dynamodb": "^3.1050.0",
     "@aws-sdk/client-s3": "^3.1045.0",
+    "@aws-sdk/lib-dynamodb": "^3.1050.0",
     "@aws-sdk/s3-request-presigner": "^3.1045.0",
     "@dropbox/sign": "^1.10.0",
     "@sentry/nextjs": "^10.39.0",

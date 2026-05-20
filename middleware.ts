@@ -21,6 +21,8 @@ const PUBLIC_EXACT = new Set([
   '/api/external/submit',
   '/api/intake/efax', // generic webhook (HMAC-protected, see app/api/intake/efax/route.ts)
   '/api/intake/email', // email intake webhook
+  '/api/auth/callback', // Cognito magic-link landing — user is unauthenticated by definition
+  '/api/auth/request-magic-link', // unauthenticated by definition; rate-limited internally
 ]);
 
 // Public API prefixes whose sub-paths are themselves public. The trailing
