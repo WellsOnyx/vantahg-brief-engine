@@ -212,16 +212,10 @@ export async function POST(
       getRequestContext(request),
     );
 
-    // Item 17: Fire-and-forget email to TPA signer (basic notification)
-    // In production this should use a proper template + the email adapter
+    // Phase 1 #17: Fire the new branded notification helper (replaces previous inline logic)
     if (!envelope.demo) {
-      import('@/lib/adapters/email').then(({ getEmailAdapter }) => {
-        const email = getEmailAdapter();
-        email.send({
-          to: tpaSignerEmail,
-          subject: `Action Required: Sign your VantaUM MSA + BAA`,
-          text: `Please sign the VantaUM Master Services Agreement for ${signup.legal_name}. Link: ${process.env.NEXT_PUBLIC_APP_URL || 'https://app.vantaum.com'}/login`,
-        }).catch(() => {});
+      import('@/lib/notifications').then(({ notifyContractSentForSignature }) => {
+        notifyContractSentForSignature(signup.id).catch(() => {});
       });
     }
 
