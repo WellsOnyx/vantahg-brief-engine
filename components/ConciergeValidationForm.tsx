@@ -93,29 +93,29 @@ export function ConciergeValidationForm({ onSubmit, isSubmitting, caseNumber, fa
   const charPercentage = Math.min((charCount / MAX_CHARS) * 100, 100);
 
   return (
-    <div className="bg-surface rounded-xl border border-border shadow-sm animate-slide-up">
-      <div className="p-5 border-b border-border bg-emerald-50/60">
+    <div className="bg-surface border border-border rounded-2xl shadow-sm overflow-hidden animate-slide-up">
+      <div className="p-5 border-b border-border bg-emerald-50/80">
         <div className="flex items-start gap-3">
-          <div className="w-9 h-9 rounded-lg bg-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
+          <div className="w-9 h-9 rounded-xl bg-emerald-600 flex items-center justify-center shrink-0 mt-0.5 ring-1 ring-emerald-700/30">
             <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
           <div className="min-w-0 flex-1">
-            <h3 className="font-[family-name:var(--font-dm-serif)] text-xl text-navy">
+            <h3 className="font-[family-name:var(--font-dm-serif)] text-2xl text-navy tracking-[-0.5px]">
               Validate AI Clinical Brief
             </h3>
-            <p className="text-sm text-emerald-800 mt-1">
-              AI handled 95% (extraction + brief + deterministic multi-source fact-check). Your required reasoning — including explicit fact-check acknowledgment when quality flags are raised — is the human gate that makes every determination clinically defensible.
+            <p className="text-sm text-emerald-900 mt-1 leading-snug">
+              AI handled 95%. Your required reasoning is the human gate that makes every determination clinically defensible.
             </p>
             {caseNumber && (
-              <p className="text-xs text-muted font-mono mt-1">Case {caseNumber}</p>
+              <p className="text-xs text-muted font-mono mt-1.5">Case {caseNumber}</p>
             )}
           </div>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="p-5 space-y-6">
+      <form onSubmit={handleSubmit} className="p-6 space-y-7">
         {/* Rationale — the core required human input */}
         <div>
           <label htmlFor="concierge-rationale" className="block text-sm font-semibold text-foreground mb-1.5">
@@ -220,31 +220,35 @@ export function ConciergeValidationForm({ onSubmit, isSubmitting, caseNumber, fa
 
         {/* Optional structured flags for clean handoff to clinical team */}
         <div>
-          <div className="text-sm font-semibold text-foreground mb-2">Handoff Flags (optional but helpful)</div>
-          <div className="flex flex-wrap gap-2">
-            {VALIDATION_FLAGS.map((flag) => {
-              const active = selectedFlags.includes(flag.key);
-              return (
-                <button
-                  key={flag.key}
-                  type="button"
-                  onClick={() => toggleFlag(flag.key)}
-                  disabled={isSubmitting}
-                  className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
-                    active
-                      ? 'bg-emerald-100 border-emerald-300 text-emerald-800'
-                      : 'bg-white border-border text-muted hover:border-emerald-200 hover:text-emerald-700'
-                  }`}
-                >
-                  {active && (
-                    <svg className="w-3.5 h-3.5 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 10l7-7m0 0l7 7" />
-                    </svg>
-                  )}
-                  {flag.label}
-                </button>
-              );
-            })}
+          <div>
+            <div className="text-sm font-semibold text-foreground mb-3">Handoff Quality Signals (optional)</div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {VALIDATION_FLAGS.map((flag) => {
+                const active = selectedFlags.includes(flag.key);
+                return (
+                  <button
+                    key={flag.key}
+                    type="button"
+                    onClick={() => toggleFlag(flag.key)}
+                    disabled={isSubmitting}
+                    className={`rounded-xl border px-4 py-3 text-left text-sm transition-all active:scale-[0.985] ${
+                      active
+                        ? 'border-emerald-400 bg-emerald-50 text-emerald-900 ring-1 ring-emerald-400/30'
+                        : 'border-border bg-white text-foreground hover:border-emerald-200'
+                    }`}
+                  >
+                    <div className="font-medium">{flag.label}</div>
+                    <div className="text-[11px] text-muted mt-0.5">
+                      {flag.key === 'extraction_accurate' && 'Key facts pulled correctly'}
+                      {flag.key === 'clinical_context_clear' && 'Enough context for reviewer'}
+                      {flag.key === 'documents_complete' && 'No obvious missing files'}
+                      {flag.key === 'minor_gaps' && 'Flagged for downstream attention'}
+                      {flag.key === 'needs_deeper_review' && 'Recommend MD-level scrutiny'}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
           </div>
           <p className="text-[11px] text-muted mt-2">These travel with the case into the clinical review queue for better triage.</p>
         </div>
