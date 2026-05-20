@@ -7,6 +7,22 @@ import { Construct } from 'constructs';
 export interface BuildStackProps extends cdk.StackProps {
   envName: string;
   appRepositoryName: string; // e.g. "vantaum-prod-app"
+  /**
+   * ARN of the CodeConnections GitHub connection authorizing CodeBuild to
+   * clone the source repo. Created once per account+region via the Developer
+   * Tools console (Settings → Connections → Create connection → GitHub).
+   * The connection must be in `Available` state before the project can build.
+   *
+   * Required because the legacy OAuth-per-account credential is deprecated;
+   * CodeConnections (formerly CodeStar Connections) is the modern auth path.
+   */
+  githubConnectionArn: string;
+  /** GitHub owner. e.g. "WellsOnyx" */
+  githubOwner: string;
+  /** GitHub repo (no owner prefix). e.g. "vantahg-brief-engine" */
+  githubRepo: string;
+  /** Default branch the project tracks; per-build overrides via --source-version. */
+  defaultBranch?: string;
 }
 
 /**
@@ -24,7 +40,14 @@ export class BuildStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: BuildStackProps) {
     super(scope, id, props);
 
-    const { envName, appRepositoryName } = props;
+    const {
+      envName,
+      appRepositoryName,
+      githubConnectionArn,
+      githubOwner,
+      githubRepo,
+      defaultBranch = 'main',
+    } = props;
 
     // Reference the existing app ECR repository (created / managed by ComputeStack / earlier deploys)
     const appRepository = ecr.Repository.fromRepositoryName(
@@ -51,6 +74,14 @@ export class BuildStack extends cdk.Stack {
       }),
     );
 
+    // CodeConnections needs to be used by the build role to clone the source repo.
+    buildRole.addToPolicy(
+      new iam.PolicyStatement({
+        actions: ['codeconnections:UseConnection', 'codestar-connections:UseConnection'],
+        resources: [githubConnectionArn],
+      }),
+    );
+
     // CloudWatch Logs permissions (standard for CodeBuild)
     buildRole.addManagedPolicy(
       iam.ManagedPolicy.fromAwsManagedPolicyName('CloudWatchLogsFullAccess'),
@@ -59,23 +90,23 @@ export class BuildStack extends cdk.Stack {
     // The actual arm64 build project
     // Using native arm64 compute so we never get silent amd64 images again.
     //
-    // Source: GitHub. We pin to the repo but leave the ref/branch to be supplied
-    // at start-build time via sourceVersion (commit SHA or branch name). That
-    // lets us build any branch/commit on demand without redeploying CDK.
+    // Source auth uses the modern CodeConnections (formerly CodeStar
+    // Connections) GitHub integration via `connectionArn`. We construct the
+    // source with `Source.gitHub` then patch the underlying CloudFormation
+    // resource to set `Auth.Type=CODECONNECTIONS` with the ARN — the L2
+    // construct doesn't yet expose `connectionArn` as a typed prop, but the
+    // L1 override is type-safe and stable.
     //
-    // Auth: relies on a per-account GitHub OAuth/PAT connection that must be
-    // configured ONCE in the CodeBuild console (Settings → Source providers).
-    // If not set up yet, the first start-build will return AccessDeniedException
-    // — see runbook in docs for the 1-click console wiring.
+    // `--source-version` at start-build time can target any commit or branch
+    // without redeploying CDK.
     this.arm64BuildProject = new codebuild.Project(this, 'Arm64AppBuild', {
       projectName: `vantaum-${envName}-arm64-app-build`,
       description: 'Builds the VantaUM Next.js app as a linux/arm64 Docker image and pushes to ECR',
       role: buildRole,
       source: codebuild.Source.gitHub({
-        owner: 'WellsOnyx',
-        repo: 'vantahg-brief-engine',
-        // Default branch ref — overridden per build via --source-version
-        branchOrRef: 'claude/roadmap-20260518',
+        owner: githubOwner,
+        repo: githubRepo,
+        branchOrRef: defaultBranch,
         cloneDepth: 1,
       }),
       environment: {
@@ -101,6 +132,16 @@ export class BuildStack extends cdk.Stack {
       },
       buildSpec: codebuild.BuildSpec.fromSourceFilename('buildspec.yml'),
       timeout: cdk.Duration.minutes(30),
+    });
+
+    // L1 patch: switch the GitHub source from the legacy OAuth auth to
+    // CodeConnections. The L2 construct generates the project with no auth
+    // block; we add Auth.Type=CODECONNECTIONS pointing at the connection ARN
+    // so CodeBuild can clone the repo via the modern path.
+    const cfnProject = this.arm64BuildProject.node.defaultChild as codebuild.CfnProject;
+    cfnProject.addPropertyOverride('Source.Auth', {
+      Type: 'CODECONNECTIONS',
+      Resource: githubConnectionArn,
     });
 
     // Output the project name so it can be referenced in pipelines or scripts
