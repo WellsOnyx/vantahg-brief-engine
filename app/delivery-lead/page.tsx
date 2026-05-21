@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { SlaTracker } from '@/components/SlaTracker';
+import { PageDashboard, PageHero, PageSectionHeading, StatCard } from '@/components/layouts/PageLayouts';
 
 /**
  * Delivery Lead Operations & Workload Layer (items ~36-45 track)
@@ -83,6 +84,17 @@ export default function DeliveryLeadPage() {
   const [selectedForFlag, setSelectedForFlag] = useState<UrgentCase | null>(null);
   const [flagReason, setFlagReason] = useState('');
 
+  // Reassign modal state — forces a human reason on every move (audit + defensibility)
+  type ReassignTarget = {
+    clientId: string;
+    clientName: string;
+    toConciergeId: string;
+    toName: string;
+    fromName?: string;
+  };
+  const [reassignTarget, setReassignTarget] = useState<ReassignTarget | null>(null);
+  const [reassignReason, setReassignReason] = useState('');
+
   // Local demo state for instant UX after reassign (no full reload flicker)
   const [localConcierges, setLocalConcierges] = useState<Concierge[] | null>(null);
 
@@ -137,28 +149,46 @@ export default function DeliveryLeadPage() {
     return 1;
   });
 
-  // Smart rebalance suggestions (computed from current loads — automation layer)
+  // Smart rebalance suggestions — real, data-driven (no name hardcoding)
+  // Picks the most overloaded concierge with clients, then the best underloaded target with spare headroom.
   const suggestions: ReassignSuggestion[] = [];
   if (concierges.length >= 2) {
-    // Example: Jordan is crushed (95%), Sam has headroom
-    const jordan = concierges.find((c) => c.name.includes('Jordan'));
-    const sam = concierges.find((c) => c.name.includes('Sam'));
-    if (jordan && sam && jordan.clients && jordan.clients.length) {
-      const candidate = jordan.clients[0];
-      suggestions.push({
-        from: jordan.name,
-        to: sam.name,
-        clientName: candidate.name,
-        clientId: candidate.id,
-        volume: candidate.expected_weekly,
-        reason: `Jordan at ${Math.round(jordan.utilization * 100)}% — move ${candidate.expected_weekly}/wk to Sam (${Math.round(sam.utilization * 100)}%)`,
-      });
+    const sortedByLoad = [...concierges].sort((a, b) => b.utilization - a.utilization);
+    const overloaded = sortedByLoad.find((c) => c.utilization >= 0.75 && c.clients && c.clients.length > 0);
+
+    if (overloaded) {
+      const others = concierges
+        .filter((c) => c.id !== overloaded.id)
+        .sort((a, b) => a.utilization - b.utilization);
+
+      for (const candidateClient of overloaded.clients ?? []) {
+        const target = others.find((t) => {
+          const spare = t.weekly_auth_cap - t.estimated_weekly_load;
+          return spare >= candidateClient.expected_weekly && t.utilization < 0.8;
+        });
+
+        if (target) {
+          suggestions.push({
+            from: overloaded.name,
+            to: target.name,
+            clientName: candidateClient.name,
+            clientId: candidateClient.id,
+            volume: candidateClient.expected_weekly,
+            reason: `${overloaded.name} at ${Math.round(overloaded.utilization * 100)}% — move ${candidateClient.expected_weekly}/wk to ${target.name} (${Math.round(target.utilization * 100)}%, ${Math.round((target.weekly_auth_cap - target.estimated_weekly_load) - candidateClient.expected_weekly)} headroom left)`,
+          });
+          break; // one high-signal suggestion is enough for the DL surface
+        }
+      }
     }
   }
 
-  async function performReassign(clientId: string, toConciergeId: string, clientName: string) {
+  async function performReassign(clientId: string, toConciergeId: string, clientName: string, reason?: string) {
     setReassigning(clientId);
     setActionMsg(null);
+    const finalReason = (reason && reason.trim().length > 3)
+      ? reason.trim()
+      : 'Delivery Lead pod rebalance';
+
     try {
       const res = await fetch('/api/delivery/concierges', {
         method: 'POST',
@@ -167,7 +197,7 @@ export default function DeliveryLeadPage() {
           action: 'reassign_client',
           client_id: clientId,
           to_concierge_id: toConciergeId,
-          reason: 'Delivery Lead pod rebalance',
+          reason: finalReason,
         }),
       });
 
@@ -232,86 +262,140 @@ export default function DeliveryLeadPage() {
   }
 
   async function flagForSecondLook(uc: UrgentCase, conciergeId: string) {
-    // Quality flagging + second-look flow
-    // In production this would POST to /api/quality/audits or /api/cases/[id]/edit with special note + audit "second_look_requested"
-    // Here we simulate the white-glove action and surface success.
     const reason = flagReason.trim() || 'Delivery Lead requested second look on intake quality / SLA risk';
-    setActionMsg(`Second-look flag recorded for ${uc.case_number}. Reason: "${reason}". Audit trail created. Concierge + senior reviewer notified (simulated).`);
-    setSelectedForFlag(null);
-    setFlagReason('');
 
-    // Could also call a real endpoint here in future; for V1 demo this is sufficient and defensible.
-    // Optionally bump the case in local state or refresh.
-    if (data?.demo) {
-      // leave as-is; DL can refresh to clear visual
+    try {
+      const res = await fetch('/api/delivery/concierges', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'flag_second_look',
+          case_id: uc.id,
+          concierge_id: conciergeId,
+          reason,
+        }),
+      });
+
+      const json = await res.json();
+      if (!res.ok) {
+        setActionMsg(`Flag failed: ${json.error || 'unknown'}`);
+      } else {
+        setActionMsg(json.message || `Second-look flag recorded for ${uc.case_number}. Reason: "${reason}". Audit trail created.`);
+      }
+    } catch {
+      setActionMsg('Network error while recording second-look flag. The case is still flagged locally in this session.');
+    } finally {
+      setSelectedForFlag(null);
+      setFlagReason('');
     }
   }
 
   const handleQuickReassign = (sug: ReassignSuggestion) => {
     const target = concierges.find((c) => c.name === sug.to);
     if (target) {
-      void performReassign(sug.clientId, target.id, sug.clientName);
+      setReassignTarget({
+        clientId: sug.clientId,
+        clientName: sug.clientName,
+        toConciergeId: target.id,
+        toName: target.name,
+        fromName: sug.from,
+      });
+      setReassignReason('');
     }
   };
 
+  // Open the reason-forced reassign modal (used by all manual/quick paths)
+  function openReassignModal(clientId: string, clientName: string, toConciergeId: string, toName: string, fromName?: string) {
+    setReassignTarget({ clientId, clientName, toConciergeId, toName, fromName });
+    setReassignReason('');
+  }
+
+  // Execute after the DL has provided a reason
+  function confirmReassignWithReason() {
+    if (!reassignTarget) return;
+    const reason = reassignReason.trim();
+    if (reason.length < 8) {
+      setActionMsg('Please provide a short reason (min ~8 characters) for the audit record.');
+      return;
+    }
+    void performReassign(
+      reassignTarget.clientId,
+      reassignTarget.toConciergeId,
+      reassignTarget.clientName,
+      reason
+    );
+    setReassignTarget(null);
+    setReassignReason('');
+  }
+
   return (
-    <div className="py-10 md:py-16 bg-background min-h-screen">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
-        {/* Header — white-glove, calm authority */}
-        <header className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <p className="text-xs uppercase tracking-[2px] text-muted font-semibold">Delivery Operations • Pod Leadership</p>
-            <h1 className="text-4xl md:text-5xl font-bold text-navy mt-1 tracking-tight">Delivery Lead Dashboard</h1>
-            <p className="text-[15px] text-muted mt-3 max-w-3xl">
-              Full visibility into your concierge pod. Heavy automation handles routing and load math — you review, rebalance, and flag only when human judgment is required. 300 auths/week cap per concierge.
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => void load()}
-              disabled={refreshing}
-              className="bg-white border border-border text-navy px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-navy/5 active:bg-navy/10 disabled:opacity-60 transition"
-            >
-              {refreshing ? 'Syncing…' : 'Refresh Pod'}
-            </button>
-            {data?.demo && (
-              <span className="text-[10px] uppercase tracking-widest font-mono bg-amber-100 text-amber-900 border border-amber-200 px-3 py-1 rounded-full">DEMO — LIVE SIMULATION</span>
-            )}
-          </div>
-        </header>
+    <PageDashboard
+      hero={
+        <PageHero
+          eyebrow="Delivery Operations • Pod Leadership"
+          title="Delivery Lead Dashboard"
+          subtitle="Full visibility into your concierge pod. Heavy automation handles routing and load math — you review, rebalance, and flag only when human judgment is required. 300 auths/week cap per concierge."
+          actions={
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => void load()}
+                disabled={refreshing}
+                className="bg-white/10 hover:bg-white/20 border border-white/30 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition disabled:opacity-60"
+              >
+                {refreshing ? 'Syncing…' : 'Refresh Pod'}
+              </button>
+              {data?.demo && (
+                <span className="text-[10px] uppercase tracking-widest font-mono bg-amber-400/90 text-amber-950 border border-amber-300 px-3 py-1 rounded-full">DEMO — LIVE SIMULATION</span>
+              )}
+            </div>
+          }
+        />
+      }
+    >
+      {error && (
+        <div className="rounded-2xl bg-red-50 border border-red-200 text-red-800 px-5 py-3 text-sm mb-6">
+          {error}
+        </div>
+      )}
+      {actionMsg && (
+        <div className="rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 px-5 py-3 text-sm flex items-center gap-2 mb-6">
+          {actionMsg}
+          <button onClick={() => setActionMsg(null)} className="ml-auto text-emerald-700 hover:underline">Dismiss</button>
+        </div>
+      )}
 
-        {error && <div className="rounded-2xl bg-red-50 border border-red-200 text-red-800 px-5 py-3 text-sm">{error}</div>}
-        {actionMsg && (
-          <div className="rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 px-5 py-3 text-sm flex items-center gap-2">
-            {actionMsg}
-            <button onClick={() => setActionMsg(null)} className="ml-auto text-emerald-700 hover:underline">Dismiss</button>
-          </div>
-        )}
-
-        {/* POD HEALTH — SLA + Capacity at a glance (no manual calculation) */}
-        <section>
-          <div className="flex items-baseline justify-between mb-3">
-            <h2 className="text-xl font-semibold text-navy">Pod Health</h2>
-            <p className="text-xs text-muted">Live aggregate across your {concierges.length} concierges</p>
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-            <Stat label="Active cases" value={pod?.total_active_cases?.toString() ?? concierges.reduce((s, c) => s + (c.sla?.total ?? 0), 0).toString()} />
-            <Stat label="Utilization" value={`${Math.round(aggregateUtil * 100)}%`} sub={`${totalLoad} / ${totalCap} weekly`} />
-            <Stat label="At capacity (≥90%)" value={atCapacity.toString()} tone={atCapacity > 0 ? 'warn' : 'ok'} />
-            <Stat label="Critical / Overdue" value={`${podCritical + podOverdue}`} tone={(podCritical + podOverdue) > 0 ? 'warn' : 'ok'} sub="Immediate attention" />
-            <Stat label="At-risk (any urgency)" value={podAtRisk.toString()} tone={podAtRisk > 5 ? 'warn' : 'ok'} />
-          </div>
-        </section>
+      {/* POD HEALTH — now using the design system Stats + StatCard */}
+      <PageDashboard.Stats>
+        <StatCard
+          label="Active cases"
+          value={pod?.total_active_cases?.toString() ?? concierges.reduce((s, c) => s + (c.sla?.total ?? 0), 0).toString()}
+        />
+        <StatCard
+          label="Utilization"
+          value={`${Math.round(aggregateUtil * 100)}%`}
+          hint={`${totalLoad} / ${totalCap} weekly`}
+        />
+        <StatCard
+          label="At capacity (≥90%)"
+          value={atCapacity.toString()}
+          hint={atCapacity > 0 ? 'Review load' : 'Healthy'}
+        />
+        <StatCard
+          label="Critical / Overdue"
+          value={`${podCritical + podOverdue}`}
+          hint="Immediate attention"
+        />
+      </PageDashboard.Stats>
 
         {/* TEAM WORKLOAD — capacity + clients + urgency per concierge */}
         <section className="bg-surface rounded-3xl border border-border p-8 shadow-sm">
           <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-2xl font-semibold text-navy">Concierge Team Workload</h2>
-              <p className="text-sm text-muted mt-1">Each row = one concierge + their assigned clients + live SLA risk. Reassignments are one click.</p>
-            </div>
-            {data?.demo && <span className="uppercase text-[10px] tracking-widest px-3 py-1 rounded-full border bg-white text-muted">Simulated live data</span>}
+            <PageSectionHeading
+              hint={data?.demo ? 'Simulated live data' : `${concierges.length} active concierges`}
+            >
+              Concierge Team Workload
+            </PageSectionHeading>
+            <p className="text-sm text-muted">Each row = one concierge + their assigned clients + live SLA risk. Reassignments are one click.</p>
           </div>
 
           {concierges.length === 0 ? (
@@ -378,7 +462,7 @@ export default function DeliveryLeadPage() {
                             const others = concierges.filter((x) => x.id !== c.id && x.utilization < 0.85);
                             if (c.clients && c.clients.length && others.length) {
                               const target = others.sort((a, b) => a.utilization - b.utilization)[0];
-                              void performReassign(c.clients[0].id, target.id, c.clients[0].name);
+                              openReassignModal(c.clients[0].id, c.clients[0].name, target.id, target.name, c.name);
                             } else {
                               setActionMsg('No suitable target concierge with spare capacity right now.');
                             }
@@ -428,11 +512,10 @@ export default function DeliveryLeadPage() {
         {/* SLA ALERTS BOARD — unified urgency across entire pod */}
         <section className="bg-white rounded-3xl border border-border p-8">
           <div className="flex justify-between items-baseline mb-5">
-            <div>
-              <h2 className="text-2xl font-semibold text-navy">Pod SLA Alerts</h2>
-              <p className="text-sm text-muted">All cases in warning, critical, or overdue status from your concierges. Sorted by deadline.</p>
-            </div>
-            <div className="text-xs text-muted">{allUrgentCases.length} items requiring attention</div>
+            <PageSectionHeading hint={`${allUrgentCases.length} items requiring attention`}>
+              Pod SLA Alerts
+            </PageSectionHeading>
+            <p className="text-sm text-muted">All cases in warning, critical, or overdue status from your concierges. Sorted by deadline.</p>
           </div>
 
           {allUrgentCases.length === 0 ? (
@@ -448,14 +531,18 @@ export default function DeliveryLeadPage() {
                     <button onClick={() => setSelectedForFlag(uc)} className="text-xs border px-3 py-1 rounded-lg hover:bg-amber-50 border-amber-300 text-amber-700">Second look</button>
                     <button
                       onClick={() => {
-                        // Quick reassign this specific case's concierge (demo)
                         const current = concierges.find((c) => c.id === uc.conciergeId);
                         const target = concierges.find((c) => c.id !== uc.conciergeId && c.utilization < 0.8);
-                        if (current && target) {
-                          // For demo we reuse client reassign (in real would be case-level endpoint)
-                          if (current.clients?.[0]) {
-                            void performReassign(current.clients[0].id, target.id, current.clients[0].name);
-                          }
+                        if (current && target && current.clients?.[0]) {
+                          openReassignModal(
+                            current.clients[0].id,
+                            current.clients[0].name,
+                            target.id,
+                            target.name,
+                            current.name
+                          );
+                        } else {
+                          setActionMsg('No suitable lower-load target found for quick case move.');
                         }
                       }}
                       className="text-xs border px-3 py-1 rounded-lg hover:bg-navy hover:text-white"
@@ -471,12 +558,14 @@ export default function DeliveryLeadPage() {
 
         {/* REASSIGNMENT CENTER — automation + manual override, minimal toil */}
         <section className="bg-surface border border-border rounded-3xl p-8">
-          <h2 className="text-2xl font-semibold text-navy mb-2">Reassignment &amp; Rebalance Center</h2>
+          <PageSectionHeading>
+            Reassignment &amp; Rebalance Center
+          </PageSectionHeading>
           <p className="text-sm text-muted max-w-2xl mb-6">
             Smart suggestions are pre-computed from live capacity + SLA risk. One click executes the move, updates assignments, open cases, and the audit trail. No spreadsheets. No phone calls.
           </p>
 
-          {suggestions.length > 0 && (
+          {suggestions.length > 0 ? (
             <div className="mb-8">
               <div className="uppercase text-[11px] tracking-[1.5px] text-muted mb-3">Recommended by load balancer</div>
               {suggestions.map((sug, idx) => (
@@ -495,6 +584,10 @@ export default function DeliveryLeadPage() {
                 </div>
               ))}
             </div>
+          ) : (
+            <div className="mb-8 text-sm text-muted bg-white border border-border rounded-2xl px-6 py-4">
+              Load is currently balanced across the pod. No automated moves recommended right now.
+            </div>
           )}
 
           {/* Manual reassign controls for any client */}
@@ -510,7 +603,7 @@ export default function DeliveryLeadPage() {
         {/* BASIC POD REPORTING + QUALITY */}
         <section className="grid md:grid-cols-2 gap-6">
           <div className="bg-white border border-border rounded-3xl p-8">
-            <h3 className="font-semibold text-xl text-navy mb-4">This Pod — Quick Metrics</h3>
+            <PageSectionHeading>This Pod — Quick Metrics</PageSectionHeading>
             <ul className="space-y-3 text-sm">
               <li className="flex justify-between"><span className="text-muted">Total weekly capacity</span><span className="font-semibold">{totalCap} auths</span></li>
               <li className="flex justify-between"><span className="text-muted">Current committed volume</span><span className="font-semibold">{totalLoad} auths</span></li>
@@ -522,7 +615,7 @@ export default function DeliveryLeadPage() {
           </div>
 
           <div className="bg-white border border-border rounded-3xl p-8">
-            <h3 className="font-semibold text-xl text-navy mb-4">Quality &amp; Second-Look</h3>
+            <PageSectionHeading>Quality &amp; Second-Look</PageSectionHeading>
             <p className="text-sm text-muted mb-4">Flag any case for a senior or DL second look. This creates a permanent audit entry, notifies the assigned concierge + quality team, and can trigger a dedicated quality_audit record.</p>
             <div className="text-sm bg-amber-50 border border-amber-200 rounded-2xl p-4">
               Any “Flag for 2nd look” action taken in the alerts or per-concierge urgent lists above writes a defensible record. No extra forms for the DL — the system captures context automatically.
@@ -532,7 +625,6 @@ export default function DeliveryLeadPage() {
         </section>
 
         <div className="text-center text-[11px] text-muted pt-4">Concierge only reviews and reasons. Delivery Leads steer the pod with visibility and light-touch controls. All changes are logged for audit and regulatory review.</div>
-      </div>
 
       {/* Second-look modal (minimal, elegant, zero friction) */}
       {selectedForFlag && (
@@ -561,17 +653,52 @@ export default function DeliveryLeadPage() {
           </div>
         </div>
       )}
-    </div>
+
+      {/* Reassign confirmation modal — forces a reason for every move (audit grade) */}
+      {reassignTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setReassignTarget(null)}>
+          <div className="bg-white rounded-3xl border shadow-xl max-w-md w-full p-8" onClick={(e) => e.stopPropagation()}>
+            <h3 className="font-semibold text-2xl text-navy">Confirm client reassign</h3>
+            <div className="mt-4 text-sm">
+              <div className="font-medium text-navy">{reassignTarget.clientName}</div>
+              <div className="text-muted mt-1">
+                Moving from <span className="font-medium text-navy">{reassignTarget.fromName || 'current concierge'}</span>
+                {' '}→{' '}
+                <span className="font-medium text-emerald-700">{reassignTarget.toName}</span>
+              </div>
+            </div>
+
+            <label className="block text-xs uppercase tracking-widest text-muted mt-6 mb-1.5">
+              Reason for this move (required for audit)
+            </label>
+            <textarea
+              value={reassignReason}
+              onChange={(e) => setReassignReason(e.target.value)}
+              placeholder="e.g. Jordan at 95% utilization, Sam has 50% headroom. Reducing SLA risk on Valley Medical Group."
+              className="w-full border border-border rounded-2xl p-4 text-sm h-24 focus:outline-none focus:border-navy/40"
+            />
+            <p className="text-[10px] text-muted mt-1">This is stored in the audit log and visible in case history.</p>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => { setReassignTarget(null); setReassignReason(''); }}
+                className="flex-1 py-3 border rounded-2xl text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmReassignWithReason}
+                disabled={!!reassigning || reassignReason.trim().length < 8}
+                className="flex-1 py-3 bg-navy text-white rounded-2xl text-sm font-semibold disabled:opacity-50"
+              >
+                {reassigning ? 'Executing…' : 'Confirm &amp; Reassign'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </PageDashboard>
   );
 }
 
-function Stat({ label, value, sub, tone }: { label: string; value: string; sub?: string; tone?: 'ok' | 'warn' }) {
-  const ringClass = tone === 'warn' ? 'border-amber-300 bg-amber-50' : 'border-border bg-white';
-  return (
-    <div className={`rounded-2xl border shadow-sm px-5 py-4 ${ringClass}`}>
-      <p className="text-[10px] uppercase tracking-[1.5px] text-muted font-semibold">{label}</p>
-      <p className="text-3xl font-semibold text-navy mt-1 tracking-tighter">{value}</p>
-      {sub && <p className="text-xs text-muted mt-0.5">{sub}</p>}
-    </div>
-  );
-}
+

@@ -6,6 +6,7 @@ import { applyRateLimit } from '@/lib/rate-limit-middleware';
 import { apiError } from '@/lib/api-error';
 import { getRequestContext } from '@/lib/security';
 import { listConciergesWithLoad, reassignClientToConcierge } from '@/lib/delivery/assignment';
+import { logAuditEvent } from '@/lib/audit';
 
 export const dynamic = 'force-dynamic';
 
@@ -119,7 +120,22 @@ export async function GET(request: NextRequest) {
       deliveryLeadId: dlFilter || undefined,
       onlyActive: true,
     });
-    return NextResponse.json({ demo: false, concierges });
+
+    // Lightweight real pod summary (capacity view). SLA/urgent detail is richer in demo for now.
+    const totalLoad = concierges.reduce((s, c) => s + c.estimated_weekly_load, 0);
+    const totalCap = concierges.reduce((s, c) => s + c.weekly_auth_cap, 0);
+    const aggregateUtil = totalCap > 0 ? Math.min(1, totalLoad / totalCap) : 0;
+    const atCapacityCount = concierges.filter((c) => c.utilization >= 0.9).length;
+
+    const podSummary = {
+      total_concierges: concierges.length,
+      total_active_cases: 0, // populated by richer case aggregation in future iteration
+      at_risk: atCapacityCount,
+      critical_overdue: 0,
+      aggregate_utilization: aggregateUtil,
+    };
+
+    return NextResponse.json({ demo: false, concierges, pod_summary: podSummary });
   } catch (err) {
     return apiError(err, {
       operation: 'list_concierges_with_load',
@@ -189,6 +205,33 @@ export async function POST(request: NextRequest) {
       });
 
       return NextResponse.json({ success: true, message: result.message, concierges: updated, demo: false });
+    }
+
+    if (action === 'flag_second_look') {
+      const { case_id, concierge_id, reason } = body || {};
+      if (!case_id) {
+        return NextResponse.json({ error: 'case_id is required' }, { status: 400 });
+      }
+
+      const actor = (authResult as any)?.user?.email || 'delivery-lead';
+      const requestContext = getRequestContext(request);
+
+      await logAuditEvent(
+        case_id,
+        'quality_second_look_requested',
+        actor,
+        {
+          concierge_id: concierge_id || null,
+          reason: reason || 'Delivery Lead requested second look',
+          source: 'delivery_lead_dashboard',
+        },
+        requestContext
+      );
+
+      return NextResponse.json({
+        success: true,
+        message: 'Second-look flag recorded. Audit entry created.',
+      });
     }
 
     return NextResponse.json({ error: 'Unsupported action' }, { status: 400 });
