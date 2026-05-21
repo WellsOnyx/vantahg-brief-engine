@@ -1,7 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { PageList, PageHero, StatCard } from '@/components/layouts/PageLayouts';
+import { PageList, PageHero } from '@/components/layouts/PageLayouts';
+import { SectionCard } from '@/components/SectionCard';
+import { EmptyState } from '@/components/EmptyState';
+import { MetricValue, type MetricFormat } from '@/components/MetricValue';
 
 interface Invoice {
   id: string;
@@ -47,7 +50,6 @@ export default function InvoicesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Generate-modal state
   const [showGenerate, setShowGenerate] = useState(false);
   const [clients, setClients] = useState<Client[]>([]);
   const [clientId, setClientId] = useState('');
@@ -126,146 +128,203 @@ export default function InvoicesPage() {
   const draftCount = invoices.filter((i) => i.status === 'draft').length;
 
   return (
-    <div className="py-10 md:py-16 bg-background min-h-screen">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
-        <header className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <p className="text-xs uppercase tracking-wide text-muted font-semibold">Billing</p>
-            <h1 className="text-3xl md:text-4xl font-bold text-navy mt-1">Invoices</h1>
-            <p className="text-sm text-muted mt-2 max-w-2xl">
-              Monthly PEPM invoices, one per TPA per period. Generate at month-end, mark sent, then mark paid as remittance comes in.
-            </p>
+    <PageList
+      hero={
+        <PageHero
+          eyebrow="Billing"
+          title="Invoices"
+          subtitle="Monthly PEPM invoices, one per TPA per period. Generate at month-end, mark sent, then mark paid as remittance comes in."
+          actions={
+            <button
+              onClick={() => { setShowGenerate(true); void loadClients(); }}
+              className="btn-primary text-sm"
+            >
+              Generate invoice
+            </button>
+          }
+        />
+      }
+    >
+      {invoices.length > 0 && (
+        <PageList.Stats>
+          <MetricCard label="Outstanding" value={totalOutstanding} format="currency" />
+          <MetricCard label="Paid" value={totalPaid} format="currency" />
+          <MetricCard label="Drafts" value={draftCount} />
+          <MetricCard label="Total invoices" value={invoices.length} />
+        </PageList.Stats>
+      )}
+
+      {error && error.includes('Sign in as admin') ? (
+        <div className="flex min-h-[300px] items-center justify-center">
+          <div className="card p-8 text-center max-w-sm">
+            <p className="text-sm text-muted">Admin access required to view invoices.</p>
+            <a href="/login" className="mt-4 inline-block text-navy underline text-sm">Sign in with an admin account →</a>
           </div>
-          <button
-            onClick={() => { setShowGenerate(true); void loadClients(); }}
-            className="bg-navy text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-navy/90"
-          >
-            Generate invoice
-          </button>
-        </header>
+        </div>
+      ) : error ? (
+        <div className="text-red-700 text-sm">{error}</div>
+      ) : null}
 
-        <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <Stat label="Outstanding" value={fmtCents(totalOutstanding)} />
-          <Stat label="Paid" value={fmtCents(totalPaid)} />
-          <Stat label="Drafts" value={draftCount.toString()} />
-          <Stat label="Total invoices" value={invoices.length.toString()} />
-        </section>
-
-        {error && <div className="rounded-lg bg-red-50 border border-red-200 text-red-800 px-4 py-3 text-sm">{error}</div>}
-
-        {showGenerate && (
-          <section className="bg-surface rounded-xl border border-border shadow-sm p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-navy">Generate invoice</h2>
-              <button onClick={() => setShowGenerate(false)} className="text-sm text-muted hover:text-navy">Cancel</button>
+      {showGenerate && (
+        <SectionCard
+          eyebrow="Action"
+          title="Generate invoice"
+          hint={
+            <button
+              onClick={() => setShowGenerate(false)}
+              className="text-sm text-muted hover:text-navy"
+            >
+              Cancel
+            </button>
+          }
+        >
+          <form onSubmit={generate} className="space-y-3 max-w-2xl">
+            <div>
+              <label className="text-xs text-muted uppercase tracking-wide font-medium block mb-1.5">Client</label>
+              <select
+                required
+                value={clientId}
+                onChange={(e) => setClientId(e.target.value)}
+                className="w-full bg-white border border-border rounded-lg px-3 py-2 text-sm"
+              >
+                <option value="">— Select —</option>
+                {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
             </div>
-            <form onSubmit={generate} className="space-y-3 max-w-2xl">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div>
-                <label className="text-xs text-muted uppercase tracking-wide font-medium block mb-1.5">Client</label>
-                <select required value={clientId} onChange={(e) => setClientId(e.target.value)}
-                        className="w-full bg-white border border-border rounded-lg px-3 py-2 text-sm">
-                  <option value="">— Select —</option>
-                  {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
+                <label className="text-xs text-muted uppercase tracking-wide font-medium block mb-1.5">Period (YYYY-MM)</label>
+                <input
+                  type="text"
+                  placeholder="leave blank for last month"
+                  value={period}
+                  onChange={(e) => setPeriod(e.target.value)}
+                  className="w-full bg-white border border-border rounded-lg px-3 py-2 text-sm"
+                />
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div>
-                  <label className="text-xs text-muted uppercase tracking-wide font-medium block mb-1.5">Period (YYYY-MM)</label>
-                  <input type="text" placeholder="leave blank for last month"
-                         value={period} onChange={(e) => setPeriod(e.target.value)}
-                         className="w-full bg-white border border-border rounded-lg px-3 py-2 text-sm" />
-                </div>
-                <div>
-                  <label className="text-xs text-muted uppercase tracking-wide font-medium block mb-1.5">Members (override)</label>
-                  <input type="number" min={0} value={memberOverride} onChange={(e) => setMemberOverride(e.target.value)}
-                         className="w-full bg-white border border-border rounded-lg px-3 py-2 text-sm" />
-                </div>
-                <div>
-                  <label className="text-xs text-muted uppercase tracking-wide font-medium block mb-1.5">PEPM $ (override)</label>
-                  <input type="number" min={0} step="0.01" value={rateOverride} onChange={(e) => setRateOverride(e.target.value)}
-                         className="w-full bg-white border border-border rounded-lg px-3 py-2 text-sm" />
-                </div>
+              <div>
+                <label className="text-xs text-muted uppercase tracking-wide font-medium block mb-1.5">Members (override)</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={memberOverride}
+                  onChange={(e) => setMemberOverride(e.target.value)}
+                  className="w-full bg-white border border-border rounded-lg px-3 py-2 text-sm"
+                />
               </div>
-              {genError && <div className="text-xs text-red-700 bg-red-50 border border-red-200 rounded px-3 py-2">{genError}</div>}
-              {genSuccess && <div className="text-xs text-emerald-800 bg-emerald-50 border border-emerald-200 rounded px-3 py-2">{genSuccess}</div>}
-              <button type="submit" disabled={generating || !clientId}
-                      className="bg-navy text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-navy/90 disabled:opacity-50">
-                {generating ? 'Generating…' : 'Generate'}
-              </button>
-            </form>
-          </section>
-        )}
-
-        <section className="bg-surface rounded-xl border border-border shadow-sm overflow-hidden">
-          {loading ? (
-            <div className="p-6 text-sm text-muted">Loading invoices...</div>
-          ) : invoices.length === 0 ? (
-            <div className="p-6 text-sm text-muted">No invoices yet. Click <strong>Generate invoice</strong> to create one.</div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-background text-muted text-xs uppercase tracking-wide">
-                  <tr>
-                    <th className="text-left px-4 py-2">Invoice</th>
-                    <th className="text-left px-4 py-2">Client</th>
-                    <th className="text-left px-4 py-2">Period</th>
-                    <th className="text-right px-4 py-2">Members</th>
-                    <th className="text-right px-4 py-2">PEPM</th>
-                    <th className="text-right px-4 py-2">Total</th>
-                    <th className="text-left px-4 py-2">Status</th>
-                    <th className="text-left px-4 py-2">Meow</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {invoices.map((inv) => (
-                    <tr key={inv.id} className="hover:bg-background/50">
-                      <td className="px-4 py-3 font-mono text-xs">{inv.invoice_number}</td>
-                      <td className="px-4 py-3 font-semibold text-navy">{inv.client_name ?? '—'}</td>
-                      <td className="px-4 py-3">{fmtDate(inv.period_start)} – {fmtDate(inv.period_end)}</td>
-                      <td className="px-4 py-3 text-right">{inv.member_count.toLocaleString()}</td>
-                      <td className="px-4 py-3 text-right">{fmtCents(inv.pepm_rate_cents)}</td>
-                      <td className="px-4 py-3 text-right font-semibold">{fmtCents(inv.total_cents)}</td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border ${STATUS_PILL[inv.status]}`}>
-                          {inv.status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-xs">
-                        {inv.meow_invoice_id ? (
-                          <>
-                            <div className="text-muted font-mono">{inv.meow_status ?? '—'}</div>
-                            {inv.meow_payment_url && (
-                              <a
-                                href={inv.meow_payment_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-navy underline"
-                              >
-                                Pay link →
-                              </a>
-                            )}
-                          </>
-                        ) : (
-                          <span className="text-muted">not pushed</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <div>
+                <label className="text-xs text-muted uppercase tracking-wide font-medium block mb-1.5">PEPM $ (override)</label>
+                <input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={rateOverride}
+                  onChange={(e) => setRateOverride(e.target.value)}
+                  className="w-full bg-white border border-border rounded-lg px-3 py-2 text-sm"
+                />
+              </div>
             </div>
-          )}
-        </section>
-      </div>
-    </div>
+            {genError && (
+              <div className="text-xs text-red-700 bg-red-50 border border-red-200 rounded px-3 py-2">
+                {genError}
+              </div>
+            )}
+            {genSuccess && (
+              <div className="text-xs text-emerald-800 bg-emerald-50 border border-emerald-200 rounded px-3 py-2">
+                {genSuccess}
+              </div>
+            )}
+            <button
+              type="submit"
+              disabled={generating || !clientId}
+              className="btn-primary text-sm disabled:opacity-50"
+            >
+              {generating ? 'Generating…' : 'Generate'}
+            </button>
+          </form>
+        </SectionCard>
+      )}
+
+      {loading ? (
+        <div className="p-6 text-sm text-muted animate-pulse">Loading invoices…</div>
+      ) : invoices.length === 0 ? (
+        <EmptyState
+          title="Your first invoice arrives on the 1st."
+          body="Monthly PEPM invoices generate at month-end, one per TPA. Generate one manually whenever you need to."
+          action={{
+            label: 'Generate invoice',
+            onClick: () => { setShowGenerate(true); void loadClients(); },
+          }}
+          tone="gold"
+        />
+      ) : (
+        <PageList.Body>
+          <div className="overflow-x-auto card p-0">
+            <table className="w-full text-sm">
+              <thead className="bg-background text-muted text-xs uppercase tracking-wide">
+                <tr>
+                  <th className="text-left px-4 py-2">Invoice</th>
+                  <th className="text-left px-4 py-2">Client</th>
+                  <th className="text-left px-4 py-2">Period</th>
+                  <th className="text-right px-4 py-2">Members</th>
+                  <th className="text-right px-4 py-2">PEPM</th>
+                  <th className="text-right px-4 py-2">Total</th>
+                  <th className="text-left px-4 py-2">Status</th>
+                  <th className="text-left px-4 py-2">Meow</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {invoices.map((inv) => (
+                  <tr key={inv.id} className="hover:bg-background/50">
+                    <td className="px-4 py-3 font-mono text-xs">{inv.invoice_number}</td>
+                    <td className="px-4 py-3 font-semibold text-navy">{inv.client_name ?? '—'}</td>
+                    <td className="px-4 py-3">{fmtDate(inv.period_start)} – {fmtDate(inv.period_end)}</td>
+                    <td className="px-4 py-3 text-right">{inv.member_count.toLocaleString()}</td>
+                    <td className="px-4 py-3 text-right">{fmtCents(inv.pepm_rate_cents)}</td>
+                    <td className="px-4 py-3 text-right font-semibold">{fmtCents(inv.total_cents)}</td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border ${STATUS_PILL[inv.status]}`}>
+                        {inv.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-xs">
+                      {inv.meow_invoice_id ? (
+                        <>
+                          <div className="text-muted font-mono">{inv.meow_status ?? '—'}</div>
+                          {inv.meow_payment_url && (
+                            <a href={inv.meow_payment_url} target="_blank" rel="noopener noreferrer" className="text-navy underline">Pay link →</a>
+                          )}
+                        </>
+                      ) : (
+                        <span className="text-muted">not pushed</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </PageList.Body>
+      )}
+    </PageList>
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function MetricCard({
+  label,
+  value,
+  format = 'number',
+}: {
+  label: string;
+  value: number | null | undefined;
+  format?: MetricFormat;
+}) {
   return (
-    <div className="rounded-xl border border-border bg-surface shadow-sm px-4 py-3">
-      <p className="text-[11px] uppercase tracking-wide text-muted font-semibold">{label}</p>
-      <p className="text-xl font-bold text-navy mt-1">{value}</p>
+    <div className="card p-4">
+      <p className="text-[10px] uppercase tracking-[0.12em] text-muted font-semibold">{label}</p>
+      <p className="text-3xl mt-1">
+        <MetricValue value={value} format={format} />
+      </p>
     </div>
   );
 }
