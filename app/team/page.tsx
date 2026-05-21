@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { createBrowserClient } from '@/lib/supabase-browser';
+import { EmptyState } from '@/components/EmptyState';
 
 type Role = 'admin' | 'reviewer' | 'client' | 'builder' | 'ceo' | 'practice-lead' | 'slt';
 
@@ -181,10 +182,10 @@ export default function TeamPage() {
         {!members ? (
           <div className="p-6 text-muted text-sm">Loading roster…</div>
         ) : members.length === 0 ? (
-          <div className="p-10 text-center text-muted">
-            No team members yet. The first user to sign in becomes a reviewer by default;
-            assign roles from this page.
-          </div>
+          <EmptyState
+            title="No teammates inside yet."
+            body="The first user to sign in lands here as a reviewer. Promote, demote, and reassign roles from this page."
+          />
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { EmptyState } from '@/components/EmptyState';
 
 /**
  * Admin review screen for TPA signup requests (Phase 1 item #5).
@@ -221,22 +222,14 @@ export default function AdminSignupsPage() {
               </div>
             </div>
           ) : rows.length === 0 ? (
-            <div className="p-12 text-center">
-              <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gold/10 mb-3">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#c9a227" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                  <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                  <circle cx="8.5" cy="7" r="4" />
-                  <line x1="20" y1="8" x2="20" y2="14" />
-                  <line x1="23" y1="11" x2="17" y2="11" />
-                </svg>
-              </div>
-              <p className="text-sm text-navy font-semibold">
-                {filter ? `No submissions with status "${STATUS_LABEL[filter as Status]}".` : 'No signup submissions yet.'}
-              </p>
-              <p className="text-xs text-muted mt-1">
-                Prospects can apply at <Link href="/signup-tpa" className="text-navy underline">/signup-tpa</Link>.
-              </p>
-            </div>
+            <EmptyState
+              tone={filter ? 'neutral' : 'gold'}
+              title={filter ? `Nothing matching "${STATUS_LABEL[filter as Status]}".` : 'No one is at the door yet.'}
+              body={filter
+                ? 'Try clearing the filter, or wait for the next state change.'
+                : 'Prospects apply at /signup-tpa. New requests appear here in real time, ready for review.'}
+              action={filter ? undefined : { label: 'Open the public form', href: '/signup-tpa' }}
+            />
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full text-sm">

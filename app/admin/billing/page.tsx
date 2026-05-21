@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { createBrowserClient, hasBrowserSupabaseConfig } from '@/lib/supabase-browser';
 import type { Client, OnboardingStatus } from '@/lib/types';
+import { EmptyState } from '@/components/EmptyState';
 
 /**
  * Local role type. The shared `BillingRole` in `lib/auth-guard.ts` is narrower
@@ -296,17 +297,20 @@ export default function AdminBillingPage() {
         {clients === null ? (
           <div className="px-6 py-10 text-sm text-muted">Loading clients…</div>
         ) : clients.length === 0 ? (
-          <div className="px-6 py-10 text-sm text-muted">
-            <p className="text-navy font-medium mb-1">No clients yet</p>
-            <p>
-              Run{' '}
-              <code className="px-1.5 py-0.5 rounded bg-gray-100 text-navy font-mono text-xs">
-                scripts/bootstrap-real-client.ts
-              </code>{' '}
-              to seed your first TPA, then refresh this page.
-            </p>
+          <div className="p-6">
+            <EmptyState
+              tone="gold"
+              title="The ledger is waiting."
+              body={
+                <>
+                  Approved TPAs land here for PEPM billing. Seed the first one with{' '}
+                  <code className="px-1.5 py-0.5 rounded bg-gray-100 text-navy font-mono text-xs">scripts/bootstrap-real-client.ts</code>{' '}
+                  or approve a signup at <Link href="/admin/signups" className="text-navy underline decoration-dotted underline-offset-2">/admin/signups</Link>.
+                </>
+              }
+            />
             {dataError && (
-              <p className="mt-3 text-amber-700 text-xs">{dataError}</p>
+              <p className="mt-3 text-amber-700 text-xs text-center">{dataError}</p>
             )}
           </div>
         ) : (

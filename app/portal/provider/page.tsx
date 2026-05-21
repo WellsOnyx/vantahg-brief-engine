@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { EmptyState } from '@/components/EmptyState';
 
 interface ProviderProfile {
   practice: { id: string; name: string; specialty: string | null; address: string | null; phone: string | null };
@@ -113,10 +114,12 @@ export default function ProviderPortalPage() {
             <Link href="/cases" className="text-sm text-navy underline">View all →</Link>
           </div>
           {cases.length === 0 ? (
-            <p className="text-sm text-muted py-8 text-center">
-              No cases yet.{' '}
-              <Link href="/portal/provider/submit" className="text-navy underline">Submit your first authorization →</Link>
-            </p>
+            <EmptyState
+              tone="gold"
+              title="Your first authorization is one form away."
+              body="Submitted cases land here as soon as the form goes through. The clinical team picks them up from there."
+              action={{ label: 'Submit an authorization', href: '/portal/provider/submit' }}
+            />
           ) : (
             <ul className="divide-y divide-border">
               {cases.slice(0, 15).map((c) => (

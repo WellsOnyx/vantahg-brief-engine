@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import type { Reviewer, ReviewerStatus, ServiceCategory } from '@/lib/types';
+import { EmptyState } from '@/components/EmptyState';
 
 const SPECIALTIES = [
   'Internal Medicine',
@@ -406,42 +407,16 @@ export default function ReviewersPage() {
             </div>
           </div>
         ) : filtered.length === 0 ? (
-          <div className="p-12 text-center animate-slide-up">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-navy/5 flex items-center justify-center">
-              <svg className="w-8 h-8 text-navy/30" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 9h3.75M15 12h3.75M15 15h3.75M4.5 19.5h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5zm6-10.125a1.875 1.875 0 11-3.75 0 1.875 1.875 0 013.75 0zm1.294 6.336a6.721 6.721 0 01-3.17.789 6.721 6.721 0 01-3.168-.789 3.376 3.376 0 016.338 0z" />
-              </svg>
-            </div>
- <h3 className="font-semibold text-base text-foreground">
-              {hasFilters ? 'No matching reviewers' : 'No reviewers yet'}
-            </h3>
-            <p className="text-sm text-muted mt-2 max-w-sm mx-auto">
-              {hasFilters
-                ? 'No reviewers match the selected filters. Try adjusting your criteria.'
-                : 'Add your first physician reviewer to start managing your review panel.'}
-            </p>
-            {hasFilters ? (
-              <button
-                onClick={() => { setFilterSpecialty(''); setFilterCategory(''); setFilterStatus(''); setFilterState(''); }}
-                className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-gold-dark hover:text-gold transition-colors"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-                Clear all filters
-              </button>
-            ) : (
-              <button
-                onClick={openAdd}
-                className="mt-6 inline-flex items-center gap-2 bg-navy text-white px-5 py-2.5 rounded-lg font-medium text-sm hover:bg-navy-light transition-colors"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                Add Reviewer
-              </button>
-            )}
-          </div>
+          <EmptyState
+            tone={hasFilters ? 'neutral' : 'gold'}
+            title={hasFilters ? 'No reviewers match these filters.' : 'Your physician panel is empty.'}
+            body={hasFilters
+              ? 'Try widening the filters, or clear them to see everyone.'
+              : 'Add board-certified reviewers by specialty so cases route automatically.'}
+            action={hasFilters
+              ? { label: 'Clear all filters', onClick: () => { setFilterSpecialty(''); setFilterCategory(''); setFilterStatus(''); setFilterState(''); } }
+              : { label: 'Add a reviewer', onClick: openAdd }}
+          />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">

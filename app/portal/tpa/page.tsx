@@ -11,6 +11,7 @@ import {
   PageSectionHeading,
   StatCard,
 } from '@/components/layouts/PageLayouts';
+import { EmptyState } from '@/components/EmptyState';
 
 /**
  * TPA-facing portal dashboard.
@@ -204,23 +205,12 @@ export default function TpaPortalPage() {
               Recent cases
             </PageSectionHeading>
             {cases.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gold/10 mb-3">
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#c9a227" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                    <polyline points="14 2 14 8 20 8" />
-                    <line x1="12" y1="18" x2="12" y2="12" />
-                    <line x1="9" y1="15" x2="15" y2="15" />
-                  </svg>
-                </div>
-                <p className="text-sm text-muted">No cases yet.</p>
-                <Link
-                  href="/portal/tpa/submit"
-                  className="text-sm text-navy font-semibold underline underline-offset-2 hover:text-gold-dark mt-1 inline-block"
-                >
-                  Submit your first authorization →
-                </Link>
-              </div>
+              <EmptyState
+                tone="gold"
+                title="Your first case is one form away."
+                body="Authorizations land here as soon as you submit them. The clinical team picks them up from there."
+                action={{ label: 'Submit an authorization', href: '/portal/tpa/submit' }}
+              />
             ) : (
               <ul className="divide-y divide-border">
                 {cases.slice(0, 12).map((c) => (
@@ -262,12 +252,12 @@ export default function TpaPortalPage() {
             </PageSectionHeading>
             {profile.practices.length === 0 ? (
               <p className="text-sm text-muted">
-                No practices yet.{' '}
+                Network is empty.{' '}
                 <Link
                   href="/portal/tpa/practices"
                   className="text-navy font-semibold underline underline-offset-2"
                 >
-                  Add one →
+                  Invite your first practice →
                 </Link>
               </p>
             ) : (

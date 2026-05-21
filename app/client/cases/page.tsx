@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createBrowserClient } from '@/lib/supabase-browser';
 import { getTimeRemaining, formatTimeRemaining, getSlaStatus } from '@/lib/sla-calculator';
+import { EmptyState } from '@/components/EmptyState';
 
 interface MyCase {
   id: string;
@@ -177,11 +178,10 @@ export default function ClientCasesPage() {
         </div>
 
         {cases.length === 0 ? (
-          <div className="bg-surface rounded-xl border border-border shadow-sm p-10 text-center">
-            <p className="text-muted">
-              No cases yet. Submitted cases will appear here as soon as they enter intake.
-            </p>
-          </div>
+          <EmptyState
+            title="No cases on your desk."
+            body="Submitted cases land here as soon as intake opens them. Until then, the room is quiet."
+          />
         ) : (
           <>
             {active.length > 0 && (

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import type { Client, ClientType, OnboardingStatus } from '@/lib/types';
+import { EmptyState } from '@/components/EmptyState';
 
 const clientTypeLabels: Record<ClientType, string> = {
   tpa: 'TPA',
@@ -283,28 +284,12 @@ export default function ClientsPage() {
             </div>
           </div>
         ) : clients.length === 0 ? (
-          <div className="p-12 text-center animate-slide-up">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-navy/5 flex items-center justify-center">
-              <svg className="w-8 h-8 text-navy/30" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3H21m-3.75 3H21" />
-              </svg>
-            </div>
- <h3 className="font-semibold text-base text-foreground">
-              No clients yet
-            </h3>
-            <p className="text-sm text-muted mt-2 max-w-sm mx-auto">
-              Add your first TPA, health plan, or employer client to start managing contracts and clinical guidelines.
-            </p>
-            <button
-              onClick={openAdd}
-              className="mt-6 inline-flex items-center gap-2 bg-navy text-white px-5 py-2.5 rounded-lg font-medium text-sm hover:bg-navy-light transition-colors"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              Add Client
-            </button>
-          </div>
+          <EmptyState
+            tone="gold"
+            title="The book is open. Add your first client."
+            body="TPAs, health plans, self-funded employers — each one starts with a name and a contact. Contracts and clinical guidelines follow."
+            action={{ label: 'Add a client', onClick: openAdd }}
+          />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">

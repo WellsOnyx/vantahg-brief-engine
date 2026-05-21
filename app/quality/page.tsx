@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { QualityAudit, Staff } from '@/lib/types';
 import { useTenantScope, withTenantScope } from '@/lib/tenant-scope';
 import { TenantScopeBadge } from '@/components/TenantScopeBadge';
+import { EmptyState } from '@/components/EmptyState';
 
 interface QualityMetrics {
   total_audits: number;
@@ -343,13 +344,10 @@ export default function QualityPage() {
         /* Audit History Tab */
         <div className="bg-surface rounded-lg border border-border shadow-sm overflow-hidden">
           {audits.length === 0 ? (
-            <div className="p-12 text-center animate-slide-up">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-navy/5 flex items-center justify-center">
-                <svg className="w-8 h-8 text-navy/30" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-              </div>
-              <h3 className="font-semibold text-base">No audits yet</h3>
-              <p className="text-sm text-muted mt-2 max-w-sm mx-auto">Quality audits will appear here as RNs review LPN case work for URAC compliance.</p>
-            </div>
+            <EmptyState
+              title="No audits on the books yet."
+              body="As RNs review LPN case work for URAC compliance, audits land here. Start one from the Metrics tab."
+            />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import type { Staff, StaffRole } from '@/lib/types';
+import { EmptyState } from '@/components/EmptyState';
 
 const ROLE_LABELS: Record<StaffRole, string> = {
   lpn: 'Licensed Practical Nurse',
@@ -244,16 +245,14 @@ export default function StaffPage() {
             </div>
           </div>
         ) : filtered.length === 0 ? (
-          <div className="p-12 text-center animate-slide-up">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-navy/5 flex items-center justify-center">
-              <svg className="w-8 h-8 text-navy/30" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" /></svg>
-            </div>
- <h3 className="font-semibold text-base text-foreground">{hasFilters ? 'No matching staff' : 'No staff yet'}</h3>
-            <p className="text-sm text-muted mt-2 max-w-sm mx-auto">{hasFilters ? 'No staff match the selected filters.' : 'Add your first clinical staff member to start building pods.'}</p>
-            {!hasFilters && (
-              <button onClick={openAdd} className="mt-6 inline-flex items-center gap-2 bg-navy text-white px-5 py-2.5 rounded-lg font-medium text-sm hover:bg-navy-light transition-colors">Add Staff</button>
-            )}
-          </div>
+          <EmptyState
+            tone={hasFilters ? 'neutral' : 'gold'}
+            title={hasFilters ? 'No staff match these filters.' : 'The room is empty. Hire someone.'}
+            body={hasFilters
+              ? 'Try widening the filters, or clear them to see everyone.'
+              : 'Add LPNs, RNs, MDs, and concierges to build pods. Pods route cases.'}
+            action={hasFilters ? undefined : { label: 'Add a staff member', onClick: openAdd }}
+          />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">

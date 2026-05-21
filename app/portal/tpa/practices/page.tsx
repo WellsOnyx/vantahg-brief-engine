@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { EmptyState } from '@/components/EmptyState';
 
 interface Practice {
   id: string;
@@ -169,7 +170,11 @@ export default function TpaPracticesPage() {
           {loading ? (
             <div className="p-6 text-sm text-muted">Loading practices…</div>
           ) : practices.length === 0 ? (
-            <div className="p-6 text-sm text-muted">No practices yet. Click <strong>+ Add practice</strong> to get started.</div>
+            <EmptyState
+              tone="gold"
+              title="Your network starts here."
+              body="Invite practices into your network so they can submit authorizations under your contract. They land in your case queue automatically."
+            />
           ) : (
             <ul className="divide-y divide-border">
               {practices.map((p) => (
