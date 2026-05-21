@@ -23,7 +23,8 @@ export type NotificationType =
   | 'intake_confirmation'
   | 'quality_audit_assigned'
   | 'contract_partially_signed'
-  | 'contract_fully_executed';
+  | 'contract_fully_executed'
+  | 'contract_sent_for_signature';
 
 export interface NotificationPayload {
   type: NotificationType;

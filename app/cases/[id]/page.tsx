@@ -17,6 +17,7 @@ import { SlaTracker } from '@/components/SlaTracker';
 import { CopilotSidebar } from '@/components/chat/CopilotSidebar';
 import { useStreamingBrief } from '@/lib/hooks/use-streaming-brief';
 import type { Case, Reviewer, AuditLogEntry } from '@/lib/types';
+import { PageHero, BackLink } from '@/components/layouts/PageLayouts';
 
 const SERVICE_CATEGORY_LABELS: Record<string, string> = {
   imaging: 'Imaging',
@@ -375,23 +376,37 @@ export default function CaseDetailPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-        <div>
-          <div className="flex items-center gap-3 mb-1">
-            <Link href="/" className="text-muted hover:text-navy text-sm">&larr; Dashboard</Link>
-          </div>
-          <h1 className="font-[family-name:var(--font-dm-serif)] text-2xl sm:text-3xl text-navy">
-            Case {caseData.case_number}
-          </h1>
-          <div className="flex items-center gap-3 mt-2">
-            <StatusBadge status={caseData.status} />
-            <PriorityBadge priority={caseData.priority} />
-            <span className="text-sm text-muted capitalize">{caseData.vertical}</span>
-            <span className="text-sm text-muted">{caseData.review_type?.replace(/_/g, ' ')}</span>
-          </div>
+    <div className="bg-background min-h-screen">
+      {/* ── Hero band (Phase 1 retrofit — editorial arrival moment) ─── */}
+      <PageHero
+        eyebrow={caseData.case_number}
+        title={caseData.patient_name || `Case ${caseData.case_number}`}
+        subtitle={
+          caseData.procedure_description ? (
+            <span className="text-white/75">{caseData.procedure_description}</span>
+          ) : undefined
+        }
+        actions={<BackLink href="/cases" label="All cases" />}
+      >
+        <div className="flex flex-wrap items-center gap-2 mt-3">
+          <StatusBadge status={caseData.status} />
+          <PriorityBadge priority={caseData.priority} />
+          {caseData.vertical && (
+            <span className="text-[11px] uppercase tracking-wide text-white/70 border border-white/20 px-2 py-0.5 rounded-full capitalize">
+              {caseData.vertical}
+            </span>
+          )}
+          {caseData.review_type && (
+            <span className="text-[11px] uppercase tracking-wide text-white/70 border border-white/20 px-2 py-0.5 rounded-full">
+              {caseData.review_type.replace(/_/g, ' ')}
+            </span>
+          )}
         </div>
+      </PageHero>
+
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8 pb-8">
+      {/* Action toolbar (was the right side of the old header — kept on white card for legibility) */}
+      <div className="card p-4 mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3">
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
           {caseData.ai_brief && (
             <Link
@@ -1093,6 +1108,7 @@ export default function CaseDetailPage() {
         determinationAt={caseData.determination_at}
         onSuccess={handleAppealSuccess}
       />
+      </div>
     </div>
   );
 }
