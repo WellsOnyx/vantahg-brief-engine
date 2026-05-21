@@ -205,6 +205,16 @@ export async function POST(
       });
 
       if (assignmentOutcome.ok) {
+        // Harden #15: Persist concierge + delivery lead directly on the client row
+        // for easy querying and to match the original requirement.
+        await supabase
+          .from('clients')
+          .update({
+            concierge_id: assignmentOutcome.concierge_id,
+            delivery_lead_id: assignmentOutcome.delivery_lead_id,
+          })
+          .eq('id', newClient.id);
+
         await logAuditEvent(newClient.id, 'delivery_team_auto_assigned', authResult.user.email, {
           signup_id: id,
           concierge_id: assignmentOutcome.concierge_id,

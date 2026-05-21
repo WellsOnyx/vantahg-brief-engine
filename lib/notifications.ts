@@ -1,6 +1,7 @@
 import { getServiceClient } from '@/lib/supabase';
 import { logAuditEvent } from '@/lib/audit';
 import { isDemoMode } from '@/lib/demo-mode';
+import { getEmailAdapter } from '@/lib/adapters/email';
 
 // ============================================================================
 // Types
@@ -618,16 +619,31 @@ export async function notifyContractSentForSignature(signupId: string): Promise<
   const baseUrl = process.env.NEXTAUTH_URL || process.env.VERCEL_URL || 'http://localhost:3000';
   const loginUrl = `${baseUrl}/login`;
 
-  await sendNotification({
-    type: 'contract_sent_for_signature',
-    recipient_email: recipientEmail,
-    subject: `Action Required: Sign your VantaUM MSA + BAA for ${company}`,
-    body:
-      `Hello,\n\n` +
-      `Your Master Services Agreement and Business Associate Agreement for ${company} has been prepared and sent for your signature via Dropbox Sign.\n\n` +
-      `Please check your inbox (and spam folder) for the email from Dropbox Sign. The link will allow you to review and sign the documents electronically.\n\n` +
-      `Once you sign, Jonathan Arias (Co-Chair, COO & General Counsel) will counter-sign, and you will receive a fully executed copy along with access to the VantaUM TPA portal.\n\n` +
-      `If you have any questions, reply to this email or contact your VantaUM representative.\n\n` +
-      `Login: ${loginUrl}`,
-  });
+  // Harden #17: Use the real email adapter when available, fall back gracefully
+  const emailAdapter = await getEmailAdapter().catch(() => null);
+
+  const subject = `Action Required: Sign your VantaUM MSA + BAA for ${company}`;
+  const textBody =
+    `Hello,\n\n` +
+    `Your Master Services Agreement and Business Associate Agreement for ${company} has been prepared and sent for your signature via Dropbox Sign.\n\n` +
+    `Please check your inbox (and spam folder) for the email from Dropbox Sign. The link will allow you to review and sign the documents electronically.\n\n` +
+    `Once you sign, Jonathan Arias (Co-Chair, COO & General Counsel) will counter-sign, and you will receive a fully executed copy along with access to the VantaUM TPA portal.\n\n` +
+    `If you have any questions, reply to this email or contact your VantaUM representative.\n\n` +
+    `Login: ${loginUrl}`;
+
+  if (emailAdapter) {
+    await emailAdapter.send({
+      to: recipientEmail,
+      subject,
+      text: textBody,
+    }).catch(() => {});
+  } else {
+    // Fallback to existing sendNotification path
+    await sendNotification({
+      type: 'contract_sent_for_signature',
+      recipient_email: recipientEmail,
+      subject,
+      body: textBody,
+    });
+  }
 }
