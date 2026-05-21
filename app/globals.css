@@ -58,6 +58,12 @@ body.scroll-locked {
   100% { background-position: 200% 0; }
 }
 
+/* Skeleton shimmer — slides an absolute gradient child across a clipped parent. */
+@keyframes skeleton-shimmer {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
 @keyframes scaleIn {
   from {
     opacity: 0;
