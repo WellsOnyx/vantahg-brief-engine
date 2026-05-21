@@ -70,9 +70,15 @@ function LoginForm() {
 
     const supabase = createBrowserClient();
 
-    if (!supabase) {
-      // Demo mode — pass straight through.
-      window.location.href = explicitRedirect || '/';
+    // NOTE: We deliberately do NOT short-circuit when supabase is null.
+    // On Fargate, Supabase env vars are empty by design — the new path is
+    // Cognito via /api/auth/sign-in (password) or /api/auth/request-magic-link.
+    // The demo-mode "pass straight through to /" branch was the old V0
+    // behavior and bypasses real auth. Only allow it when we're explicitly
+    // in client-side demo mode (NEXT_PUBLIC_DEMO_MODE=true).
+    const browserDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
+    if (!supabase && browserDemoMode) {
+      window.location.href = explicitRedirect || '/dashboard';
       return;
     }
 
@@ -119,14 +125,18 @@ function LoginForm() {
         }
 
         if (res.status === 503) {
-          // Cognito not wired — fall back to Supabase path.
-          const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-          if (signInError) {
-            setError("That email and password don't match our records.");
+          if (!supabase) {
+            setError('Authentication is not configured on this deployment.');
           } else {
-            const destination = explicitRedirect ?? (await resolveLandingPage(supabase));
-            window.location.href = destination;
-            return;
+            // Cognito not wired — fall back to Supabase path.
+            const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+            if (signInError) {
+              setError("That email and password don't match our records.");
+            } else {
+              const destination = explicitRedirect ?? (await resolveLandingPage(supabase));
+              window.location.href = destination;
+              return;
+            }
           }
         } else if (res.status === 429) {
           setError('Too many sign-in attempts. Wait a minute and try again.');
