@@ -186,21 +186,8 @@ export default function AdminSignupDetailPage() {
           subtitle={row.dba ? `dba ${row.dba}` : undefined}
           actions={
             row.status === 'pending_review' ? (
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setMode('confirming_approve')}
-                  disabled={submitting}
-                  className="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-emerald-700 disabled:opacity-50"
-                >
-                  Approve
-                </button>
-                <button
-                  onClick={() => setMode('confirming_reject')}
-                  disabled={submitting}
-                  className="border border-red-300 text-red-700 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-red-50"
-                >
-                  Reject
-                </button>
+              <div className="text-xs text-amber-700 bg-amber-100 px-3 py-1 rounded-full">
+                Pending Review — actions available below
               </div>
             ) : null
           }
@@ -259,41 +246,6 @@ export default function AdminSignupDetailPage() {
         }
       />
     </PageFocused>
-  );
-
-          <Field label="Current TPA system" value={row.existing_tpa_system} />
-          <Field label="Estimated members" value={row.estimated_members !== null ? row.estimated_members.toLocaleString() : null} />
-          <Field label="Expected auths / week" value={row.expected_weekly_auths !== null ? row.expected_weekly_auths.toString() : null} />
-          <Field
-            label="Proposed PEPM"
-            value={row.pepm_rate_cents !== null ? `$${(row.pepm_rate_cents / 100).toFixed(2)}` : null}
-            hint="Set by admin during review."
-          />
-        </Section>
-
-        {row.notes && (
-          <Section title="Notes from prospect">
-            <p className="text-sm text-navy whitespace-pre-wrap">{row.notes}</p>
-          </Section>
-        )}
-
-        <Section title="Review trail">
-          <Field label="Reviewed by" value={row.reviewed_by} mono />
-          <Field label="Reviewed at" value={row.reviewed_at ? new Date(row.reviewed_at).toLocaleString() : null} />
-          {row.rejection_reason && <Field label="Rejection reason" value={row.rejection_reason} />}
-          <Field label="Approved by" value={row.approved_by} mono />
-          <Field label="Approved at" value={row.approved_at ? new Date(row.approved_at).toLocaleString() : null} />
-          <Field label="Linked client_id" value={row.client_id} mono hint="Set on approve. Links to the tenant created via bootstrap-real-client logic." />
-        </Section>
-
-        <section className="bg-surface rounded-xl border border-border shadow-sm p-6">
-          <h2 className="font-semibold text-sm text-navy uppercase tracking-wide mb-4">
-            Signed contract
-          </h2>
-          <ContractPanel row={row} onUpdate={(updated) => setRow(updated)} />
-        </section>
-      </div>
-    </Frame>
   );
 }
 
