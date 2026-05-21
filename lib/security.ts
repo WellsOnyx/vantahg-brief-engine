@@ -9,30 +9,105 @@
 // ── PHI field patterns ─────────────────────────────────────────────────────
 
 const PHI_FIELDS: Record<string, (value: unknown) => unknown> = {
-  patient_name: (v) => {
-    if (typeof v !== 'string' || v.length === 0) return 'REDACTED';
-    return `${v.charAt(0)}***`;
-  },
+  // Patient identifiers
+  patient_name: (v) => initialize(v),
+  patient_first_name: (v) => initialize(v),
+  patient_last_name: (v) => initialize(v),
   patient_dob: () => 'REDACTED',
-  patient_member_id: (v) => {
-    if (typeof v !== 'string' || v.length < 4) return 'REDACTED';
-    return `***${v.slice(-4)}`;
-  },
+  patient_member_id: (v) => lastFour(v),
+  member_id: (v) => lastFour(v),
   patient_gender: () => 'REDACTED',
+  patient_address: () => 'REDACTED',
+  patient_phone: () => 'REDACTED',
+  ssn: () => 'REDACTED',
+  // Provider identifiers
   dea_number: () => 'REDACTED',
-  contact_email: (v) => {
-    if (typeof v !== 'string' || !v.includes('@')) return 'REDACTED';
-    const [, domain] = v.split('@');
-    return `***@${domain}`;
-  },
+  npi: (v) => lastFour(v),
+  // Generic contact info (both `contact_*` and bare keys)
+  contact_email: (v) => maskEmail(v),
   contact_phone: () => 'REDACTED',
+  contact_name: (v) => initialize(v),
+  email: (v) => maskEmail(v),
   phone: () => 'REDACTED',
-  email: (v) => {
-    if (typeof v !== 'string' || !v.includes('@')) return 'REDACTED';
-    const [, domain] = v.split('@');
-    return `***@${domain}`;
+  // Recipient shapes used by notification helpers
+  recipient_email: (v) => maskEmail(v),
+  recipient_phone: () => 'REDACTED',
+  recipient_name: (v) => initialize(v),
+  // Generic `to` field on email/SMS adapters
+  to: (v) => {
+    if (typeof v === 'string' && v.includes('@')) return maskEmail(v);
+    return 'REDACTED';
   },
+  // Fax numbers
+  from_number: () => 'REDACTED',
+  to_number: () => 'REDACTED',
+  fax_number: () => 'REDACTED',
 };
+
+function initialize(v: unknown): string {
+  if (typeof v !== 'string' || v.length === 0) return 'REDACTED';
+  return `${v.charAt(0)}***`;
+}
+function lastFour(v: unknown): string {
+  if (typeof v !== 'string' || v.length < 4) return 'REDACTED';
+  return `***${v.slice(-4)}`;
+}
+function maskEmail(v: unknown): string {
+  if (typeof v !== 'string' || !v.includes('@')) return 'REDACTED';
+  const [, domain] = v.split('@');
+  return `***@${domain}`;
+}
+
+/**
+ * Redact a single email — keep the domain so support can debug routing,
+ * never expose the user identifier. "alice@health.com" → "***@health.com".
+ */
+export function redactEmail(value: unknown): string {
+  if (typeof value !== 'string' || !value.includes('@')) return 'REDACTED';
+  const [, domain] = value.split('@');
+  return `***@${domain}`;
+}
+
+/**
+ * Redact a phone number to a country-code-and-last-2 shape so on-call can
+ * tell roughly where it routed without learning the line.
+ * "+12035551234" → "+1***34". Anything that doesn't parse → "REDACTED".
+ */
+export function redactPhone(value: unknown): string {
+  if (typeof value !== 'string' || value.length < 4) return 'REDACTED';
+  const digits = value.replace(/\D/g, '');
+  if (digits.length < 4) return 'REDACTED';
+  const last2 = digits.slice(-2);
+  const cc = value.startsWith('+') ? `+${digits.slice(0, digits.length > 10 ? 1 : 0)}` : '';
+  return `${cc}***${last2}`;
+}
+
+/**
+ * Redact a person's name to first initial + asterisks.
+ * "Alice Johnson" → "A***". Empty / non-string → "REDACTED".
+ */
+export function redactName(value: unknown): string {
+  if (typeof value !== 'string' || value.length === 0) return 'REDACTED';
+  return `${value.charAt(0)}***`;
+}
+
+/**
+ * Safe console.log replacement. Sanitizes any object arguments through
+ * sanitizeForLogging and leaves primitives alone. Use this any time you'd
+ * write console.log but the payload might contain PHI.
+ *
+ *   safeLog('[NOTIFICATION]', { recipient_email, subject });
+ *
+ * NEVER do template-string interpolation of PHI before passing in — the
+ * string is already exfiltrated at that point. Pass structured fields.
+ */
+export function safeLog(prefix: string, ...args: unknown[]) {
+  console.log(prefix, ...args.map((a) => (typeof a === 'object' && a !== null ? sanitizeForLogging(a) : a)));
+}
+
+export function safeError(prefix: string, ...args: unknown[]) {
+  console.error(prefix, ...args.map((a) => (typeof a === 'object' && a !== null ? sanitizeForLogging(a) : a)));
+}
 
 /**
  * Deep-clones and redacts PHI fields from an object before it is written to

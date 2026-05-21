@@ -2,6 +2,7 @@ import { getServiceClient } from '@/lib/supabase';
 import { logAuditEvent } from '@/lib/audit';
 import { isDemoMode } from '@/lib/demo-mode';
 import { getEmailAdapter } from '@/lib/adapters/email';
+import { redactEmail, redactPhone, redactName } from '@/lib/security';
 
 // ============================================================================
 // Types
@@ -49,8 +50,16 @@ export interface NotificationPayload {
  */
 export async function sendNotification(payload: NotificationPayload): Promise<void> {
   if (isDemoMode()) {
-    console.log(`[NOTIFICATION] ${payload.type} | To: ${payload.recipient_name || payload.recipient_email || payload.recipient_phone} | Subject: ${payload.subject}`);
-    console.log(`[NOTIFICATION] Body: ${payload.body.substring(0, 200)}`);
+    const recipient = payload.recipient_name
+      ? redactName(payload.recipient_name)
+      : payload.recipient_email
+        ? redactEmail(payload.recipient_email)
+        : payload.recipient_phone
+          ? redactPhone(payload.recipient_phone)
+          : 'unknown';
+    console.log(`[NOTIFICATION] ${payload.type} | To: ${recipient} | Subject: ${payload.subject}`);
+    // Body intentionally omitted — bodies routinely contain PHI (patient names,
+    // procedure codes, member IDs). Subject is the only safe summary.
     return;
   }
 
@@ -98,8 +107,8 @@ async function sendEmail(to: string, subject: string, body: string): Promise<voi
   const smtpFrom = process.env.SMTP_FROM || 'VantaUM <noreply@vantaum.com>';
 
   if (!smtpHost || !smtpUser || !smtpPass) {
-    console.log(`[EMAIL STUB] To: ${to} | Subject: ${subject}`);
-    console.log(`[EMAIL STUB] Body: ${body.substring(0, 300)}`);
+    console.log(`[EMAIL STUB] To: ${redactEmail(to)} | Subject: ${subject}`);
+    // Body omitted — see note in sendNotification above.
     return;
   }
 
@@ -153,12 +162,12 @@ async function sendSms(phone: string, message: string): Promise<void> {
   const fromNumber = process.env.TWILIO_PHONE_NUMBER;
 
   if (!accountSid || !authToken || !fromNumber) {
-    console.log(`[SMS STUB] To: ${phone} | ${message}`);
+    console.log(`[SMS STUB] To: ${redactPhone(phone)} | (message body redacted)`);
     return;
   }
 
   // TODO: Wire up Twilio when ready
-  console.log(`[SMS STUB] Would send to ${phone}: ${message}`);
+  console.log(`[SMS STUB] Would send to ${redactPhone(phone)} (message body redacted)`);
 }
 
 // ============================================================================

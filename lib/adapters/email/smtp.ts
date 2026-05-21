@@ -1,4 +1,5 @@
 import type { EmailAdapter, SendEmailParams, SendEmailResult, SendEmailError } from './types';
+import { redactEmail } from '@/lib/security';
 
 /**
  * Generic SMTP implementation via nodemailer.
@@ -28,7 +29,7 @@ export class SmtpEmailAdapter implements EmailAdapter {
     if (!smtpHost || !smtpUser || !smtpPass) {
       // No SMTP configured — log and return ok so the caller's happy
       // path keeps working in dev. Production should always have these.
-      console.log(`[EMAIL STUB] To: ${params.to} | Subject: ${params.subject}`);
+      console.log(`[EMAIL STUB] To: ${redactEmail(params.to)} | Subject: ${params.subject}`);
       return { ok: true, messageId: `stub-${Date.now()}` };
     }
 

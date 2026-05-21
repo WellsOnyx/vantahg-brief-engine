@@ -6,6 +6,7 @@ import { isDemoMode } from '@/lib/demo-mode';
 import type { ServiceCategory, CasePriority, ReviewType, FacilityType } from '@/lib/types';
 import { requireRole } from '@/lib/auth-guard';
 import { applyRateLimit } from '@/lib/rate-limit-middleware';
+import { redactName } from '@/lib/security';
 
 export const dynamic = 'force-dynamic';
 
@@ -155,8 +156,8 @@ export async function POST(request: NextRequest) {
         results.case_numbers.push(caseNumber);
         results.created++;
 
-        // Audit log (console in demo mode)
-        console.log(`[DEMO AUDIT] case_created | case_number=${caseNumber} | patient=${raw.patient_name}`);
+        // Audit log (console in demo mode). Patient name redacted to first initial.
+        console.log(`[DEMO AUDIT] case_created | case_number=${caseNumber} | patient=${redactName(raw.patient_name)}`);
       }
 
       return NextResponse.json(results, { status: 201 });

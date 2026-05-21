@@ -2,6 +2,7 @@ import { getServiceClient } from '@/lib/supabase';
 import { logAuditEvent } from '@/lib/audit';
 import { isDemoMode, getDemoReviewers, getDemoCase } from '@/lib/demo-mode';
 import type { Case, Reviewer } from '@/lib/types';
+import { redactName } from '@/lib/security';
 
 export interface AssignmentResult {
   assigned: boolean;
@@ -140,7 +141,7 @@ function autoAssignDemo(caseId: string): AssignmentResult {
   );
 
   if (match) {
-    console.log(`[AUTO-ASSIGN DEMO] Case ${caseData.case_number} → ${match.name} (${serviceCategory})`);
+    console.log(`[AUTO-ASSIGN DEMO] Case ${caseData.case_number} → ${redactName(match.name)} (${match.id}, ${serviceCategory})`);
     return { assigned: true, reviewerId: match.id, reviewerName: match.name };
   }
 

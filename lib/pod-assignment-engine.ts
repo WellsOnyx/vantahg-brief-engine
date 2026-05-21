@@ -4,6 +4,7 @@ import { isDemoMode, getDemoCases, getDemoStaff, getDemoPods } from '@/lib/demo-
 import { autoAssignReviewer } from '@/lib/assignment-engine';
 import { pickLpnByScore, scoreLpnForCase } from '@/lib/delivery/lpn-scoring';
 import type { Case, Staff, Pod, LpnDetermination, RnDetermination } from '@/lib/types';
+import { redactName } from '@/lib/security';
 
 // ============================================================================
 // Types
@@ -325,7 +326,7 @@ function assignToPodDemo(caseId: string): PodAssignmentResult {
     return { assigned: false, reason: 'No LPN in demo pod' };
   }
 
-  console.log(`[POD ASSIGN DEMO] Case ${caseData.case_number} → ${pod.name} → ${lpn.name}`);
+  console.log(`[POD ASSIGN DEMO] Case ${caseData.case_number} → ${pod.name} → ${redactName(lpn.name)} (${lpn.id})`);
   return {
     assigned: true,
     podId: pod.id,
