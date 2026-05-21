@@ -169,16 +169,7 @@ body.scroll-locked {
   transform: translateY(-1px);
 }
 
-.btn-gold {
-  background: var(--color-gold);
-  color: var(--color-navy);
-}
-
-.btn-gold:hover:not(:disabled) {
-  background: var(--color-gold-light);
-  box-shadow: 0 4px 12px rgba(201, 162, 39, 0.3);
-  transform: translateY(-1px);
-}
+/* .btn-gold removed 2026-05-21 — gold is a mark, not a fill. Use .btn-primary. */
 
 /* ── Card Styles ─────────────────────────────────────────────── */
 
