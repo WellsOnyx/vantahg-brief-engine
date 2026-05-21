@@ -24,6 +24,63 @@ body {
   font-family: var(--font-sans);
 }
 
+/* ── A11y: keyboard focus rings ──────────────────────────────────────── */
+/* Every interactive control gets a gold focus ring when focused via
+   keyboard (not mouse). Tailwind's default focus rings are too subtle
+   on the navy/cream palette. */
+:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+/* Mouse focus is suppressed by :focus-visible (which only matches
+   keyboard focus). No need for the legacy :focus { outline: none } hack. */
+
+/* ── A11y: respect prefers-reduced-motion ────────────────────────────── */
+/* Disable shimmer + stagger + slide animations for users who set
+   reduce-motion. We keep opacity transitions (low motion). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ── A11y: skip link for keyboard users ──────────────────────────────── */
+.sr-only-focusable {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.sr-only-focusable:focus,
+.sr-only-focusable:focus-visible {
+  position: fixed;
+  top: 0.5rem;
+  left: 0.5rem;
+  z-index: 100;
+  width: auto;
+  height: auto;
+  padding: 0.75rem 1.25rem;
+  margin: 0;
+  overflow: visible;
+  clip: auto;
+  white-space: normal;
+  background: var(--color-navy);
+  color: white;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
 body.scroll-locked {
   overflow: hidden;
   position: fixed;

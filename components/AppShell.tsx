@@ -92,12 +92,15 @@ export function AppShell({
 
   return (
     <TenantScopeProvider>
+      <a href="#main-content" className="sr-only-focusable">
+        Skip to main content
+      </a>
       <div className="min-h-screen bg-background flex">
         <Sidebar groups={groups} roleSurface={roleSurface} pathname={pathname} />
 
         <div className="flex-1 flex flex-col min-w-0">
           <TopBar pathname={pathname} secondaryNav={secondaryNav} />
-          <main className="flex-1 animate-fade-in">{children}</main>
+          <main id="main-content" className="flex-1 animate-fade-in" tabIndex={-1}>{children}</main>
         </div>
       </div>
     </TenantScopeProvider>
