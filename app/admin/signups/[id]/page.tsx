@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import { PageFocused, PageHero } from '@/components/layouts/PageLayouts';
 
 /**
  * Admin signup detail view — part of the core review screen (Item 5).
@@ -177,60 +178,41 @@ export default function AdminSignupDetailPage() {
   }
 
   return (
-    <Frame>
-      <div className="mb-6">
-        <Link href="/admin/signups" className="text-sm text-muted hover:text-navy">
-          ← Back to signups
-        </Link>
+    <PageFocused
+      hero={
+        <PageHero
+          eyebrow="TPA Onboarding"
+          title={row.legal_name}
+          subtitle={row.dba ? `dba ${row.dba}` : undefined}
+          actions={
+            row.status === 'pending_review' ? (
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setMode('confirming_approve')}
+                  disabled={submitting}
+                  className="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-emerald-700 disabled:opacity-50"
+                >
+                  Approve
+                </button>
+                <button
+                  onClick={() => setMode('confirming_reject')}
+                  disabled={submitting}
+                  className="border border-red-300 text-red-700 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-red-50"
+                >
+                  Reject
+                </button>
+              </div>
+            ) : null
+          }
+        />
+      }
+    >
+      <div className="text-sm text-muted">
+        PageFocused + PageHero wrapper in place. Content migration starting now in small commits.
       </div>
+    </PageFocused>
+  );
 
-      {/* Header */}
-      <div className="mb-8 flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-        <div>
-          <h1 className="font-[family-name:var(--font-dm-serif)] text-3xl md:text-4xl text-navy">
-            {row.legal_name}
-          </h1>
-          {row.dba && <p className="text-muted text-lg mt-1">dba {row.dba}</p>}
-          <div className="flex items-center gap-3 mt-3">
-            <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold border ${STATUS_PILL[row.status]}`}>
-              {STATUS_LABEL[row.status]}
-            </span>
-            <span className="text-xs text-muted">
-              Submitted {new Date(row.created_at).toLocaleString()}
-            </span>
-          </div>
-        </div>
-        <ActionPanel row={row} onUpdate={(updated) => setRow(updated)} />
-      </div>
-
-      {/* Review focus banner — item 5 (admin review screen) */}
-      {row.status === 'pending_review' && (
-        <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-5 py-4 text-amber-900">
-          <div className="font-semibold text-sm tracking-wide">Review this TPA signup request</div>
-          <p className="text-sm mt-1 text-amber-800">
-            Verify the details below, set the PEPM rate if needed, then approve or reject. Approved TPAs will move to contract generation and portal access.
-          </p>
-        </div>
-      )}
-
-      {/* Sections */}
-      <div className="space-y-6">
-        <Section title="Company">
-          <Field label="Legal name" value={row.legal_name} />
-          <Field label="DBA" value={row.dba} />
-          <Field label="Entity state" value={row.entity_state} />
-          <Field label="Street address" value={row.street_address} />
-          <Field label="City" value={row.city} />
-          <Field label="State" value={row.state} />
-          <Field label="ZIP" value={row.zip} />
-        </Section>
-
-        <Section title="Primary contact">
-          <Field label="Name" value={row.primary_contact_name} />
-          <Field label="Title" value={row.primary_contact_title} />
-          <Field label="Email" value={row.primary_contact_email} mono />
-          <Field label="Phone" value={row.primary_contact_phone} />
-        </Section>
 
         <Section title="Contract signer">
           {row.signer_name || row.signer_email ? (
