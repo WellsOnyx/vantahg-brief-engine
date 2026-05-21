@@ -58,6 +58,11 @@ const nextConfig: NextConfig = {
   // (which Claude Code uses) emit server.js under .next/standalone/.claude/...
   // which breaks the Dockerfile COPY paths.
   outputFileTracingRoot: path.join(__dirname),
+  async redirects() {
+    return [
+      { source: '/sign-up', destination: '/signup', permanent: false },
+    ];
+  },
   async headers() {
     return [
       {

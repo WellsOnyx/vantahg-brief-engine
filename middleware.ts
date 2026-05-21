@@ -5,7 +5,7 @@ import { isDemoMode } from '@/lib/demo-mode';
 // Public marketing / auth-flow page prefixes. `startsWith` semantics are
 // intentional here because routes like `/signup-tpa` and `/demo-tour` are
 // real pages that should remain reachable without auth.
-const PUBLIC_PAGE_PREFIXES = ['/login', '/signup', '/welcome', '/demo', '/site'];
+const PUBLIC_PAGE_PREFIXES = ['/login', '/signup', '/sign-up', '/magic-link', '/forgot-password', '/welcome', '/demo', '/site'];
 
 // Protected portal paths — these require an authenticated + approved TPA / Provider
 const TPA_PORTAL_PREFIX = '/portal/tpa';

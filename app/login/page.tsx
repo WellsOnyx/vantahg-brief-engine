@@ -5,19 +5,17 @@ import { useSearchParams } from 'next/navigation';
 import { createBrowserClient } from '@/lib/supabase-browser';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import Link from 'next/link';
+import {
+  AuthShell,
+  AuthField,
+  AuthCTA,
+  AuthError,
+} from '@/components/layouts/AuthShell';
 
 /**
  * Routes a freshly-signed-in user to the right landing page based on their
- * role.
- *
- * Critically, this must NEVER return '/' for a signed-in user — '/' is
- * the chromeless marketing page (see AppShell.tsx isChromeless), which
- * means landing there hides the app nav and makes the sign-in look
- * broken ("blank page, no nav"). Every signed-in user gets routed to
- * an app surface with the top nav visible.
- *
- * If role lookup fails for any reason, fall through to /cases — that
- * page renders with the nav and works for any internal role.
+ * role. Never returns '/' (chromeless marketing page) — every signed-in
+ * user lands on an app surface with the nav visible.
  */
 async function resolveLandingPage(supabase: SupabaseClient): Promise<string> {
   try {
@@ -44,38 +42,40 @@ async function resolveLandingPage(supabase: SupabaseClient): Promise<string> {
   }
 }
 
+type Mode = 'password' | 'magic-link' | 'magic-link-sent';
+
 function LoginForm() {
   const searchParams = useSearchParams();
-  // `redirect` is honored when explicitly set (e.g. someone clicked a deep
-  // link that required auth). Otherwise we role-route after sign-in below.
   const explicitRedirect = searchParams.get('redirect');
+  const reason = searchParams.get('reason');
   const fromSquarespace = searchParams.get('from') === 'squarespace';
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [useMagicLink, setUseMagicLink] = useState(false);
+  const [mode, setMode] = useState<Mode>('password');
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState<{ type: 'error' | 'success'; text: string } | null>(null);
+  const [error, setError] = useState<string | null>(
+    reason === 'auth_unavailable'
+      ? 'Authentication is temporarily unavailable. Try again in a moment.'
+      : reason === 'portal_access_required'
+        ? 'Sign in to reach the partner portal.'
+        : null,
+  );
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    setMessage(null);
+    setError(null);
 
     const supabase = createBrowserClient();
 
     if (!supabase) {
-      // Demo mode — redirect straight through
+      // Demo mode — pass straight through.
       window.location.href = explicitRedirect || '/';
       return;
     }
 
-    if (useMagicLink) {
-      // Provider-agnostic: POST to our auth adapter route. Under
-      // ENABLE_AWS_AUTH=true (production Fargate) this hits Cognito's
-      // custom auth flow; under Supabase it falls back to signInWithOtp.
-      // Either way the user gets an email with a link that lands on
-      // /api/auth/callback which sets the session cookie and redirects.
+    if (mode === 'magic-link') {
       try {
         const res = await fetch('/api/auth/request-magic-link', {
           method: 'POST',
@@ -86,25 +86,20 @@ function LoginForm() {
           }),
         });
         if (res.status === 429) {
-          setMessage({ type: 'error', text: 'Too many requests. Wait a minute and try again.' });
+          setError('Too many requests. Wait a minute and try again.');
         } else if (res.status >= 400 && res.status !== 202) {
-          setMessage({ type: 'error', text: 'Could not send the magic link. Check the email and try again.' });
+          setError("That didn't work. Check the email and try again.");
         } else {
-          setMessage({
-            type: 'success',
-            text: 'Check your email for the magic link. Click it to sign in.',
-          });
+          setMode('magic-link-sent');
         }
       } catch {
-        setMessage({ type: 'error', text: 'Network error. Try again.' });
+        setError('Network error. Try again.');
       }
     } else {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) {
-        setMessage({ type: 'error', text: error.message });
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+      if (signInError) {
+        setError("That email and password don't match our records.");
       } else {
-        // Role-route the user. Clients go to their dashboard; everyone else
-        // goes to the explicit redirect target or root.
         const destination = explicitRedirect ?? (await resolveLandingPage(supabase));
         window.location.href = destination;
         return;
@@ -114,133 +109,173 @@ function LoginForm() {
     setLoading(false);
   }
 
+  // ── State: magic-link confirmation ─────────────────────────────
+  if (mode === 'magic-link-sent') {
+    const emailDomain = email.split('@')[1] || 'your inbox';
+    return (
+      <AuthShell
+        eyebrow="Sent"
+        title={<>Check {emailDomain}.</>}
+        subtitle="The link is good for 15 minutes and works on this device or any other."
+        footer={
+          <>
+            <p>
+              <button
+                type="button"
+                onClick={() => {
+                  setMode('magic-link');
+                }}
+                className="text-navy/70 hover:text-navy underline decoration-dotted underline-offset-4"
+              >
+                Use a different email
+              </button>
+            </p>
+            <p>
+              <a
+                href="https://www.wellsonyx.com/firstlevelreview"
+                className="text-muted hover:text-navy underline decoration-dotted underline-offset-4"
+              >
+                Return to wellsonyx.com
+              </a>
+            </p>
+          </>
+        }
+      >
+        <div className="space-y-6">
+          <p className="text-sm text-muted leading-relaxed">
+            We sent a one-time link to{' '}
+            <span className="text-navy font-medium">{email}</span>. Click it on
+            this device or your phone to finish signing in.
+          </p>
+          <AuthCTA
+            type="button"
+            onClick={() => {
+              setMode('magic-link');
+              setError(null);
+            }}
+          >
+            Didn&apos;t get it? Send again
+          </AuthCTA>
+        </div>
+      </AuthShell>
+    );
+  }
+
+  // ── State: password or magic-link request ──────────────────────
+  const eyebrow = fromSquarespace ? 'Welcome' : 'Sign in';
+  const title = fromSquarespace ? (
+    <>Welcome from Wells Onyx.</>
+  ) : (
+    <>The room is quiet. Your work is waiting.</>
+  );
+  const subtitle =
+    'Signed sessions for VantaUM reviewers, concierges, and partner clients.';
+
   return (
-    <div className="bg-surface rounded-2xl shadow-xl border border-border p-8">
-      {/* Logo */}
-      <div className="flex items-center justify-center gap-3 mb-8">
-        <div className="w-10 h-10 bg-gold-gradient rounded-lg flex items-center justify-center font-bold text-navy text-lg shadow-md shadow-gold/20">
-          V
-        </div>
-        <span className="font-[family-name:var(--font-dm-serif)] text-2xl tracking-tight text-navy">
-          Vanta<span className="text-gold">HG</span>
-        </span>
-      </div>
+    <AuthShell
+      eyebrow={eyebrow}
+      title={title}
+      subtitle={subtitle}
+      footer={
+        <>
+          <p>
+            <Link
+              href="/client/cases"
+              className="text-muted hover:text-navy underline decoration-dotted underline-offset-4"
+            >
+              View my cases
+            </Link>
+            <span className="text-gold/60 mx-2">·</span>
+            <a
+              href="https://www.wellsonyx.com/firstlevelreview"
+              className="text-muted hover:text-navy underline decoration-dotted underline-offset-4"
+            >
+              Return to wellsonyx.com
+            </a>
+          </p>
+          <p className="text-[10px] text-muted/60 mt-3">A Wells Onyx Service</p>
+        </>
+      }
+    >
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {error && <AuthError>{error}</AuthError>}
 
-      <p className="text-center text-xs text-muted -mt-4 mb-2">First-Level Review Platform</p>
+        <AuthField
+          id="email"
+          label="Email"
+          type="email"
+          value={email}
+          onChange={setEmail}
+          placeholder="you@health-plan.com"
+          required
+          autoComplete="email"
+        />
 
-      <h1 className="text-xl font-semibold text-center text-foreground mb-6">
-        {fromSquarespace ? 'Welcome from Wells Onyx' : 'Sign in to your account'}
-      </h1>
-
-      {message && (
-        <div
-          className={`mb-4 p-3 rounded-lg text-sm ${
-            message.type === 'error'
-              ? 'bg-red-50 text-red-700 border border-red-200'
-              : 'bg-green-50 text-green-700 border border-green-200'
-          }`}
-        >
-          {message.text}
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label htmlFor="email" className="block text-sm font-medium text-foreground mb-1">
-            Email
-          </label>
-          <input
-            id="email"
-            type="email"
+        {mode === 'password' && (
+          <AuthField
+            id="password"
+            label="Password"
+            type="password"
+            value={password}
+            onChange={setPassword}
+            placeholder="••••••••"
             required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gold/50 focus:border-gold"
-            placeholder="you@example.com"
+            autoComplete="current-password"
           />
-        </div>
-
-        {!useMagicLink && (
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-foreground mb-1">
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              required={!useMagicLink}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gold/50 focus:border-gold"
-              placeholder="Your password"
-            />
-          </div>
         )}
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full py-2.5 px-4 bg-navy text-white rounded-lg text-sm font-semibold hover:bg-navy-light transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {loading ? 'Signing in...' : useMagicLink ? 'Send magic link' : 'Sign in'}
-        </button>
+        <div className="pt-2">
+          <AuthCTA type="submit" disabled={loading}>
+            {loading ? 'Signing in…' : mode === 'magic-link' ? 'Send link' : 'Continue'}
+          </AuthCTA>
+        </div>
+
+        <p className="text-sm text-navy/70 text-center">
+          {mode === 'magic-link' ? (
+            <>
+              Prefer a password?{' '}
+              <button
+                type="button"
+                onClick={() => {
+                  setMode('password');
+                  setError(null);
+                }}
+                className="text-gold-dark underline decoration-gold/30 underline-offset-4 hover:decoration-gold"
+              >
+                Use one instead.
+              </button>
+            </>
+          ) : (
+            <>
+              Prefer a magic link?{' '}
+              <button
+                type="button"
+                onClick={() => {
+                  setMode('magic-link');
+                  setError(null);
+                }}
+                className="text-gold-dark underline decoration-gold/30 underline-offset-4 hover:decoration-gold"
+              >
+                Email me one instead.
+              </button>
+            </>
+          )}
+        </p>
       </form>
-
-      <div className="mt-4 text-center">
-        <button
-          onClick={() => {
-            setUseMagicLink(!useMagicLink);
-            setMessage(null);
-          }}
-          className="text-sm text-gold-dark hover:text-gold transition-colors"
-        >
-          {useMagicLink ? 'Use password instead' : 'Use magic link instead'}
-        </button>
-      </div>
-
-      <div className="mt-6 pt-4 border-t border-border text-center space-y-2">
-        <span className="text-sm text-muted">
-          Don&apos;t have an account?{' '}
-          <Link href="/signup" className="text-gold-dark hover:text-gold font-medium">
-            Sign up
-          </Link>
-        </span>
-        <p className="text-xs text-muted">
-          <Link
-            href="/client/cases"
-            className="hover:text-foreground transition-colors underline decoration-dotted"
-          >
-            View My Cases
-          </Link>
-          {' '}(for client users)
-        </p>
-        <p className="text-xs text-muted">
-          <a
-            href="https://www.wellsonyx.com/firstlevelreview"
-            className="hover:text-foreground transition-colors"
-          >
-            Return to wellsonyx.com
-          </a>
-        </p>
-      </div>
-
-      <p className="mt-4 text-center text-[10px] text-muted/60">A Wells Onyx Service</p>
-    </div>
+    </AuthShell>
   );
 }
 
 export default function LoginPage() {
   return (
-    <div className="min-h-[80vh] flex items-center justify-center px-4">
-      <div className="w-full max-w-md">
-        <Suspense fallback={
-          <div className="bg-surface rounded-2xl shadow-xl border border-border p-8 text-center">
-            <div className="animate-pulse text-muted text-sm">Loading...</div>
-          </div>
-        }>
-          <LoginForm />
-        </Suspense>
-      </div>
-    </div>
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-background flex items-center justify-center">
+          <p className="text-sm text-muted animate-pulse">Loading…</p>
+        </div>
+      }
+    >
+      <LoginForm />
+    </Suspense>
   );
 }

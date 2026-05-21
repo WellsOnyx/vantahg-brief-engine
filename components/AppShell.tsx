@@ -51,7 +51,21 @@ export interface AppShellProps {
   children: React.ReactNode;
 }
 
-const CHROMELESS_PATHS = new Set(['/', '/demo', '/site', '/signup-tpa']);
+// Pages that render WITHOUT the AppShell chrome (sidebar + top bar).
+// Exact matches stay in CHROMELESS_PATHS; everything else is a prefix
+// matcher so we don't have to keep adding sub-paths.
+const CHROMELESS_PATHS = new Set(['/']);
+const CHROMELESS_PREFIXES = [
+  '/demo',
+  '/site',
+  '/signup-tpa',
+  '/login',
+  '/signup',
+  '/sign-up',
+  '/auth',
+  '/magic-link',
+  '/forgot-password',
+];
 
 export function AppShell({
   navLinks,
@@ -61,7 +75,9 @@ export function AppShell({
   children,
 }: AppShellProps) {
   const pathname = usePathname();
-  const isChromeless = CHROMELESS_PATHS.has(pathname);
+  const isChromeless =
+    CHROMELESS_PATHS.has(pathname) ||
+    CHROMELESS_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + '/'));
 
   if (isChromeless) {
     return <>{children}</>;
