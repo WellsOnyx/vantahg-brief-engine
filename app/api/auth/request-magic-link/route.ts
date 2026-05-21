@@ -3,7 +3,8 @@ import { z } from 'zod';
 import { getAuthAdapter } from '@/lib/adapters/auth';
 import { applyRateLimit } from '@/lib/rate-limit-middleware';
 import { logSecurityEvent } from '@/lib/audit';
-import { getRequestContext } from '@/lib/security';
+import { getRequestContext, redactEmail } from '@/lib/security';
+import { withRequest } from '@/lib/log';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,14 +35,19 @@ const Body = z.object({
 });
 
 export async function POST(request: NextRequest) {
+  const log = withRequest(request);
   const rateLimited = await applyRateLimit(request, { maxRequests: 10 });
-  if (rateLimited) return rateLimited;
+  if (rateLimited) {
+    log.warn('magic_link_rate_limited');
+    return rateLimited;
+  }
 
   const ctx = getRequestContext(request);
   let body: z.infer<typeof Body>;
   try {
     body = Body.parse(await request.json());
   } catch {
+    log.warn('magic_link_invalid_email');
     return NextResponse.json({ error: 'invalid_email' }, { status: 400 });
   }
 
@@ -57,6 +63,13 @@ export async function POST(request: NextRequest) {
   });
 
   if (!result.ok) {
+    log.error('magic_link_send_failed', {
+      recipient_email: redactEmail(email),
+      code: result.code,
+      // result.message may contain provider-specific detail. Safe to log;
+      // the route response stays opaque to the caller below.
+      detail: result.message,
+    });
     await logSecurityEvent(
       'magic_link_request_failed',
       email,
@@ -69,6 +82,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ status: 'sent' }, { status });
   }
 
+  log.info('magic_link_sent', {
+    recipient_email: redactEmail(email),
+    pre_existing: result.preExisting,
+  });
   await logSecurityEvent('magic_link_requested', email, { preExisting: result.preExisting }, ctx);
   return NextResponse.json({ status: 'sent' }, { status: 202 });
 }
