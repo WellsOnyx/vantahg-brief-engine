@@ -3,6 +3,7 @@ import { requireAuth } from '@/lib/auth-guard';
 import { isDemoMode } from '@/lib/demo-mode';
 import { getServiceClient } from '@/lib/supabase';
 import { submitAudit } from '@/lib/quality-audit';
+import { applyRateLimit } from '@/lib/rate-limit-middleware';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,6 +38,9 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const rateLimited = await applyRateLimit(request, { maxRequests: 60 });
+    if (rateLimited) return rateLimited;
+
     const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) return authResult;
 
