@@ -207,26 +207,60 @@ export default function AdminSignupDetailPage() {
         />
       }
     >
-      <div className="text-sm text-muted">
-        PageFocused + PageHero wrapper in place. Content migration starting now in small commits.
-      </div>
+      <PageFocused.Body
+        main={
+          <div className="space-y-6">
+            <Section title="Company">
+              <Field label="Legal name" value={row.legal_name} />
+              <Field label="DBA" value={row.dba} />
+              <Field label="Entity state" value={row.entity_state} />
+              <Field label="Street address" value={row.street_address} />
+              <Field label="City" value={row.city} />
+              <Field label="State" value={row.state} />
+              <Field label="ZIP" value={row.zip} />
+            </Section>
+
+            <Section title="Primary contact">
+              <Field label="Name" value={row.primary_contact_name} />
+              <Field label="Title" value={row.primary_contact_title} />
+              <Field label="Email" value={row.primary_contact_email} mono />
+              <Field label="Phone" value={row.primary_contact_phone} />
+            </Section>
+
+            <Section title="Contract signer">
+              {row.signer_name || row.signer_email ? (
+                <>
+                  <Field label="Name" value={row.signer_name} />
+                  <Field label="Title" value={row.signer_title} />
+                  <Field label="Email" value={row.signer_email} mono />
+                </>
+              ) : (
+                <p className="text-sm text-muted italic">Not provided — primary contact is the default signer.</p>
+              )}
+            </Section>
+
+            <Section title="Operation">
+              <Field label="Expected weekly auths" value={row.expected_weekly_auths ? row.expected_weekly_auths.toString() : null} />
+              <Field label="Existing TPA system" value={row.existing_tpa_system} />
+            </Section>
+
+            <Section title="Notes">
+              <Field label="Internal notes" value={row.notes} />
+            </Section>
+          </div>
+        }
+        aside={
+          <div className="space-y-4">
+            <div className="card p-5">
+              <div className="text-sm font-semibold text-navy mb-2">Contract Status</div>
+              <p className="text-xs text-muted">Contract panel will be wired here next.</p>
+            </div>
+          </div>
+        }
+      />
     </PageFocused>
   );
 
-
-        <Section title="Contract signer">
-          {row.signer_name || row.signer_email ? (
-            <>
-              <Field label="Name" value={row.signer_name} />
-              <Field label="Title" value={row.signer_title} />
-              <Field label="Email" value={row.signer_email} mono />
-            </>
-          ) : (
-            <p className="text-sm text-muted italic">Not provided — primary contact is the default signer.</p>
-          )}
-        </Section>
-
-        <Section title="Operation">
           <Field label="Current TPA system" value={row.existing_tpa_system} />
           <Field label="Estimated members" value={row.estimated_members !== null ? row.estimated_members.toLocaleString() : null} />
           <Field label="Expected auths / week" value={row.expected_weekly_auths !== null ? row.expected_weekly_auths.toString() : null} />
