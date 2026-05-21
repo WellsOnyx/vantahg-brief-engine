@@ -3,13 +3,16 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { createBrowserClient } from '@/lib/supabase-browser';
 
 /**
  * Admin signup detail view — part of the core review screen (Item 5).
  * Shows all data submitted via /signup-tpa, review trail, approve/reject controls,
  * and contract status. This is the primary place Jonathan reviews new TPA requests.
- * Contract generation actions are present but will be enhanced in item 6.
+ *
+ * Access is enforced server-side on `/api/admin/signups/:id` (requireRole).
+ * The page treats the API response as the source of truth — no client-side
+ * auth check duplicating the server contract (that was the old Supabase
+ * browser-auth path and it breaks under Cognito).
  */
 
 type Status = 'pending_review' | 'approved' | 'rejected' | 'signed' | 'live';
@@ -80,68 +83,68 @@ export default function AdminSignupDetailPage() {
   const id = params.id;
   const [row, setRow] = useState<SignupRow | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [accessChecked, setAccessChecked] = useState(false);
-  const [hasAccess, setHasAccess] = useState(false);
+  const [accessStatus, setAccessStatus] = useState<'unknown' | 'ok' | 'forbidden' | 'unauth'>('unknown');
 
   useEffect(() => {
     let cancelled = false;
-    async function init() {
-      const browser = createBrowserClient();
-      if (!browser) {
-        if (!cancelled) {
-          setHasAccess(true);
-          setAccessChecked(true);
-          await load();
-        }
-        return;
-      }
-      const { data: { user } } = await browser.auth.getUser();
-      if (!user) {
-        if (!cancelled) {
-          setHasAccess(false);
-          setAccessChecked(true);
-        }
-        return;
-      }
-      const { data: profile } = await browser
-        .from('user_profiles')
-        .select('role')
-        .eq('id', user.id)
-        .maybeSingle();
-      const role = profile?.role ?? 'reviewer';
-      const allowed = role === 'admin' || role === 'ceo' || role === 'slt' || role === 'builder';
-      if (!cancelled) {
-        setHasAccess(allowed);
-        setAccessChecked(true);
-        if (allowed) await load();
-      }
-    }
     async function load() {
       try {
-        const res = await fetch(`/api/admin/signups/${id}`);
+        const res = await fetch(`/api/admin/signups/${id}`, { cache: 'no-store' });
+        if (cancelled) return;
+        if (res.status === 401) {
+          setAccessStatus('unauth');
+          return;
+        }
+        if (res.status === 403) {
+          setAccessStatus('forbidden');
+          return;
+        }
         if (res.status === 404) {
+          setAccessStatus('ok');
           setError('Signup not found.');
           return;
         }
         if (!res.ok) {
+          setAccessStatus('ok');
           setError(`Failed to load (${res.status})`);
           return;
         }
         const data = (await res.json()) as SignupRow;
-        if (!cancelled) setRow(data);
+        if (!cancelled) {
+          setRow(data);
+          setAccessStatus('ok');
+        }
       } catch {
-        if (!cancelled) setError('Failed to load signup');
+        if (!cancelled) {
+          setAccessStatus('ok');
+          setError('Failed to load signup');
+        }
       }
     }
-    init();
+    load();
     return () => { cancelled = true; };
   }, [id]);
 
-  if (!accessChecked) {
+  if (accessStatus === 'unknown') {
     return <Frame><div className="text-muted">Loading…</div></Frame>;
   }
 
-  if (!hasAccess) {
+  if (accessStatus === 'unauth') {
+    return (
+      <Frame>
+        <div className="bg-surface rounded-2xl border border-border shadow-sm p-10 text-center">
+          <h1 className="font-[family-name:var(--font-dm-serif)] text-2xl text-navy mb-2">
+            Sign in required
+          </h1>
+          <Link href={`/login?redirect=/admin/signups/${id}`} className="btn btn-primary mt-4 inline-flex">
+            Go to login
+          </Link>
+        </div>
+      </Frame>
+    );
+  }
+
+  if (accessStatus === 'forbidden') {
     return (
       <Frame>
         <div className="bg-surface rounded-2xl border border-border shadow-sm p-10 text-center">

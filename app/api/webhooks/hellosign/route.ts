@@ -7,6 +7,7 @@ import { apiError } from '@/lib/api-error';
 import { getRequestContext } from '@/lib/security';
 import { getEnv } from '@/lib/env';
 import { provisionTpaUserAndMagicLink } from '@/lib/contracts/client-onboarding';
+import { notifyContractPartiallySigned, notifyContractFullyExecuted } from '@/lib/notifications';
 
 export const dynamic = 'force-dynamic';
 
@@ -223,6 +224,13 @@ export async function POST(request: NextRequest) {
           contract_id: contract.id,
           signature_request_id: event.signature_request_id,
         }, getRequestContext(request));
+
+        // Item 18 (Claude): notify admins so Jonathan knows his
+        // counter-signature is queued up. HelloSign also emails the next
+        // signer in the routing order; this is the VantaUM-branded heads-up.
+        // Fire-and-forget — never block webhook ack on email delivery.
+        void notifyContractPartiallySigned(contract.id).catch(() => {});
+
         return new NextResponse(SUCCESS_BODY, { status: 200 });
       }
 
@@ -353,6 +361,13 @@ export async function POST(request: NextRequest) {
             signature_request_id: event.signature_request_id,
           }, getRequestContext(request));
         }
+
+        // Item 18 (Claude): admin notification that the MSA is fully
+        // executed. Fired in addition to the TPA welcome email above so
+        // Jonathan + the admin distribution list have a confirmation
+        // separate from the customer-facing welcome.
+        // Fire-and-forget — never block webhook ack on email delivery.
+        void notifyContractFullyExecuted(contract.id).catch(() => {});
 
         return new NextResponse(SUCCESS_BODY, { status: 200 });
       }
