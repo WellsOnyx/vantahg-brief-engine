@@ -619,8 +619,15 @@ export async function notifyContractSentForSignature(signupId: string): Promise<
   const baseUrl = process.env.NEXTAUTH_URL || process.env.VERCEL_URL || 'http://localhost:3000';
   const loginUrl = `${baseUrl}/login`;
 
-  // Harden #17: Use the real email adapter when available, fall back gracefully
-  const emailAdapter = await getEmailAdapter().catch(() => null);
+  // Harden #17: Use the real email adapter when available, fall back gracefully.
+  // getEmailAdapter() is synchronous and never throws (returns cached or default
+  // adapter); the previous await + .catch was a type error caught at build.
+  let emailAdapter: ReturnType<typeof getEmailAdapter> | null = null;
+  try {
+    emailAdapter = getEmailAdapter();
+  } catch {
+    emailAdapter = null;
+  }
 
   const subject = `Action Required: Sign your VantaUM MSA + BAA for ${company}`;
   const textBody =

@@ -84,7 +84,7 @@ export default function TpaSubmitPage() {
 
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 -mt-10 pb-16 animate-slide-up">
           <div className="card p-6 md:p-8">
-            <h2 className="font-[family-name:var(--font-display)] text-xl text-navy">What happens next</h2>
+            <h2 className="text-base font-semibold text-navy tracking-tight">What happens next</h2>
             <p className="text-sm text-muted mt-1">
               The case is now in intake. The Brief Engine is generating the clinical summary and fact-check — it will appear on your dashboard within moments.
             </p>
