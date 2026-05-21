@@ -6,6 +6,9 @@ import { CaseTable } from '@/components/CaseTable';
 import { SlaTracker } from '@/components/SlaTracker';
 import { getTimeRemaining } from '@/lib/sla-calculator';
 import type { Case, CaseStatus } from '@/lib/types';
+import { PageDashboard, PageHero } from '@/components/layouts/PageLayouts';
+import { SectionCard } from '@/components/SectionCard';
+import { MetricValue } from '@/components/MetricValue';
 
 const statusCards: { status: CaseStatus; label: string; color: string; icon: React.ReactNode }[] = [
   {
@@ -231,102 +234,79 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="py-16 md:py-24 bg-background">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Dashboard header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-10">
-          <div>
-            <h2 className="font-[family-name:var(--font-dm-serif)] text-3xl text-navy">
-              Clinical Review Dashboard
-            </h2>
-            <p className="text-muted mt-1">Medical utilization review case management and AI brief generation</p>
-          </div>
-          <Link
-            href="/cases/new"
-            className="inline-flex items-center gap-2 bg-navy text-white px-5 py-2.5 rounded-lg font-medium hover:bg-navy-light transition-colors shadow-sm"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            New Case
-          </Link>
-        </div>
-
-        {/* Error State */}
-        {error && (
-          <div className="mb-8 animate-fade-in">
-            <div className="bg-surface rounded-xl border border-red-200 shadow-sm p-6">
-              <div className="flex items-start gap-4">
-                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-50 flex items-center justify-center">
-                  <svg className="w-5 h-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-                  </svg>
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold text-foreground">Something went wrong</h3>
-                  <p className="text-sm text-muted mt-1">{error}</p>
-                </div>
-                <button
-                  onClick={fetchCases}
-                  className="inline-flex items-center gap-2 bg-navy text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-navy-light transition-colors"
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182" />
-                  </svg>
-                  Retry
-                </button>
-              </div>
+    <PageDashboard
+      hero={
+        <PageHero
+          eyebrow="Clinical review"
+          title="The room is ready."
+          subtitle="Medical utilization review case management and AI-assisted clinical briefs."
+          actions={
+            <Link href="/cases/new" className="btn-primary text-sm inline-flex items-center gap-2">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              New case
+            </Link>
+          }
+        />
+      }
+    >
+      {error && (
+        <SectionCard>
+          <div className="flex items-start gap-4">
+            <div className="flex-1">
+              <h3 className="font-semibold text-foreground">Something went wrong</h3>
+              <p className="text-sm text-muted mt-1">{error}</p>
             </div>
+            <button onClick={fetchCases} className="btn-primary text-sm">
+              Retry
+            </button>
           </div>
-        )}
+        </SectionCard>
+      )}
 
-        {/* Status Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 mb-8">
-          {statusCards.map(({ status, label, color, icon }) => (
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 stagger-children">
+        {statusCards.map(({ status, label, color, icon }) => {
+          const count = countByStatus(status);
+          return (
             <div key={status} className={`rounded-xl border p-5 ${color} transition-all hover:shadow-md`}>
               <div className="flex items-center justify-between mb-2">
                 <span className="opacity-60">{icon}</span>
               </div>
-              <div className="text-3xl font-bold tracking-tight">
-                {loading ? <span className="skeleton inline-block w-8 h-8 rounded" /> : countByStatus(status)}
+              <div className="text-3xl tracking-tight">
+                {loading ? (
+                  <span className="skeleton inline-block w-8 h-8 rounded" />
+                ) : (
+                  <MetricValue value={count} />
+                )}
               </div>
               <div className="text-sm font-medium mt-1">{label}</div>
             </div>
-          ))}
-        </div>
-
-        {/* SLA Alerts Section */}
-        <SlaAlerts cases={cases} loading={loading} />
-
-        {/* Cases Table */}
-        <div className="bg-surface rounded-xl border border-border shadow-sm overflow-hidden">
-          <div className="px-6 py-5 border-b border-border bg-gray-50/30">
-            <div className="flex items-center gap-3">
-              <svg className="w-5 h-5 text-navy/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zM3.75 12h.007v.008H3.75V12zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm-.375 5.25h.007v.008H3.75v-.008zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
-              </svg>
-              <h3 className="font-semibold text-lg text-navy">Recent Cases</h3>
-            </div>
-          </div>
-          {loading ? (
-            <div className="p-6 space-y-4 animate-fade-in">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="flex items-center gap-4">
-                  <div className="skeleton w-24 h-4 rounded" />
-                  <div className="skeleton w-32 h-4 rounded" />
-                  <div className="skeleton w-20 h-4 rounded hidden md:block" />
-                  <div className="skeleton skeleton-badge hidden sm:block" />
-                  <div className="skeleton skeleton-badge" />
-                  <div className="flex-1" />
-                  <div className="skeleton w-16 h-4 rounded hidden sm:block" />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <CaseTable cases={cases} showFilters />
-          )}
-        </div>
+          );
+        })}
       </div>
-    </div>
+
+      <SlaAlerts cases={cases} loading={loading} />
+
+      <SectionCard eyebrow="Recent" title="Cases" padding="p-0">
+        {loading ? (
+          <div className="p-6 space-y-4 animate-fade-in">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="flex items-center gap-4">
+                <div className="skeleton w-24 h-4 rounded" />
+                <div className="skeleton w-32 h-4 rounded" />
+                <div className="skeleton w-20 h-4 rounded hidden md:block" />
+                <div className="skeleton skeleton-badge hidden sm:block" />
+                <div className="skeleton skeleton-badge" />
+                <div className="flex-1" />
+                <div className="skeleton w-16 h-4 rounded hidden sm:block" />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <CaseTable cases={cases} showFilters />
+        )}
+      </SectionCard>
+    </PageDashboard>
   );
 }

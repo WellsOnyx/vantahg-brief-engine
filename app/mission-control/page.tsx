@@ -3,6 +3,10 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import type { UsageMetrics } from '@/lib/usage-metrics';
+import { PageDashboard, PageHero } from '@/components/layouts/PageLayouts';
+import { SectionCard } from '@/components/SectionCard';
+import { EmptyState } from '@/components/EmptyState';
+import { MetricValue, type MetricFormat } from '@/components/MetricValue';
 
 /**
  * Mission Control — system-wide executive overview.
@@ -57,16 +61,38 @@ export default function MissionControlPage() {
 
   if (error) {
     return (
-      <Frame>
-        <div className="bg-surface rounded-xl border border-red-200 shadow-sm p-6 text-red-800">
-          {error}
-        </div>
-      </Frame>
+      <PageDashboard
+        hero={
+          <PageHero
+            eyebrow="Mission control"
+            title="System-wide overview."
+            subtitle="Cross-tenant executive view of every TPA, reviewer, and case."
+          />
+        }
+      >
+        <SectionCard>
+          <p className="text-sm text-foreground">{error}</p>
+        </SectionCard>
+      </PageDashboard>
     );
   }
 
   if (!metrics) {
-    return <Frame><div className="text-muted">Loading mission control…</div></Frame>;
+    return (
+      <PageDashboard
+        hero={
+          <PageHero
+            eyebrow="Mission control"
+            title="System-wide overview."
+            subtitle="Cross-tenant executive view of every TPA, reviewer, and case."
+          />
+        }
+      >
+        <SectionCard>
+          <p className="text-sm text-muted animate-pulse">Loading mission control…</p>
+        </SectionCard>
+      </PageDashboard>
+    );
   }
 
   // Pre-compute the executive-friendly numbers from the existing payload.
@@ -79,47 +105,40 @@ export default function MissionControlPage() {
   const sla = metrics.cases.sla;
 
   return (
-    <Frame>
-      {/* Header */}
-      <div className="mb-10 flex flex-col md:flex-row md:items-end md:justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="font-[family-name:var(--font-dm-serif)] text-4xl md:text-5xl text-navy">
-              Mission Control
-            </h1>
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-navy/10 text-navy border border-navy/20">
-              <span className="w-1.5 h-1.5 rounded-full bg-navy" />
-              System-wide
-            </span>
-            {metrics.source === 'demo' && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 border border-amber-200">
-                Demo Data
-              </span>
-            )}
-          </div>
-          <p className="text-muted mt-2 text-lg">
-            Cross-tenant executive overview · {metrics.period.label}
-          </p>
-        </div>
-        <div className="text-right">
-          <div className="text-xs text-muted">Updated</div>
-          <div className="text-sm text-navy font-medium">
-            {new Date(metrics.generated_at).toLocaleString()}
-          </div>
-        </div>
-      </div>
-
+    <PageDashboard
+      hero={
+        <PageHero
+          eyebrow="Mission control · system-wide"
+          title="The operation, at a glance."
+          subtitle={`Cross-tenant executive overview · ${metrics.period.label}`}
+          actions={
+            <div className="text-right">
+              <div className="text-[10px] uppercase tracking-widest text-white/50">Updated</div>
+              <div className="text-sm text-white/80">
+                {new Date(metrics.generated_at).toLocaleString()}
+              </div>
+              {metrics.source === 'demo' && (
+                <span className="inline-flex items-center gap-1 mt-2 px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-100 text-amber-800 border border-amber-200">
+                  Demo data
+                </span>
+              )}
+            </div>
+          }
+        />
+      }
+    >
       {/* Hero KPIs */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5 mb-10">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5 stagger-children">
         <HeroKpi
-          label="Total Cases"
-          value={totalCases.toLocaleString()}
+          label="Total cases"
+          value={totalCases}
           sub={`${activeCount.toLocaleString()} active · ${completedCount.toLocaleString()} delivered`}
           tone="navy"
         />
         <HeroKpi
-          label="SLA Compliance"
-          value={`${sla.compliance_pct}%`}
+          label="SLA compliance"
+          value={sla.compliance_pct}
+          format="percent"
           sub={`${sla.on_time} on-time · ${sla.breached} breached`}
           tone={
             sla.compliance_pct >= 95 ? 'green' :
@@ -128,8 +147,8 @@ export default function MissionControlPage() {
           }
         />
         <HeroKpi
-          label="Briefs This Month"
-          value={metrics.briefs.generated_count.toLocaleString()}
+          label="Briefs this month"
+          value={metrics.briefs.generated_count}
           sub={
             metrics.briefs.failed_count > 0
               ? `${metrics.briefs.failed_count} failed`
@@ -138,76 +157,80 @@ export default function MissionControlPage() {
           tone={metrics.briefs.failed_count > 0 ? 'amber' : 'green'}
         />
         <HeroKpi
-          label="Anthropic Cost"
-          value={`$${metrics.tokens.estimated_cost_usd.toFixed(2)}`}
+          label="Anthropic cost"
+          value={metrics.tokens.estimated_cost_usd}
+          format="currency"
           sub="Month-to-date"
           tone="navy"
         />
       </div>
 
       {/* Pipeline + Intake side-by-side */}
-      <div className="grid lg:grid-cols-3 gap-6 mb-10">
+      <div className="grid lg:grid-cols-3 gap-6">
         {/* Pipeline (spans 2 cols on lg) */}
-        <section className="lg:col-span-2 bg-surface rounded-xl border border-border shadow-sm p-6">
-          <h2 className="font-semibold text-sm text-navy uppercase tracking-wide mb-1">
-            Case Pipeline
-          </h2>
-          <p className="text-xs text-muted mb-5">
-            Distribution of cases across the review lifecycle
-          </p>
-
-          {/* Active vs completed split bar */}
-          <div className="mb-5">
-            <div className="flex justify-between text-xs mb-1">
-              <span className="text-navy font-semibold">Active · {activeCount.toLocaleString()}</span>
-              <span className="text-emerald-700 font-semibold">Delivered · {completedCount.toLocaleString()} ({completedPct}%)</span>
+        <div className="lg:col-span-2">
+          <SectionCard
+            eyebrow="Pipeline"
+            title="Case distribution"
+            hint={<span className="text-xs text-muted">{totalCases.toLocaleString()} total</span>}
+          >
+            {/* Active vs completed split bar */}
+            <div className="mb-5">
+              <div className="flex justify-between text-xs mb-1">
+                <span className="text-navy font-semibold">Active · {activeCount.toLocaleString()}</span>
+                <span className="text-emerald-700 font-semibold">
+                  Delivered · {completedCount.toLocaleString()} ({completedPct}%)
+                </span>
+              </div>
+              <div className="flex h-3 rounded-full overflow-hidden bg-gray-100">
+                <div
+                  className="bg-navy"
+                  style={{ width: totalCases > 0 ? `${((totalCases - completedCount) / totalCases) * 100}%` : '0%' }}
+                />
+                <div
+                  className="bg-emerald-500"
+                  style={{ width: totalCases > 0 ? `${(completedCount / totalCases) * 100}%` : '0%' }}
+                />
+              </div>
             </div>
-            <div className="flex h-3 rounded-full overflow-hidden bg-gray-100">
-              <div
-                className="bg-navy"
-                style={{ width: totalCases > 0 ? `${((totalCases - completedCount) / totalCases) * 100}%` : '0%' }}
-              />
-              <div
-                className="bg-emerald-500"
-                style={{ width: totalCases > 0 ? `${(completedCount / totalCases) * 100}%` : '0%' }}
-              />
-            </div>
-          </div>
 
-          {/* Status breakdown */}
-          {metrics.cases.by_status.length === 0 ? (
-            <div className="text-sm text-muted py-4">No cases in the system yet.</div>
-          ) : (
-            <ul className="space-y-1.5">
-              {metrics.cases.by_status.map((row) => (
-                <li key={row.status} className="flex items-center gap-3 text-sm">
-                  <span className="w-36 shrink-0 text-navy">
-                    {STATUS_LABEL[row.status] ?? row.status}
-                  </span>
-                  <div className="flex-1 h-1.5 bg-gray-100 rounded overflow-hidden">
-                    <div
-                      className={`h-full ${TERMINAL.has(row.status) ? 'bg-emerald-500' : 'bg-navy/70'}`}
-                      style={{ width: totalCases > 0 ? `${(row.count / totalCases) * 100}%` : '0%' }}
-                    />
-                  </div>
-                  <span className="font-semibold text-navy w-12 text-right shrink-0">{row.count}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+            {metrics.cases.by_status.length === 0 ? (
+              <EmptyState
+                title="No cases in the system yet."
+                body="The pipeline lights up as soon as the first auth lands."
+              />
+            ) : (
+              <ul className="space-y-1.5">
+                {metrics.cases.by_status.map((row) => (
+                  <li key={row.status} className="flex items-center gap-3 text-sm">
+                    <span className="w-36 shrink-0 text-navy">
+                      {STATUS_LABEL[row.status] ?? row.status}
+                    </span>
+                    <div className="flex-1 h-1.5 bg-gray-100 rounded overflow-hidden">
+                      <div
+                        className={`h-full ${TERMINAL.has(row.status) ? 'bg-emerald-500' : 'bg-navy/70'}`}
+                        style={{ width: totalCases > 0 ? `${(row.count / totalCases) * 100}%` : '0%' }}
+                      />
+                    </div>
+                    <span className="font-semibold text-navy w-12 text-right shrink-0">{row.count}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </SectionCard>
+        </div>
 
         {/* Intake snapshot */}
-        <section className="bg-surface rounded-xl border border-border shadow-sm p-6">
-          <h2 className="font-semibold text-sm text-navy uppercase tracking-wide mb-1">
-            Intake This Month
-          </h2>
-          <p className="text-xs text-muted mb-5">
-            {metrics.intake.total.toLocaleString()} total events
-          </p>
-
+        <SectionCard
+          eyebrow="Intake"
+          title="This month"
+          hint={<span className="text-xs text-muted">{metrics.intake.total.toLocaleString()} events</span>}
+        >
           {metrics.intake.by_channel.length === 0 ? (
-            <div className="text-sm text-muted py-4">No intake activity this period.</div>
+            <EmptyState
+              title="The phone hasn't rung yet."
+              body="Channels: eFax, email, portal, API. Activity surfaces as soon as it arrives."
+            />
           ) : (
             <ul className="space-y-2">
               {metrics.intake.by_channel.map((row) => {
@@ -227,42 +250,24 @@ export default function MissionControlPage() {
               })}
             </ul>
           )}
-        </section>
+        </SectionCard>
       </div>
 
       {/* Quick links */}
-      <section className="mb-10">
-        <h2 className="font-semibold text-sm text-navy uppercase tracking-wide mb-3">
-          Drill Down
-        </h2>
+      <SectionCard eyebrow="Drill down" title="Operational surfaces">
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-          <QuickLink href="/cases" label="All Cases" sub={`${totalCases.toLocaleString()} total`} />
+          <QuickLink href="/cases" label="All cases" sub={`${totalCases.toLocaleString()} total`} />
           <QuickLink href="/clients" label="Clients (TPAs)" sub="Roster + onboarding" />
-          <QuickLink href="/reviewers" label="Reviewer Team" sub="Roster + availability" />
+          <QuickLink href="/reviewers" label="Reviewer team" sub="Roster + availability" />
           <QuickLink href="/quality" label="Quality" sub="Audits + compliance" />
-          <QuickLink href="/admin/usage" label="Usage & Cost" sub="Detailed ops view" />
+          <QuickLink href="/admin/usage" label="Usage & cost" sub="Detailed ops view" />
         </div>
-      </section>
-    </Frame>
+      </SectionCard>
+    </PageDashboard>
   );
 }
 
 // ── Presentational ────────────────────────────────────────────────────────
-
-function Frame({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="py-10 md:py-16 bg-background min-h-screen">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">{children}</div>
-    </div>
-  );
-}
-
-const TONE_TEXT: Record<string, string> = {
-  navy: 'text-navy',
-  green: 'text-green-700',
-  amber: 'text-amber-700',
-  red: 'text-red-700',
-};
 
 const TONE_RING: Record<string, string> = {
   navy: 'ring-navy/20',
@@ -274,11 +279,13 @@ const TONE_RING: Record<string, string> = {
 function HeroKpi({
   label,
   value,
+  format = 'number',
   sub,
   tone = 'navy',
 }: {
   label: string;
-  value: string;
+  value: number | null | undefined;
+  format?: MetricFormat;
   sub?: string;
   tone?: 'navy' | 'green' | 'amber' | 'red';
 }) {
@@ -287,8 +294,8 @@ function HeroKpi({
       <div className="text-[11px] text-muted uppercase tracking-widest font-semibold mb-3">
         {label}
       </div>
-      <div className={`text-4xl md:text-5xl font-[family-name:var(--font-dm-serif)] leading-none ${TONE_TEXT[tone]}`}>
-        {value}
+      <div className="text-4xl md:text-5xl leading-none">
+        <MetricValue value={value} format={format} />
       </div>
       {sub && <div className="text-xs text-muted mt-3">{sub}</div>}
     </div>

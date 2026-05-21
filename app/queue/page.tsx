@@ -6,6 +6,10 @@ import type { Case, CasePriority, ServiceCategory, QueueRole, QueueMeta } from '
 import { StatusBadge, PriorityBadge } from '@/components/StatusBadge';
 import { SlaTracker } from '@/components/SlaTracker';
 import { getTimeRemaining, type UrgencyLevel } from '@/lib/sla-calculator';
+import { PageList, PageHero } from '@/components/layouts/PageLayouts';
+import { SectionCard } from '@/components/SectionCard';
+import { EmptyState } from '@/components/EmptyState';
+import { MetricValue } from '@/components/MetricValue';
 
 // ── Label & color maps ──
 
@@ -151,122 +155,86 @@ export default function QueuePage() {
   }, [cases]);
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="font-[family-name:var(--font-dm-serif)] text-3xl text-navy">
-              My Queue
-            </h1>
-            <p className="text-muted text-sm mt-1">
-              Cases assigned to you, sorted by urgency
-            </p>
-          </div>
-          <Link
-            href="/cases"
-            className="text-sm text-navy hover:text-gold transition-colors"
-          >
-            View all cases &rarr;
-          </Link>
+    <PageList
+      hero={
+        <PageHero
+          eyebrow="My queue"
+          title="Your cases, in order of urgency."
+          subtitle="Auto-refreshes every 60 seconds. Sort by SLA urgency, then case priority."
+          actions={
+            <Link href="/cases" className="text-sm text-white/80 hover:text-gold transition-colors">
+              View all cases &rarr;
+            </Link>
+          }
+        />
+      }
+    >
+      <SectionCard eyebrow="Demo" title="Viewing as">
+        <div className="flex flex-wrap gap-2">
+          {DEMO_PERSONAS.map((persona) => (
+            <button
+              key={persona.label}
+              onClick={() => setSelectedPersona(persona)}
+              className={`px-3 py-1.5 text-sm rounded-full border transition-all ${
+                selectedPersona.label === persona.label
+                  ? 'bg-navy text-white border-navy'
+                  : 'bg-surface text-foreground border-border hover:border-navy/30'
+              }`}
+            >
+              {persona.label}
+            </button>
+          ))}
         </div>
+      </SectionCard>
 
-        {/* Demo Persona Switcher */}
-        <div className="mb-6">
-          <label className="block text-xs font-medium text-muted mb-2 uppercase tracking-wider">
-            Viewing as
-          </label>
-          <div className="flex flex-wrap gap-2">
-            {DEMO_PERSONAS.map((persona) => (
-              <button
-                key={persona.label}
-                onClick={() => setSelectedPersona(persona)}
-                className={`px-3 py-1.5 text-sm rounded-full border transition-all ${
-                  selectedPersona.label === persona.label
-                    ? 'bg-navy text-white border-navy'
-                    : 'bg-surface text-foreground border-border hover:border-navy/30'
-                }`}
-              >
-                {persona.label}
-              </button>
+      <PageList.Stats>
+        <QueueStatCard label="In queue" value={meta.total} />
+        <QueueStatCard label="Overdue" value={meta.overdue_count} alert={meta.overdue_count > 0} />
+        <QueueStatCard label="Critical" value={meta.critical_count} alert={meta.critical_count > 0} />
+        <QueueStatCard label="Avg time left" value={formatAvgTime(cases)} />
+      </PageList.Stats>
+
+      {loading && (
+        <SectionCard padding="p-0">
+          <div className="animate-pulse">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-4 p-4 border-b border-border last:border-b-0">
+                <div className="w-2.5 h-2.5 rounded-full bg-muted/30" />
+                <div className="w-24 h-4 rounded bg-muted/20" />
+                <div className="w-32 h-4 rounded bg-muted/20" />
+                <div className="flex-1" />
+                <div className="w-16 h-6 rounded-full bg-muted/20" />
+                <div className="w-20 h-6 rounded-full bg-muted/20" />
+              </div>
             ))}
           </div>
-        </div>
+        </SectionCard>
+      )}
 
-        {/* Stats Bar */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <StatCard
-            label="In Queue"
-            value={meta.total}
-            icon="📋"
-          />
-          <StatCard
-            label="Overdue"
-            value={meta.overdue_count}
-            icon="🔴"
-            alert={meta.overdue_count > 0}
-          />
-          <StatCard
-            label="Critical"
-            value={meta.critical_count}
-            icon="🟡"
-            alert={meta.critical_count > 0}
-          />
-          <StatCard
-            label="Avg Time Left"
-            value={formatAvgTime(cases)}
-            icon="⏱"
-          />
-        </div>
-
-        {/* Loading State */}
-        {loading && (
-          <div className="bg-surface rounded-xl border border-border overflow-hidden">
-            <div className="animate-pulse">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="flex items-center gap-4 p-4 border-b border-border last:border-b-0">
-                  <div className="w-2.5 h-2.5 rounded-full bg-muted/30" />
-                  <div className="w-24 h-4 rounded bg-muted/20" />
-                  <div className="w-32 h-4 rounded bg-muted/20" />
-                  <div className="flex-1" />
-                  <div className="w-16 h-6 rounded-full bg-muted/20" />
-                  <div className="w-20 h-6 rounded-full bg-muted/20" />
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Error State */}
-        {error && !loading && (
-          <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
-            <p className="text-red-700 mb-3">{error}</p>
+      {error && !loading && (
+        <SectionCard>
+          <div className="flex items-start justify-between gap-4">
+            <p className="text-sm text-foreground">{error}</p>
             <button
               onClick={() => { setLoading(true); fetchQueue(); }}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 transition-colors"
+              className="btn-primary text-sm"
             >
               Retry
             </button>
           </div>
-        )}
+        </SectionCard>
+      )}
 
-        {/* Empty State */}
-        {!loading && !error && sortedCases.length === 0 && (
-          <div className="bg-surface rounded-xl border border-border p-12 text-center">
-            <div className="text-4xl mb-3">✅</div>
-            <h3 className="font-[family-name:var(--font-dm-serif)] text-xl text-navy mb-2">
-              Queue is clear
-            </h3>
-            <p className="text-muted text-sm">
-              No cases require your attention right now.
-            </p>
-          </div>
-        )}
+      {!loading && !error && sortedCases.length === 0 && (
+        <EmptyState
+          title="The queue is quiet."
+          body="No cases require your attention right now. The list refreshes every 60 seconds."
+        />
+      )}
 
-        {/* Desktop Table */}
-        {!loading && !error && sortedCases.length > 0 && (
-          <>
-            <div className="hidden md:block bg-surface rounded-xl border border-border overflow-hidden">
+      {!loading && !error && sortedCases.length > 0 && (
+        <>
+          <div className="hidden md:block bg-surface rounded-xl border border-border overflow-hidden">
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-border bg-muted/5">
@@ -404,30 +372,43 @@ export default function QueuePage() {
               })}
             </div>
 
-            {/* Footer */}
-            <div className="mt-4 text-sm text-muted text-center">
-              Showing {sortedCases.length} case{sortedCases.length !== 1 ? 's' : ''} &middot; Auto-refreshes every 60s
-            </div>
-          </>
-        )}
-      </div>
-    </div>
+          {/* Footer */}
+          <div className="mt-4 text-sm text-muted text-center">
+            Showing {sortedCases.length} case{sortedCases.length !== 1 ? 's' : ''} &middot; Auto-refreshes every 60s
+          </div>
+        </>
+      )}
+    </PageList>
   );
 }
 
-// ── StatCard ──
+// ── QueueStatCard ──
+// Local card that pipes the value through MetricValue so 0 renders as
+// em-dash ("zero is not broken"). String values (like "2h 14m") pass
+// through unchanged via the MetricValue showZero path.
 
-function StatCard({ label, value, icon, alert }: { label: string; value: number | string; icon: string; alert?: boolean }) {
+function QueueStatCard({
+  label,
+  value,
+  alert,
+}: {
+  label: string;
+  value: number | string;
+  alert?: boolean;
+}) {
   return (
     <div className={`rounded-xl border p-4 ${alert ? 'bg-red-50 border-red-200' : 'bg-surface border-border'}`}>
-      <div className="flex items-center gap-2 mb-1">
-        <span className="text-lg">{icon}</span>
-        <span className={`text-xs font-medium uppercase tracking-wider ${alert ? 'text-red-600' : 'text-muted'}`}>
-          {label}
-        </span>
-      </div>
-      <p className={`text-2xl font-semibold ${alert ? 'text-red-700' : 'text-navy'}`}>
-        {value}
+      <p className={`text-[10px] uppercase tracking-[0.12em] font-semibold ${alert ? 'text-red-600' : 'text-muted'}`}>
+        {label}
+      </p>
+      <p className="text-3xl mt-1">
+        {typeof value === 'string' && value !== '--' ? (
+          <span className={`font-[family-name:var(--font-display)] ${alert ? 'text-red-700' : 'text-navy'}`}>
+            {value}
+          </span>
+        ) : (
+          <MetricValue value={typeof value === 'string' ? null : value} />
+        )}
       </p>
     </div>
   );
