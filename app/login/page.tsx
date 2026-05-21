@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState, useMemo, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { createBrowserClient } from '@/lib/supabase-browser';
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -11,6 +11,7 @@ import {
   AuthCTA,
   AuthError,
 } from '@/components/layouts/AuthShell';
+import { pickLoginTagline } from '@/lib/login-taglines';
 
 /**
  * Routes a freshly-signed-in user to the right landing page based on their
@@ -162,11 +163,15 @@ function LoginForm() {
   }
 
   // ── State: password or magic-link request ──────────────────────
+  // Rotating tagline — picked once per mount so it stays stable
+  // while the user types, but rotates on every fresh visit / refresh.
+  const tagline = useMemo(() => pickLoginTagline(), []);
+
   const eyebrow = fromSquarespace ? 'Welcome' : 'Sign in';
   const title = fromSquarespace ? (
     <>Welcome from Wells Onyx.</>
   ) : (
-    <>The room is quiet. Your work is waiting.</>
+    <>{tagline.title}</>
   );
   const subtitle =
     'Signed sessions for VantaUM reviewers, concierges, and partner clients.';
