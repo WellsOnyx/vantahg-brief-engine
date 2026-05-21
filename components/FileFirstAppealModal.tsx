@@ -113,7 +113,7 @@ export function FileFirstAppealModal({
         <div className="px-6 py-5 border-b border-border bg-gradient-to-b from-white to-gray-50/60 flex items-center justify-between">
           <div>
             <p className="text-xs uppercase tracking-[1.5px] text-muted font-semibold">First Level Appeal</p>
-            <h2 className="font-[family-name:var(--font-dm-serif)] text-2xl text-navy mt-0.5">
+ <h2 className="text-2xl text-navy mt-0.5">
               File Appeal for {caseNumber}
             </h2>
           </div>
@@ -136,7 +136,7 @@ export function FileFirstAppealModal({
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <h3 className="font-[family-name:var(--font-dm-serif)] text-2xl text-navy">Appeal Filed Successfully</h3>
+ <h3 className="text-2xl text-navy">Appeal Filed Successfully</h3>
             <p className="mt-2 text-sm text-muted max-w-md mx-auto">
               A new linked appeal case has been created. The original case is now marked with <span className="font-medium text-navy">appeal_status: pending</span>.
             </p>

@@ -134,7 +134,7 @@ export default function AuditDetailPage() {
 
       <div className="flex items-center justify-between mt-3 mb-6 flex-wrap gap-3">
         <div>
-          <h1 className="font-[family-name:var(--font-dm-serif)] text-2xl text-navy">Quality audit scoring</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-navy">Quality audit scoring</h1>
           <p className="text-xs text-muted mt-0.5">
             Case <span className="font-mono">{audit.case_id}</span>
             {' • '}Status:{' '}

@@ -90,7 +90,7 @@ function WelcomeMessage({ mode }: { mode: 'intake' | 'review' }) {
 
       {mode === 'intake' ? (
         <>
-          <h3 className="text-lg font-semibold text-foreground mb-2 font-[family-name:var(--font-dm-serif)]">
+ <h3 className="text-lg font-semibold text-foreground mb-2">
             Submit a New Case
           </h3>
           <p className="text-sm text-muted max-w-md leading-relaxed">
@@ -100,7 +100,7 @@ function WelcomeMessage({ mode }: { mode: 'intake' | 'review' }) {
         </>
       ) : (
         <>
-          <h3 className="text-lg font-semibold text-foreground mb-2 font-[family-name:var(--font-dm-serif)]">
+ <h3 className="text-lg font-semibold text-foreground mb-2">
             Case Review Assistant
           </h3>
           <p className="text-sm text-muted max-w-md leading-relaxed">

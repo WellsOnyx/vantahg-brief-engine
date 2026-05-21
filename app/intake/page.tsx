@@ -454,7 +454,7 @@ export default function IntakePage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
         <div>
-          <h1 className="font-[family-name:var(--font-dm-serif)] text-3xl text-navy">
+ <h1 className="text-3xl text-navy">
             Intake Management
           </h1>
           <p className="text-muted mt-1">
@@ -887,7 +887,7 @@ export default function IntakePage() {
                     <div className="flex items-start justify-between gap-4 flex-wrap">
                       <div>
                         <div className="flex items-center gap-3">
-                          <h2 className="font-[family-name:var(--font-dm-serif)] text-xl text-navy">
+ <h2 className="text-xl text-navy">
                             {(editingData?.patient_name as string) || 'Unknown Patient'}
                           </h2>
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
@@ -1517,7 +1517,7 @@ export default function IntakePage() {
                           <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                       </div>
-                      <h3 className="text-base font-semibold text-foreground font-[family-name:var(--font-dm-serif)]">
+ <h3 className="text-base font-semibold text-foreground">
                         Queue is clear
                       </h3>
                       <p className="mt-2 text-sm text-muted max-w-sm mx-auto">

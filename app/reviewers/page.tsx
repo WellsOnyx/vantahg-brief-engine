@@ -267,7 +267,7 @@ export default function ReviewersPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="font-[family-name:var(--font-dm-serif)] text-3xl text-navy">Reviewer Panel</h1>
+ <h1 className="text-3xl text-navy">Reviewer Panel</h1>
           <p className="text-muted mt-1">Manage physician reviewers, credentials, and service categories</p>
         </div>
         <button
@@ -412,7 +412,7 @@ export default function ReviewersPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 9h3.75M15 12h3.75M15 15h3.75M4.5 19.5h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5zm6-10.125a1.875 1.875 0 11-3.75 0 1.875 1.875 0 013.75 0zm1.294 6.336a6.721 6.721 0 01-3.17.789 6.721 6.721 0 01-3.168-.789 3.376 3.376 0 016.338 0z" />
               </svg>
             </div>
-            <h3 className="font-semibold text-base text-foreground font-[family-name:var(--font-dm-serif)]">
+ <h3 className="font-semibold text-base text-foreground">
               {hasFilters ? 'No matching reviewers' : 'No reviewers yet'}
             </h3>
             <p className="text-sm text-muted mt-2 max-w-sm mx-auto">
@@ -583,7 +583,7 @@ export default function ReviewersPage() {
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl mx-4 animate-scale-in">
             {/* Modal header */}
             <div className="px-6 py-4 border-b border-border flex items-center justify-between">
-              <h3 className="font-[family-name:var(--font-dm-serif)] text-xl text-navy">
+ <h3 className="text-xl text-navy">
                 {editingReviewer ? 'Edit Reviewer' : 'Add Reviewer'}
               </h3>
               <button onClick={() => setShowModal(false)} className="text-muted hover:text-foreground p-1">

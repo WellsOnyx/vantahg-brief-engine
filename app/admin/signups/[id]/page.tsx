@@ -134,7 +134,7 @@ export default function AdminSignupDetailPage() {
     return (
       <Frame>
         <div className="bg-surface rounded-2xl border border-border shadow-sm p-10 text-center">
-          <h1 className="font-[family-name:var(--font-dm-serif)] text-2xl text-navy mb-2">
+ <h1 className="text-2xl text-navy mb-2">
             Sign in required
           </h1>
           <Link href={`/login?redirect=/admin/signups/${id}`} className="btn btn-primary mt-4 inline-flex">
@@ -149,7 +149,7 @@ export default function AdminSignupDetailPage() {
     return (
       <Frame>
         <div className="bg-surface rounded-2xl border border-border shadow-sm p-10 text-center">
-          <h1 className="font-[family-name:var(--font-dm-serif)] text-2xl text-navy mb-2">
+ <h1 className="text-2xl text-navy mb-2">
             Signup Detail
           </h1>
           <p className="text-muted">Requires admin / executive / builder role.</p>

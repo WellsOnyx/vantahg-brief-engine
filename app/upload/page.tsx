@@ -109,7 +109,7 @@ function StepIndicator({ currentStep, steps }: { currentStep: number; steps: str
 function SectionTitle({ children, subtitle }: { children: React.ReactNode; subtitle?: string }) {
   return (
     <div className="mb-6">
-      <h2 className="font-[family-name:var(--font-dm-serif)] text-xl text-navy">
+ <h2 className="text-xl text-navy">
         {children}
       </h2>
       {subtitle && <p className="text-sm text-muted mt-1">{subtitle}</p>}
@@ -706,7 +706,7 @@ function SubmissionSuccess({ caseRef }: { caseRef: string }) {
         </svg>
       </div>
 
-      <h2 className="font-[family-name:var(--font-dm-serif)] text-2xl text-navy mb-2">
+ <h2 className="text-2xl text-navy mb-2">
         Case Submitted Successfully
       </h2>
       <p className="text-muted text-base max-w-md mx-auto mb-8">
@@ -953,7 +953,7 @@ export default function UploadPage() {
           </svg>
           AI-Powered Clinical Review
         </div>
-        <h1 className="font-[family-name:var(--font-dm-serif)] text-3xl sm:text-4xl text-navy mb-3">
+ <h1 className="text-3xl sm:text-4xl text-navy mb-3">
           Submit a Case for Review
         </h1>
         <p className="text-muted text-base max-w-xl mx-auto leading-relaxed">

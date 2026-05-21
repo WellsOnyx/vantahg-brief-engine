@@ -314,7 +314,7 @@ export default function CaseDetailPage() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
             </svg>
           </div>
-          <h3 className="font-semibold text-lg text-foreground font-[family-name:var(--font-dm-serif)]">
+ <h3 className="font-semibold text-lg text-foreground">
             {error === 'Case not found' ? 'Case Not Found' : 'Something went wrong'}
           </h3>
           <p className="text-sm text-muted mt-2 max-w-md mx-auto">
@@ -362,7 +362,7 @@ export default function CaseDetailPage() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m5.231 13.481L15 17.25m-4.5-15H5.625c-.621 0-1.125.504-1.125 1.125v16.5c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9zm3.75 11.625a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
             </svg>
           </div>
-          <h3 className="font-semibold text-lg text-foreground font-[family-name:var(--font-dm-serif)]">Case Not Found</h3>
+ <h3 className="font-semibold text-lg text-foreground">Case Not Found</h3>
           <p className="text-sm text-muted mt-2">The case you are looking for does not exist or may have been removed.</p>
           <Link
             href="/cases"
@@ -904,7 +904,7 @@ export default function CaseDetailPage() {
                     </svg>
                   </div>
                   <div>
-                    <div className="font-[family-name:var(--font-dm-serif)] text-xl text-navy">AI Clinical Brief — Self-Improving Live</div>
+ <div className="text-xl text-navy">AI Clinical Brief — Self-Improving Live</div>
                     <div className="text-xs text-muted mt-0.5">Multi-pass clinical reasoning loop • AI strengthens its own output for defensibility before your validation gate</div>
                   </div>
                 </div>
@@ -1027,7 +1027,7 @@ export default function CaseDetailPage() {
           {/* Determination Section */}
           {caseData.determination ? (
             <div className="bg-surface rounded-lg border border-border p-6">
-              <h3 className="font-[family-name:var(--font-dm-serif)] text-xl text-navy mb-4">Determination</h3>
+ <h3 className="text-xl text-navy mb-4">Determination</h3>
               <div className="flex items-center gap-3 mb-3">
                 <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${
                   caseData.determination === 'approve' ? 'bg-green-100 text-green-800' :
@@ -1054,7 +1054,7 @@ export default function CaseDetailPage() {
             </div>
           ) : caseData.ai_brief && caseData.assigned_reviewer_id ? (
             <div className="bg-surface rounded-lg border border-border p-6">
-              <h3 className="font-[family-name:var(--font-dm-serif)] text-xl text-navy mb-4">
+ <h3 className="text-xl text-navy mb-4">
                 Submit Determination {caseData.review_type === 'appeal' ? '(Appeal Review)' : ''}
               </h3>
               {caseData.review_type === 'appeal' && (
@@ -1088,7 +1088,7 @@ export default function CaseDetailPage() {
           {/* Audit Timeline */}
           {auditLog.length > 0 && (
             <div className="bg-surface rounded-lg border border-border p-6">
-              <h3 className="font-[family-name:var(--font-dm-serif)] text-xl text-navy mb-4">Audit Trail</h3>
+ <h3 className="text-xl text-navy mb-4">Audit Trail</h3>
               <AuditTimeline entries={auditLog} />
             </div>
           )}

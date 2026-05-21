@@ -105,7 +105,7 @@ export default function AdminSignupsPage() {
     return (
       <Shell>
         <div className="card p-10 text-center max-w-xl mx-auto mt-12">
-          <h1 className="font-[family-name:var(--font-display)] text-2xl text-navy">Sign in to continue</h1>
+ <h1 className="text-2xl text-navy">Sign in to continue</h1>
           <p className="text-sm text-muted mt-2">
             The signup review queue requires an admin session.
           </p>
@@ -121,7 +121,7 @@ export default function AdminSignupsPage() {
     return (
       <Shell>
         <div className="card p-10 text-center max-w-xl mx-auto mt-12">
-          <h1 className="font-[family-name:var(--font-display)] text-2xl text-navy">Restricted</h1>
+ <h1 className="text-2xl text-navy">Restricted</h1>
           <p className="text-sm text-muted mt-2">
             This screen is limited to admin, executive, or builder roles. Contact your delivery lead if you believe you should have access.
           </p>

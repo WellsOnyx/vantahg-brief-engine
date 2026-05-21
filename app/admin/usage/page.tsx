@@ -103,7 +103,7 @@ export default function AdminUsagePage() {
         <div className="mb-10">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h1 className="font-[family-name:var(--font-dm-serif)] text-3xl md:text-4xl text-navy">
+ <h1 className="text-3xl md:text-4xl text-navy">
                 Usage &amp; Cost
               </h1>
               <p className="text-muted mt-1 text-lg">
@@ -283,7 +283,7 @@ function KpiCard({
   return (
     <div className="bg-surface rounded-xl border border-border p-6 shadow-sm">
       <div className="text-xs text-muted uppercase tracking-wide font-medium mb-2">{label}</div>
-      <div className={`text-3xl font-[family-name:var(--font-dm-serif)] ${TONE_CLASS[tone]}`}>{value}</div>
+ <div className={`text-3xl${TONE_CLASS[tone]}`}>{value}</div>
       {sub && <div className="text-xs text-muted mt-2">{sub}</div>}
     </div>
   );

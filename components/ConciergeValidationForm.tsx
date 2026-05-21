@@ -102,7 +102,7 @@ export function ConciergeValidationForm({ onSubmit, isSubmitting, caseNumber, fa
             </svg>
           </div>
           <div className="min-w-0 flex-1">
-            <h3 className="font-[family-name:var(--font-dm-serif)] text-2xl text-navy tracking-[-0.5px]">
+ <h3 className="text-2xl text-navy tracking-[-0.5px]">
               Validate AI Clinical Brief
             </h3>
             <p className="text-sm text-emerald-900 mt-1 leading-snug">

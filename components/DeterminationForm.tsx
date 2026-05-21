@@ -222,7 +222,7 @@ export function DeterminationForm({ onSubmit, isSubmitting, isAppeal = false, or
             </svg>
           </div>
           <div>
-            <h3 className="font-[family-name:var(--font-dm-serif)] text-lg text-foreground">
+ <h3 className="text-lg text-foreground">
               Clinical Determination
             </h3>
             <p className="text-xs text-muted mt-0.5">

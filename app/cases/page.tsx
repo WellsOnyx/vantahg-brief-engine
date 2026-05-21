@@ -283,7 +283,7 @@ export default function CasesListPage() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="font-[family-name:var(--font-dm-serif)] text-3xl text-navy">
+ <h1 className="text-3xl text-navy">
               Case Management
             </h1>
             <TenantScopeBadge />
@@ -539,7 +539,7 @@ export default function CasesListPage() {
               />
             </svg>
           </div>
-          <h3 className="text-base font-semibold text-foreground font-[family-name:var(--font-dm-serif)]">
+ <h3 className="text-base font-semibold text-foreground">
             No cases found
           </h3>
           <p className="mt-2 text-sm text-muted max-w-sm mx-auto">

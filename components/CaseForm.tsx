@@ -68,7 +68,7 @@ const facilityTypeOptions: { value: FacilityType; label: string }[] = [
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <h3 className="font-[family-name:var(--font-dm-serif)] text-base text-navy pb-2 mb-4 border-b border-border">
+ <h3 className="text-base text-navy pb-2 mb-4 border-b border-border">
       {children}
     </h3>
   );
@@ -541,7 +541,7 @@ export function CaseForm({ clients, onSubmit, isSubmitting }: CaseFormProps) {
           onClick={() => setServicingProviderExpanded(!servicingProviderExpanded)}
           className="flex items-center justify-between w-full"
         >
-          <h3 className="font-[family-name:var(--font-dm-serif)] text-base text-navy">
+ <h3 className="text-base text-navy">
             Servicing Provider
           </h3>
           <svg

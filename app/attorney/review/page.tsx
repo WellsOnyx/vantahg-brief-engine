@@ -73,7 +73,7 @@ export default function AttorneyReviewQueuePage() {
           <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       </div>
-      <h3 className="font-[family-name:var(--font-dm-serif)] text-xl text-navy mb-2">No IDR cases waiting</h3>
+ <h3 className="text-xl text-navy mb-2">No IDR cases waiting</h3>
       <p className="text-sm text-muted max-w-md mx-auto">
         When Payer IDR cases are assigned to you, they will appear here for review and determination.
       </p>
@@ -91,7 +91,7 @@ export default function AttorneyReviewQueuePage() {
                 ← Back to TPA Portal
               </Link>
             </div>
-            <h1 className="font-[family-name:var(--font-dm-serif)] text-3xl md:text-4xl text-navy mt-1">
+ <h1 className="text-3xl md:text-4xl text-navy mt-1">
               Attorney Review Queue
             </h1>
             <p className="text-sm text-muted mt-2 max-w-2xl">

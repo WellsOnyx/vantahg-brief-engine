@@ -161,7 +161,7 @@ export default function TpaPortalPage() {
         <div className="flex flex-wrap items-center justify-between gap-6">
           <div className="flex-1 min-w-[260px]">
             <PageEyebrow>Submit a new auth</PageEyebrow>
-            <h2 className="font-[family-name:var(--font-display)] text-2xl md:text-3xl text-navy mt-2">
+ <h2 className="text-2xl md:text-3xl text-navy mt-2">
               We&apos;ll brief, route, and decide it &mdash; under 10 minutes.
             </h2>
             <p className="text-sm text-muted mt-2 max-w-lg">
@@ -293,7 +293,7 @@ export default function TpaPortalPage() {
       {/* ── Help card (the white-glove moment) ─────────────────── */}
       <PageDashboard.Help>
         <PageEyebrow>How concierge UM works</PageEyebrow>
-        <h3 className="font-[family-name:var(--font-display)] text-xl text-navy mt-2">
+ <h3 className="text-xl text-navy mt-2">
           You submit. We brief, route, decide, and deliver.
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mt-5">

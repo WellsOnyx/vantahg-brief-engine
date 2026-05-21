@@ -71,7 +71,7 @@ export default function TpaSubmitPage() {
               </svg>
             </div>
             <p className="text-[11px] uppercase tracking-[0.18em] text-gold font-semibold">Received</p>
-            <h1 className="font-[family-name:var(--font-display)] text-3xl md:text-4xl text-white mt-2">
+ <h1 className="text-3xl md:text-4xl text-white mt-2">
               Authorization submitted
             </h1>
             <div className="mt-3 mx-auto h-[3px] w-16 bg-gold-gradient rounded-full" />
@@ -125,7 +125,7 @@ export default function TpaSubmitPage() {
           </Link>
           <div className="mt-4 animate-fade-in">
             <p className="text-[11px] uppercase tracking-[0.18em] text-gold font-semibold">Authorization request</p>
-            <h1 className="font-[family-name:var(--font-display)] text-3xl md:text-4xl text-white mt-1">
+ <h1 className="text-3xl md:text-4xl text-white mt-1">
               Submit a new case
             </h1>
             <div className="mt-3 h-[3px] w-16 bg-gold-gradient rounded-full" />

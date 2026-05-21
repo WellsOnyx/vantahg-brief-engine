@@ -186,7 +186,7 @@ export default function AdminBillingPage() {
           <div className="text-[11px] uppercase tracking-widest text-amber-700 font-semibold mb-2">
             Access denied
           </div>
-          <h1 className="font-[family-name:var(--font-dm-serif)] text-3xl text-navy mb-3">
+ <h1 className="text-3xl text-navy mb-3">
             Billing — admin access required
           </h1>
           <p className="text-muted text-sm leading-relaxed mb-6">
@@ -227,7 +227,7 @@ export default function AdminBillingPage() {
       <div className="mb-10 flex flex-col md:flex-row md:items-end md:justify-between gap-3">
         <div>
           <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="font-[family-name:var(--font-dm-serif)] text-4xl md:text-5xl text-navy">
+ <h1 className="text-4xl md:text-5xl text-navy">
               Billing
             </h1>
             <StubPill />
@@ -500,7 +500,7 @@ function HeroKpi({
         {label}
       </div>
       <div
-        className={`text-3xl font-[family-name:var(--font-dm-serif)] ${TONE_TEXT[tone]}`}
+ className={`text-3xl${TONE_TEXT[tone]}`}
       >
         {value}
       </div>

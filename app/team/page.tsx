@@ -125,7 +125,7 @@ export default function TeamPage() {
     return (
       <Frame>
         <div className="bg-surface rounded-2xl border border-border shadow-sm p-10 text-center">
-          <h1 className="font-[family-name:var(--font-dm-serif)] text-2xl text-navy mb-2">
+ <h1 className="text-2xl text-navy mb-2">
             Team Access Management
           </h1>
           <p className="text-muted">
@@ -142,7 +142,7 @@ export default function TeamPage() {
       {/* Header */}
       <div className="mb-8 flex flex-col md:flex-row md:items-end md:justify-between gap-3">
         <div>
-          <h1 className="font-[family-name:var(--font-dm-serif)] text-3xl md:text-4xl text-navy">
+ <h1 className="text-3xl md:text-4xl text-navy">
             Team Access
           </h1>
           <p className="text-muted mt-1 text-lg">

@@ -155,7 +155,7 @@ export function VerificationSummary({ factCheck }: VerificationSummaryProps) {
             status={factCheck.overall_status}
           />
           <div>
-            <h3 className="font-[family-name:var(--font-dm-serif)] text-base text-navy">
+ <h3 className="text-base text-navy">
               Verification Report
             </h3>
             <div className="flex flex-wrap gap-3 mt-1">
@@ -205,7 +205,7 @@ export function VerificationSummary({ factCheck }: VerificationSummaryProps) {
           {/* Section-by-section claims */}
           {factCheck.sections.map((section, sIdx) => (
             <div key={sIdx}>
-              <h4 className="font-[family-name:var(--font-dm-serif)] text-sm text-navy mb-2">
+ <h4 className="text-sm text-navy mb-2">
                 {section.section}
               </h4>
               <div className="space-y-1.5">
@@ -256,7 +256,7 @@ export function VerificationSummary({ factCheck }: VerificationSummaryProps) {
           {/* Consistency checks */}
           {factCheck.consistency_checks.length > 0 && (
             <div>
-              <h4 className="font-[family-name:var(--font-dm-serif)] text-sm text-navy mb-2">
+ <h4 className="text-sm text-navy mb-2">
                 Consistency Checks
               </h4>
               <div className="space-y-1.5">

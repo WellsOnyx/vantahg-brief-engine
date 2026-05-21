@@ -94,7 +94,7 @@ export default function QualityPage() {
       <div className="flex items-center justify-between mb-8 gap-4 flex-wrap">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="font-[family-name:var(--font-dm-serif)] text-3xl text-navy">Quality Assurance</h1>
+            <h1 className="text-3xl font-semibold tracking-tight text-navy">Quality Assurance</h1>
             <TenantScopeBadge />
           </div>
           <p className="text-muted mt-1">URAC compliance monitoring, audit history, and per-staff quality trends</p>
@@ -119,7 +119,7 @@ export default function QualityPage() {
       {showNewAuditModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
           <div className="bg-surface rounded-xl border border-border shadow-xl w-full max-w-md p-6">
-            <h2 className="font-[family-name:var(--font-dm-serif)] text-xl text-navy mb-1">Start a new quality audit</h2>
+            <h2 className="text-xl font-semibold tracking-tight text-navy mb-1">Start a new quality audit</h2>
             <p className="text-xs text-muted mb-5">
               The auditing RN scores criteria, documentation, SLA, and determination
               after submitting. URAC requires a random sample of nursing-tier work.
@@ -284,7 +284,7 @@ export default function QualityPage() {
           {/* Criteria & Documentation */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-surface rounded-lg border border-border p-6">
-              <h3 className="font-[family-name:var(--font-dm-serif)] text-lg text-navy mb-4">Criteria Accuracy</h3>
+              <h3 className="text-lg font-semibold tracking-tight text-navy mb-4">Criteria Accuracy</h3>
               <div className="flex items-center gap-4">
                 <div className="w-20 h-20 rounded-full border-4 border-navy/10 flex items-center justify-center">
                   <span className={`text-2xl font-bold ${scoreColor(metrics?.avg_criteria_accuracy ?? 0)}`}>{(metrics?.avg_criteria_accuracy ?? 0).toFixed(0)}%</span>
@@ -298,7 +298,7 @@ export default function QualityPage() {
               </div>
             </div>
             <div className="bg-surface rounded-lg border border-border p-6">
-              <h3 className="font-[family-name:var(--font-dm-serif)] text-lg text-navy mb-4">Documentation Quality</h3>
+              <h3 className="text-lg font-semibold tracking-tight text-navy mb-4">Documentation Quality</h3>
               <div className="flex items-center gap-4">
                 <div className="w-20 h-20 rounded-full border-4 border-navy/10 flex items-center justify-center">
                   <span className={`text-2xl font-bold ${scoreColor(metrics?.avg_documentation_quality ?? 0)}`}>{(metrics?.avg_documentation_quality ?? 0).toFixed(0)}%</span>
@@ -316,7 +316,7 @@ export default function QualityPage() {
           {/* Per-Staff Scores */}
           <div className="bg-surface rounded-lg border border-border overflow-hidden">
             <div className="px-6 py-4 border-b border-border">
-              <h3 className="font-[family-name:var(--font-dm-serif)] text-lg text-navy">Staff Quality Scores</h3>
+              <h3 className="text-lg font-semibold tracking-tight text-navy">Staff Quality Scores</h3>
               <p className="text-xs text-muted mt-0.5">Per-staff audit results from RN quality reviews</p>
             </div>
             {(metrics?.audits_by_staff && metrics.audits_by_staff.length > 0) ? (
@@ -347,7 +347,7 @@ export default function QualityPage() {
               <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-navy/5 flex items-center justify-center">
                 <svg className="w-8 h-8 text-navy/30" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
               </div>
-              <h3 className="font-semibold text-base font-[family-name:var(--font-dm-serif)]">No audits yet</h3>
+              <h3 className="font-semibold text-base">No audits yet</h3>
               <p className="text-sm text-muted mt-2 max-w-sm mx-auto">Quality audits will appear here as RNs review LPN case work for URAC compliance.</p>
             </div>
           ) : (

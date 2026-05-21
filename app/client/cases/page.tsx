@@ -166,7 +166,7 @@ export default function ClientCasesPage() {
         {/* Header */}
         <div className="mb-8 flex flex-col md:flex-row md:items-end md:justify-between gap-3">
           <div>
-            <h1 className="font-[family-name:var(--font-dm-serif)] text-3xl md:text-4xl text-navy">
+ <h1 className="text-3xl md:text-4xl text-navy">
               My Cases
             </h1>
             <p className="text-muted mt-1 text-lg">

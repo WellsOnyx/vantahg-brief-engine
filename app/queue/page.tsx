@@ -403,7 +403,7 @@ function QueueStatCard({
       </p>
       <p className="text-3xl mt-1">
         {typeof value === 'string' && value !== '--' ? (
-          <span className={`font-[family-name:var(--font-display)] ${alert ? 'text-red-700' : 'text-navy'}`}>
+ <span className={`${alert ? 'text-red-700' : 'text-navy'}`}>
             {value}
           </span>
         ) : (

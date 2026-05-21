@@ -204,7 +204,7 @@ export default function ClientsPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="font-[family-name:var(--font-dm-serif)] text-3xl text-navy">Clients</h1>
+ <h1 className="text-3xl text-navy">Clients</h1>
           <p className="text-muted mt-1">Manage TPA, health plan, and employer clients</p>
         </div>
         <button
@@ -289,7 +289,7 @@ export default function ClientsPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3H21m-3.75 3H21" />
               </svg>
             </div>
-            <h3 className="font-semibold text-base text-foreground font-[family-name:var(--font-dm-serif)]">
+ <h3 className="font-semibold text-base text-foreground">
               No clients yet
             </h3>
             <p className="text-sm text-muted mt-2 max-w-sm mx-auto">
@@ -441,7 +441,7 @@ export default function ClientsPage() {
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl mx-4 animate-scale-in">
             {/* Modal header */}
             <div className="px-6 py-4 border-b border-border flex items-center justify-between">
-              <h3 className="font-[family-name:var(--font-dm-serif)] text-xl text-navy">
+ <h3 className="text-xl text-navy">
                 {editingClient ? 'Edit Client' : 'Add Client'}
               </h3>
               <button onClick={() => setShowModal(false)} className="text-muted hover:text-foreground p-1">

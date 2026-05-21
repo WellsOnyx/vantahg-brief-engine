@@ -165,7 +165,7 @@ export function CaseTable({ cases, showFilters = false }: CaseTableProps) {
               />
             </svg>
           </div>
-          <h3 className="text-base font-semibold text-foreground font-[family-name:var(--font-dm-serif)]">
+ <h3 className="text-base font-semibold text-foreground">
             No cases found
           </h3>
           <p className="mt-2 text-sm text-muted max-w-sm mx-auto">

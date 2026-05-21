@@ -119,7 +119,7 @@ export default function OfficeCeoPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
             </svg>
           </div>
-          <h1 className="font-[family-name:var(--font-dm-serif)] text-3xl text-navy mb-2">
+ <h1 className="text-3xl text-navy mb-2">
             Office of the CEO
           </h1>
           <p className="text-muted text-base">requires executive access</p>
@@ -152,7 +152,7 @@ export default function OfficeCeoPage() {
       <div className="mb-10 flex flex-col md:flex-row md:items-end md:justify-between gap-3">
         <div>
           <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="font-[family-name:var(--font-dm-serif)] text-4xl md:text-5xl text-navy">
+ <h1 className="text-4xl md:text-5xl text-navy">
               Office of the CEO
             </h1>
             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-gold/15 text-gold-dark border border-gold/30">
@@ -445,7 +445,7 @@ function HeroKpi({
           </span>
         )}
       </div>
-      <div className={`text-4xl md:text-5xl font-[family-name:var(--font-dm-serif)] leading-none ${TONE_TEXT[tone]}`}>
+ <div className={`text-4xl md:text-5xlleading-none ${TONE_TEXT[tone]}`}>
         {value}
       </div>
       {sub && <div className="text-xs text-muted mt-3">{sub}</div>}

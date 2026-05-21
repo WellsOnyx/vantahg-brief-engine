@@ -27,7 +27,7 @@ export function ReviewerPanel({ reviewers, selectedReviewerId, onAssign }: Revie
   return (
     <div className="bg-surface rounded-lg border border-border">
       <div className="p-4 border-b border-border">
-        <h3 className="font-[family-name:var(--font-dm-serif)] text-lg text-foreground">
+ <h3 className="text-lg text-foreground">
           Assign Reviewer
         </h3>
         <p className="text-xs text-muted mt-0.5">

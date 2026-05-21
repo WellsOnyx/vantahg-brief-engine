@@ -669,7 +669,7 @@ function ReviewExplainer() {
   return (
     <div className="bg-surface rounded-xl border border-border shadow-sm overflow-hidden">
       <div className="bg-navy px-5 py-4 sm:px-6">
-        <h2 className="font-[family-name:var(--font-dm-serif)] text-lg text-white">
+ <h2 className="text-lg text-white">
           Understanding Your Review
         </h2>
         <p className="text-white/70 text-sm mt-1">What happens at each stage</p>
@@ -846,7 +846,7 @@ export default function CaseStatusPortal() {
       <div className="mb-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <h1 className="font-[family-name:var(--font-dm-serif)] text-3xl sm:text-4xl text-navy">
+ <h1 className="text-3xl sm:text-4xl text-navy">
               Authorization Status Portal
             </h1>
             <p className="text-muted mt-2 text-base sm:text-lg">
@@ -1030,7 +1030,7 @@ export default function CaseStatusPortal() {
             {/* Quick Lookup */}
             <div className="bg-surface rounded-xl border border-border shadow-sm overflow-hidden">
               <div className="bg-navy px-5 py-4 sm:px-6">
-                <h2 className="font-[family-name:var(--font-dm-serif)] text-lg text-white">
+ <h2 className="text-lg text-white">
                   Quick Lookup
                 </h2>
                 <p className="text-white/70 text-sm mt-1">Find a case by authorization number</p>

@@ -205,7 +205,7 @@ export default function DeterminationLetterPage() {
         {/* Determination Banner */}
         <div className={`${det.bg} rounded-xl p-5 mb-8 text-center`}>
           <p className="text-xs font-medium text-muted uppercase tracking-wide mb-1">Determination</p>
-          <p className={`text-2xl font-bold ${det.color} font-[family-name:var(--font-dm-serif)]`}>
+ <p className={`text-2xl font-bold ${det.color}`}>
             {det.label}
           </p>
         </div>

@@ -134,7 +134,7 @@ export default function AttorneyDeterminePage() {
           <Link href="/attorney/review" className="text-sm text-muted hover:text-navy">
             ← Back to Attorney Review Queue
           </Link>
-          <h1 className="font-[family-name:var(--font-dm-serif)] text-3xl text-navy mt-2">
+ <h1 className="text-3xl text-navy mt-2">
             Attorney Determination
           </h1>
           <p className="text-muted mt-1">

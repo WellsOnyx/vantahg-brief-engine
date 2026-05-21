@@ -350,7 +350,7 @@ export default function BatchUploadPage() {
 
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
-            <h1 className="font-[family-name:var(--font-dm-serif)] text-3xl text-navy mb-2">
+ <h1 className="text-3xl text-navy mb-2">
               Batch Case Upload
             </h1>
             <p className="text-muted text-base">
@@ -388,7 +388,7 @@ export default function BatchUploadPage() {
               </div>
             )}
             <div>
-              <h2 className="font-[family-name:var(--font-dm-serif)] text-xl text-navy">
+ <h2 className="text-xl text-navy">
                 Batch Upload Complete
               </h2>
               <p className="text-sm text-muted mt-0.5">
@@ -534,7 +534,7 @@ export default function BatchUploadPage() {
               <div className="p-6 border-b border-border">
                 <div className="flex items-center justify-between flex-wrap gap-3">
                   <div>
-                    <h2 className="font-[family-name:var(--font-dm-serif)] text-xl text-navy">
+ <h2 className="text-xl text-navy">
                       Preview
                     </h2>
                     <p className="text-sm text-muted mt-1">

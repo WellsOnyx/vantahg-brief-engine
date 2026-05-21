@@ -33,7 +33,7 @@ export function ConfirmationDialog({
       <div className="relative bg-surface rounded-2xl shadow-2xl max-w-lg w-full max-h-[80vh] overflow-auto border border-border animate-scale-in">
         {/* Header */}
         <div className="px-6 py-4 border-b border-border bg-navy/5">
-          <h2 className="text-lg font-semibold text-foreground font-[family-name:var(--font-dm-serif)]">
+ <h2 className="text-lg font-semibold text-foreground">
             Confirm Case Submission
           </h2>
           <p className="text-xs text-muted mt-1">

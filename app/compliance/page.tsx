@@ -121,7 +121,7 @@ export default function ComplianceDashboard() {
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-8">
       {/* Page header */}
       <div>
-        <h1 className="font-[family-name:var(--font-dm-serif)] text-2xl text-navy">
+ <h1 className="text-2xl text-navy">
           Compliance Dashboard
         </h1>
         <p className="text-sm text-muted mt-1">

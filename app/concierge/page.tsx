@@ -351,7 +351,7 @@ export default function ConciergePage() {
       {/* ── Help moment ──────────────────────────────────────── */}
       <PageDashboard.Help>
         <PageEyebrow>How it works on your side</PageEyebrow>
-        <h3 className="font-[family-name:var(--font-display)] text-xl text-navy mt-2">
+ <h3 className="text-xl text-navy mt-2">
           AI did 95%. Your reasoning is what makes it defensible.
         </h3>
         <p className="text-sm text-muted mt-2 max-w-2xl">

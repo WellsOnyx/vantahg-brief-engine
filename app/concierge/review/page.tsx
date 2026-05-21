@@ -157,7 +157,7 @@ export default function ConciergeReviewQueuePage() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <h3 className="font-[family-name:var(--font-display)] text-2xl text-navy">Queue is clear</h3>
+ <h3 className="text-2xl text-navy">Queue is clear</h3>
             <p className="text-sm text-muted max-w-md mx-auto mt-2">
               No AI briefs are currently waiting for your human validation. New cases with completed briefs will appear here automatically.
             </p>
