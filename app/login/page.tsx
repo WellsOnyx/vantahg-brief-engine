@@ -162,14 +162,7 @@ function LoginForm() {
                 Use a different email
               </button>
             </p>
-            <p>
-              <a
-                href="https://www.wellsonyx.com/firstlevelreview"
-                className="text-muted hover:text-navy underline decoration-dotted underline-offset-4"
-              >
-                Return to wellsonyx.com
-              </a>
-            </p>
+
           </>
         }
       >
@@ -221,13 +214,6 @@ function LoginForm() {
             >
               View my cases
             </Link>
-            <span className="text-gold/60 mx-2">·</span>
-            <a
-              href="https://www.wellsonyx.com/firstlevelreview"
-              className="text-muted hover:text-navy underline decoration-dotted underline-offset-4"
-            >
-              Return to wellsonyx.com
-            </a>
           </p>
           <p className="text-[10px] text-muted/60 mt-3">A Wells Onyx Service</p>
         </>
