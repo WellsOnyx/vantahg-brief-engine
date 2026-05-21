@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { createBrowserClient, hasBrowserSupabaseConfig } from '@/lib/supabase-browser';
 import type { UserRole } from '@/lib/auth-guard';
+import { PageFrame } from '@/components/PageFrame';
 
 /**
  * Builders View — growth + product team operations console.
@@ -181,15 +182,15 @@ export default function BuildersPage() {
 
   if (gate.kind === 'loading') {
     return (
-      <Frame>
+      <PageFrame>
         <div className="text-muted">Loading Builders View…</div>
-      </Frame>
+      </PageFrame>
     );
   }
 
   if (gate.kind === 'denied') {
     return (
-      <Frame>
+      <PageFrame>
         <div className="bg-surface rounded-xl border border-border shadow-sm p-10 max-w-2xl">
           <div className="text-[11px] uppercase tracking-widest text-amber-700 font-semibold mb-2">
             Access denied
@@ -219,13 +220,13 @@ export default function BuildersPage() {
             )}
           </div>
         </div>
-      </Frame>
+      </PageFrame>
     );
   }
 
   // ── Allowed view ────────────────────────────────────────────────────────
   return (
-    <Frame>
+    <PageFrame>
       {/* Header */}
       <div className="mb-10 flex flex-col md:flex-row md:items-end md:justify-between gap-3">
         <div>
@@ -347,19 +348,11 @@ export default function BuildersPage() {
         Numbers and pipeline rows on this page are stubbed for the demo. Wire to a
         real CRM / analytics source before relying on them operationally.
       </p>
-    </Frame>
+    </PageFrame>
   );
 }
 
 // ── Presentational ─────────────────────────────────────────────────────────
-
-function Frame({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="py-10 md:py-16 bg-background min-h-screen">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">{children}</div>
-    </div>
-  );
-}
 
 function StubPill() {
   return (

@@ -37,6 +37,27 @@ function isPublicRoute(pathname: string): boolean {
   return false;
 }
 
+// Edge-runtime-safe Cognito session presence check. Reads the
+// `vantaum_session` cookie, parses the JSON envelope, and verifies that
+// (a) it has an id_token and (b) expires_at is in the future. Full JWT
+// signature verification happens inside Node-runtime API routes via
+// CognitoAuthAdapter.getSessionUser. The middleware only needs to answer
+// "is this caller plausibly authenticated?"
+function hasValidCognitoSession(request: NextRequest): boolean {
+  const raw = request.cookies.get('vantaum_session')?.value;
+  if (!raw) return false;
+  try {
+    const parsed = JSON.parse(raw) as { id_token?: string; expires_at?: number };
+    if (!parsed?.id_token) return false;
+    if (typeof parsed.expires_at === 'number' && parsed.expires_at < Date.now()) {
+      return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -50,6 +71,14 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/favicon') ||
     pathname.includes('.')
   ) {
+    return NextResponse.next();
+  }
+
+  // Cognito session short-circuit: if the caller has a plausible
+  // vantaum_session cookie, let them through. Per-route auth-guard
+  // calls inside individual route handlers do full JWT verification
+  // when they need the user object.
+  if (hasValidCognitoSession(request)) {
     return NextResponse.next();
   }
 

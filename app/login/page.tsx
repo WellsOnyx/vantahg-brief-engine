@@ -97,13 +97,44 @@ function LoginForm() {
         setError('Network error. Try again.');
       }
     } else {
-      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-      if (signInError) {
-        setError("That email and password don't match our records.");
-      } else {
-        const destination = explicitRedirect ?? (await resolveLandingPage(supabase));
-        window.location.href = destination;
-        return;
+      // Cognito sign-in via the server route. Supabase password auth is
+      // retained as a fallback for the V1 hybrid path: if the AWS route
+      // returns 503 (Cognito misconfigured) we fall back to Supabase.
+      try {
+        const res = await fetch('/api/auth/sign-in', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email,
+            password,
+            next: explicitRedirect ?? undefined,
+          }),
+        });
+
+        if (res.ok) {
+          const data = (await res.json().catch(() => ({}))) as { next?: string };
+          const destination = data.next ?? explicitRedirect ?? '/dashboard';
+          window.location.href = destination;
+          return;
+        }
+
+        if (res.status === 503) {
+          // Cognito not wired — fall back to Supabase path.
+          const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+          if (signInError) {
+            setError("That email and password don't match our records.");
+          } else {
+            const destination = explicitRedirect ?? (await resolveLandingPage(supabase));
+            window.location.href = destination;
+            return;
+          }
+        } else if (res.status === 429) {
+          setError('Too many sign-in attempts. Wait a minute and try again.');
+        } else {
+          setError("That email and password don't match our records.");
+        }
+      } catch {
+        setError('Network error. Try again.');
       }
     }
 
