@@ -2,6 +2,8 @@
 
 **This is the single source of truth for V1 scope, priorities, and actual delivered state.**
 
+> **Note as of 2026-05-21:** Significant groundwork has been completed across TPA, Concierge, AI, and Delivery Lead surfaces. However, several phases marked "production-ready" (especially 46-65 AI and parts of Delivery) still require infrastructure hardening, removal of demo-mode shortcuts, closed feedback loops, and real-world testing before they meet the bar for live customer use. See `docs/launch-readiness.md` and `docs/remaining-work-for-developer.md` for the current realistic assessment.
+
 Derived from the complete "Grok Super Heavy" master V1 build plan the user provided (full Phase 0/1, 21-45 Concierge UM details, the exact 13 Payer IDR tasks, Phase 3 Care Management CM-01–CM-05, 66–80, 81–100, architectural invariants, and "Summary of Changes" expectation). This file is now kept in sync with reality.
 
 See also: [v1-roadmap-gap-analysis-2026-05-19.md](./v1-roadmap-gap-analysis-2026-05-19.md) for the exhaustive missing-items review.
