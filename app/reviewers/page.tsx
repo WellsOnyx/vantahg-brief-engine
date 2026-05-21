@@ -266,7 +266,7 @@ export default function ReviewersPage() {
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-8 gap-4 flex-wrap">
         <div>
  <h1 className="text-3xl text-navy">Reviewer Panel</h1>
           <p className="text-muted mt-1">Manage physician reviewers, credentials, and service categories</p>

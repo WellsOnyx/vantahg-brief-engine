@@ -136,7 +136,7 @@ export default function PodsPage() {
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-8 gap-4 flex-wrap">
         <div>
  <h1 className="text-3xl text-navy">Review Pods</h1>
           <p className="text-muted mt-1">Organize LPN/RN teams into pods for case assignment and workload balancing</p>
