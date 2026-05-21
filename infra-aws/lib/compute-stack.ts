@@ -193,6 +193,13 @@ export class ComputeStack extends cdk.Stack {
         SES_FROM_ADDRESS: 'noreply@vantaum.com',
         // Region for AWS SDK clients.
         AWS_REGION: this.region,
+        // Cognito user pool wiring. Without these, the auth adapter falls
+        // back to empty-string defaults and the magic-link route silently
+        // returns 202 with no email actually sent. Pool + Lambdas are
+        // deployed by the vantaum-prod-auth stack.
+        COGNITO_REGION: this.region,
+        COGNITO_USER_POOL_ID: 'us-east-1_CjZbn5TD4',
+        COGNITO_CLIENT_ID: '4v19mdtmaa8ubns3d6bsi4t2i7',
       },
       secrets: usePlaceholder
         ? undefined
