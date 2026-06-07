@@ -5,7 +5,7 @@ import DemoWalkthrough from '@/components/demo/DemoWalkthrough';
 /* ─── CSS-in-JS style object for the marketing page ─── */
 /* Uses the Wells Onyx dark palette with Cormorant Garamond + DM Sans */
 
-const EA_EMAIL = 'mailto:hello@wellsonyx.com?subject=VantaUM%20Early%20Access%20Demo';
+const EA_EMAIL = 'mailto:hello@wellsonyx.com?subject=VantaUM%20Out-of-Network%20UM%20Clinical%20Layer';
 
 export default function SitePage() {
   return (
@@ -255,9 +255,9 @@ export default function SitePage() {
       <div className="vum-site">
         {/* Early Access Bar */}
         <div className="ea-bar">
-          <span className="ea-bar-pill">Early Access</span>
-          <span className="ea-bar-text">VantaUM is now accepting founding TPA partners — limited spots available.</span>
-          <a href={EA_EMAIL} className="ea-bar-link">Apply now →</a>
+          <span className="ea-bar-pill">Now Onboarding</span>
+          <span className="ea-bar-text">A next-generation clinical layer for utilization management — run externally or embedded inside your team.</span>
+          <a href={EA_EMAIL} className="ea-bar-link">Talk to us →</a>
           <span className="ea-bar-text" aria-hidden="true">·</span>
           <a href="/login" className="ea-bar-link">Sign in</a>
         </div>
@@ -269,71 +269,69 @@ export default function SitePage() {
             <span className="nav-sub">A Wells Onyx Company</span>
           </div>
           <ul className="nav-links">
-            <li><a href="#tpa">For TPAs</a></li>
-            <li><a href="#broker">For Brokers</a></li>
-            <li><a href="#chro">For CHROs</a></li>
-            <li><a href="#philosophy">Philosophy</a></li>
+            <li><a href="#workflow">The Workflow</a></li>
+            <li><a href="#oon-iro">OON + IRO</a></li>
+            <li><a href="#ratecard">Rate Card</a></li>
             <li><a href="#demo">Live Demo</a></li>
+            <li><a href="#contact">Contact</a></li>
           </ul>
           <div className="nav-cta-group">
             <a className="nav-cta" href="/login">Sign In</a>
-            <a className="nav-cta nav-cta-primary" href="#contact">Request Early Access</a>
+            <a className="nav-cta nav-cta-primary" href="#contact">Talk to Us</a>
           </div>
         </nav>
 
-        {/* Role Selector Hero */}
-        <section className="role-hero">
-          <p className="role-headline">Choose Your Role in<br />Self-Funded Healthcare</p>
-          <p className="role-sub">We built three different experiences — one for each person who actually moves the needle.</p>
-
-          <div className="role-cards">
-            {/* TPA */}
-            <a href="#tpa" className="role-card tpa">
-              <div className="role-card-eyebrow">TPA</div>
-              <div className="role-card-title">You Run<br />the Plan</div>
-              <p className="role-card-body">Let us handle first-level authorizations with AI that actually works. Clean files, faster decisions, zero added lift on your side.</p>
-              <div className="role-card-cta">See how VantaUM works for TPAs →</div>
-            </a>
-
-            {/* Broker */}
-            <a href="#broker" className="role-card broker" style={{ borderLeft: 'none', borderRight: 'none' }}>
-              <div className="role-card-eyebrow">Broker</div>
-              <div className="role-card-title">You Win<br />the Business</div>
-              <p className="role-card-body">Give your producers a real weapon. Partner with us to help your clients win self-funded accounts your competitors can't match — and keep them longer.</p>
-              <div className="role-card-cta">See how brokers win with VantaUM →</div>
-            </a>
-
-            {/* CHRO */}
-            <a href="#chro" className="role-card chro">
-              <div className="role-card-eyebrow">Total Rewards / CHRO</div>
-              <div className="role-card-title">You Own<br />the Outcome</div>
-              <p className="role-card-body">We built a completely different way to deliver healthcare — one that removes the daily friction employees hate and gives you something genuinely different to bring to your organization.</p>
-              <div className="role-card-cta">See how we make Total Rewards leaders legendary →</div>
-            </a>
+        {/* Hero — workflow-led */}
+        <section className="vum-hero">
+          <span className="hero-vline" aria-hidden="true" />
+          <div className="hero-left">
+            <div className="eyebrow">Clinical Layer for Utilization Management</div>
+            <h1>Modern UM.<br />One clinician.<br /><em>Through appeal.</em></h1>
+            <p className="hero-body">VantaUM is a next-generation clinical layer for utilization management — concierge intake, the AI Brief Engine, authorization, and first-level appeal, owned end to end by the same clinician. Run it across your whole self-funded book, or aim it at the cases that need it most. Built for independent TPAs, self-insured employers, and the clinical operations inside larger benefit organizations.</p>
+            <div className="hero-actions">
+              <a href={EA_EMAIL} className="btn-primary">Talk to Us</a>
+              <a href="#workflow" className="btn-ghost">See the workflow →</a>
+            </div>
+          </div>
+          <div className="hero-right">
+            {[
+              { step: '01', label: 'Concierge Intake', sub: 'A named coordinator opens the case and assembles the record — no portal queue, no handoffs. Part of the bundle.' },
+              { step: '02', label: 'AI Brief Engine', sub: 'The case is pre-briefed against clinical criteria before a clinician ever opens it. Speed and quality, built in. Part of the bundle.' },
+              { step: '03', label: 'Authorization + First-Level Appeal', sub: 'One reviewer owns the determination and the first-level appeal — continuity, not a relay race. This is the bundle.' },
+              { step: '04', label: 'IRO-Ready Documentation', sub: 'Every case is documented to independent-review standard. Full IRO is a separate service, billed only if a case escalates.' },
+            ].map((s) => (
+              <div key={s.step} className="hero-stat">
+                <div className="stat-val" style={{ fontSize: '22px', color: 'var(--teal)', display: 'flex', alignItems: 'baseline', gap: '12px' }}>
+                  <span style={{ fontSize: '15px', color: 'var(--white-dim)', fontFamily: 'var(--sans)', letterSpacing: '0.1em' }}>{s.step}</span>
+                  {s.label}
+                </div>
+                <div className="stat-label">{s.sub}</div>
+              </div>
+            ))}
           </div>
         </section>
 
         <hr className="divider" />
 
-        {/* Early Access */}
-        <section className="ea-section" id="early-access">
+        {/* Engagement Model */}
+        <section className="ea-section" id="engagement">
           <div className="ea-inner">
             <div className="ea-left">
-              <span className="kicker" style={{ color: 'var(--gold)' }}>Founding Partner Program</span>
-              <h2 className="sh">We are new.<br />That is the <em style={{ color: 'var(--gold)' }}>point.</em></h2>
-              <p className="sb">Most UM platforms were built in a different era — before AI could compress physician review time, before concierge coordination was operationally viable at scale. We built VantaUM from a blank page with those tools available from day one.</p>
-              <p className="sb" style={{ marginTop: 16 }}>The TPAs that partner with us now don&apos;t inherit someone else&apos;s technical debt. They help shape a platform designed around how UM should actually work.</p>
+              <span className="kicker" style={{ color: 'var(--gold)' }}>How We Engage</span>
+              <h2 className="sh">External service,<br />or an <em style={{ color: 'var(--gold)' }}>extension</em><br />of your team.</h2>
+              <p className="sb">VantaUM is built to drop into the way you already work. Run it across your whole self-funded book to take utilization management off your plate end to end — or stand us up inside your operation as a specialized arm of your own clinical team. Use it broadly, or aim it at the cases that carry the most clinical time and exposure.</p>
+              <p className="sb" style={{ marginTop: 16 }}>Either way, the bundle is the same: a single clinician carrying each case from concierge intake through authorization and first-level appeal, with documentation prepared to be IRO-ready. If a case escalates to full independent review, that&apos;s a separate service — billed only when it happens.</p>
               <div className="ea-spots">
                 <div className="ea-spots-dot" />
-                <div className="ea-spots-text"><strong>Founding partner slots are limited.</strong> Early access includes preferred pricing, direct access to the founding team, and input on product roadmap.</div>
+                <div className="ea-spots-text"><strong>Built for the teams that run the plan.</strong> Independent TPAs, self-insured employers, and the clinical operations inside larger benefit organizations — without inheriting anyone&apos;s technical debt.</div>
               </div>
             </div>
             <div className="ea-perks">
               {[
-                { num: '01', title: 'Preferred Founding Pricing', body: 'Early partners lock in rates that reflect the relationship, not a vendor transaction. Pricing is validated at ~$12 PEPM — and founding partners negotiate directly with leadership.' },
-                { num: '02', title: 'Roadmap Input', body: 'Your operational reality shapes what we build next. Founding partners have a direct line to the product team — not a support ticket and a quarterly roadmap review.' },
-                { num: '03', title: 'Reference Account Status', body: 'Be among the first TPAs in the market to operate a concierge UM model. Reference status positions your organization as a clinical quality leader to your plan sponsors.' },
-                { num: '04', title: 'White-Glove Onboarding', body: 'Founding partners get hands-on implementation directly with the Wells Onyx operating team — not a third-party integrator who read the manual last week.' },
+                { num: '01', title: 'Bundled, per case', body: 'One per-case rate for authorization plus first-level appeal. No per-member commitments, no volume floors — use it across the book or on the cases that warrant it. Full IRO is separate, only if a case escalates.' },
+                { num: '02', title: 'Embedded in your operation', body: 'Prefer to keep it in house? We run as a specialized extension of your existing clinical team, using your criteria and your voice, under your brand.' },
+                { num: '03', title: 'Continuity by design', body: 'The same clinician owns the authorization and the first-level appeal. No relay between reviewers, no context lost between stages.' },
+                { num: '04', title: 'White-glove onboarding', body: 'You stand us up once, directly with the Wells Onyx operating team — not a third-party integrator who read the manual last week.' },
               ].map((p) => (
                 <div key={p.num} className="ea-perk">
                   <div className="ea-perk-num">{p.num}</div>
@@ -344,20 +342,20 @@ export default function SitePage() {
           </div>
         </section>
 
-        {/* ── TPA Section ── */}
-        <section className="vum-section" id="tpa" style={{ background: 'var(--near-black)', borderTop: '1px solid var(--border)' }}>
+        {/* ── Workflow Section ── */}
+        <section className="vum-section" id="workflow" style={{ background: 'var(--near-black)', borderTop: '1px solid var(--border)' }}>
           <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '80px', alignItems: 'center' }}>
             <div>
-              <span className="kicker" style={{ color: 'var(--teal)' }}>For TPAs</span>
-              <h2 className="sh">You Run<br /><em>the Plan.</em><br />Let us run the auths.</h2>
-              <p className="sb" style={{ marginBottom: '24px' }}>First-level utilization management is the part of your operation that consumes the most time, produces the most friction, and carries the most compliance risk — without adding clinical value to your book.</p>
-              <p className="sb" style={{ marginBottom: '40px' }}>VantaUM handles it entirely. We intake every prior auth request, run it through clinical criteria, route it through our nursing tier, and get a determination back — typically in hours, not days. You receive a clean file and a decision. Nothing else changes on your side.</p>
+              <span className="kicker" style={{ color: 'var(--teal)' }}>The Workflow</span>
+              <h2 className="sh">One case.<br /><em>One owner.</em><br />No handoffs.</h2>
+              <p className="sb" style={{ marginBottom: '24px' }}>Utilization management is where authorization decisions get made, appeals get filed, and documentation has to hold up when it&apos;s tested. Most operations split that journey across a queue of reviewers and lose the thread between every stage.</p>
+              <p className="sb" style={{ marginBottom: '40px' }}>VantaUM runs the bundle as one continuous workflow: a concierge opens the case, the Brief Engine pre-briefs it, and a single clinician carries it through the authorization and the first-level appeal — leaving a file that&apos;s already IRO-ready. Full IRO itself is a separate service, only if the case escalates.</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '40px' }}>
                 {[
-                  'Clean files. Every case documented, criteria-cited, audit-ready on delivery.',
-                  'URAC-accredited operation. No compliance gaps to inherit.',
-                  '~$12 PEPM. No volume floors, no minimums, no surprises.',
-                  'White-glove onboarding. Your team connects once. We handle the rest.',
+                  'Concierge intake. A named coordinator owns the record — no portal queue, no triage relay.',
+                  'AI Brief Engine. Every case pre-briefed against clinical criteria before a clinician opens it.',
+                  'Same clinician through first-level appeal. Continuity, not a relay race between reviewers.',
+                  'IRO-ready documentation. Clean, criteria-cited files. Full IRO is a separate service, only on escalation.',
                 ].map((item, i) => (
                   <div key={i} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
                     <span style={{ color: 'var(--teal)', flexShrink: 0, marginTop: '2px' }}>—</span>
@@ -365,18 +363,18 @@ export default function SitePage() {
                   </div>
                 ))}
               </div>
-              <a href={EA_EMAIL} className="btn-primary">Request Early Access</a>
+              <a href={EA_EMAIL} className="btn-primary">Talk to Us</a>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
               {[
-                { label: 'Turnaround', val: '< 4 hours', sub: 'Median case-to-determination time' },
-                { label: 'SLA Compliance', val: '99.4%', sub: 'Across all review types and priorities' },
-                { label: 'Lift on your team', val: 'Zero', sub: 'We own intake, review, and delivery entirely' },
-                { label: 'Pricing', val: '~$12 PEPM', sub: 'Founding partner rate — locked in at contract' },
+                { label: 'Concierge Intake', val: 'Step 01', sub: 'A named coordinator opens the case and assembles the record.' },
+                { label: 'AI Brief Engine', val: 'Step 02', sub: 'Pre-briefed against clinical criteria before review — the secret sauce behind speed and quality.' },
+                { label: 'Authorization → Appeal', val: 'Step 03', sub: 'The same clinician owns the determination and the first-level appeal. This is the bundle.' },
+                { label: 'IRO-Ready File', val: 'Step 04', sub: 'Bundled work leaves a clean file. Full IRO is a separate service, only on escalation.' },
               ].map((s, i) => (
                 <div key={i} className="hero-stat">
-                  <div className="stat-val" style={{ fontSize: '28px', color: i === 0 ? 'var(--teal)' : 'var(--white)' }}>{s.val}</div>
-                  <div className="stat-label"><strong style={{ color: 'var(--white-muted)' }}>{s.label}</strong> — {s.sub}</div>
+                  <div className="stat-val" style={{ fontSize: '20px', color: i === 1 ? 'var(--gold)' : 'var(--teal)', fontFamily: 'var(--sans)', letterSpacing: '0.08em' }}>{s.val}</div>
+                  <div className="stat-label"><strong style={{ color: 'var(--white)' }}>{s.label}</strong> — {s.sub}</div>
                 </div>
               ))}
             </div>
@@ -385,56 +383,81 @@ export default function SitePage() {
 
         <hr className="divider" />
 
-        {/* ── Broker Section ── */}
-        <section className="vum-section" id="broker" style={{ background: 'var(--black)', borderTop: '1px solid var(--border)' }}>
+        {/* ── Rate Card Section ── */}
+        <section className="vum-section" id="ratecard" style={{ background: 'var(--black)', borderTop: '1px solid var(--border)' }}>
           <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '80px', alignItems: 'start' }}>
-              <div>
-                <span className="kicker" style={{ color: 'var(--gold)' }}>For Brokers</span>
-                <h2 className="sh">You Win<br /><em>the Business.</em><br />We help you keep it.</h2>
-                <p className="sb" style={{ marginBottom: '24px' }}>Your producers are selling self-funded accounts against carriers who've been in the market for decades. The question on every plan sponsor's mind: what do I get from you that I can't get elsewhere?</p>
-                <p className="sb" style={{ marginBottom: '40px' }}>VantaUM is the answer. Partner with us and bring your clients a modern, URAC-accredited utilization management layer that holds up under scrutiny — faster decisions, better member experience, and clinical compliance that actually protects the plan.</p>
-                <a href={EA_EMAIL} className="btn-primary" style={{ background: 'transparent', border: '1px solid var(--gold)', color: 'var(--gold)' }}>Become a broker partner →</a>
+            <div style={{ maxWidth: 600, marginBottom: 56 }}>
+              <span className="kicker" style={{ color: 'var(--gold)' }}>Rate Card</span>
+              <h2 className="sh">Priced by the case.<br /><em>Bundled by design.</em></h2>
+              <p className="sb">You pay for clinical work on the cases that warrant it — not a per-member fee on a population. Authorization and the first-level appeal come bundled as one per-case engagement, because they&apos;re one case — for everyday UM and for your highest-exposure out-of-network work alike. <strong style={{ color: 'var(--white)', fontWeight: 500 }}>Full IRO is not included in that rate</strong> — it&apos;s a separate escalation fee, billed only if and when a case actually goes to full independent review.</p>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px' }}>
+              {/* Bundled card */}
+              <div style={{ padding: '40px', background: 'var(--surface)', border: '1px solid var(--border-strong)', borderRadius: '8px 0 0 8px', display: 'flex', flexDirection: 'column' }}>
+                <div style={{ fontSize: '11px', fontWeight: 500, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--teal)', marginBottom: '20px' }}>Bundled — Per Case</div>
+                <div style={{ fontFamily: 'var(--serif)', fontSize: '30px', fontWeight: 300, lineHeight: 1.15, color: 'var(--white)', marginBottom: '8px' }}>Authorization<br />+ First-Level Appeal</div>
+                <p style={{ fontSize: '14px', fontWeight: 300, lineHeight: 1.7, color: 'var(--white-muted)', marginTop: '16px', marginBottom: '28px', flex: 1 }}>One flat per-case rate covers exactly four things: concierge intake, the AI Brief Engine, the authorization, and the first-level appeal — all owned by the same clinician. Works for everyday UM and for out-of-network cases alike. Documentation is prepared to be IRO-ready. One case, one owner, one price. Full IRO is not part of this rate.</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '28px' }}>
+                  {[
+                    { t: 'Concierge intake & record assembly', excl: false },
+                    { t: 'AI Brief Engine pre-brief', excl: false },
+                    { t: 'Authorization (in- or out-of-network)', excl: false },
+                    { t: 'First-level appeal — same clinician', excl: false },
+                    { t: 'IRO-ready documentation prepared', excl: false },
+                    { t: 'Full IRO review — separate fee, not included', excl: true },
+                  ].map((f, i) => (
+                    <div key={i} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', fontSize: '13px', fontWeight: 300, color: f.excl ? 'var(--white-dim)' : 'var(--white-muted)', lineHeight: 1.5 }}>
+                      <span style={{ color: f.excl ? 'var(--white-dim)' : 'var(--teal)', flexShrink: 0 }}>{f.excl ? '✕' : '—'}</span>{f.t}
+                    </div>
+                  ))}
+                </div>
+                <div style={{ fontFamily: 'var(--serif)', fontSize: '22px', fontWeight: 300, color: 'var(--white)' }}>One bundled per-case rate <span style={{ color: 'var(--white-dim)', fontSize: '15px', fontStyle: 'italic' }}>— scoped on a brief call</span></div>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                {[
-                  { num: '01', title: 'A real differentiator on your proposal', body: 'Most brokers are selling the same TPA relationships. Adding VantaUM gives your clients something competitors can\'t easily replicate — and gives you something concrete to point to when explaining why your book outperforms.' },
-                  { num: '02', title: 'Better retention through better outcomes', body: 'Plan sponsors stay when they can see the results. Faster authorizations, fewer grievances, cleaner audit files — these show up in your annual review and make the renewal conversation easier.' },
-                  { num: '03', title: 'Direct partner relationship', body: 'You talk to us, not to an account manager reading from a script. Founding broker partners get direct access to the Wells Onyx team and input on how the partnership evolves.' },
-                ].map((p) => (
-                  <div key={p.num} className="ea-perk">
-                    <span className="ea-perk-num">{p.num}</span>
-                    <div><div className="ea-perk-title">{p.title}</div><div className="ea-perk-body">{p.body}</div></div>
-                  </div>
-                ))}
+              {/* IRO escalation card */}
+              <div style={{ padding: '40px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '0 8px 8px 0', display: 'flex', flexDirection: 'column' }}>
+                <div style={{ fontSize: '11px', fontWeight: 500, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--gold)', marginBottom: '20px' }}>Separate — On Escalation</div>
+                <div style={{ fontFamily: 'var(--serif)', fontSize: '30px', fontWeight: 300, lineHeight: 1.15, color: 'var(--white)', marginBottom: '8px' }}>Full IRO<br />Review</div>
+                <p style={{ fontSize: '14px', fontWeight: 300, lineHeight: 1.7, color: 'var(--white-muted)', marginTop: '16px', marginBottom: '28px', flex: 1 }}>When a case escalates beyond first-level appeal to full independent review, it&apos;s billed at a separate per-case rate. You only pay it when a case actually goes there — and the file arrives already clean and IRO-ready from the bundled work.</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '28px' }}>
+                  {['Independent, conflict-free review', 'Built on the IRO-ready file already assembled', 'Billed only on escalation', 'Same documentation standard throughout'].map((f, i) => (
+                    <div key={i} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', fontSize: '13px', fontWeight: 300, color: 'var(--white-muted)', lineHeight: 1.5 }}>
+                      <span style={{ color: 'var(--gold)', flexShrink: 0 }}>—</span>{f}
+                    </div>
+                  ))}
+                </div>
+                <div style={{ fontFamily: 'var(--serif)', fontSize: '22px', fontWeight: 300, color: 'var(--white)' }}>Separate per-case rate <span style={{ color: 'var(--white-dim)', fontSize: '15px', fontStyle: 'italic' }}>— only when it escalates</span></div>
               </div>
+            </div>
+            <p className="sb" style={{ marginTop: '32px', fontSize: '14px', color: 'var(--white-dim)' }}>Prefer to run it in house? The same workflow can be embedded inside your own clinical operation as a specialized extension of your team. We&apos;ll scope the engagement on a brief call.</p>
+            <div style={{ marginTop: '36px' }}>
+              <a href={EA_EMAIL} className="btn-primary" style={{ background: 'transparent', border: '1px solid var(--gold)', color: 'var(--gold)' }}>Request the full rate card →</a>
             </div>
           </div>
         </section>
 
         <hr className="divider" />
 
-        {/* ── CHRO Section ── */}
-        <section className="vum-section" id="chro" style={{ background: 'var(--near-black)', borderTop: '1px solid var(--border)' }}>
+        {/* ── Specialized OON + IRO Capability Section ── */}
+        <section className="vum-section" id="oon-iro" style={{ background: 'var(--near-black)', borderTop: '1px solid var(--border)' }}>
           <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
-            <span className="kicker">For Total Rewards / CHRO</span>
+            <span className="kicker" style={{ color: 'var(--gold)' }}>Specialized Capability</span>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '80px', alignItems: 'start', marginTop: '0' }}>
               <div>
-                <h2 className="sh">You Own<br /><em>the Outcome.</em><br />Make it exceptional.</h2>
-                <p className="sb" style={{ marginBottom: '24px' }}>Your employees don't distinguish between their health plan and their employer. When a prior authorization takes five days and nobody calls back, that's a benefits failure — and it lands on you.</p>
-                <p className="sb" style={{ marginBottom: '24px' }}>VantaUM changes what's possible. Same-day authorization decisions. A named coordinator who actually picks up the phone. A clinical process that treats every case like it belongs to someone who matters — because it does.</p>
-                <p className="sb" style={{ marginBottom: '40px' }}>This is what genuinely different looks like in self-funded healthcare. Not a better portal. A completely different experience.</p>
-                <a href={EA_EMAIL} className="btn-primary">Talk to us about your population →</a>
+                <h2 className="sh">The same engine,<br />tuned for your<br /><em>hardest cases.</em></h2>
+                <p className="sb" style={{ marginBottom: '24px' }}>The whole platform runs your everyday utilization management. But out-of-network is its own discipline — high-stakes, appeal-prone, and unforgiving on documentation — and it&apos;s where VantaUM is genuinely differentiated.</p>
+                <p className="sb" style={{ marginBottom: '24px' }}>For out-of-network work, the same concierge intake, Brief Engine, and single-clinician continuity become a precision instrument: defensible authorizations, first-level appeals owned by the same reviewer, and files documented to independent-review standard. If a case escalates, <strong style={{ color: 'var(--white)', fontWeight: 500 }}>full IRO is available as a separate service</strong> — not bundled into the base rate, billed only when it happens.</p>
+                <p className="sb" style={{ marginBottom: '40px' }}>It&apos;s the capability ASOs and larger benefit organizations come for — and it sits on top of the general UM layer everyone else uses every day.</p>
+                <a href={EA_EMAIL} className="btn-primary" style={{ background: 'transparent', border: '1px solid var(--gold)', color: 'var(--gold)' }}>Talk to us about OON + IRO →</a>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                <div style={{ padding: '28px 32px', background: 'rgba(91,138,245,0.06)', border: '1px solid rgba(91,138,245,0.15)', borderRadius: '6px', marginBottom: '2px' }}>
-                  <p style={{ fontFamily: 'var(--serif)', fontSize: '18px', fontWeight: 300, lineHeight: 1.4, color: 'var(--white)', marginBottom: '16px', fontStyle: 'italic' }}>"The daily friction employees hate"</p>
-                  <p style={{ fontSize: '13px', fontWeight: 300, color: 'var(--white-muted)', lineHeight: 1.6 }}>Waiting 5 days for a prior auth answer. Getting a denial letter with no explanation. Being told to call back. We built VantaUM specifically to eliminate this — because it's fixable, and nobody else bothered to fix it.</p>
+                <div style={{ padding: '28px 32px', background: 'rgba(201,169,110,0.07)', border: '1px solid rgba(201,169,110,0.18)', borderRadius: '6px', marginBottom: '2px' }}>
+                  <p style={{ fontFamily: 'var(--serif)', fontSize: '18px', fontWeight: 300, lineHeight: 1.4, color: 'var(--white)', marginBottom: '16px', fontStyle: 'italic' }}>&ldquo;The cases that decide your exposure&rdquo;</p>
+                  <p style={{ fontSize: '13px', fontWeight: 300, color: 'var(--white-muted)', lineHeight: 1.6 }}>Out-of-network authorization, the appeal that almost always follows, and the documentation that has to survive independent review. This is the slice of UM where specialized clinical ownership pays for itself — and where a clean file is the difference between a defensible decision and an expensive one.</p>
                 </div>
                 {[
-                  { icon: '→', title: 'Same-day decisions on standard cases', body: 'Median turnaround under 4 hours. Members get answers before they lose faith in the process.' },
-                  { icon: '→', title: 'Named coordinator, not a call center', body: 'One person who knows your plan, your members, and your providers. Reachable. Accountable.' },
-                  { icon: '→', title: 'Something real to bring to your organization', body: 'A benefits story that stands up in the all-hands. Faster, more human, and compliant.' },
+                  { title: 'General UM, end to end', body: 'Authorization through first-level appeal across your self-funded book — the everyday workflow, owned by one clinician per case.' },
+                  { title: 'Out-of-network, specialized', body: 'The same engine aimed at your highest-exposure cases, with documentation built to independent-review standard.' },
+                  { title: 'IRO when it escalates', body: 'Full independent review available as a separate escalation service — picking up a file that&apos;s already clean.' },
                 ].map((item, i) => (
                   <div key={i} className="urac-item">
                     <div className="udot" style={{ background: 'var(--teal)' }} />
@@ -453,25 +476,25 @@ export default function SitePage() {
           <div className="phil-inner">
             <div>
               <span className="kicker">Our Philosophy</span>
-              <h2 className="sh">The middle should be<br /><em>invisible.</em></h2>
-              <p className="sb" style={{ maxWidth: 440 }}>Every other UM platform automated the easy parts and declared victory. They left physicians staring at intake queues, coordinators managing software tickets, and members waiting for a human who never comes.</p>
-              <p className="sb" style={{ maxWidth: 440, marginTop: 18 }}>We built differently. AI handles intake, evidence matching, routing, and documentation — invisibly, instantly. So the clinician opens a pre-briefed case ready for judgment. The coordinator is free to actually take care of people.</p>
+              <h2 className="sh">The Brief Engine is<br />the <em>secret sauce.</em></h2>
+              <p className="sb" style={{ maxWidth: 440 }}>Every case arrives as a stack of raw documents. The slow part isn&apos;t the clinical judgment — it&apos;s everything that has to happen before a clinician can exercise it.</p>
+              <p className="sb" style={{ maxWidth: 440, marginTop: 18 }}>The Brief Engine collapses that. It ingests the record, matches it against criteria, and hands the clinician a fully pre-briefed case. That&apos;s what lets one reviewer move fast, stay consistent, and carry the same case from authorization through appeal — leaving documentation clean enough to hand straight to an independent reviewer.</p>
             </div>
             <div>
               <div className="flow">
                 <div className="flow-row">
-                  <div className="flow-cell human" style={{ flex: '0 0 42%' }}><div className="fl">Concierge Layer</div><div className="ft">Named coordinator owns every case from intake to decision</div></div>
-                  <div className="flow-cell machine"><div className="fl">AI Intake</div><div className="ft">Document ingestion, completeness check &amp; triage in seconds</div></div>
+                  <div className="flow-cell human" style={{ flex: '0 0 42%' }}><div className="fl">Concierge Intake</div><div className="ft">Named coordinator opens the case and assembles the record</div></div>
+                  <div className="flow-cell machine"><div className="fl">AI Brief Engine</div><div className="ft">Ingests the record, matches criteria, pre-briefs the case in minutes</div></div>
                 </div>
-                <div className="flow-bridge">workflow</div>
+                <div className="flow-bridge">same clinician</div>
                 <div className="flow-row">
-                  <div className="flow-cell machine"><div className="fl">AI Routing</div><div className="ft">Evidence matching, policy alignment, auto-approval for clear-cut cases</div></div>
-                  <div className="flow-cell clinical" style={{ flex: '0 0 42%' }}><div className="fl">Clinical Review</div><div className="ft">Complex cases → same-specialty physician, pre-briefed. No queue.</div></div>
+                  <div className="flow-cell clinical"><div className="fl">Authorization</div><div className="ft">Specialist reviewer makes the determination on a pre-briefed file</div></div>
+                  <div className="flow-cell clinical" style={{ flex: '0 0 46%' }}><div className="fl">First-Level Appeal</div><div className="ft">The same clinician owns the appeal. No relay, no lost context.</div></div>
                 </div>
-                <div className="flow-bridge">workflow</div>
+                <div className="flow-bridge">if it escalates</div>
                 <div className="flow-row">
-                  <div className="flow-cell human" style={{ flex: 1 }}><div className="fl">Decision &amp; Communication</div><div className="ft">Clear rationale delivered to provider and member. Human available immediately.</div></div>
-                  <div className="flow-cell machine" style={{ flex: '0 0 38%' }}><div className="fl">AI Documentation</div><div className="ft">Full URAC-compliant audit trail generated automatically</div></div>
+                  <div className="flow-cell human" style={{ flex: 1 }}><div className="fl">IRO-Ready Documentation</div><div className="ft">Clean, criteria-cited file ready for independent review</div></div>
+                  <div className="flow-cell machine" style={{ flex: '0 0 32%' }}><div className="fl">Full IRO</div><div className="ft">Separate engagement, only when needed</div></div>
                 </div>
               </div>
             </div>
@@ -483,12 +506,12 @@ export default function SitePage() {
           <div style={{ maxWidth: 1200, margin: '0 auto' }}>
             <div style={{ maxWidth: 580, marginBottom: 64 }}>
               <span className="kicker">The VantaUM Model</span>
-              <h2 className="sh">Three layers.<br />Each doing what it does <em>best.</em></h2>
+              <h2 className="sh">Three layers.<br />One case <em>through appeal.</em></h2>
             </div>
             <div className="pillars-grid">
-              <div className="pillar"><span className="pnum" style={{ color: 'var(--white-dim)' }}>01</span><div className="pname">Concierge Team</div><p className="pbody">A dedicated, named coordinator assigned to each plan. They know the plan&apos;s policies, the provider relationships, and the member population. Available. Accountable. Never a call center rotation.</p><span className="ptag" style={{ background: 'rgba(255,255,255,0.07)', color: 'var(--white-muted)' }}>Human-first</span></div>
-              <div className="pillar"><span className="pnum" style={{ color: 'rgba(91,138,245,0.45)' }}>02</span><div className="pname">AI Intelligence Layer</div><p className="pbody">Our ingestion engine extracts and classifies clinical documentation, cross-references evidence-based guidelines, and prepares the full case brief before a physician ever opens the file. Review time compressed dramatically — judgment preserved entirely.</p><span className="ptag" style={{ background: 'rgba(91,138,245,0.1)', color: 'var(--teal)' }}>AI-powered</span></div>
-              <div className="pillar"><span className="pnum" style={{ color: 'rgba(201,169,110,0.4)' }}>03</span><div className="pname">Elite Physician Panel</div><p className="pbody">Board-certified specialists in active practice. Not generalists in a queue — same-specialty physicians who understand the clinical picture. When a cardiology case arrives, a cardiologist reviews it.</p><span className="ptag" style={{ background: 'var(--gold-dim)', color: 'var(--gold)' }}>Clinical excellence</span></div>
+              <div className="pillar"><span className="pnum" style={{ color: 'var(--white-dim)' }}>01</span><div className="pname">Concierge Intake</div><p className="pbody">A dedicated, named coordinator opens each case and assembles the record. They know the criteria, the provider relationships, and the case history. Available. Accountable. Never a portal queue.</p><span className="ptag" style={{ background: 'rgba(255,255,255,0.07)', color: 'var(--white-muted)' }}>Human-first</span></div>
+              <div className="pillar"><span className="pnum" style={{ color: 'rgba(91,138,245,0.45)' }}>02</span><div className="pname">AI Brief Engine</div><p className="pbody">The secret sauce. It extracts and classifies the clinical record, cross-references evidence-based criteria, and prepares the full brief before a clinician opens the file. That&apos;s what makes the workflow fast and consistent — and the documentation IRO-ready by default.</p><span className="ptag" style={{ background: 'rgba(91,138,245,0.1)', color: 'var(--teal)' }}>AI-powered</span></div>
+              <div className="pillar"><span className="pnum" style={{ color: 'rgba(201,169,110,0.4)' }}>03</span><div className="pname">Same Clinician, Through Appeal</div><p className="pbody">Board-certified specialists in active practice — the same reviewer who owns the authorization owns the first-level appeal. Continuity, not a queue. When a cardiology case arrives, a cardiologist carries it the whole way.</p><span className="ptag" style={{ background: 'var(--gold-dim)', color: 'var(--gold)' }}>Clinical excellence</span></div>
             </div>
           </div>
         </section>
@@ -497,7 +520,7 @@ export default function SitePage() {
         <div className="manifesto">
           <div style={{ maxWidth: 860 }}>
             <span className="qmark">&ldquo;</span>
-            <p className="qtext">Every platform that replaced a clinician with an algorithm made the care <em>cheaper.</em> Very few made it better. We built VantaUM to do both — and we refused to sacrifice one for the other.</p>
+            <p className="qtext">Most operations split a single case across a queue of reviewers and call it <em>scale.</em> We built VantaUM so one clinician owns the case from authorization through appeal — because continuity is what makes the documentation hold up.</p>
             <p className="qattr">VantaUM &middot; A Wells Onyx Company</p>
           </div>
         </div>
@@ -507,18 +530,18 @@ export default function SitePage() {
           <div style={{ maxWidth: 1200, margin: '0 auto' }}>
             <div style={{ maxWidth: 560, marginBottom: 56 }}>
               <span className="kicker">Why VantaUM</span>
-              <h2 className="sh">What legacy UM<br />won&apos;t tell you.</h2>
-              <p className="sb">Legacy platforms were built to process volume. VantaUM was built to serve members, protect providers, and give plans a UM partner they can actually stand behind.</p>
+              <h2 className="sh">What a generalist<br />UM queue <em>won&apos;t</em> tell you.</h2>
+              <p className="sb">Most UM operations were built to process every case the same way. VantaUM was built around clinical ownership — one reviewer per case, from authorization through first-level appeal — with the documentation to back the decision when it&apos;s tested. It&apos;s why it holds up on everyday UM and shines on your hardest out-of-network cases.</p>
             </div>
             <table className="ctable">
-              <thead><tr><th>The Question</th><th>Legacy UM</th><th>VantaUM</th></tr></thead>
+              <thead><tr><th>The Question</th><th>Generalist UM Queue</th><th>VantaUM</th></tr></thead>
               <tbody>
-                <tr><td>Who reviews complex cases?</td><td>Nurses working a volume queue. Physician involvement is the exception.</td><td>Same-specialty, board-certified physicians in active practice.<span className="tgood">Always</span></td></tr>
-                <tr><td>How do I reach someone?</td><td>Call center. Ticket submitted. Wait for a callback.</td><td>Named concierge coordinator. Direct line. Same day response.</td></tr>
-                <tr><td>What role does AI play?</td><td>AI auto-approves and auto-denies. The human is an exception handler.</td><td>AI handles intake, routing, and documentation. Every consequential clinical call is human.</td></tr>
-                <tr><td>What if I disagree?</td><td>Submit an appeal. Wait. Navigate a process designed to discourage escalation.</td><td>Peer-to-peer with a same-specialty physician available immediately. Clear, fast escalation.</td></tr>
-                <tr><td>How is compliance managed?</td><td>Separate compliance team. Documentation created after the fact.</td><td>AI generates URAC-compliant documentation in real time. Audit-ready from day one.</td></tr>
-                <tr><td>What channels does this unlock?</td><td>Commercial configurations only in most cases.</td><td>URAC accreditation unlocks Medicaid, VA, and self-insured employer channels.</td></tr>
+                <tr><td>Who owns a case?</td><td>Whoever pulls it off the queue next. Ownership changes at every stage.</td><td>One named clinician, from authorization through first-level appeal.<span className="tgood">Continuity</span></td></tr>
+                <tr><td>How is the case prepared?</td><td>A raw document stack lands on a reviewer&apos;s desk.</td><td>The AI Brief Engine pre-briefs every case against criteria before review.</td></tr>
+                <tr><td>What happens on appeal?</td><td>A different reviewer picks it up cold and rebuilds the context.</td><td>The same clinician owns the first-level appeal. No lost context, no relay.</td></tr>
+                <tr><td>How good is the documentation?</td><td>Assembled after the fact, when an auditor or IRO asks for it.</td><td>Criteria-cited and IRO-ready from the moment the case is reviewed.</td></tr>
+                <tr><td>What if a case escalates to IRO?</td><td>Scramble to assemble a defensible file under deadline.</td><td>The file is already clean — independent review picks up a complete record.</td></tr>
+                <tr><td>How do we engage it?</td><td>Rebuild the capability internally, or buy a one-size-fits-all platform.</td><td>Bundled per case, or embedded as a specialized extension of your team.</td></tr>
               </tbody>
             </table>
           </div>
@@ -529,8 +552,8 @@ export default function SitePage() {
           <div style={{ maxWidth: 1100, margin: '0 auto' }}>
             <div style={{ maxWidth: 600, marginBottom: 48 }}>
               <span className="kicker">See It Live</span>
-              <h2 className="sh">Watch the AI work.<br /><em>Then meet the humans behind it.</em></h2>
-              <p className="sb">This is a live demo of the VantaUM intake and clinical routing engine. Submit a case and see how AI compresses the middle — so the clinician receives a fully pre-briefed file, not a raw document stack.</p>
+              <h2 className="sh">Watch the Brief Engine work.<br /><em>Then meet the clinician behind it.</em></h2>
+              <p className="sb">This is a live demo of the VantaUM intake and Brief Engine. Submit a case and watch it go from raw documents to a fully pre-briefed, criteria-cited file — the same file a clinician carries from authorization through appeal.</p>
             </div>
             <div>
               <div className="demo-frame-label"><span className="demo-live-dot" /> Live Demo Environment <span style={{ fontWeight: 300, opacity: 0.5, fontSize: '11px', marginLeft: '8px' }}>All patients, cases, and organizations shown are fictional and for illustrative purposes only.</span></div>
@@ -538,8 +561,8 @@ export default function SitePage() {
                 <DemoWalkthrough />
               </div>
               <div className="demo-cta-row">
-                <p className="demo-cta-text">Ready to see how this runs on your actual member population?</p>
-                <a href={EA_EMAIL} className="btn-primary">Apply for Early Access</a>
+                <p className="demo-cta-text">Ready to see how this runs on your actual caseload?</p>
+                <a href={EA_EMAIL} className="btn-primary">Talk to Us</a>
               </div>
             </div>
           </div>
@@ -550,13 +573,13 @@ export default function SitePage() {
           <div className="urac-inner">
             <div>
               <span className="kicker">Accreditation</span>
-              <h2 className="sh">URAC is the key<br />that opens the<br /><em>right rooms.</em></h2>
-              <p className="sb" style={{ maxWidth: 420 }}>Most UM vendors serve the commercial market and stop there. URAC accreditation positions VantaUM as a credentialed partner for the most regulated, highest-value programs in American healthcare.</p>
+              <h2 className="sh">Documentation<br />that holds up under<br /><em>independent review.</em></h2>
+              <p className="sb" style={{ maxWidth: 420 }}>A determination is only as strong as the record behind it. VantaUM is built to the standard that matters when a case is tested — URAC-aligned, criteria-cited, and ready for an independent reviewer the moment it&apos;s written.</p>
             </div>
             <div className="urac-list">
-              <div className="urac-item"><div className="udot" style={{ background: 'var(--teal)' }} /><div><div className="utitle">Medicaid Programs</div><div className="ubody">State Medicaid contracts require URAC or equivalent UM accreditation. Accreditation is the entry ticket — it&apos;s the floor, not the ceiling.</div></div></div>
-              <div className="urac-item"><div className="udot" style={{ background: 'var(--gold)' }} /><div><div className="utitle">VA &amp; Federal Health Programs</div><div className="ubody">Department of Veterans Affairs programs require certified UM oversight from accredited organizations. A critical channel for a company with federal relationships in development.</div></div></div>
-              <div className="urac-item"><div className="udot" style={{ background: 'rgba(255,255,255,0.35)' }} /><div><div className="utitle">Self-Insured Employers</div><div className="ubody">Large self-funded employers increasingly require URAC-accredited UM partners. Accreditation signals clinical rigor before a single conversation begins.</div></div></div>
+              <div className="urac-item"><div className="udot" style={{ background: 'var(--teal)' }} /><div><div className="utitle">IRO-ready by default</div><div className="ubody">Every case is documented to independent-review standard during the bundled work — not reconstructed under deadline once a case escalates.</div></div></div>
+              <div className="urac-item"><div className="udot" style={{ background: 'var(--gold)' }} /><div><div className="utitle">Criteria-cited determinations</div><div className="ubody">Each decision is tied to the evidence-based criteria behind it, so the rationale is clear to a provider, an auditor, or an independent reviewer.</div></div></div>
+              <div className="urac-item"><div className="udot" style={{ background: 'rgba(255,255,255,0.35)' }} /><div><div className="utitle">Credentialed clinical rigor</div><div className="ubody">A credentialed operation that the most regulated programs and the most demanding self-funded plans can stand behind — signaled before a single conversation begins.</div></div></div>
             </div>
           </div>
         </section>
@@ -570,13 +593,13 @@ export default function SitePage() {
 
         {/* CTA */}
         <section className="cta-section" id="contact">
-          <span className="kicker" style={{ display: 'block' }}>Founding Partner Program</span>
-          <h2 className="sh" style={{ maxWidth: 700, margin: '0 auto 20px' }}>A few spots remain.<br /><em>Will you be one<br />of the first?</em></h2>
-          <p className="sb" style={{ maxWidth: 500, margin: '0 auto 16px' }}>We are selectively onboarding founding TPA partners who want to shape what great UM looks like — and be positioned as a clinical quality leader before anyone else gets there.</p>
+          <span className="kicker" style={{ display: 'block' }}>Let&apos;s Talk</span>
+          <h2 className="sh" style={{ maxWidth: 700, margin: '0 auto 20px' }}>Bring us the cases<br /><em>that matter most.</em></h2>
+          <p className="sb" style={{ maxWidth: 520, margin: '0 auto 16px' }}>Whether you want a clinical layer for your everyday utilization management, a specialized engine for your out-of-network exposure, or both — embedded in your team or run externally — the conversation starts the same way: tell us about your caseload.</p>
           <p className="sb" style={{ maxWidth: 500, margin: '0 auto 48px' }}>Email us directly. No form. No sales queue. You&apos;ll hear back from someone who can actually make a decision.</p>
           <div className="cta-actions">
-            <a href={EA_EMAIL} className="btn-primary">Apply for Early Access</a>
-            <a href="#model" className="btn-ghost">Explore the model →</a>
+            <a href={EA_EMAIL} className="btn-primary">Talk to Us</a>
+            <a href="#ratecard" className="btn-ghost">See the rate card →</a>
           </div>
         </section>
 
