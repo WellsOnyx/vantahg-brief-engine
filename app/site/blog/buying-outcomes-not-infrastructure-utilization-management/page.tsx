@@ -172,8 +172,8 @@ export default function BlogPost() {
               </div>
               <div className="pillar-card">
                 <div className="pillar-card-label">Predictable</div>
-                <div className="pillar-card-title">PEPM pricing</div>
-                <div className="pillar-card-body">Predictable, scalable, fits most stop-loss criteria. Your UM cost scales with your membership. No surprise invoices. No fixed overhead when membership fluctuates.</div>
+                <div className="pillar-card-title">Priced by the case</div>
+                <div className="pillar-card-body">You pay for clinical work on the cases that warrant it &mdash; authorization and first-level appeal bundled together, with full IRO a separate rate only when a case escalates. No per-member overhead, no fixed cost on a population.</div>
               </div>
             </div>
 
@@ -182,7 +182,7 @@ export default function BlogPost() {
             {/* ── Section: Founding partners ── */}
             <h2>For founding TPA partners.</h2>
 
-            <p>VantaUM is currently onboarding founding partners to our initial capacity of 300,000&ndash;340,000 member lives. Founding partners lock in PEPM rates before pricing scales at full buildout.</p>
+            <p>VantaUM is currently onboarding founding partners. Engage us as a bundled per-case service for authorization through first-level appeal, or embed the same workflow inside your own clinical operation. Founding partners lock in preferred rates before pricing scales at full buildout.</p>
 
             <p>If your TPA is ready to stop building UM infrastructure and start buying UM outcomes, we should talk.</p>
           </div>

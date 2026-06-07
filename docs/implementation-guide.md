@@ -38,7 +38,7 @@ That's it. No hardware, no software installs, no IT projects on your side.
 
 ## What You Get
 
-- **Per-employee-per-month pricing** — no capital expenditure, no infrastructure to maintain
+- **Bundled per-case pricing** — authorization and first-level appeal as one engagement; no capital expenditure, no infrastructure to maintain
 - **Concierge intake** — live, trained intake specialists (no phone trees, no IVR)
 - **AI-powered clinical briefs** — structured summaries prepared before physician review
 - **Same-specialty physician determinations** — matched to the authorization type
@@ -74,9 +74,9 @@ We meet you where you are. Choose one or combine several:
 
 ## Pricing
 
-VantaUM is priced on a **per-employee-per-month (PEPM)** basis that scales with your membership. No setup fees for founding partners. No long-term lock-in — we earn your renewal every quarter.
+VantaUM is priced **by the case**, not by the member. Authorization and the first-level appeal come bundled as one per-case engagement. Full IRO review is a separate per-case rate, billed only when a case actually escalates. No per-member fees, no volume floors, no fixed overhead on a population.
 
-Founding partner rates are available for early adopters. Pricing is provided after a brief discovery call to scope your volume and complexity.
+Prefer to run it in house? The same workflow can be embedded as a specialized extension of your own clinical team. Pricing is scoped on a brief discovery call against your actual caseload.
 
 ---
 

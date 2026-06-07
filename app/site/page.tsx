@@ -320,7 +320,7 @@ export default function SitePage() {
             </div>
             <div className="ea-perks">
               {[
-                { num: '01', title: 'Preferred Founding Pricing', body: 'Early partners lock in rates that reflect the relationship, not a vendor transaction. Pricing is validated at ~$12 PEPM — and founding partners negotiate directly with leadership.' },
+                { num: '01', title: 'Preferred Founding Pricing', body: 'Early partners lock in rates that reflect the relationship, not a vendor transaction. Pricing is bundled per case — and founding partners negotiate directly with leadership.' },
                 { num: '02', title: 'Roadmap Input', body: 'Your operational reality shapes what we build next. Founding partners have a direct line to the product team — not a support ticket and a quarterly roadmap review.' },
                 { num: '03', title: 'Reference Account Status', body: 'Be among the first TPAs in the market to operate a concierge UM model. Reference status positions your organization as a clinical quality leader to your plan sponsors.' },
                 { num: '04', title: 'White-Glove Onboarding', body: 'Founding partners get hands-on implementation directly with the Wells Onyx operating team — not a third-party integrator who read the manual last week.' },
@@ -346,7 +346,7 @@ export default function SitePage() {
                 {[
                   'Clean files. Every case documented, criteria-cited, audit-ready on delivery.',
                   'URAC-accredited operation. No compliance gaps to inherit.',
-                  '~$12 PEPM. No volume floors, no minimums, no surprises.',
+                  'Bundled per case. No volume floors, no minimums, no surprises.',
                   'White-glove onboarding. Your team connects once. We handle the rest.',
                 ].map((item, i) => (
                   <div key={i} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
@@ -362,7 +362,7 @@ export default function SitePage() {
                 { label: 'Turnaround', val: '< 4 hours', sub: 'Median case-to-determination time' },
                 { label: 'SLA Compliance', val: '99.4%', sub: 'Across all review types and priorities' },
                 { label: 'Lift on your team', val: 'Zero', sub: 'We own intake, review, and delivery entirely' },
-                { label: 'Pricing', val: '~$12 PEPM', sub: 'Founding partner rate — locked in at contract' },
+                { label: 'Pricing', val: 'Per case', sub: 'Authorization + first-level appeal, bundled' },
               ].map((s, i) => (
                 <div key={i} className="hero-stat">
                   <div className="stat-val" style={{ fontSize: '28px', color: i === 0 ? 'var(--teal)' : 'var(--white)' }}>{s.val}</div>
