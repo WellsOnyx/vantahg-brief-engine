@@ -270,7 +270,7 @@ export default function SitePage() {
           </div>
           <ul className="nav-links">
             <li><a href="#workflow">The Workflow</a></li>
-            <li><a href="#oon-iro">OON + IRO</a></li>
+            <li><a href="#oon-iro">Specialized</a></li>
             <li><a href="#ratecard">Rate Card</a></li>
             <li><a href="#demo">Live Demo</a></li>
             <li><a href="#contact">Contact</a></li>
