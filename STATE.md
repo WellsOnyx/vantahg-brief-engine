@@ -315,6 +315,49 @@ the contract until then.
 
 ---
 
+## 🩺 Clinician "My Day" dashboard — 2026-06-12
+
+Branch `feature/clinician-dashboard` (off main `c0862d0`). Desktop session.
+
+- **`lib/clinician/day-planner.ts`** — pure scheduling engine, sibling of
+  `lib/delivery/lpn-scoring.ts`. Orders a clinician's personal queue
+  earliest-deadline-first (EDF minimizes max lateness for a serial worker,
+  so "at_risk" means *no* ordering saves the day — the verdict is provable),
+  projects finish time per case at `position * avg_turnaround`, computes
+  slack vs deadline, and rolls up feasibility: `on_track` / `tight`
+  (min slack < 1h) / `at_risk` (any projected miss). Unknown turnaround
+  history assumes 1.5h/case and flags `assumed_turnaround` so the UI says so
+  (deliberately different from lpn-scoring's pessimistic 999h — a personal
+  schedule built on 999h would be noise).
+- **`GET /api/clinician/summary?staff_id=`** — requireAuth + rate limit,
+  demo-mode safe. Composes staff record, role-scoped personal queue
+  (LPN: `lpn_review` + `pend_missing_info`; RN: own `rn_review` only —
+  pod-oversight cases are LPN work and stay in `/api/queue`), the day plan,
+  and a quality-audit summary (avg score, SLA compliance rate) from
+  `quality_audits` where `audited_staff_id` = the clinician. 400 for
+  `admin_staff` (day plans are clinical-only), 404 unknown staff.
+- **`/clinician` page** — "My Day" in the clinician nav (layout.tsx +
+  AppShell title map). Feasibility banner, stat row (plan size, projected
+  misses, thinnest margin, projected work, quality score), capacity bar vs
+  `max_cases_per_day`, "Up next" card with Start review CTA, EDF work-order
+  table (deadline via SlaTracker, projected finish clock time, margin
+  badge), quality corner linking to /quality. Clinician picker pills match
+  the /queue persona pattern; 60s auto-refresh.
+- **Tests: 20 new** (14 pure engine in
+  `__tests__/lib/clinician/day-planner.test.ts`, 6 API in
+  `__tests__/api/clinician-summary.test.ts`). Verified live in demo mode:
+  Rosa Martinez's plan projects VUM-MED-0203 finish at +1.2h with 1h47m
+  slack — math confirmed on screen, zero console errors.
+- ⚠️ Pre-existing on main, NOT from this branch: 26 test failures across 9
+  files (case-documents, adapters factories, portals, ical, notifications)
+  fail on clean `c0862d0` too — verified via throwaway worktree. Separate
+  fix needed.
+- ⚠️ Also observed this session: `vantaum-prod-app` ECS service has
+  **runningCount 0** (desired tasks not running). app.vantaum.com is
+  therefore down or cold. Investigate before any demo.
+
+---
+
 > ## 🆕 Resuming as a fresh Claude thread? Do this:
 >
 > ```bash
