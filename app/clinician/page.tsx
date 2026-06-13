@@ -27,9 +27,28 @@ interface QualitySummary {
   last_audit_at: string | null;
 }
 
+/** Mirrors DecisionReadiness from /api/clinician/summary. */
+interface Readiness {
+  brief_ready: boolean;
+  fact_check_score: number | null;
+  human_review_recommended: boolean;
+  criteria: {
+    set_id: string | null;
+    guideline_label: string;
+    met_count: number;
+    not_met_count: number;
+    unable_count: number;
+    verdict: 'met' | 'not_met' | 'partial' | 'insufficient';
+  } | null;
+  ai_recommendation: string | null;
+  ai_confidence: string | null;
+}
+
+type PlannedEntry = DayPlan<Case>['ordered'][number] & { readiness: Readiness };
+
 interface ClinicianSummary {
   staff: Staff;
-  plan: DayPlan<Case>;
+  plan: Omit<DayPlan<Case>, 'ordered'> & { ordered: PlannedEntry[] };
   quality: QualitySummary;
 }
 
@@ -62,6 +81,49 @@ function formatHours(hours: number): string {
 
 function formatClock(iso: string): string {
   return new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
+
+const VERDICT_LABEL: Record<string, string> = {
+  met: 'criteria met',
+  not_met: 'criteria not met',
+  partial: 'criteria partial',
+  insufficient: 'criteria unassessed',
+};
+
+/**
+ * The delight chip: how much of the work is already done when the
+ * clinician opens the case. The human gate is explicit — when the
+ * fact-checker wants human reasoning, the chip says so instead of
+ * pretending the case is rubber-stampable.
+ */
+function ReadinessChip({ r }: { r: Readiness }) {
+  if (!r.brief_ready) {
+    return (
+      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border bg-gray-50 text-gray-600 border-gray-200">
+        Brief in progress
+      </span>
+    );
+  }
+  const chip = r.human_review_recommended
+    ? { label: 'Prepped — needs your reasoning', classes: 'bg-amber-50 text-amber-800 border-amber-200' }
+    : { label: 'Decision-ready', classes: 'bg-green-50 text-green-700 border-green-200' };
+  return (
+    <span className="inline-flex flex-col items-start gap-0.5">
+      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border ${chip.classes}`}>
+        {chip.label}
+      </span>
+      <span className="text-[11px] text-muted">
+        {r.fact_check_score != null && <>FC {r.fact_check_score}</>}
+        {r.criteria && (
+          <>
+            {r.fact_check_score != null && ' · '}
+            {r.criteria.set_id ?? 'VantaUM'} {VERDICT_LABEL[r.criteria.verdict]}
+          </>
+        )}
+        {r.ai_recommendation && <> · AI: {r.ai_recommendation}{r.ai_confidence ? ` (${r.ai_confidence})` : ''}</>}
+      </span>
+    </span>
+  );
 }
 
 function slackBadge(slack: number | null, miss: boolean) {
@@ -280,6 +342,9 @@ export default function ClinicianDashboardPage() {
                     Projected finish {formatClock(nextCase.projected_finish_at)}
                     {nextCase.slack_hours !== null && <> &middot; {formatHours(nextCase.slack_hours)} {nextCase.projected_miss ? 'past deadline' : 'of slack'}</>}
                   </p>
+                  <div className="mt-2">
+                    <ReadinessChip r={nextCase.readiness} />
+                  </div>
                 </div>
                 {nextCase.case.turnaround_deadline && (
                   <SlaTracker deadline={nextCase.case.turnaround_deadline} compact />
@@ -312,6 +377,7 @@ export default function ClinicianDashboardPage() {
                       <th className="px-4 py-3 font-semibold">Deadline</th>
                       <th className="px-4 py-3 font-semibold">Proj. finish</th>
                       <th className="px-4 py-3 font-semibold">Margin</th>
+                      <th className="px-4 py-3 font-semibold hidden lg:table-cell">Prepped</th>
                       <th className="px-4 py-3" />
                     </tr>
                   </thead>
@@ -336,6 +402,7 @@ export default function ClinicianDashboardPage() {
                         </td>
                         <td className="px-4 py-3 text-sm text-foreground whitespace-nowrap">{formatClock(p.projected_finish_at)}</td>
                         <td className="px-4 py-3">{slackBadge(p.slack_hours, p.projected_miss)}</td>
+                        <td className="px-4 py-3 hidden lg:table-cell"><ReadinessChip r={p.readiness} /></td>
                         <td className="px-4 py-3 text-right">
                           <Link href={`/cases/${p.case.id}`} className="text-sm text-navy hover:text-gold-dark font-medium transition-colors">
                             Review &rarr;

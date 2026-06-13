@@ -315,6 +315,77 @@ the contract until then.
 
 ---
 
+## 🔄 Intake → Concierge → Clinician flow + own criteria engine — 2026-06-12/13
+
+Branch `feature/clinician-dashboard` (off main `c0862d0`). The "My Day"
+dashboard below was the start; this section is the full workflow Jonah
+actually asked for — the intake fan-in, the concierge relationship call,
+the decision-ready clinician handoff, and dropping InterQual for our own
+criteria.
+
+### 🔒 LOCKED DECISION: VantaUM builds its OWN criteria engine — NOT InterQual/MCG
+Jonah, 2026-06-12. We do not license InterQual or MCG. Owning the criteria
+library is the moat (citation-enforced, payer-customizable, Gravity-Rails-
+scoped, auditable). Memory: `decision_criteria_engine.md`.
+- **`lib/criteria/library.ts`** — versioned, provenance-stamped criteria
+  sets (`VC-<code>-v<n>`, provenance `vantaum_criteria_library`) built on
+  the existing evidence-based `lib/medical-criteria.ts` content. Exposes a
+  `CriteriaSource` contract that Cole's `lib/medical-qualifications/` RAG
+  ("the in-house InterQual/MCG replacement") plugs into in prod.
+  `assessFromBrief()` rolls a brief's criteria_match into a met/not_met/
+  partial/insufficient verdict.
+- **Scrubbed InterQual/MCG as OUR basis** from: generate-brief standard
+  prompt (now cites the VantaUM Criteria Library + public evidence),
+  `medical-criteria.ts` guideline_references (11 commercial refs removed,
+  test pins zero), all demo brief `guideline_source` strings (→ `VantaUM
+  Criteria VC-...`), concierge help copy, demo client onboarding notes.
+  KEPT: `known-guidelines.ts` (fact-checker recognizes commercial names so
+  it can flag hallucinated cites) and staff "InterQual Certified" creds
+  (a clinician credential, not a license). Added a `27130` (THA) criteria
+  set so all 7 demo procedure codes are governed.
+
+### Concierge ping center — intake fan-in → first call → relationship
+Every entry point (eFax, Gravity Rails agent, live call, call center,
+client portal, manual entry) is already the same case engine. The
+concierge's first job is the callback, not data entry — the brief engine
+has usually done the auth work before the phone rings.
+- **Migration `027_concierge_touchpoints.sql`** — append-only log of human
+  touches per case. A case with no outbound first-contact touchpoint = an
+  open ping. (Note: a `027_gravity_rail_per_concierge.sql` is referenced in
+  older git history but is NOT on this branch / main; 027 here is the
+  touchpoints migration. Renumber if both land.)
+- **`lib/concierge/pings.ts`** — pure: `buildPings()` (active cases minus
+  contacted, most-overdue-first vs a 30-min callback target),
+  `buildCallPrep()` (auth_prepared / in_motion / just_arrived / needs_info
+  line the concierge opens the call with), `intakeChannelLabel()`.
+- **`GET /api/concierge/pings`** (demo rotates cases across all 6 channels)
+  + **`POST /api/concierge/touchpoints`** (logs the call, tenant-guarded,
+  PHI-safe audit — outcome/channel only, never notes). New "First call"
+  feed on `/concierge` with inline log-call form; logging removes the ping.
+
+### Clinician decision-readiness (delight without quality loss)
+- `/api/clinician/summary` plan entries now carry `readiness`: brief_ready,
+  fact_check_score, **human_review_recommended** (straight from the
+  fact-checker — surfaced, never suppressed), VantaUM criteria assessment,
+  AI recommendation + confidence.
+- `/clinician` Up-Next card + work-order table show a ReadinessChip:
+  "Decision-ready" (green) or "Prepped — needs your reasoning" (amber) with
+  `FC <score> · VC-<id> criteria <verdict> · AI: <rec> (<conf>)`. The human
+  gate stays explicit.
+
+### Verification
+- **45 new tests** this session (criteria library 12, day-planner 14,
+  pings 8 + API 5, clinician-summary 6). Full suite 332 passing, **zero new
+  failures** (the 26 pre-existing failures across 9 files are unchanged).
+- Build passes (set aside untracked `lib/medical-qualifications` etc. WIP
+  that breaks compile on any branch — missing `./types`). Verified live in
+  demo mode: First-call feed across all 6 channels with prep lines, log-call
+  closes the ping (5→4), clinician chip shows `VantaUM Criteria VC-J1745-v1
+  criteria not met · AI: pend (high)` with the human-review gate lit. Zero
+  console errors.
+
+---
+
 ## 🩺 Clinician "My Day" dashboard — 2026-06-12
 
 Branch `feature/clinician-dashboard` (off main `c0862d0`). Desktop session.
@@ -371,6 +442,7 @@ Branch `feature/clinician-dashboard` (off main `c0862d0`). Desktop session.
 >
 > **Locked decisions live in `~/.claude/projects/-Users-jonahmanning-vantahg-brief-engine/memory/`** and auto-load every session. Don't waste turns rediscussing:
 > - Billing: Meow (not Stripe)
+> - **Clinical criteria: VantaUM's OWN criteria engine (NOT InterQual/MCG)** — locked 2026-06-12
 > - Hosting: marketing on Vercel, app on AWS Fargate
 > - Auth V1: hybrid Supabase Auth, Cognito later
 > - Florida governance + Jonathan Arias signs all contracts

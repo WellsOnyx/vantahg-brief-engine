@@ -1,4 +1,4 @@
-import { getCriteriaForCodes } from '@/lib/medical-criteria';
+import { getCriteriaSet } from '@/lib/criteria/library';
 import { factCheckBrief } from './fact-checker';
 import { analyzeTwoMidnightRule, getTwoMidnightBriefContext } from './two-midnight-rule';
 import { isRealAnthropicEnabled } from './env';
@@ -300,7 +300,7 @@ Call the record_clinical_brief tool exactly once with the complete structured br
 
 You are NOT rendering a determination. You are preparing the brief so the physician has more time with the case, not less.
 
-Be precise, clinical, and cite specific criteria. Use standard medical terminology (ICD-10, CPT/HCPCS). Reference applicable clinical guidelines (InterQual, MCG, ACR Appropriateness Criteria, specialty society guidelines, CMS National Coverage Determinations as relevant). Flag any missing information that the reviewer should note.
+Be precise, clinical, and cite specific criteria. Use standard medical terminology (ICD-10, CPT/HCPCS). The criteria basis is the VANTAUM CRITERIA LIBRARY reference provided with the case (VantaUM's own evidence-based criteria), supplemented by published sources: specialty society guidelines (ACR Appropriateness Criteria, AAOS, AGA, AASM, APA, etc.) and CMS National Coverage Determinations as relevant. Do NOT present commercial criteria products (InterQual, MCG) as the basis for the review — VantaUM maintains its own criteria library. When a VantaUM criteria set id (VC-...) is provided, cite it as the guideline source. Flag any missing information that the reviewer should note.
 
 Key principles:
 - Evaluate diagnosis-procedure alignment (does the diagnosis support the requested procedure?)
@@ -313,12 +313,17 @@ Call the record_clinical_brief tool exactly once with the complete structured br
 }
 
 function buildUserPrompt(caseData: Case, client: Client | null, isMdReview: boolean): string {
-  // Look up medical criteria for the submitted procedure codes
+  // Look up VantaUM criteria sets for the submitted procedure codes.
+  // Versioned set ids (VC-<code>-v<n>) flow into the brief's
+  // guideline_source so determinations cite OUR criteria, with the
+  // public evidence each set is built on listed as citations.
   let criteriaContext = '';
   if (caseData.procedure_codes?.length) {
-    const matchedCriteria = getCriteriaForCodes(caseData.procedure_codes);
-    if (Object.keys(matchedCriteria).length > 0) {
-      criteriaContext = `\n\nMEDICAL CRITERIA REFERENCE:\n${JSON.stringify(matchedCriteria, null, 2)}`;
+    const matchedSets = caseData.procedure_codes
+      .map((code) => getCriteriaSet(code))
+      .filter((s): s is NonNullable<typeof s> => s !== null);
+    if (matchedSets.length > 0) {
+      criteriaContext = `\n\nVANTAUM CRITERIA LIBRARY REFERENCE (cite the set_id as the guideline source):\n${JSON.stringify(matchedSets, null, 2)}`;
     }
   }
 
@@ -330,7 +335,7 @@ function buildUserPrompt(caseData: Case, client: Client | null, isMdReview: bool
     if (client.uses_mcg) sources.push('MCG Health (Cite)');
     if (client.custom_guidelines_url) sources.push(`Custom guidelines: ${client.custom_guidelines_url}`);
     if (sources.length > 0) {
-      clientCriteriaContext = `\n\nCLIENT-REQUIRED CRITERIA SOURCES: This client (${client.name}) requires reviews to reference: ${sources.join(', ')}. Prioritize these sources when citing guideline matches.`;
+      clientCriteriaContext = `\n\nCLIENT-MANDATED CROSS-REFERENCES: This client (${client.name}) asks that reviews also reference: ${sources.join(', ')}. Note alignment with these sources where applicable, but the primary basis remains the VantaUM Criteria Library and published evidence.`;
       if (client.contracted_sla_hours) {
         clientCriteriaContext += `\nClient SLA: ${client.contracted_sla_hours} hours turnaround.`;
       }

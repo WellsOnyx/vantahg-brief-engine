@@ -3,7 +3,8 @@ import { getServiceClient } from '@/lib/supabase';
 import { isDemoMode, getDemoStaffMember, getDemoQueueCases, getDemoQualityAudits } from '@/lib/demo-mode';
 import { requireAuth } from '@/lib/auth-guard';
 import { applyRateLimit } from '@/lib/rate-limit-middleware';
-import { buildDayPlan } from '@/lib/clinician/day-planner';
+import { buildDayPlan, type DayPlan } from '@/lib/clinician/day-planner';
+import { assessFromBrief, type CriteriaAssessment } from '@/lib/criteria/library';
 import type { Case, QualityAudit, Staff } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -20,6 +21,40 @@ export const dynamic = 'force-dynamic';
  * RN: assigned_rn_id in rn_review. RN pod-oversight cases are LPN
  * work and belong in /api/queue, not in a personal schedule.
  */
+
+/**
+ * How prepared is this case for a human decision? The delight contract:
+ * by the time a case hits a clinician's plan, the brief engine has done
+ * the heavy lifting — but the human gate never disappears.
+ * human_review_recommended comes straight from the fact-checker and is
+ * surfaced, never suppressed.
+ */
+export interface DecisionReadiness {
+  brief_ready: boolean;
+  fact_check_score: number | null;
+  human_review_recommended: boolean;
+  criteria: CriteriaAssessment | null;
+  ai_recommendation: string | null;
+  ai_confidence: string | null;
+}
+
+function buildReadiness(c: Case): DecisionReadiness {
+  return {
+    brief_ready: c.ai_brief != null,
+    fact_check_score: c.fact_check?.overall_score ?? null,
+    human_review_recommended: c.fact_check?.human_review_recommended ?? false,
+    criteria: assessFromBrief(c.procedure_codes ?? [], c.ai_brief),
+    ai_recommendation: c.ai_brief?.ai_recommendation?.recommendation ?? null,
+    ai_confidence: c.ai_brief?.ai_recommendation?.confidence ?? null,
+  };
+}
+
+function withReadiness(plan: DayPlan<Case>) {
+  return {
+    ...plan,
+    ordered: plan.ordered.map((p) => ({ ...p, readiness: buildReadiness(p.case) })),
+  };
+}
 
 interface QualitySummary {
   audit_count: number;
@@ -81,7 +116,7 @@ export async function GET(request: NextRequest) {
       const audits = getDemoQualityAudits(undefined, staffId);
       return NextResponse.json({
         staff,
-        plan: buildDayPlan(personal, staff),
+        plan: withReadiness(buildDayPlan(personal, staff)),
         quality: summarizeAudits(audits),
       });
     }
@@ -133,7 +168,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       staff: typedStaff,
-      plan: buildDayPlan((cases ?? []) as Case[], typedStaff),
+      plan: withReadiness(buildDayPlan((cases ?? []) as Case[], typedStaff)),
       quality: summarizeAudits((audits ?? []) as QualityAudit[]),
     });
   } catch (err) {

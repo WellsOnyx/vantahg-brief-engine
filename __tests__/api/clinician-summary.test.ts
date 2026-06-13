@@ -103,6 +103,19 @@ describe('GET /api/clinician/summary', () => {
     // Rosa has a completed demo audit, so the summary is populated
     expect(body.quality.audit_count).toBeGreaterThan(0);
     expect(body.quality.avg_overall_score).not.toBeNull();
+
+    // Decision readiness rides on every plan entry: brief state, the
+    // human-review gate, and a VantaUM criteria assessment (never a
+    // commercial product) when a brief exists.
+    for (const p of body.plan.ordered) {
+      expect(p.readiness).toBeDefined();
+      expect(typeof p.readiness.brief_ready).toBe('boolean');
+      expect(typeof p.readiness.human_review_recommended).toBe('boolean');
+      if (p.readiness.brief_ready && p.readiness.criteria) {
+        expect(p.readiness.criteria.guideline_label).toContain('VantaUM');
+        expect(['met', 'not_met', 'partial', 'insufficient']).toContain(p.readiness.criteria.verdict);
+      }
+    }
   });
 
   it('limits an RN plan to their personal rn_review cases (no pod oversight)', async () => {
