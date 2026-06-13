@@ -348,6 +348,7 @@ const PATH_LABELS: Record<string, string> = {
   intake: 'Intake',
   efax: 'eFax',
   queue: 'Queue',
+  clinician: 'My Day',
   quality: 'Quality',
   ops: 'Operations',
   'mission-control': 'Mission Control',

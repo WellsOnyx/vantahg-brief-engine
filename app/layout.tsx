@@ -67,6 +67,7 @@ const conciergeNav: NavGroup[] = [
 const clinicianNav: NavGroup[] = [
   {
     items: [
+      { href: "/clinician", label: "My Day" },
       { href: "/queue", label: "My Queue" },
       { href: "/cases", label: "Cases" },
       { href: "/cases?status=brief_ready", label: "Briefs" },
