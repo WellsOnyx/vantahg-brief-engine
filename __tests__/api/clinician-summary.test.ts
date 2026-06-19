@@ -115,7 +115,19 @@ describe('GET /api/clinician/summary', () => {
         expect(p.readiness.criteria.guideline_label).toContain('VantaUM');
         expect(['met', 'not_met', 'partial', 'insufficient']).toContain(p.readiness.criteria.verdict);
       }
+      // Two-tier routing: every entry carries a lane decision.
+      expect(['auto', 'review']).toContain(p.readiness.lane);
+      expect(Array.isArray(p.readiness.lane_reasons)).toBe(true);
+      // A 'review' entry must explain itself; an 'auto' entry must not be a denial.
+      if (p.readiness.lane === 'review') {
+        expect(p.readiness.lane_reasons.length).toBeGreaterThan(0);
+      } else {
+        expect(p.readiness.ai_recommendation).not.toBe('deny');
+      }
     }
+
+    // Lane tally is present and sums to the plan size.
+    expect(body.plan.lanes.auto + body.plan.lanes.review).toBe(body.plan.ordered.length);
   });
 
   it('limits an RN plan to their personal rn_review cases (no pod oversight)', async () => {

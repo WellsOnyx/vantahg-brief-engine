@@ -24,6 +24,7 @@ export const DEMO_CASE_IDS = {
   psychotherapy: 'case-005-psychotherapy-90837',
   epiduralInjection: 'case-006-esi-64483',
   hipReplacement: 'case-007-hip-27130',
+  cleanImaging: 'case-008-mri-knee-73721',
 } as const;
 
 export const DEMO_STAFF_IDS = {
@@ -546,6 +547,78 @@ const mriLumbarBrief: AIBrief = {
     additional_info_needed: [
       'Detailed PT notes would strengthen the record but are not required for determination given the PT summary and clinical findings',
     ],
+    state_specific_requirements: [],
+  },
+};
+
+// A deliberately CLEAN case — fully documented, criteria met, no gaps —
+// so the two-tier dashboard shows the Lane 1 "tap to approve" path.
+// Paired with an inline passing fact_check so it deterministically routes
+// to the auto lane (lib/routing/readiness-score.ts).
+const cleanKneeMriBrief: AIBrief = {
+  clinical_question:
+    'Is MRI of the right knee without contrast (CPT 73721) medically necessary for this patient with persistent mechanical knee symptoms and a positive McMurray test refractory to conservative management?',
+  patient_summary:
+    'Daniel Reyes is a 44-year-old male presenting with 10 weeks of right knee pain, intermittent locking, and a sensation of giving way following a twisting injury. He has completed 8 weeks of supervised physical therapy, a full course of NSAIDs, and activity modification without resolution. Examination demonstrates a positive McMurray test, medial joint-line tenderness, and a small effusion. Plain radiographs show no fracture and preserved joint spaces. No red-flag findings.',
+  diagnosis_analysis: {
+    primary_diagnosis: 'M23.205 - Derangement of unspecified medial meniscus, right knee',
+    secondary_diagnoses: ['M25.561 - Pain in right knee'],
+    diagnosis_procedure_alignment:
+      'Mechanical symptoms with a positive McMurray test and medial joint-line tenderness are directly consistent with internal derangement; MRI is the appropriate study to confirm meniscal pathology before any surgical referral.',
+  },
+  procedure_analysis: {
+    codes: ['73721 - MRI lower extremity joint without contrast'],
+    clinical_rationale:
+      'Persistent mechanical symptoms after a documented 8-week course of conservative care, with objective examination findings, support advanced imaging to characterize meniscal/ligamentous pathology and direct treatment.',
+    complexity_level: 'routine',
+    setting_appropriateness: 'Outpatient imaging center is the appropriate, cost-effective setting.',
+  },
+  criteria_match: {
+    guideline_source: 'VantaUM Criteria VC-73721-v1 / ACR',
+    applicable_guideline: 'VantaUM Criteria VC-73721-v1 (MRI Knee); ACR Appropriateness Criteria — Chronic Knee Pain',
+    criteria_met: [
+      'Mechanical symptoms (locking, giving way) consistent with internal derangement',
+      'Failure of conservative management documented: supervised PT x 8 weeks, NSAIDs, activity modification',
+      'Objective examination findings present: positive McMurray, medial joint-line tenderness, effusion',
+      'Plain radiographs obtained and reviewed prior to advanced imaging',
+      'No prior MRI of this knee for the current episode of care',
+      'Red-flag findings appropriately screened and absent',
+    ],
+    criteria_not_met: [],
+    criteria_unable_to_assess: [],
+    conservative_alternatives: [
+      'Continued physical therapy (already completed 8 weeks without resolution)',
+    ],
+  },
+  documentation_review: {
+    documents_provided:
+      'Requesting provider clinical notes, right knee radiograph report, complete physical therapy notes (all 16 sessions), medication history, and letter of medical necessity',
+    key_findings: [
+      'Provider notes document positive McMurray, medial joint-line tenderness, and a small effusion',
+      'Radiograph report confirms no fracture and preserved joint spaces',
+      'Complete PT notes document 16 supervised sessions over 8 weeks with persistent mechanical symptoms',
+      'Medication history confirms an adequate NSAID trial',
+      'Letter of medical necessity articulates the rationale and results-directed plan',
+    ],
+    missing_documentation: [],
+  },
+  ai_recommendation: {
+    recommendation: 'approve',
+    confidence: 'high',
+    rationale:
+      'All VantaUM criteria (VC-73721-v1) for knee MRI are met with a fully documented record: mechanical symptoms, objective examination findings, completed conservative care, and prior radiographs. Medical necessity is clearly established.',
+    key_considerations: [
+      'Every primary VantaUM imaging criterion is satisfied with supporting documentation',
+      'No red-flag or emergent indication — standard authorization timeline applies',
+      'Record is complete; no additional information required for determination',
+    ],
+    if_modify_suggestion: null,
+  },
+  reviewer_action: {
+    decision_required: 'Confirm medical necessity for right knee MRI on a fully documented record',
+    time_sensitivity: 'Standard turnaround; case received within the contractual SLA window.',
+    peer_to_peer_suggested: false,
+    additional_info_needed: [],
     state_specific_requirements: [],
   },
 };
@@ -1165,6 +1238,92 @@ export const demoCases: Case[] = [
     intake_channel: 'portal',
     intake_confirmation_sent: true,
     authorization_number: 'AUTH-2026-00203',
+    peer_to_peer_status: null,
+    peer_to_peer_scheduled_at: null,
+    peer_to_peer_completed_at: null,
+    peer_to_peer_notes: null,
+    appeal_of_case_id: null,
+    appeal_status: null,
+    physician_ai_agreement: null,
+    physician_ai_feedback_notes: null,
+    denial_strength_score: null,
+    denial_strength_grade: null,
+    two_midnight_applies: false,
+    payer_classification: 'commercial',
+    reviewer: undefined,
+    client: demoClients[0],
+  },
+
+  // CASE 8: Clean knee MRI — Lane 1 "tap to approve" exemplar (LPN Review).
+  // Fully documented, criteria met, passing fact_check → routes to the auto
+  // lane so the two-tier dashboard shows the one-tap path, not just review.
+  {
+    id: DEMO_CASE_IDS.cleanImaging,
+    created_at: daysAgo(0, 5),
+    updated_at: daysAgo(0, 1),
+    case_number: 'VUM-MED-0208',
+    status: 'lpn_review',
+    priority: 'standard',
+    service_category: 'imaging',
+    vertical: 'medical',
+    patient_name: 'Daniel Reyes',
+    patient_dob: '1981-09-12',
+    patient_member_id: 'SWA-2026-71880',
+    patient_gender: 'Male',
+    requesting_provider: 'Dr. Helen Park',
+    requesting_provider_npi: '4567890123',
+    requesting_provider_specialty: 'Orthopedic Surgery',
+    servicing_provider: null,
+    servicing_provider_npi: null,
+    facility_name: 'Valley Imaging Associates',
+    facility_type: 'outpatient',
+    procedure_codes: ['73721'],
+    diagnosis_codes: ['M23.205', 'M25.561'],
+    procedure_description: 'MRI right knee without contrast — persistent mechanical symptoms, positive McMurray, failed 8 weeks conservative care',
+    clinical_question: 'Is MRI right knee medically necessary given positive McMurray and documented failure of 8 weeks conservative management?',
+    assigned_reviewer_id: null,
+    review_type: 'prior_auth',
+    payer_name: 'Blue Cross Blue Shield',
+    plan_type: 'PPO',
+    turnaround_deadline: hoursFromNow(20),
+    sla_hours: 48,
+    ai_brief: cleanKneeMriBrief,
+    ai_brief_generated_at: daysAgo(0, 4),
+    fact_check: {
+      overall_score: 96,
+      overall_status: 'pass',
+      sections: [],
+      summary: { verified: 11, unverified: 0, flagged: 0 },
+      consistency_checks: [{ check: 'All consistency checks', passed: true, detail: 'Coherent and fully documented' }],
+      checked_at: daysAgo(0, 4),
+      human_review_recommended: false,
+      review_reasons: [],
+    },
+    fact_check_at: daysAgo(0, 4),
+    determination: null,
+    determination_rationale: null,
+    determination_at: null,
+    determined_by: null,
+    denial_reason: null,
+    denial_criteria_cited: null,
+    alternative_recommended: null,
+    submitted_documents: ['ortho_clinical_notes.pdf', 'knee_xray_report.pdf', 'physical_therapy_notes_full.pdf', 'medication_history.pdf', 'letter_of_medical_necessity.pdf'],
+    client_id: DEMO_CLIENT_IDS.southwestAdmin,
+    assigned_pod_id: DEMO_POD_IDS.alphaGeneral,
+    assigned_lpn_id: DEMO_STAFF_IDS.martinezLpn,
+    assigned_rn_id: DEMO_STAFF_IDS.carterRn,
+    lpn_review_notes: null,
+    lpn_review_at: null,
+    lpn_determination: null,
+    rn_review_notes: null,
+    rn_review_at: null,
+    rn_determination: null,
+    sla_paused_at: null,
+    sla_resumed_at: null,
+    sla_pause_total_hours: 0,
+    intake_channel: 'api',
+    intake_confirmation_sent: true,
+    authorization_number: 'AUTH-2026-00208',
     peer_to_peer_status: null,
     peer_to_peer_scheduled_at: null,
     peer_to_peer_completed_at: null,

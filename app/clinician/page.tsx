@@ -42,13 +42,19 @@ interface Readiness {
   } | null;
   ai_recommendation: string | null;
   ai_confidence: string | null;
+  lane: 'auto' | 'review';
+  lane_reasons: string[];
+  readiness_score: number;
 }
 
 type PlannedEntry = DayPlan<Case>['ordered'][number] & { readiness: Readiness };
 
 interface ClinicianSummary {
   staff: Staff;
-  plan: Omit<DayPlan<Case>, 'ordered'> & { ordered: PlannedEntry[] };
+  plan: Omit<DayPlan<Case>, 'ordered'> & {
+    ordered: PlannedEntry[];
+    lanes: { auto: number; review: number };
+  };
   quality: QualitySummary;
 }
 
@@ -104,9 +110,10 @@ function ReadinessChip({ r }: { r: Readiness }) {
       </span>
     );
   }
-  const chip = r.human_review_recommended
-    ? { label: 'Prepped — needs your reasoning', classes: 'bg-amber-50 text-amber-800 border-amber-200' }
-    : { label: 'Decision-ready', classes: 'bg-green-50 text-green-700 border-green-200' };
+  // Lane 1 (auto) = clean, one-tap. Lane 2 (review) = needs reasoning.
+  const chip = r.lane === 'auto'
+    ? { label: '✓ Tap to approve', classes: 'bg-green-50 text-green-700 border-green-300' }
+    : { label: 'Needs your reasoning', classes: 'bg-amber-50 text-amber-800 border-amber-200' };
   return (
     <span className="inline-flex flex-col items-start gap-0.5">
       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border ${chip.classes}`}>
@@ -307,6 +314,9 @@ export default function ClinicianDashboardPage() {
             />
           </div>
 
+          {/* Two-tier lane split — the delight headline */}
+          <LaneBanner auto={plan.lanes.auto} review={plan.lanes.review} />
+
           {/* Capacity bar */}
           {plan.capacity.max_cases_per_day !== null && (
             <SectionCard eyebrow="Capacity" title={`${plan.capacity.active_count} of ${plan.capacity.max_cases_per_day} daily cases`}>
@@ -349,9 +359,18 @@ export default function ClinicianDashboardPage() {
                 {nextCase.case.turnaround_deadline && (
                   <SlaTracker deadline={nextCase.case.turnaround_deadline} compact />
                 )}
-                <Link href={`/cases/${nextCase.case.id}`} className="btn-primary text-sm">
-                  Start review
-                </Link>
+                {nextCase.readiness.lane === 'auto' ? (
+                  <Link
+                    href={`/cases/${nextCase.case.id}`}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 transition-colors"
+                  >
+                    ✓ Tap to approve
+                  </Link>
+                ) : (
+                  <Link href={`/cases/${nextCase.case.id}`} className="btn-primary text-sm">
+                    Start review
+                  </Link>
+                )}
               </div>
             </SectionCard>
           )}
@@ -460,6 +479,40 @@ function StatCard({ label, value, alert = false }: { label: string; value: numbe
         {typeof value === 'number' ? <MetricValue value={value} /> : value}
       </div>
       <div className={`text-sm font-medium mt-1 ${alert ? 'text-red-600' : 'text-muted'}`}>{label}</div>
+    </div>
+  );
+}
+
+/**
+ * The two-tier headline: how much of today is one-tap vs. real review.
+ * This is the "delight" message — most of the stack drains with a tap,
+ * a few cases get your full attention.
+ */
+function LaneBanner({ auto, review }: { auto: number; review: number }) {
+  const total = auto + review;
+  if (total === 0) return null;
+  const autoPct = Math.round((auto / total) * 100);
+  return (
+    <div className="rounded-xl border border-border bg-surface p-5">
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div>
+          <p className="text-sm text-foreground">
+            <span className="font-semibold text-green-700">{auto} ready to approve</span>
+            {' · '}
+            <span className="font-semibold text-amber-700">{review} need your reasoning</span>
+          </p>
+          <p className="text-xs text-muted mt-0.5">
+            {autoPct}% of your day is a tap. The rest is where your judgment matters.
+          </p>
+        </div>
+        <div className="text-right">
+          <div className="text-2xl font-bold text-green-700">{autoPct}%</div>
+          <div className="text-[11px] uppercase tracking-wide text-muted">one-tap</div>
+        </div>
+      </div>
+      <div className="mt-3 h-2 rounded-full bg-amber-100 overflow-hidden flex">
+        <div className="h-full bg-green-500 transition-all" style={{ width: `${autoPct}%` }} />
+      </div>
     </div>
   );
 }

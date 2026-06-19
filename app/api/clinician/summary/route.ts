@@ -5,6 +5,7 @@ import { requireAuth } from '@/lib/auth-guard';
 import { applyRateLimit } from '@/lib/rate-limit-middleware';
 import { buildDayPlan, type DayPlan } from '@/lib/clinician/day-planner';
 import { assessFromBrief, type CriteriaAssessment } from '@/lib/criteria/library';
+import { scoreReadiness, type ReadinessLane } from '@/lib/routing/readiness-score';
 import type { Case, QualityAudit, Staff } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -36,9 +37,23 @@ export interface DecisionReadiness {
   criteria: CriteriaAssessment | null;
   ai_recommendation: string | null;
   ai_confidence: string | null;
+  /**
+   * Two-tier routing (docs/throughput-architecture-11k.md):
+   * 'auto'   → Lane 1, a clean case the clinician can one-tap approve.
+   * 'review' → Lane 2, needs the full review UI + human reasoning.
+   * Denials never route to 'auto' — see lib/routing/readiness-score.ts.
+   */
+  lane: ReadinessLane;
+  lane_reasons: string[];
+  readiness_score: number;
 }
 
 function buildReadiness(c: Case): DecisionReadiness {
+  const decision = scoreReadiness({
+    procedure_codes: c.procedure_codes ?? [],
+    ai_brief: c.ai_brief,
+    fact_check: c.fact_check,
+  });
   return {
     brief_ready: c.ai_brief != null,
     fact_check_score: c.fact_check?.overall_score ?? null,
@@ -46,13 +61,23 @@ function buildReadiness(c: Case): DecisionReadiness {
     criteria: assessFromBrief(c.procedure_codes ?? [], c.ai_brief),
     ai_recommendation: c.ai_brief?.ai_recommendation?.recommendation ?? null,
     ai_confidence: c.ai_brief?.ai_recommendation?.confidence ?? null,
+    lane: decision.lane,
+    lane_reasons: decision.reasons,
+    readiness_score: decision.score,
   };
 }
 
 function withReadiness(plan: DayPlan<Case>) {
+  const ordered = plan.ordered.map((p) => ({ ...p, readiness: buildReadiness(p.case) }));
+  // Lane tally drives the two-tier headline on the dashboard.
+  const auto_count = ordered.filter((p) => p.readiness.lane === 'auto').length;
   return {
     ...plan,
-    ordered: plan.ordered.map((p) => ({ ...p, readiness: buildReadiness(p.case) })),
+    ordered,
+    lanes: {
+      auto: auto_count,
+      review: ordered.length - auto_count,
+    },
   };
 }
 
