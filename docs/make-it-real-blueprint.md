@@ -124,10 +124,10 @@ real behind `ENABLE_REAL_MEOW` but unprovisioned. **Multi-model billing
 does not exist yet.**
 
 **Block 4 deliverables:**
-1. **Billing-model abstraction** — `clients.billing_model ∈ {pepm, pmpm, per_auth}` + a per-client rate config (rates differ per client). Migration + types.
-2. **Invoice generation per model** — PEPM (members × rate, exists), PMPM (members × rate), per-auth (count of billable auths in period × rate). One generator, three strategies.
-3. **COGS tracking — human labor first (Jonah's pick):** capture concierge-touch + clinician-review **minutes per auth** (the pipeline timer from Block 2 + touchpoint logs feed this), apply a labor-cost rate, roll up **cost per auth** and **margin per client**. This is the number that tells you if a client's rate is profitable.
-4. Margin view: revenue (by model) − COGS (labor) per client per period.
+1. **Billing-model abstraction** — `clients.billing_model ∈ {pepm, pmpm, per_auth}` + a per-client rate config (rates differ per client). Migration + types. ✅ **DONE** — migration `028_billing_models.sql`, pure math in `lib/billing/billing-models.ts:computeInvoiceLine` (14 tests). Per-auth rule wired: denied bills same as approved; appeals billed separately at their own rate; missing rate throws (loud, not silent-zero).
+2. **Invoice generation per model** — PEPM (members × rate, exists), PMPM (members × rate), per-auth (count of billable auths in period × rate). One generator, three strategies. 🔜 **NEXT** — `computeInvoiceLine` is ready; wire it into the persistence path in `lib/billing/invoice-generator.ts` (today's generator is PEPM-coupled; leave it working, add the model-aware path).
+3. **COGS tracking — human labor first (Jonah's pick):** capture concierge-touch + clinician-review **minutes per auth**, apply a **per-staff loaded rate** (`staff.loaded_cost_per_hour_cents` — varies per hire), roll up **cost per auth** and **margin per client**. ✅ **Foundation DONE** — `case_labor_entries` table (028), `computeLaborCogs` + `computeMargin` (pure, tested, surfaces unpriced entries). 🔜 capture path (pipeline timer + touchpoints → entries) is next.
+4. Margin view: revenue (by model) − COGS (labor) per client per period. `computeMargin` ready; UI is later.
 
 ---
 
@@ -148,10 +148,10 @@ PR-sized block.
 
 ---
 
-## Open Questions
+## Decisions (Jonah, 2026-06-16)
 
-1. **BPO call center** — do reps enter via the existing portal form, or do you want a dedicated `/api/intake/bpo` with call metadata (call id, duration → feeds COGS)?
-2. **Per-auth "billable" definition** — does a denied auth bill the same as approved? Does an appeal bill separately? (Drives Block 4 invoice logic.)
-3. **Downstream care data source** — where does outcome data come from (claims feed, provider attestation, manual)? Determines Block 3 scope.
-4. **VantaQual naming** — confirm "VantaQual" is the public product name for the qualifications engine.
-5. **Labor cost rate** — loaded cost/hour for concierge vs clinician, to turn minutes into COGS dollars.
+1. **BPO call center** — ❌ **Do NOT build a dedicated intake path.** Reps use the existing portal/manual form once a BPO partner is selected. Cut from scope.
+2. **Per-auth "billable"** — ✅ A **denied auth bills the same as an approved auth.** An **appeal bills separately** (its own billable event). Drives Block 4 invoice logic.
+3. **Downstream care data source** — ⏸️ **Undecided.** Block 3 downstream tracking ships as a **capture-ready schema stub only** (table + status fields), no data integration until the source is chosen.
+4. **VantaQual naming** — ✅ Working/placeholder name, kept. Lives in one `lib/vantaqual/` surface so a later rename is trivial.
+5. **Labor cost rate** — ✅ **Varies per hire.** COGS reads a **per-staff loaded cost rate** (`staff.loaded_cost_per_hour`), not a global constant.
