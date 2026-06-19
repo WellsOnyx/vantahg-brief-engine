@@ -9,6 +9,7 @@ import {
   PageSectionHeading,
   StatCard,
 } from '@/components/layouts/PageLayouts';
+import type { ConciergePing, TouchpointOutcome } from '@/lib/concierge/pings';
 
 /**
  * Concierge front-line dashboard.
@@ -93,6 +94,7 @@ function timeOfDayGreeting(): string {
 export default function ConciergePage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [queue, setQueue] = useState<QueueCase[]>([]);
+  const [pings, setPings] = useState<ConciergePing[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -102,9 +104,10 @@ export default function ConciergePage() {
     else setLoading(true);
     setError(null);
     try {
-      const [profRes, queueRes] = await Promise.all([
+      const [profRes, queueRes, pingsRes] = await Promise.all([
         fetch('/api/concierge/me', { cache: 'no-store' }),
         fetch('/api/concierge/queue', { cache: 'no-store' }),
+        fetch('/api/concierge/pings', { cache: 'no-store' }),
       ]);
       if (!profRes.ok) {
         if (profRes.status === 401) {
@@ -121,6 +124,10 @@ export default function ConciergePage() {
       if (queueRes.ok) {
         const q = (await queueRes.json()) as { cases: QueueCase[] };
         setQueue(q.cases ?? []);
+      }
+      if (pingsRes.ok) {
+        const p = (await pingsRes.json()) as { pings: ConciergePing[] };
+        setPings(p.pings ?? []);
       }
     } catch {
       setError('Network error. Try again.');
@@ -235,6 +242,11 @@ export default function ConciergePage() {
       {/* ── Body: queue + lines/capacity ─────────────────────── */}
       <PageDashboard.Body
         main={
+          <div className="space-y-6">
+          <FirstCallFeed
+            pings={pings}
+            onLogged={(caseId) => setPings((prev) => prev.filter((p) => p.case_id !== caseId))}
+          />
           <div className="card p-5 md:p-6">
             <PageSectionHeading
               hint={<span className="text-xs text-muted">{queue.length} active</span>}
@@ -289,6 +301,7 @@ export default function ConciergePage() {
                 })}
               </ul>
             )}
+          </div>
           </div>
         }
         aside={
@@ -356,7 +369,8 @@ export default function ConciergePage() {
         </h3>
         <p className="text-sm text-muted mt-2 max-w-2xl">
           When a case lands in <span className="font-semibold text-navy">brief_ready</span>, the
-          AI has already extracted facts, matched InterQual/MCG criteria, and drafted the brief.
+          AI has already extracted facts, matched them against the VantaUM Criteria Library — our
+          own evidence-based criteria, not a licensed product — and drafted the brief.
           You validate — capture your reasoning (≥30 chars), flag concerns — and route to LPN/RN/MD.
           Your gate is the one that holds in audit.
         </p>
@@ -371,5 +385,192 @@ function Line({ label, value, mono }: { label: string; value: string; mono?: boo
       <span className="text-xs text-muted uppercase tracking-wide">{label}</span>
       <span className={`text-sm text-navy ${mono ? 'font-mono' : ''}`}>{value}</span>
     </li>
+  );
+}
+
+// ── First-call ping feed ──────────────────────────────────────────────
+//
+// Every entry point (fax, Gravity Rails agent, live call, call center,
+// client portal, manual entry) lands here as a ping. The brief engine
+// is already working the auth by the time the concierge dials — the
+// call is relationship, not data collection.
+
+const CHANNEL_BADGE: Record<string, string> = {
+  efax: 'bg-blue-50 text-blue-800 border-blue-200',
+  api: 'bg-violet-50 text-violet-800 border-violet-200',
+  phone: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+  email: 'bg-cyan-50 text-cyan-800 border-cyan-200',
+  portal: 'bg-teal-50 text-teal-800 border-teal-200',
+  batch_upload: 'bg-gray-50 text-gray-700 border-gray-200',
+};
+
+const PREP_TONE: Record<string, string> = {
+  auth_prepared: 'text-emerald-700',
+  in_motion: 'text-blue-700',
+  just_arrived: 'text-navy',
+  needs_info: 'text-amber-700',
+};
+
+const OUTCOME_OPTIONS: Array<{ value: TouchpointOutcome; label: string }> = [
+  { value: 'reached', label: 'Reached them' },
+  { value: 'voicemail', label: 'Voicemail' },
+  { value: 'no_answer', label: 'No answer' },
+  { value: 'left_message', label: 'Left message with office' },
+  { value: 'scheduled_callback', label: 'Scheduled callback' },
+  { value: 'email_sent', label: 'Followed up by email' },
+];
+
+function countdownLabel(minutes: number): { label: string; tone: string } {
+  if (minutes < 0) {
+    return { label: `${Math.abs(minutes)}m past target`, tone: 'bg-red-50 text-red-800 border-red-200' };
+  }
+  if (minutes <= 10) {
+    return { label: `${minutes}m to call`, tone: 'bg-amber-50 text-amber-800 border-amber-200' };
+  }
+  return { label: `${minutes}m to call`, tone: 'bg-emerald-50 text-emerald-800 border-emerald-200' };
+}
+
+function FirstCallFeed({
+  pings,
+  onLogged,
+}: {
+  pings: ConciergePing[];
+  onLogged: (caseId: string) => void;
+}) {
+  const [openLogFor, setOpenLogFor] = useState<string | null>(null);
+  const [outcome, setOutcome] = useState<TouchpointOutcome>('reached');
+  const [notes, setNotes] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [logError, setLogError] = useState<string | null>(null);
+
+  async function submitLog(caseId: string) {
+    setSaving(true);
+    setLogError(null);
+    try {
+      const res = await fetch('/api/concierge/touchpoints', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ case_id: caseId, outcome, notes, is_first_contact: true }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.error ?? `Could not log the call (${res.status}).`);
+      }
+      setOpenLogFor(null);
+      setOutcome('reached');
+      setNotes('');
+      onLogged(caseId);
+    } catch (err) {
+      setLogError(err instanceof Error ? err.message : 'Could not log the call.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="card p-5 md:p-6">
+      <PageSectionHeading
+        hint={
+          <span className="text-xs text-muted">
+            {pings.length === 0 ? 'all callers reached' : `${pings.length} to call · 30-min target`}
+          </span>
+        }
+      >
+        First call
+      </PageSectionHeading>
+      {pings.length === 0 ? (
+        <div className="text-center py-8">
+          <p className="text-sm text-navy font-semibold">Every new intake has been called back.</p>
+          <p className="text-xs text-muted mt-1">New pings land here from every channel — fax, Gravity Rails, calls, portal.</p>
+        </div>
+      ) : (
+        <ul className="divide-y divide-border">
+          {pings.map((p) => {
+            const cd = countdownLabel(p.minutes_to_target);
+            const isOpen = openLogFor === p.case_id;
+            return (
+              <li key={p.case_id} className="py-3 first:pt-0 last:pb-0">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span
+                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border ${
+                          CHANNEL_BADGE[p.intake_channel] ?? CHANNEL_BADGE.batch_upload
+                        }`}
+                      >
+                        {p.channel_label}
+                      </span>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border ${cd.tone}`}>
+                        {cd.label}
+                      </span>
+                      <span className="font-mono text-[11px] text-muted">
+                        {p.case_number}
+                        {p.client_name && <span> · {p.client_name}</span>}
+                      </span>
+                    </div>
+                    <p className="font-semibold text-navy truncate mt-1">{p.patient_name ?? '(no name)'}</p>
+                    <p className="text-xs text-muted truncate">{p.procedure_description ?? '—'}</p>
+                    <p className={`text-xs mt-1 font-medium ${PREP_TONE[p.prep.level]}`}>{p.prep.line}</p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Link
+                      href={`/cases/${p.case_id}`}
+                      className="text-xs px-3 py-1.5 rounded-lg border border-border text-navy hover:border-navy/40 transition"
+                    >
+                      Open case
+                    </Link>
+                    <button
+                      onClick={() => {
+                        setOpenLogFor(isOpen ? null : p.case_id);
+                        setLogError(null);
+                      }}
+                      className="text-xs px-3 py-1.5 rounded-lg bg-navy text-white font-semibold hover:bg-navy/90 transition"
+                    >
+                      {isOpen ? 'Close' : 'Log call'}
+                    </button>
+                  </div>
+                </div>
+                {isOpen && (
+                  <div className="mt-3 rounded-lg border border-border bg-background p-3">
+                    <div className="flex flex-wrap gap-2">
+                      {OUTCOME_OPTIONS.map((o) => (
+                        <button
+                          key={o.value}
+                          onClick={() => setOutcome(o.value)}
+                          className={`px-2.5 py-1 text-xs rounded-full border transition ${
+                            outcome === o.value
+                              ? 'bg-navy text-white border-navy'
+                              : 'bg-surface text-foreground border-border hover:border-navy/30'
+                          }`}
+                        >
+                          {o.label}
+                        </button>
+                      ))}
+                    </div>
+                    <textarea
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      placeholder="Call notes (optional) — who you spoke with, what they need, anything for the clinical team"
+                      rows={2}
+                      className="mt-2 w-full text-sm rounded-lg border border-border bg-surface p-2 focus:outline-none focus:ring-1 focus:ring-navy/30"
+                    />
+                    {logError && <p className="text-xs text-red-700 mt-1">{logError}</p>}
+                    <div className="flex justify-end mt-2">
+                      <button
+                        onClick={() => submitLog(p.case_id)}
+                        disabled={saving}
+                        className="text-xs px-4 py-1.5 rounded-lg bg-gold text-navy font-semibold hover:bg-gold-light disabled:opacity-50 transition"
+                      >
+                        {saving ? 'Saving…' : 'Save touchpoint'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
   );
 }

@@ -43,7 +43,7 @@ export async function generateAuthorizationNumber(): Promise<string> {
 export interface IntakeLogEntry {
   id: string;
   created_at: string;
-  channel: 'portal' | 'efax' | 'email' | 'phone' | 'api' | 'batch_upload';
+  channel: 'portal' | 'efax' | 'email' | 'phone' | 'api' | 'gravity_rails' | 'batch_upload';
   source_identifier: string | null; // fax number, email address, API key name, etc.
   authorization_number: string | null;
   case_id: string | null; // null until case is created

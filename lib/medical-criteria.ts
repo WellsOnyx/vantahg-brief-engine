@@ -28,9 +28,7 @@ export const medicalCriteria: Record<string, MedicalCriteria> = {
       "No prior imaging performed"
     ],
     guideline_references: [
-      "ACR Appropriateness Criteria - Low Back Pain",
-      "InterQual Imaging Criteria",
-      "MCG Imaging Guidelines"
+      "ACR Appropriateness Criteria - Low Back Pain"
     ]
   },
 
@@ -102,9 +100,30 @@ export const medicalCriteria: Record<string, MedicalCriteria> = {
       "Active infection or uncontrolled HbA1c >8%"
     ],
     guideline_references: [
-      "AAOS Clinical Practice Guidelines - Osteoarthritis of the Knee",
-      "MCG Surgery Guidelines",
-      "InterQual Procedures"
+      "AAOS Clinical Practice Guidelines - Osteoarthritis of the Knee"
+    ]
+  },
+
+  "27130": {
+    name: "Total Hip Arthroplasty (THA)",
+    category: "surgery",
+    typical_criteria: [
+      "Advanced (grade III-IV) hip osteoarthritis on radiographic imaging",
+      "Failed conservative treatment for >=3 months (PT, analgesics, activity modification)",
+      "Significant functional impairment documented (gait, ADLs, validated outcome scores such as Harris Hip Score)",
+      "Intra-articular injection trialed or contraindication documented",
+      "BMI documented and addressed in surgical planning",
+      "No active infection at the surgical site"
+    ],
+    common_denial_reasons: [
+      "Insufficient conservative treatment (<3 months or incomplete trial)",
+      "Mild arthritis without radiographic severity",
+      "No documentation of functional limitation or validated outcome measures",
+      "BMI >40 without documented optimization plan",
+      "Active infection or uncontrolled comorbidity affecting surgical candidacy"
+    ],
+    guideline_references: [
+      "AAOS Clinical Practice Guidelines - Osteoarthritis of the Hip"
     ]
   },
 
@@ -150,8 +169,7 @@ export const medicalCriteria: Record<string, MedicalCriteria> = {
       "Prior surgery at same level without documented recurrence or new pathology"
     ],
     guideline_references: [
-      "NASS Clinical Guidelines - Lumbar Disc Herniation",
-      "InterQual Procedures"
+      "NASS Clinical Guidelines - Lumbar Disc Herniation"
     ]
   },
 
@@ -176,9 +194,7 @@ export const medicalCriteria: Record<string, MedicalCriteria> = {
       "Prior injections at the same level without documented benefit"
     ],
     guideline_references: [
-      "ASIPP Guidelines for Interventional Techniques",
-      "InterQual Procedures",
-      "MCG Procedures"
+      "ASIPP Guidelines for Interventional Techniques"
     ]
   },
 
@@ -278,8 +294,7 @@ export const medicalCriteria: Record<string, MedicalCriteria> = {
       "Missing progress notes or clinical documentation"
     ],
     guideline_references: [
-      "APA Practice Guidelines",
-      "MCG Behavioral Health Guidelines"
+      "APA Practice Guidelines"
     ]
   },
 
@@ -304,8 +319,7 @@ export const medicalCriteria: Record<string, MedicalCriteria> = {
     ],
     guideline_references: [
       "AAO Preferred Practice Pattern - Cataract in the Adult Eye",
-      "CMS NCD for Cataract Surgery",
-      "InterQual Ophthalmology Procedures"
+      "CMS NCD for Cataract Surgery"
     ]
   },
 
@@ -403,8 +417,7 @@ export const medicalCriteria: Record<string, MedicalCriteria> = {
       "Goals not specific, measurable, or time-limited"
     ],
     guideline_references: [
-      "CMS Therapy Services Guidelines (Medicare Benefit Policy Manual)",
-      "InterQual Rehabilitation Criteria"
+      "CMS Therapy Services Guidelines (Medicare Benefit Policy Manual)"
     ]
   },
 
@@ -428,8 +441,7 @@ export const medicalCriteria: Record<string, MedicalCriteria> = {
       "Functional goals achieved or patient discharged to outpatient therapy"
     ],
     guideline_references: [
-      "CMS Home Health Conditions of Participation",
-      "InterQual Home Care Criteria"
+      "CMS Home Health Conditions of Participation"
     ]
   },
 
@@ -555,7 +567,7 @@ export const commonMedicalCodes: { code: string; description: string; category: 
   // Internal Medicine codes
   { code: "99223", description: "Hospital Admission - High Complexity", category: "internal_medicine" },
   { code: "99222", description: "Hospital Admission - Moderate Complexity", category: "internal_medicine" },
-  { code: "99232", description: "Subsequent Hospital Care - Moderate Complexity", category: "internal_medicine" },
+  { code: "99232", description: "Subsequent Hospital Care - Moderate Complexity", category: "internal_medicine" }
 ];
 
 // ── Utility Functions ────────────────────────────────────────────────────────
@@ -597,6 +609,6 @@ export function getServiceCategories(): string[] {
     "workers_comp",
     "emergency_medicine",
     "internal_medicine",
-    "other",
+    "other"
   ];
 }

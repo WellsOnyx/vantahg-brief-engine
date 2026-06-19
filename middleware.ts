@@ -21,6 +21,7 @@ const PUBLIC_EXACT = new Set([
   '/api/external/submit',
   '/api/intake/efax', // generic webhook (HMAC-protected, see app/api/intake/efax/route.ts)
   '/api/intake/email', // email intake webhook
+  '/api/intake/gravity-rails', // Gravity Rails inbound (HMAC x-gr-signature, machine-to-machine)
   '/api/auth/callback', // Cognito magic-link landing — user is unauthenticated by definition
   '/api/auth/request-magic-link', // unauthenticated by definition; rate-limited internally
   '/api/auth/sign-in', // Cognito password sign-in — unauthenticated by definition; rate-limited internally

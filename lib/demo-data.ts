@@ -24,6 +24,7 @@ export const DEMO_CASE_IDS = {
   psychotherapy: 'case-005-psychotherapy-90837',
   epiduralInjection: 'case-006-esi-64483',
   hipReplacement: 'case-007-hip-27130',
+  cleanImaging: 'case-008-mri-knee-73721',
 } as const;
 
 export const DEMO_STAFF_IDS = {
@@ -155,7 +156,7 @@ export const demoClients: Client[] = [
     mcg_api_key: null,
     onboarding_status: 'active',
     credentials_configured_at: '2024-03-05T14:30:00.000Z',
-    onboarding_notes: 'InterQual credentials provided by J. Hawkins. Sub-license agreement on file.',
+    onboarding_notes: 'Reviews run on the VantaUM Criteria Library — no external criteria licenses needed. Cross-reference preferences captured from J. Hawkins.',
   },
   {
     id: DEMO_CLIENT_IDS.pinnacleHealth,
@@ -178,7 +179,7 @@ export const demoClients: Client[] = [
     mcg_api_key: '••••••••••••mcg_9d2b',
     onboarding_status: 'active',
     credentials_configured_at: '2025-01-20T10:15:00.000Z',
-    onboarding_notes: 'MCG Cite access provided. Annual renewal in January.',
+    onboarding_notes: 'Reviews run on the VantaUM Criteria Library. Client requested quarterly criteria-update summaries.',
   },
   {
     id: DEMO_CLIENT_IDS.westernEmployers,
@@ -201,7 +202,7 @@ export const demoClients: Client[] = [
     mcg_api_key: null,
     onboarding_status: 'credentials_needed',
     credentials_configured_at: null,
-    onboarding_notes: 'InterQual configured. MCG API key pending — Lisa Tran to provide by 2/15.',
+    onboarding_notes: 'VantaUM Criteria Library active. Plan-specific criteria customizations queued with Lisa Tran (target 2/15).',
   },
 ];
 
@@ -491,9 +492,9 @@ const mriLumbarBrief: AIBrief = {
     setting_appropriateness: 'Outpatient imaging center is the appropriate and cost-effective setting for non-emergent lumbar MRI.',
   },
   criteria_match: {
-    guideline_source: 'InterQual / ACR',
+    guideline_source: 'VantaUM Criteria VC-72148-v1 / ACR',
     applicable_guideline:
-      'InterQual 2026 Advanced Imaging: Lumbar Spine MRI; ACR Appropriateness Criteria for Low Back Pain',
+      'VantaUM Criteria VC-72148-v1 (MRI Lumbar Spine); ACR Appropriateness Criteria for Low Back Pain',
     criteria_met: [
       'Duration of symptoms exceeds 6 weeks with progressive radiculopathy',
       'Failure of conservative management documented: PT x 6 weeks, NSAIDs, activity modification',
@@ -529,9 +530,9 @@ const mriLumbarBrief: AIBrief = {
     recommendation: 'approve',
     confidence: 'high',
     rationale:
-      'All InterQual criteria for lumbar spine MRI are met. The patient has progressive radiculopathy with objective neurological findings that has persisted beyond 6 weeks despite documented conservative management. Advanced imaging is appropriate to guide further treatment decisions. The clinical presentation, duration of symptoms, and failure of conservative care all support medical necessity.',
+      'All VantaUM criteria (VC-72148-v1) for lumbar spine MRI are met. The patient has progressive radiculopathy with objective neurological findings that has persisted beyond 6 weeks despite documented conservative management. Advanced imaging is appropriate to guide further treatment decisions. The clinical presentation, duration of symptoms, and failure of conservative care all support medical necessity.',
     key_considerations: [
-      'All primary InterQual imaging criteria are satisfied including duration, failed conservative care, and objective neurological findings',
+      'All primary VantaUM imaging criteria (VC-72148-v1) are satisfied including duration, failed conservative care, and objective neurological findings',
       'The absence of red flag symptoms confirms this is not an emergent indication, supporting standard authorization timeline',
       'Results may guide referral to pain management or surgical evaluation depending on findings',
     ],
@@ -546,6 +547,78 @@ const mriLumbarBrief: AIBrief = {
     additional_info_needed: [
       'Detailed PT notes would strengthen the record but are not required for determination given the PT summary and clinical findings',
     ],
+    state_specific_requirements: [],
+  },
+};
+
+// A deliberately CLEAN case — fully documented, criteria met, no gaps —
+// so the two-tier dashboard shows the Lane 1 "tap to approve" path.
+// Paired with an inline passing fact_check so it deterministically routes
+// to the auto lane (lib/routing/readiness-score.ts).
+const cleanKneeMriBrief: AIBrief = {
+  clinical_question:
+    'Is MRI of the right knee without contrast (CPT 73721) medically necessary for this patient with persistent mechanical knee symptoms and a positive McMurray test refractory to conservative management?',
+  patient_summary:
+    'Daniel Reyes is a 44-year-old male presenting with 10 weeks of right knee pain, intermittent locking, and a sensation of giving way following a twisting injury. He has completed 8 weeks of supervised physical therapy, a full course of NSAIDs, and activity modification without resolution. Examination demonstrates a positive McMurray test, medial joint-line tenderness, and a small effusion. Plain radiographs show no fracture and preserved joint spaces. No red-flag findings.',
+  diagnosis_analysis: {
+    primary_diagnosis: 'M23.205 - Derangement of unspecified medial meniscus, right knee',
+    secondary_diagnoses: ['M25.561 - Pain in right knee'],
+    diagnosis_procedure_alignment:
+      'Mechanical symptoms with a positive McMurray test and medial joint-line tenderness are directly consistent with internal derangement; MRI is the appropriate study to confirm meniscal pathology before any surgical referral.',
+  },
+  procedure_analysis: {
+    codes: ['73721 - MRI lower extremity joint without contrast'],
+    clinical_rationale:
+      'Persistent mechanical symptoms after a documented 8-week course of conservative care, with objective examination findings, support advanced imaging to characterize meniscal/ligamentous pathology and direct treatment.',
+    complexity_level: 'routine',
+    setting_appropriateness: 'Outpatient imaging center is the appropriate, cost-effective setting.',
+  },
+  criteria_match: {
+    guideline_source: 'VantaUM Criteria VC-73721-v1 / ACR',
+    applicable_guideline: 'VantaUM Criteria VC-73721-v1 (MRI Knee); ACR Appropriateness Criteria — Chronic Knee Pain',
+    criteria_met: [
+      'Mechanical symptoms (locking, giving way) consistent with internal derangement',
+      'Failure of conservative management documented: supervised PT x 8 weeks, NSAIDs, activity modification',
+      'Objective examination findings present: positive McMurray, medial joint-line tenderness, effusion',
+      'Plain radiographs obtained and reviewed prior to advanced imaging',
+      'No prior MRI of this knee for the current episode of care',
+      'Red-flag findings appropriately screened and absent',
+    ],
+    criteria_not_met: [],
+    criteria_unable_to_assess: [],
+    conservative_alternatives: [
+      'Continued physical therapy (already completed 8 weeks without resolution)',
+    ],
+  },
+  documentation_review: {
+    documents_provided:
+      'Requesting provider clinical notes, right knee radiograph report, complete physical therapy notes (all 16 sessions), medication history, and letter of medical necessity',
+    key_findings: [
+      'Provider notes document positive McMurray, medial joint-line tenderness, and a small effusion',
+      'Radiograph report confirms no fracture and preserved joint spaces',
+      'Complete PT notes document 16 supervised sessions over 8 weeks with persistent mechanical symptoms',
+      'Medication history confirms an adequate NSAID trial',
+      'Letter of medical necessity articulates the rationale and results-directed plan',
+    ],
+    missing_documentation: [],
+  },
+  ai_recommendation: {
+    recommendation: 'approve',
+    confidence: 'high',
+    rationale:
+      'All VantaUM criteria (VC-73721-v1) for knee MRI are met with a fully documented record: mechanical symptoms, objective examination findings, completed conservative care, and prior radiographs. Medical necessity is clearly established.',
+    key_considerations: [
+      'Every primary VantaUM imaging criterion is satisfied with supporting documentation',
+      'No red-flag or emergent indication — standard authorization timeline applies',
+      'Record is complete; no additional information required for determination',
+    ],
+    if_modify_suggestion: null,
+  },
+  reviewer_action: {
+    decision_required: 'Confirm medical necessity for right knee MRI on a fully documented record',
+    time_sensitivity: 'Standard turnaround; case received within the contractual SLA window.',
+    peer_to_peer_suggested: false,
+    additional_info_needed: [],
     state_specific_requirements: [],
   },
 };
@@ -568,9 +641,9 @@ const totalKneeBrief: AIBrief = {
     setting_appropriateness: 'Outpatient ASC setting is appropriate and cost-effective for this patient profile. Patient has controlled comorbidities (BMI 31.2, HbA1c 6.1%), adequate social support, and no contraindications to outpatient joint replacement per CMS criteria.',
   },
   criteria_match: {
-    guideline_source: 'MCG / AAOS',
+    guideline_source: 'VantaUM Criteria VC-27447-v1 / AAOS',
     applicable_guideline:
-      'MCG 27th Edition: Total Knee Arthroplasty; AAOS Clinical Practice Guidelines for OA of the Knee (2021)',
+      'VantaUM Criteria VC-27447-v1 (Total Knee Arthroplasty); AAOS Clinical Practice Guidelines for OA of the Knee (2021)',
     criteria_met: [
       'Radiographic evidence of severe OA: Kellgren-Lawrence grade 4 with complete joint space loss',
       'Failure of physical therapy: 12 sessions over 4 months with documented lack of improvement',
@@ -585,7 +658,7 @@ const totalKneeBrief: AIBrief = {
       'Whether viscosupplementation (hyaluronic acid injection series) was offered or considered as an intermediate step prior to TKA - not addressed in the documentation',
     ],
     conservative_alternatives: [
-      'Viscosupplementation series (not yet tried, though not required per MCG for KL grade 4)',
+      'Viscosupplementation series (not yet tried, though not required per VC-27447-v1 for KL grade 4)',
       'Unloader knee brace (already in use with insufficient relief)',
       'Continued NSAID/analgesic management (failed)',
     ],
@@ -607,9 +680,9 @@ const totalKneeBrief: AIBrief = {
     recommendation: 'approve',
     confidence: 'high',
     rationale:
-      'The patient presents with well-documented end-stage right knee osteoarthritis (KL grade 4) with comprehensive failure of conservative management over 4 months including PT, pharmacotherapy, and injections. Functional limitation is significant and well-documented with validated outcome measures. Pre-operative medical optimization is demonstrated with acceptable HbA1c and BMI. All MCG criteria for total knee arthroplasty appear to be met. The proposed outpatient ASC setting is appropriate for this patient.',
+      'The patient presents with well-documented end-stage right knee osteoarthritis (KL grade 4) with comprehensive failure of conservative management over 4 months including PT, pharmacotherapy, and injections. Functional limitation is significant and well-documented with validated outcome measures. Pre-operative medical optimization is demonstrated with acceptable HbA1c and BMI. All VantaUM criteria (VC-27447-v1) for total knee arthroplasty appear to be met. The proposed outpatient ASC setting is appropriate for this patient.',
     key_considerations: [
-      'Viscosupplementation was not documented as having been tried or discussed, though this is not a required prerequisite per MCG criteria when KL grade 4 OA is present',
+      'Viscosupplementation was not documented as having been tried or discussed, though this is not a required prerequisite per VantaUM criteria when KL grade 4 OA is present',
       'BMI of 31.2 is above normal but well within surgical candidacy thresholds for most plans',
       'Outpatient ASC setting is appropriate and cost-effective for this patient profile per current CMS guidance',
       'Post-operative PT and rehabilitation plan should be verified as part of the surgical authorization',
@@ -645,9 +718,9 @@ const infliximabBrief: AIBrief = {
     setting_appropriateness: 'Outpatient infusion center is the appropriate setting for infliximab administration. First infusion requires monitoring for infusion reactions; subsequent infusions may be administered in the same setting with standard monitoring protocols.',
   },
   criteria_match: {
-    guideline_source: 'InterQual / AGA / Plan-specific formulary',
+    guideline_source: 'VantaUM Criteria VC-J1745-v1 / AGA / Plan-specific formulary',
     applicable_guideline:
-      'InterQual 2026: Biologic Therapy for Inflammatory Bowel Disease; AGA Clinical Practice Guidelines for Management of Crohn\'s Disease (2024); Southwest Administrators Specialty Pharmacy Policy',
+      'VantaUM Criteria VC-J1745-v1 (Infliximab for IBD); AGA Clinical Practice Guidelines for Management of Crohn\'s Disease (2024); Southwest Administrators Specialty Pharmacy Policy',
     criteria_met: [
       'Confirmed diagnosis of Crohn\'s disease with endoscopic evidence of active mucosal inflammation',
       'Failure of first-line therapy: mesalamine x 6 months without adequate disease control',
@@ -729,9 +802,9 @@ const psychotherapyBrief: AIBrief = {
     setting_appropriateness: 'Outpatient office-based psychotherapy is the appropriate setting. The level of care (outpatient) is appropriate for the current symptom severity.',
   },
   criteria_match: {
-    guideline_source: 'MCG / APA / Plan-specific',
+    guideline_source: 'VantaUM Criteria VC-90837-v1 / APA / Plan-specific',
     applicable_guideline:
-      'MCG 27th Edition: Outpatient Psychotherapy; Pinnacle Health Plan Behavioral Health Coverage Policy; APA Practice Guidelines for Major Depressive Disorder',
+      'VantaUM Criteria VC-90837-v1 (Outpatient Psychotherapy); Pinnacle Health Plan Behavioral Health Coverage Policy; APA Practice Guidelines for Major Depressive Disorder',
     criteria_met: [
       'Established diagnosis of major depressive disorder, recurrent, moderate (F33.1)',
       'Active treatment relationship with qualified psychiatrist',
@@ -817,9 +890,9 @@ const epiduralInjectionBrief: AIBrief = {
     setting_appropriateness: 'Ambulatory surgery center (ASC) is the appropriate setting for fluoroscopically-guided transforaminal epidural steroid injection. This is consistent with the setting used for the first injection.',
   },
   criteria_match: {
-    guideline_source: 'InterQual / ASIPP / Plan-specific',
+    guideline_source: 'VantaUM Criteria VC-64483-v1 / ASIPP / Plan-specific',
     applicable_guideline:
-      'InterQual 2026: Epidural Steroid Injections; ASIPP Evidence-Based Guidelines for Interventional Techniques in Chronic Spinal Pain (2024); Southwest Administrators Pain Management Policy',
+      'VantaUM Criteria VC-64483-v1 (Transforaminal ESI); ASIPP Evidence-Based Guidelines for Interventional Techniques in Chronic Spinal Pain (2024); Southwest Administrators Pain Management Policy',
     criteria_met: [
       'MRI-confirmed structural pathology correlating with clinical presentation: L4-5 disc herniation with left foraminal stenosis matching L5 radiculopathy',
       'Documented failure of conservative management: PT x 6 weeks, gabapentin, NSAIDs',
@@ -900,8 +973,8 @@ const hipReplacementBrief: AIBrief = {
     setting_appropriateness: 'Inpatient hospital is the appropriate setting for total hip arthroplasty in a 68-year-old patient. Meets Two-Midnight Rule criteria.',
   },
   criteria_match: {
-    guideline_source: 'MCG / AAOS',
-    applicable_guideline: 'MCG 2026: Total Hip Arthroplasty; AAOS Clinical Practice Guidelines for Hip Osteoarthritis',
+    guideline_source: 'VantaUM Criteria VC-27130-v1 / AAOS',
+    applicable_guideline: 'VantaUM Criteria VC-27130-v1 (Total Hip Arthroplasty); AAOS Clinical Practice Guidelines for Hip Osteoarthritis',
     criteria_met: [
       'Radiographic evidence of Grade IV osteoarthritis with complete joint space loss',
       'Documented failure of conservative management over 18+ months',
@@ -931,7 +1004,7 @@ const hipReplacementBrief: AIBrief = {
     recommendation: 'approve',
     confidence: 'high',
     rationale:
-      'All MCG and AAOS criteria for total hip arthroplasty are met. The patient has exhausted conservative options with documented failure and progressive functional decline. Pre-operative cardiac clearance should be obtained but does not affect the medical necessity determination.',
+      'All VantaUM (VC-27130-v1) and AAOS criteria for total hip arthroplasty are met. The patient has exhausted conservative options with documented failure and progressive functional decline. Pre-operative cardiac clearance should be obtained but does not affect the medical necessity determination.',
     key_considerations: [
       'Patient has prior right knee replacement — consider bilateral joint disease pattern',
       'Pre-operative cardiac clearance should be confirmed prior to scheduling',
@@ -989,7 +1062,7 @@ export const demoCases: Case[] = [
     fact_check: null,
     fact_check_at: null,
     determination: 'approve',
-    determination_rationale: 'All InterQual imaging criteria met. Patient has progressive L5 radiculopathy with objective neurological findings (positive SLR, dermatomal sensory deficit) refractory to 6 weeks of conservative management including PT, NSAIDs, and activity modification. Advanced imaging is medically necessary to evaluate for structural pathology and guide further treatment. Approved per InterQual criteria.',
+    determination_rationale: 'All VantaUM imaging criteria (VC-72148-v1) met. Patient has progressive L5 radiculopathy with objective neurological findings (positive SLR, dermatomal sensory deficit) refractory to 6 weeks of conservative management including PT, NSAIDs, and activity modification. Advanced imaging is medically necessary to evaluate for structural pathology and guide further treatment. Approved per VantaUM Criteria VC-72148-v1.',
     determination_at: daysAgo(1, 8),
     determined_by: DEMO_REVIEWER_IDS.richardson,
     denial_reason: null,
@@ -1001,7 +1074,7 @@ export const demoCases: Case[] = [
     assigned_pod_id: DEMO_POD_IDS.alphaGeneral,
     assigned_lpn_id: DEMO_STAFF_IDS.martinezLpn,
     assigned_rn_id: null,
-    lpn_review_notes: 'All InterQual imaging criteria met. Patient has progressive L5 radiculopathy with positive SLR, failed 6 weeks conservative management including PT and NSAIDs. Criteria clearly met — recommending approval.',
+    lpn_review_notes: 'All VantaUM imaging criteria (VC-72148-v1) met. Patient has progressive L5 radiculopathy with positive SLR, failed 6 weeks conservative management including PT and NSAIDs. Criteria clearly met — recommending approval.',
     lpn_review_at: daysAgo(5, 10),
     lpn_determination: 'criteria_met',
     rn_review_notes: null,
@@ -1077,10 +1150,10 @@ export const demoCases: Case[] = [
     assigned_pod_id: DEMO_POD_IDS.alphaGeneral,
     assigned_lpn_id: DEMO_STAFF_IDS.jonesLpn,
     assigned_rn_id: DEMO_STAFF_IDS.carterRn,
-    lpn_review_notes: 'MCG criteria for TKA met. KL grade 4, failed 4 months conservative management. However, viscosupplementation assessment gap noted. Escalating for RN oversight.',
+    lpn_review_notes: 'VantaUM criteria (VC-27447-v1) for TKA met. KL grade 4, failed 4 months conservative management. However, viscosupplementation assessment gap noted. Escalating for RN oversight.',
     lpn_review_at: daysAgo(3, 8),
     lpn_determination: 'escalate_to_rn',
-    rn_review_notes: 'Reviewed LPN assessment. Concur that MCG criteria are met. Viscosupplementation is not required per MCG for KL grade 4. However, BMI of 31.2 is borderline — escalating to physician reviewer for final determination.',
+    rn_review_notes: 'Reviewed LPN assessment. Concur that VantaUM criteria (VC-27447-v1) are met. Viscosupplementation is not required per VC-27447-v1 for KL grade 4. However, BMI of 31.2 is borderline — escalating to physician reviewer for final determination.',
     rn_review_at: daysAgo(1, 5),
     rn_determination: 'escalate_to_md',
     sla_paused_at: null,
@@ -1165,6 +1238,92 @@ export const demoCases: Case[] = [
     intake_channel: 'portal',
     intake_confirmation_sent: true,
     authorization_number: 'AUTH-2026-00203',
+    peer_to_peer_status: null,
+    peer_to_peer_scheduled_at: null,
+    peer_to_peer_completed_at: null,
+    peer_to_peer_notes: null,
+    appeal_of_case_id: null,
+    appeal_status: null,
+    physician_ai_agreement: null,
+    physician_ai_feedback_notes: null,
+    denial_strength_score: null,
+    denial_strength_grade: null,
+    two_midnight_applies: false,
+    payer_classification: 'commercial',
+    reviewer: undefined,
+    client: demoClients[0],
+  },
+
+  // CASE 8: Clean knee MRI — Lane 1 "tap to approve" exemplar (LPN Review).
+  // Fully documented, criteria met, passing fact_check → routes to the auto
+  // lane so the two-tier dashboard shows the one-tap path, not just review.
+  {
+    id: DEMO_CASE_IDS.cleanImaging,
+    created_at: daysAgo(0, 5),
+    updated_at: daysAgo(0, 1),
+    case_number: 'VUM-MED-0208',
+    status: 'lpn_review',
+    priority: 'standard',
+    service_category: 'imaging',
+    vertical: 'medical',
+    patient_name: 'Daniel Reyes',
+    patient_dob: '1981-09-12',
+    patient_member_id: 'SWA-2026-71880',
+    patient_gender: 'Male',
+    requesting_provider: 'Dr. Helen Park',
+    requesting_provider_npi: '4567890123',
+    requesting_provider_specialty: 'Orthopedic Surgery',
+    servicing_provider: null,
+    servicing_provider_npi: null,
+    facility_name: 'Valley Imaging Associates',
+    facility_type: 'outpatient',
+    procedure_codes: ['73721'],
+    diagnosis_codes: ['M23.205', 'M25.561'],
+    procedure_description: 'MRI right knee without contrast — persistent mechanical symptoms, positive McMurray, failed 8 weeks conservative care',
+    clinical_question: 'Is MRI right knee medically necessary given positive McMurray and documented failure of 8 weeks conservative management?',
+    assigned_reviewer_id: null,
+    review_type: 'prior_auth',
+    payer_name: 'Blue Cross Blue Shield',
+    plan_type: 'PPO',
+    turnaround_deadline: hoursFromNow(20),
+    sla_hours: 48,
+    ai_brief: cleanKneeMriBrief,
+    ai_brief_generated_at: daysAgo(0, 4),
+    fact_check: {
+      overall_score: 96,
+      overall_status: 'pass',
+      sections: [],
+      summary: { verified: 11, unverified: 0, flagged: 0 },
+      consistency_checks: [{ check: 'All consistency checks', passed: true, detail: 'Coherent and fully documented' }],
+      checked_at: daysAgo(0, 4),
+      human_review_recommended: false,
+      review_reasons: [],
+    },
+    fact_check_at: daysAgo(0, 4),
+    determination: null,
+    determination_rationale: null,
+    determination_at: null,
+    determined_by: null,
+    denial_reason: null,
+    denial_criteria_cited: null,
+    alternative_recommended: null,
+    submitted_documents: ['ortho_clinical_notes.pdf', 'knee_xray_report.pdf', 'physical_therapy_notes_full.pdf', 'medication_history.pdf', 'letter_of_medical_necessity.pdf'],
+    client_id: DEMO_CLIENT_IDS.southwestAdmin,
+    assigned_pod_id: DEMO_POD_IDS.alphaGeneral,
+    assigned_lpn_id: DEMO_STAFF_IDS.martinezLpn,
+    assigned_rn_id: DEMO_STAFF_IDS.carterRn,
+    lpn_review_notes: null,
+    lpn_review_at: null,
+    lpn_determination: null,
+    rn_review_notes: null,
+    rn_review_at: null,
+    rn_determination: null,
+    sla_paused_at: null,
+    sla_resumed_at: null,
+    sla_pause_total_hours: 0,
+    intake_channel: 'api',
+    intake_confirmation_sent: true,
+    authorization_number: 'AUTH-2026-00208',
     peer_to_peer_status: null,
     peer_to_peer_scheduled_at: null,
     peer_to_peer_completed_at: null,
@@ -1293,11 +1452,11 @@ export const demoCases: Case[] = [
     fact_check: null,
     fact_check_at: null,
     determination: 'deny',
-    determination_rationale: 'Continued weekly extended psychotherapy sessions (90837) are not medically necessary at the current level of clinical improvement. PHQ-9 has improved from 19 (moderately severe) to 8 (mild) with a documented plateau in the 7-9 range over the past 4 months. GAD-7 has improved from 14 to 5. Functional recovery is well-documented including return to full-time work. Treatment plateau has been reached. Step-down to standard session length (90834) at biweekly frequency is clinically appropriate per MCG guidelines. The patient may continue psychotherapy at a standard session format without additional authorization. Peer-to-peer consultation has been offered to the requesting provider.',
+    determination_rationale: 'Continued weekly extended psychotherapy sessions (90837) are not medically necessary at the current level of clinical improvement. PHQ-9 has improved from 19 (moderately severe) to 8 (mild) with a documented plateau in the 7-9 range over the past 4 months. GAD-7 has improved from 14 to 5. Functional recovery is well-documented including return to full-time work. Treatment plateau has been reached. Step-down to standard session length (90834) at biweekly frequency is clinically appropriate per VantaUM Criteria VC-90837-v1. The patient may continue psychotherapy at a standard session format without additional authorization. Peer-to-peer consultation has been offered to the requesting provider.',
     determination_at: daysAgo(2, 6),
     determined_by: DEMO_REVIEWER_IDS.torres,
     denial_reason: 'Treatment plateau reached; current symptom severity (PHQ-9: 8, mild) does not support continued weekly extended sessions',
-    denial_criteria_cited: 'MCG 27th Edition: Outpatient Psychotherapy; Pinnacle Health Plan Behavioral Health Coverage Policy',
+    denial_criteria_cited: 'VantaUM Criteria VC-90837-v1 (Outpatient Psychotherapy); Pinnacle Health Plan Behavioral Health Coverage Policy',
     alternative_recommended: 'Standard psychotherapy sessions (90834) at biweekly frequency for relapse prevention',
     submitted_documents: ['psychiatrist_clinical_notes.pdf', 'treatment_plan_update.pdf', 'phq9_gad7_scores.pdf', 'medication_management_notes.pdf', 'csa_request_form.pdf'],
     client_id: DEMO_CLIENT_IDS.pinnacleHealth,
@@ -1305,7 +1464,7 @@ export const demoCases: Case[] = [
     assigned_pod_id: DEMO_POD_IDS.betaBehavioral,
     assigned_lpn_id: DEMO_STAFF_IDS.nguyenLpn,
     assigned_rn_id: DEMO_STAFF_IDS.brownRn,
-    lpn_review_notes: 'PHQ-9 improved from 19 to 8 (mild). Treatment plateau evident for 4+ months. Weekly extended sessions not supported at current severity per MCG. Criteria not met for continued 90837 at weekly frequency.',
+    lpn_review_notes: 'PHQ-9 improved from 19 to 8 (mild). Treatment plateau evident for 4+ months. Weekly extended sessions not supported at current severity per VC-90837-v1. Criteria not met for continued 90837 at weekly frequency.',
     lpn_review_at: daysAgo(4, 9),
     lpn_determination: 'criteria_not_met',
     rn_review_notes: 'Concur with LPN assessment. Step-down to 90834 biweekly is appropriate. Escalating to physician for formal denial determination.',
@@ -1381,10 +1540,10 @@ export const demoCases: Case[] = [
     assigned_pod_id: DEMO_POD_IDS.alphaGeneral,
     assigned_lpn_id: DEMO_STAFF_IDS.jonesLpn,
     assigned_rn_id: DEMO_STAFF_IDS.carterRn,
-    lpn_review_notes: 'InterQual criteria met for repeat ESI. Positive response to first injection (60% relief x 3 months). MRI-confirmed disc herniation with L5 radiculopathy. 2nd injection this year, within plan limits. Criteria met — recommending approval.',
+    lpn_review_notes: 'VantaUM criteria (VC-64483-v1) met for repeat ESI. Positive response to first injection (60% relief x 3 months). MRI-confirmed disc herniation with L5 radiculopathy. 2nd injection this year, within plan limits. Criteria met — recommending approval.',
     lpn_review_at: daysAgo(1, 8),
     lpn_determination: 'criteria_met',
-    rn_review_notes: 'Reviewed LPN criteria match. All InterQual criteria met. However, expedited priority and pain management category warrant physician sign-off per protocol.',
+    rn_review_notes: 'Reviewed LPN criteria match. All VantaUM criteria (VC-64483-v1) met. However, expedited priority and pain management category warrant physician sign-off per protocol.',
     rn_review_at: daysAgo(0, 7),
     rn_determination: 'escalate_to_md',
     sla_paused_at: null,
@@ -1457,7 +1616,7 @@ export const demoCases: Case[] = [
     assigned_pod_id: DEMO_POD_IDS.alphaGeneral,
     assigned_lpn_id: DEMO_STAFF_IDS.jonesLpn,
     assigned_rn_id: DEMO_STAFF_IDS.carterRn,
-    lpn_review_notes: 'MCG criteria met for total hip arthroplasty. Grade IV OA confirmed on X-ray. Failed PT, NSAIDs, and 3 corticosteroid injections over 18 months. Harris Hip Score 38/100. All criteria satisfied — recommending approval.',
+    lpn_review_notes: 'VantaUM criteria (VC-27130-v1) met for total hip arthroplasty. Grade IV OA confirmed on X-ray. Failed PT, NSAIDs, and 3 corticosteroid injections over 18 months. Harris Hip Score 38/100. All criteria satisfied — recommending approval.',
     lpn_review_at: daysAgo(0, 8),
     lpn_determination: 'criteria_met',
     rn_review_notes: null,
@@ -1546,7 +1705,7 @@ export const demoAuditLog: AuditLogEntry[] = [
     case_id: DEMO_CASE_IDS.mriLumbar,
     action: 'determination_made',
     actor: DEMO_REVIEWER_IDS.richardson,
-    details: { determination: 'approve', rationale: 'All InterQual imaging criteria met. Progressive radiculopathy refractory to conservative management.' },
+    details: { determination: 'approve', rationale: 'All VantaUM imaging criteria (VC-72148-v1) met. Progressive radiculopathy refractory to conservative management.' },
   },
   {
     id: 'audit-001-08',
