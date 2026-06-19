@@ -110,3 +110,70 @@ Jonah's direction: "no more vanity branding — make it real." The full plan is 
 **Build order:** B4 billing abstraction → B1 GR inbound → B2 VantaQual V1 → timer+COGS → B3 appeal/IRO map → B3 downstream tracking → kill facades + fix tests. Steps 1–3 are the highest-leverage real wins; each is PR-sized.
 
 **Open questions for you/Jonah** are at the bottom of the blueprint (BPO intake path, per-auth "billable" definition, downstream data source, VantaQual naming, labor cost rate).
+
+---
+
+## 10. "Make it real" — BUILT this session (Jonah's decisions applied)
+
+Jonah answered the open questions; decisions are recorded in
+`docs/make-it-real-blueprint.md` ("Decisions" section). Then I built three
+of the four blocks. **All on `feature/clinician-dashboard`, 375 tests
+passing (+33 this session), zero new failures.**
+
+### ✅ Block 4 — Billing as a product (foundation) — `f485134`
+- **Migration `028_billing_models.sql`**: `clients.billing_model
+  {pepm|pmpm|per_auth}` + per-client `*_rate_cents`; `invoices`
+  generalized (kept PEPM columns, added model discriminator +
+  `billable_quantity`/`unit_rate` + per-auth breakdown + `cogs_labor_cents`
+  snapshot; `pepm_rate_cents`/`member_count` relaxed to nullable);
+  `staff.loaded_cost_per_hour_cents` (per-hire); **`case_labor_entries`**
+  table (the COGS raw signal).
+- **`lib/billing/billing-models.ts`** (pure, 14 tests): `computeInvoiceLine`
+  (3 models; **per Jonah: denied auth bills same as approved, appeals
+  billed separately at own rate; missing rate THROWS — no silent zero**);
+  `computeLaborCogs` (per-staff rates, surfaces unpriced entries);
+  `computeMargin` (honest negatives).
+- **Not yet:** wire `computeInvoiceLine` into `invoice-generator.ts`
+  persistence (today's generator is PEPM-coupled — left working); build the
+  labor-capture path (pipeline timer + touchpoints → `case_labor_entries`).
+
+### ✅ Block 1 — Gravity Rails inbound + One Door — `3f0c549`
+- **Closed the one true intake hole.** GR was outbound-only; now
+  **`POST /api/intake/gravity-rails`** (HMAC `x-gr-signature`) normalizes →
+  shared 24h dedup → creates a real case. Demo skips HMAC for testing;
+  prod 503 if `GRAVITY_RAIL_WEBHOOK_SECRET` unset, 401 on bad sig. 6 tests.
+- **`lib/intake/normalize.ts`** — the shared "One Door" contract every
+  channel maps onto (`normalizeIntake`, `fingerprintInputs`,
+  `buildCaseInsert`). 11 tests.
+- **New env needed in prod:** `GRAVITY_RAIL_WEBHOOK_SECRET` (vault).
+- **Next:** refactor `/api/external/submit` onto the same normalizer so all
+  channels literally share one path (currently it has its own copy).
+
+### ✅ Block 2 — VantaQual V1 — `cdfe4fc`
+- **`lib/vantaqual/index.ts`** — the branded product surface over
+  `lib/criteria/library.ts` (our InterQual/MCG answer). Re-exports the
+  engine (one import), `vantaQualInfo`, `coverageFor` (governed vs
+  ungoverned — no silent gaps), and `activeBackend()` which **honestly
+  returns `static_library` until your `lib/medical-qualifications/` RAG is
+  wired behind the same `CriteriaSource` contract (V2).** 5 tests.
+- **For Cole:** the seam for your RAG is `CriteriaSource` in
+  `lib/criteria/library.ts`. Implement it and flip `activeBackend()` — no
+  caller changes. "VantaQual" is a placeholder name (Jonah), centralized in
+  `VANTAQUAL_NAME` so a rename is one edit.
+
+### ⬜ Block 3 — The Fork — not started
+Denial→appeal→IRO journey (map the state machine + deadline clock) and
+approved→downstream care tracking (greenfield; **data source TBD per
+Jonah** — ships as a capture-ready schema stub when started).
+
+### Decisions applied (Jonah, 2026-06-16)
+1. BPO call center — **no dedicated intake path**; reps use the portal form.
+2. Per-auth — **denied bills same as approved; appeals bill separately.** ✅ wired.
+3. Downstream care data source — **undecided** → Block 3 stays a schema stub.
+4. VantaQual — placeholder name, kept. ✅
+5. Labor cost — **per-hire rate** (`staff.loaded_cost_per_hour_cents`). ✅
+
+### Marketing copy
+Per Jonah, the homepage no longer advertises a per-case rate — repositioned
+as a **custom scoped engagement** (commit `031c69e`). Section nav "Rate
+Card" → "Engagement"; preserved the no-PEPM / continuity / IRO-ready story.
