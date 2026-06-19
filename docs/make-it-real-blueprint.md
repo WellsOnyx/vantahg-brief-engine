@@ -74,9 +74,9 @@ denied  → appeal / IRO journey  → track all of it
   contract as the deep backend. No caller changes.
 
 **Block 2 deliverables:**
-1. `lib/vantaqual/` — formalize the criteria engine under the VantaQual name; `CriteriaSource` stays the seam for the RAG.
-2. A **pipeline timer**: stamp each stage (intake→brief→qual→ready) so "<2 min" is measured, not claimed. Feeds COGS (Block 4) and the load test.
-3. Coverage honesty: VantaQual states which codes it governs vs. falls back on — no silent gaps.
+1. `lib/vantaqual/` — formalize the criteria engine under the VantaQual name; `CriteriaSource` stays the seam for the RAG. ✅ **DONE** — `lib/vantaqual/index.ts` (product surface, re-exports the engine, `vantaQualInfo`, `activeBackend()` honestly reports `static_library` until the RAG is wired). 5 tests.
+2. A **pipeline timer**: stamp each stage (intake→brief→qual→ready) so "<2 min" is measured, not claimed. Feeds COGS (Block 4) and the load test. 🔜 NEXT.
+3. Coverage honesty: VantaQual states which codes it governs vs. falls back on — no silent gaps. ✅ **DONE** — `coverageFor()` returns governed/ungoverned/fully_covered.
 
 ---
 
