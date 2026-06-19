@@ -95,3 +95,18 @@ STATE.md's "MOBILE HANDOFF" / "HONEST AUDIT" sections describe a stale-v2-contai
 - **Phase 4:** tiered AI pipeline (cheap model for easy cases, Opus for hard + critique) — the real cost/latency ceiling at 11k/day.
 - **Gravity Rails inbound case-sync** (§3).
 - **Fix the 26 stale tests** so CI can guard the cutover.
+
+---
+
+## 9. NEW — "Make it real" blueprint (Jonah, 2026-06-16)
+
+Jonah's direction: "no more vanity branding — make it real." The full plan is in **`docs/make-it-real-blueprint.md`**. Four Lego blocks:
+
+- **Block 1 — One Door:** every intake (fax, email, phone, manual/portal, Gravity Rails, BPO call center) into the same case engine. The real hole is **Gravity Rails inbound** (outbound client exists; nothing creates a case *from* GR yet) + a normalized intake contract.
+- **Block 2 — <2-min pipeline + VantaQual:** the pipeline exists (concierge → brief → fact-check → two-tier routing → clinician). **VantaQual** = productize our OWN qualifications engine. Decided: **formalize `lib/criteria/library.ts` as VantaQual V1 now; your `lib/medical-qualifications/` RAG drops in behind the same `CriteriaSource` contract later.** Add a pipeline timer so "<2 min" is measured.
+- **Block 3 — The Fork:** denied → appeal/IRO journey (fields exist, journey unmapped — needs the state machine + deadline clock + IRO-as-separate-engagement hand-off); approved → downstream care tracking + outcomes (greenfield, record currently stops at `delivered`).
+- **Block 4 — Billing as a product:** today is **PEPM-only** (`018_invoices.sql`); needs `billing_model ∈ {pepm, pmpm, per_auth}` with **per-client rates** + **COGS by human labor** (concierge + clinician minutes/auth → cost per auth → margin per client). Jonah picked human-labor as the COGS driver.
+
+**Build order:** B4 billing abstraction → B1 GR inbound → B2 VantaQual V1 → timer+COGS → B3 appeal/IRO map → B3 downstream tracking → kill facades + fix tests. Steps 1–3 are the highest-leverage real wins; each is PR-sized.
+
+**Open questions for you/Jonah** are at the bottom of the blueprint (BPO intake path, per-auth "billable" definition, downstream data source, VantaQual naming, labor cost rate).
