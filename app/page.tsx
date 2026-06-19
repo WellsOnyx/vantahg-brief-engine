@@ -271,7 +271,7 @@ export default function SitePage() {
           <ul className="nav-links">
             <li><a href="#workflow">The Workflow</a></li>
             <li><a href="#oon-iro">Specialized</a></li>
-            <li><a href="#ratecard">Rate Card</a></li>
+            <li><a href="#engagement-model">Engagement</a></li>
             <li><a href="#demo">Live Demo</a></li>
             <li><a href="#contact">Contact</a></li>
           </ul>
@@ -298,7 +298,7 @@ export default function SitePage() {
               { step: '01', label: 'Concierge Intake', sub: 'A named coordinator opens the case and assembles the record — no portal queue, no handoffs. Part of the bundle.' },
               { step: '02', label: 'AI Brief Engine', sub: 'The case is pre-briefed against clinical criteria before a clinician ever opens it. Speed and quality, built in. Part of the bundle.' },
               { step: '03', label: 'Authorization + First-Level Appeal', sub: 'One reviewer owns the determination and the first-level appeal — continuity, not a relay race. This is the bundle.' },
-              { step: '04', label: 'IRO-Ready Documentation', sub: 'Every case is documented to independent-review standard. Full IRO is a separate service, billed only if a case escalates.' },
+              { step: '04', label: 'IRO-Ready Documentation', sub: 'Every case is documented to independent-review standard. Full IRO is a separate engagement, scoped only if a case escalates.' },
             ].map((s) => (
               <div key={s.step} className="hero-stat">
                 <div className="stat-val" style={{ fontSize: '22px', color: 'var(--teal)', display: 'flex', alignItems: 'baseline', gap: '12px' }}>
@@ -320,7 +320,7 @@ export default function SitePage() {
               <span className="kicker" style={{ color: 'var(--gold)' }}>How We Engage</span>
               <h2 className="sh">External service,<br />or an <em style={{ color: 'var(--gold)' }}>extension</em><br />of your team.</h2>
               <p className="sb">VantaUM is built to drop into the way you already work. Run it across your whole self-funded book to take utilization management off your plate end to end — or stand us up inside your operation as a specialized arm of your own clinical team. Use it broadly, or aim it at the cases that carry the most clinical time and exposure.</p>
-              <p className="sb" style={{ marginTop: 16 }}>Either way, the bundle is the same: a single clinician carrying each case from concierge intake through authorization and first-level appeal, with documentation prepared to be IRO-ready. If a case escalates to full independent review, that&apos;s a separate service — billed only when it happens.</p>
+              <p className="sb" style={{ marginTop: 16 }}>Either way, the bundle is the same: a single clinician carrying each case from concierge intake through authorization and first-level appeal, with documentation prepared to be IRO-ready. If a case escalates to full independent review, that&apos;s a separate engagement — scoped only when it happens.</p>
               <div className="ea-spots">
                 <div className="ea-spots-dot" />
                 <div className="ea-spots-text"><strong>Built for the teams that run the plan.</strong> Independent TPAs, self-insured employers, and the clinical operations inside larger benefit organizations — without inheriting anyone&apos;s technical debt.</div>
@@ -328,7 +328,7 @@ export default function SitePage() {
             </div>
             <div className="ea-perks">
               {[
-                { num: '01', title: 'Bundled, per case', body: 'One per-case rate for authorization plus first-level appeal. No per-member commitments, no volume floors — use it across the book or on the cases that warrant it. Full IRO is separate, only if a case escalates.' },
+                { num: '01', title: 'Bundled by design', body: 'Authorization and first-level appeal in one engagement. No per-member commitments, no volume floors — use it across the book or on the cases that warrant it. Full IRO is separate, only if a case escalates.' },
                 { num: '02', title: 'Embedded in your operation', body: 'Prefer to keep it in house? We run as a specialized extension of your existing clinical team, using your criteria and your voice, under your brand.' },
                 { num: '03', title: 'Continuity by design', body: 'The same clinician owns the authorization and the first-level appeal. No relay between reviewers, no context lost between stages.' },
                 { num: '04', title: 'White-glove onboarding', body: 'You stand us up once, directly with the Wells Onyx operating team — not a third-party integrator who read the manual last week.' },
@@ -383,20 +383,20 @@ export default function SitePage() {
 
         <hr className="divider" />
 
-        {/* ── Rate Card Section ── */}
+        {/* ── Engagement Model Section ── */}
         <section className="vum-section" id="ratecard" style={{ background: 'var(--black)', borderTop: '1px solid var(--border)' }}>
           <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
             <div style={{ maxWidth: 600, marginBottom: 56 }}>
-              <span className="kicker" style={{ color: 'var(--gold)' }}>Rate Card</span>
-              <h2 className="sh">Priced by the case.<br /><em>Bundled by design.</em></h2>
-              <p className="sb">You pay for clinical work on the cases that warrant it — not a per-member fee on a population. Authorization and the first-level appeal come bundled as one per-case engagement, because they&apos;re one case — for everyday UM and for your highest-exposure out-of-network work alike. <strong style={{ color: 'var(--white)', fontWeight: 500 }}>Full IRO is not included in that rate</strong> — it&apos;s a separate escalation fee, billed only if and when a case actually goes to full independent review.</p>
+              <span className="kicker" style={{ color: 'var(--gold)' }}>The Engagement</span>
+              <h2 className="sh">Scoped to your book.<br /><em>Bundled by design.</em></h2>
+              <p className="sb">Every engagement is scoped to your book — not a per-member fee on a population, no volume floors, no PEPM. Authorization and the first-level appeal come bundled as one engagement, because they&apos;re one case — for everyday UM and for your highest-exposure out-of-network work alike. <strong style={{ color: 'var(--white)', fontWeight: 500 }}>Full IRO is a separate escalation</strong> — added only if and when a case actually goes to full independent review.</p>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px' }}>
               {/* Bundled card */}
               <div style={{ padding: '40px', background: 'var(--surface)', border: '1px solid var(--border-strong)', borderRadius: '8px 0 0 8px', display: 'flex', flexDirection: 'column' }}>
-                <div style={{ fontSize: '11px', fontWeight: 500, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--teal)', marginBottom: '20px' }}>Bundled — Per Case</div>
+                <div style={{ fontSize: '11px', fontWeight: 500, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--teal)', marginBottom: '20px' }}>Bundled — Core Engagement</div>
                 <div style={{ fontFamily: 'var(--serif)', fontSize: '30px', fontWeight: 300, lineHeight: 1.15, color: 'var(--white)', marginBottom: '8px' }}>Authorization<br />+ First-Level Appeal</div>
-                <p style={{ fontSize: '14px', fontWeight: 300, lineHeight: 1.7, color: 'var(--white-muted)', marginTop: '16px', marginBottom: '28px', flex: 1 }}>One flat per-case rate covers exactly four things: concierge intake, the AI Brief Engine, the authorization, and the first-level appeal — all owned by the same clinician. Works for everyday UM and for out-of-network cases alike. Documentation is prepared to be IRO-ready. One case, one owner, one price. Full IRO is not part of this rate.</p>
+                <p style={{ fontSize: '14px', fontWeight: 300, lineHeight: 1.7, color: 'var(--white-muted)', marginTop: '16px', marginBottom: '28px', flex: 1 }}>One engagement covers exactly four things: concierge intake, the AI Brief Engine, the authorization, and the first-level appeal — all owned by the same clinician. Works for everyday UM and for out-of-network cases alike. Documentation is prepared to be IRO-ready. One case, one owner, one engagement. Full IRO is scoped separately.</p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '28px' }}>
                   {[
                     { t: 'Concierge intake & record assembly', excl: false },
@@ -404,20 +404,20 @@ export default function SitePage() {
                     { t: 'Authorization (in- or out-of-network)', excl: false },
                     { t: 'First-level appeal — same clinician', excl: false },
                     { t: 'IRO-ready documentation prepared', excl: false },
-                    { t: 'Full IRO review — separate fee, not included', excl: true },
+                    { t: 'Full IRO review — scoped separately, on escalation', excl: true },
                   ].map((f, i) => (
                     <div key={i} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', fontSize: '13px', fontWeight: 300, color: f.excl ? 'var(--white-dim)' : 'var(--white-muted)', lineHeight: 1.5 }}>
                       <span style={{ color: f.excl ? 'var(--white-dim)' : 'var(--teal)', flexShrink: 0 }}>{f.excl ? '✕' : '—'}</span>{f.t}
                     </div>
                   ))}
                 </div>
-                <div style={{ fontFamily: 'var(--serif)', fontSize: '22px', fontWeight: 300, color: 'var(--white)' }}>One bundled per-case rate <span style={{ color: 'var(--white-dim)', fontSize: '15px', fontStyle: 'italic' }}>— scoped on a brief call</span></div>
+                <div style={{ fontFamily: 'var(--serif)', fontSize: '22px', fontWeight: 300, color: 'var(--white)' }}>One bundled engagement <span style={{ color: 'var(--white-dim)', fontSize: '15px', fontStyle: 'italic' }}>— scoped on a brief call</span></div>
               </div>
               {/* IRO escalation card */}
               <div style={{ padding: '40px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '0 8px 8px 0', display: 'flex', flexDirection: 'column' }}>
                 <div style={{ fontSize: '11px', fontWeight: 500, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--gold)', marginBottom: '20px' }}>Separate — On Escalation</div>
                 <div style={{ fontFamily: 'var(--serif)', fontSize: '30px', fontWeight: 300, lineHeight: 1.15, color: 'var(--white)', marginBottom: '8px' }}>Full IRO<br />Review</div>
-                <p style={{ fontSize: '14px', fontWeight: 300, lineHeight: 1.7, color: 'var(--white-muted)', marginTop: '16px', marginBottom: '28px', flex: 1 }}>When a case escalates beyond first-level appeal to full independent review, it&apos;s billed at a separate per-case rate. You only pay it when a case actually goes there — and the file arrives already clean and IRO-ready from the bundled work.</p>
+                <p style={{ fontSize: '14px', fontWeight: 300, lineHeight: 1.7, color: 'var(--white-muted)', marginTop: '16px', marginBottom: '28px', flex: 1 }}>When a case escalates beyond first-level appeal to full independent review, it&apos;s scoped as a separate engagement. It comes into play only when a case actually goes there — and the file arrives already clean and IRO-ready from the bundled work.</p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '28px' }}>
                   {['Independent, conflict-free review', 'Built on the IRO-ready file already assembled', 'Billed only on escalation', 'Same documentation standard throughout'].map((f, i) => (
                     <div key={i} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', fontSize: '13px', fontWeight: 300, color: 'var(--white-muted)', lineHeight: 1.5 }}>
@@ -425,12 +425,12 @@ export default function SitePage() {
                     </div>
                   ))}
                 </div>
-                <div style={{ fontFamily: 'var(--serif)', fontSize: '22px', fontWeight: 300, color: 'var(--white)' }}>Separate per-case rate <span style={{ color: 'var(--white-dim)', fontSize: '15px', fontStyle: 'italic' }}>— only when it escalates</span></div>
+                <div style={{ fontFamily: 'var(--serif)', fontSize: '22px', fontWeight: 300, color: 'var(--white)' }}>Scoped separately <span style={{ color: 'var(--white-dim)', fontSize: '15px', fontStyle: 'italic' }}>— only when it escalates</span></div>
               </div>
             </div>
             <p className="sb" style={{ marginTop: '32px', fontSize: '14px', color: 'var(--white-dim)' }}>Prefer to run it in house? The same workflow can be embedded inside your own clinical operation as a specialized extension of your team. We&apos;ll scope the engagement on a brief call.</p>
             <div style={{ marginTop: '36px' }}>
-              <a href={EA_EMAIL} className="btn-primary" style={{ background: 'transparent', border: '1px solid var(--gold)', color: 'var(--gold)' }}>Request the full rate card →</a>
+              <a href={EA_EMAIL} className="btn-primary" style={{ background: 'transparent', border: '1px solid var(--gold)', color: 'var(--gold)' }}>Scope your engagement →</a>
             </div>
           </div>
         </section>
@@ -445,7 +445,7 @@ export default function SitePage() {
               <div>
                 <h2 className="sh">The same engine,<br />tuned for your<br /><em>hardest cases.</em></h2>
                 <p className="sb" style={{ marginBottom: '24px' }}>The whole platform runs your everyday utilization management. But out-of-network is its own discipline — high-stakes, appeal-prone, and unforgiving on documentation — and it&apos;s where VantaUM is genuinely differentiated.</p>
-                <p className="sb" style={{ marginBottom: '24px' }}>For out-of-network work, the same concierge intake, Brief Engine, and single-clinician continuity become a precision instrument: defensible authorizations, first-level appeals owned by the same reviewer, and files documented to independent-review standard. If a case escalates, <strong style={{ color: 'var(--white)', fontWeight: 500 }}>full IRO is available as a separate service</strong> — not bundled into the base rate, billed only when it happens.</p>
+                <p className="sb" style={{ marginBottom: '24px' }}>For out-of-network work, the same concierge intake, Brief Engine, and single-clinician continuity become a precision instrument: defensible authorizations, first-level appeals owned by the same reviewer, and files documented to independent-review standard. If a case escalates, <strong style={{ color: 'var(--white)', fontWeight: 500 }}>full IRO is available as a separate service</strong> — not part of the core engagement, scoped only when it happens.</p>
                 <p className="sb" style={{ marginBottom: '40px' }}>It&apos;s the capability ASOs and larger benefit organizations come for — and it sits on top of the general UM layer everyone else uses every day.</p>
                 <a href={EA_EMAIL} className="btn-primary" style={{ background: 'transparent', border: '1px solid var(--gold)', color: 'var(--gold)' }}>Talk to us about OON + IRO →</a>
               </div>
@@ -541,7 +541,7 @@ export default function SitePage() {
                 <tr><td>What happens on appeal?</td><td>A different reviewer picks it up cold and rebuilds the context.</td><td>The same clinician owns the first-level appeal. No lost context, no relay.</td></tr>
                 <tr><td>How good is the documentation?</td><td>Assembled after the fact, when an auditor or IRO asks for it.</td><td>Criteria-cited and IRO-ready from the moment the case is reviewed.</td></tr>
                 <tr><td>What if a case escalates to IRO?</td><td>Scramble to assemble a defensible file under deadline.</td><td>The file is already clean — independent review picks up a complete record.</td></tr>
-                <tr><td>How do we engage it?</td><td>Rebuild the capability internally, or buy a one-size-fits-all platform.</td><td>Bundled per case, or embedded as a specialized extension of your team.</td></tr>
+                <tr><td>How do we engage it?</td><td>Rebuild the capability internally, or buy a one-size-fits-all platform.</td><td>A bundled engagement, or embedded as a specialized extension of your team.</td></tr>
               </tbody>
             </table>
           </div>
@@ -599,7 +599,7 @@ export default function SitePage() {
           <p className="sb" style={{ maxWidth: 500, margin: '0 auto 48px' }}>Email us directly. No form. No sales queue. You&apos;ll hear back from someone who can actually make a decision.</p>
           <div className="cta-actions">
             <a href={EA_EMAIL} className="btn-primary">Talk to Us</a>
-            <a href="#ratecard" className="btn-ghost">See the rate card →</a>
+            <a href="#engagement-model" className="btn-ghost">See how we engage →</a>
           </div>
         </section>
 
