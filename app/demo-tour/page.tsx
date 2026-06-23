@@ -195,6 +195,14 @@ export default function DemoTourPage() {
       </header>
 
       <main className="pt-20 pb-16 max-w-5xl mx-auto px-6">
+        {/* Demo provisioning bar — feels like logged into synthetic TPA */}
+        <div className="mb-6 -mt-2 rounded-xl border border-gold/30 bg-gold/5 px-4 py-2 text-xs flex flex-wrap items-center gap-x-4 gap-y-1 text-white/70">
+          <span className="font-medium text-gold">DEMO MODE — Southwest Administrators (TPA)</span>
+          <span>Reviewer: Dr. Priya Patel, MD • Orthopedic Surgery</span>
+          <span className="hidden sm:inline">•</span>
+          <span>InterQual + CMS criteria engine active • All cases synthetic</span>
+          <a href="/demo" className="ml-auto text-gold hover:underline">Also try interactive brief explorer →</a>
+        </div>
 
         {/* ── Step label ── */}
         <div className="text-center mb-10 animate-fade-in" key={step}>
@@ -520,6 +528,11 @@ export default function DemoTourPage() {
               >
                 Try a different scenario →
               </button>
+            </div>
+
+            {/* Easy play: jump to full app surfaces in this synthetic TPA */}
+            <div className="mt-8 pt-6 border-t border-white/10 text-center text-xs text-white/40">
+              Ready to play more? <a href="/cases" className="text-gold underline">Open full cases list</a> · <a href="/quality" className="text-gold underline">Quality audits</a> · <a href="/dashboard" className="text-gold underline">Dashboard</a> (all pre-loaded synthetic data, demo mode)
             </div>
           </div>
         )}

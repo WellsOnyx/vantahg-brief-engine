@@ -331,6 +331,7 @@ function Header() {
         <Link href="/" className="text-sm text-muted hover:text-navy transition-colors">
           ← Back to vantaum.com
         </Link>
+        <Link href="/demo-tour" className="text-sm text-gold hover:underline ml-3">Or launch demo →</Link>
       </div>
     </header>
   );

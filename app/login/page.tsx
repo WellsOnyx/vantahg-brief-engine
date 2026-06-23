@@ -294,6 +294,16 @@ function LoginForm() {
           )}
         </p>
       </form>
+
+      {/* Prominent one-click demo entry for prospects (Optum etc) — frictionless canned experience */}
+      <div className="mt-6 pt-5 border-t border-navy/10">
+        <div className="rounded-lg border border-gold/40 bg-[#fffaf0] p-3.5 text-center">
+          <div className="text-[10px] font-semibold tracking-[0.1em] text-gold uppercase mb-1">Prospect / Optum Demo</div>
+          <p className="text-xs text-navy/70 mb-2 leading-snug">Pre-canned synthetic data. No signup. Full InterQual-style criteria, AI briefs + deterministic fact-check, audits.</p>
+          <a href="/demo-tour" className="inline-block rounded-md bg-gold px-4 py-1.5 text-xs font-semibold text-navy hover:bg-[#d8b25e] active:bg-gold">Launch Canned Demo (Southwest TPA) →</a>
+          <div className="mt-1.5 text-[10px] text-navy/50">Or <a href="/demo" className="underline">interactive brief</a> · <a href="/cases" className="underline">full app demo</a></div>
+        </div>
+      </div>
     </AuthShell>
   );
 }

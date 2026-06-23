@@ -24,11 +24,18 @@ export default function DemoPage() {
           <p className="text-white/60 text-sm sm:text-base max-w-xl mx-auto">
             Watch a real utilization review case flow through VantaUM — from intake to AI-generated clinical brief to physician determination.
           </p>
+          <div className="mt-4 flex flex-wrap gap-3 justify-center">
+            <a href="/demo-tour" className="px-5 py-2 rounded-full bg-gold text-navy text-sm font-semibold hover:bg-[#d4b25c]">Start Guided Tour (prospect call)</a>
+            <a href="/cases" className="px-5 py-2 rounded-full border border-white/40 text-white/90 text-sm hover:bg-white/10">Jump into full app demo →</a>
+          </div>
         </div>
       </div>
       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
         <DemoWalkthrough />
       </main>
+      <div className="max-w-3xl mx-auto px-6 pb-8 text-center text-xs text-navy/50">
+        All data synthetic. This demo runs entirely client-side with the same criteria engine (InterQual/MCG/ACR references) used in production.
+      </div>
       <footer className="text-center py-6 text-xs text-[#0c2340]/30">
         <p>VantaUM — A <a href="https://wellsonyx.com" target="_blank" rel="noopener noreferrer" className="hover:text-[#c9a227]">Wells Onyx</a> Service</p>
         <p className="mt-1">AI advises. Physicians decide. Every case, every time.</p>

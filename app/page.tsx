@@ -259,6 +259,8 @@ export default function SitePage() {
           <span className="ea-bar-text">A next-generation clinical layer for utilization management — run externally or embedded inside your team.</span>
           <a href={EA_EMAIL} className="ea-bar-link">Talk to us →</a>
           <span className="ea-bar-text" aria-hidden="true">·</span>
+          <a href="/demo-tour" className="ea-bar-link">Launch Demo</a>
+          <span className="ea-bar-text" aria-hidden="true">·</span>
           <a href="/login" className="ea-bar-link">Sign in</a>
         </div>
 
@@ -273,9 +275,11 @@ export default function SitePage() {
             <li><a href="#oon-iro">Specialized</a></li>
             <li><a href="#ratecard">Rate Card</a></li>
             <li><a href="#demo">Live Demo</a></li>
+            <li><a href="/demo-tour" className="font-medium text-gold">Guided Tour →</a></li>
             <li><a href="#contact">Contact</a></li>
           </ul>
           <div className="nav-cta-group">
+            <a className="nav-cta" href="/demo-tour">Launch Demo</a>
             <a className="nav-cta" href="/login">Sign In</a>
             <a className="nav-cta nav-cta-primary" href="#contact">Talk to Us</a>
           </div>
@@ -289,8 +293,8 @@ export default function SitePage() {
             <h1>Modern UM.<br />One clinician.<br /><em>Through appeal.</em></h1>
             <p className="hero-body">VantaUM is a next-generation clinical layer for utilization management — concierge intake, the AI Brief Engine, authorization, and first-level appeal, owned end to end by the same clinician. Run it across your whole self-funded book, or aim it at the cases that need it most. Built for independent TPAs, self-insured employers, and the clinical operations inside larger benefit organizations.</p>
             <div className="hero-actions">
-              <a href={EA_EMAIL} className="btn-primary">Talk to Us</a>
-              <a href="#workflow" className="btn-ghost">See the workflow →</a>
+              <a href="/demo-tour" className="btn-primary">Launch Optum Demo →</a>
+              <a href={EA_EMAIL} className="btn-ghost">Talk to Us</a>
             </div>
           </div>
           <div className="hero-right">
@@ -561,8 +565,11 @@ export default function SitePage() {
                 <DemoWalkthrough />
               </div>
               <div className="demo-cta-row">
-                <p className="demo-cta-text">Ready to see how this runs on your actual caseload?</p>
-                <a href={EA_EMAIL} className="btn-primary">Talk to Us</a>
+                <p className="demo-cta-text">Ready to see how this runs on your actual caseload? Or explore the full guided canned tour with synthetic Southwest TPA data.</p>
+                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                  <a href="/demo-tour" className="btn-primary" style={{ background: 'var(--gold)', color: 'var(--black)' }}>Full Guided Demo</a>
+                  <a href={EA_EMAIL} className="btn-primary">Talk to Us</a>
+                </div>
               </div>
             </div>
           </div>
