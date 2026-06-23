@@ -76,14 +76,9 @@ export function AppShell({
   children,
 }: AppShellProps) {
   const pathname = usePathname();
-  const isChromeless =
-    CHROMELESS_PATHS.has(pathname) ||
-    CHROMELESS_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + '/'));
 
-  if (isChromeless) {
-    return <>{children}</>;
-  }
-
+  // Hooks must run on every render (before any early return) to keep hook
+  // order stable when navigating between chrome and chromeless routes.
   const [demo, setDemo] = useState(false);
   const [activeMicro, setActiveMicro] = useState<string | null>(null);
 
@@ -96,12 +91,20 @@ export function AppShell({
     setDemo(hasDemoSignal);
   }, [pathname]);
 
+  const isChromeless =
+    CHROMELESS_PATHS.has(pathname) ||
+    CHROMELESS_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + '/'));
+
   function launchMicroDemo(label: string) {
     setActiveMicro(label);
   }
 
   function closeMicro() {
     setActiveMicro(null);
+  }
+
+  if (isChromeless) {
+    return <>{children}</>;
   }
 
   const groups: NavGroup[] =
@@ -130,7 +133,7 @@ export function AppShell({
         <div className="flex-1 flex flex-col min-w-0">
           <TopBar pathname={pathname} secondaryNav={secondaryNav} />
           <main id="main-content" className="flex-1 animate-fade-in overflow-auto" tabIndex={-1}>
-            {demo && activeMicro ? getMicroMainContent(activeMicro) : children}
+            {demo && activeMicro ? <MicroMain label={activeMicro} /> : children}
           </main>
         </div>
       </div>
@@ -266,7 +269,7 @@ function Sidebar({
               <span className="font-semibold text-gold-dark">Micro Demo: {activeMicro}</span>
               <button onClick={onCloseMicro} className="text-gold/60 hover:text-gold">×</button>
             </div>
-            {getMicroDemoContent(activeMicro)}
+            <MicroSidebar label={activeMicro} />
           </div>
         )}
 
@@ -338,165 +341,366 @@ function isActive(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-function getMicroDemoContent(label: string) {
-  // Static but realistic content based on the rich synthetic demo data (6 cases, Southwest TPA, InterQual etc.)
+/* ─── Demo micro-experiences ─────────────────────────────────────────── */
+// Interactive synthetic demos. Each button mutates local synthetic state and
+// surfaces in-UI feedback (MicroToast) instead of a native alert() dialog.
+
+const microWrap = 'p-6 text-white bg-[#0a0f1a] min-h-[calc(100vh-56px)]';
+const microCard = 'bg-[#111827] border border-white/10 rounded-xl p-4 mb-4';
+const microBtn =
+  'px-4 py-2 bg-gold text-navy rounded text-sm font-medium hover:opacity-90 active:scale-[0.99] transition';
+
+const SAMPLE_PATIENTS = ['Dana Whitfield', 'Luis Moreno', 'Aisha Bello', 'Grace Kim', 'Tom Nguyen', 'Priya Patel'];
+const SAMPLE_PROCEDURES = ['MRI lumbar 72148', 'Knee arthroscopy 29881', 'CPAP setup E0601', 'Infliximab J1745', 'CT abdomen 74177'];
+const STAGES = ['Intake', 'LPN Review', 'Brief Ready', 'Determined'] as const;
+
+function useMicroToast() {
+  const [toast, setToast] = useState<string | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  function showToast(message: string) {
+    setToast(message);
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => setToast(null), 3200);
+  }
+  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
+  return { toast, showToast };
+}
+
+function MicroToast({ message }: { message: string | null }) {
+  if (!message) return null;
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className="fixed bottom-5 left-1/2 -translate-x-1/2 z-[60] px-4 py-2.5 rounded-lg bg-gold text-navy text-sm font-medium shadow-lg shadow-black/30 animate-fade-in"
+    >
+      {message}
+    </div>
+  );
+}
+
+function MicroHeader({ title, action }: { title: string; action?: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between mb-6">
+      <h2 className="text-2xl font-semibold">
+        {title} <span className="text-xs px-2 py-0.5 bg-gold/20 text-gold rounded">DEMO</span>
+      </h2>
+      {action}
+    </div>
+  );
+}
+
+/* Sidebar micro panel — compact synthetic preview + one real action each. */
+function MicroSidebar({ label }: { label: string }) {
+  const [note, setNote] = useState<string | null>(null);
+  const [count, setCount] = useState(0);
+
+  function act(message: string) {
+    setCount((c) => c + 1);
+    setNote(message);
+  }
+
+  let body: React.ReactNode;
+  let action: { text: string; run: () => void } | null = null;
+
   switch (label) {
     case 'Mission Control':
-      return (
+      body = (
         <div className="space-y-2 text-[11px]">
           <div>Synthetic load: <span className="font-medium">6 cases</span> in flight.</div>
           <div>Briefs ready today: 4 • Avg verification: 94%</div>
           <div className="text-gold">SLA compliance: 100% on demo cases</div>
-          <button onClick={() => alert('Synthetic workload re-simulated using demo cases + audits.')} className="text-gold hover:underline">Recompute synthetic metrics →</button>
         </div>
       );
+      action = { text: 'Recompute synthetic metrics →', run: () => act('Workload re-simulated from demo cases + audits.') };
+      break;
     case 'Operations':
-      return (
+      body = (
         <div className="space-y-1.5 text-[11px]">
           <div>Active pods: 3 (synthetic)</div>
           <div>Demo staff loaded from roster</div>
           <div>Next auto-assign target: infliximab or TKA case</div>
-          <button onClick={() => alert('Demo pod assignment scored (SLA slack + load).')} className="text-gold hover:underline">Score next assignment (demo) →</button>
         </div>
       );
+      action = { text: 'Score next assignment (demo) →', run: () => act('Next pod assignment scored (SLA slack + load).') };
+      break;
     case 'Clients':
-      return (
+      body = (
         <div className="space-y-1 text-[11px]">
           <div>3+ demo TPAs loaded (incl. Southwest Administrators)</div>
           <div>• Southwest Administrators (TPA)</div>
           <div>• Other synthetic plans</div>
-          <button onClick={() => alert('Demo client intake triggered — new synthetic case added to queue.')} className="text-gold hover:underline">Simulate intake for Southwest →</button>
         </div>
       );
+      action = { text: 'Simulate intake for Southwest →', run: () => act(`New synthetic case added to Southwest queue (${6 + count + 1} total).`) };
+      break;
     case 'Billing':
-      return (
+      body = (
         <div className="space-y-1 text-[11px]">
           <div>Last synthetic determination batch: 4 cases • ~$1,240 modeled payout</div>
           <div>Demo invoices + Meow exports ready</div>
-          <button onClick={() => alert('Demo Meow-style payout generated from synthetic determinations.')} className="text-gold hover:underline">Generate demo payout →</button>
         </div>
       );
+      action = { text: 'Generate demo payout →', run: () => act('Meow-style payout generated from synthetic determinations.') };
+      break;
     case 'Setup':
-      return (
+      body = (
         <div className="space-y-1 text-[11px]">
           <div>Demo TPA fully seeded: 3 reviewers, 6 cases, pods ready.</div>
-          <button onClick={() => alert('Demo practice invite + kickoff .ics sent (synthetic).')} className="text-gold hover:underline">Run demo onboarding →</button>
         </div>
       );
+      action = { text: 'Run demo onboarding →', run: () => act('Practice invite + kickoff .ics sent (synthetic).') };
+      break;
     default:
-      return <div className="text-[11px]">Quick synthetic preview for this area (demo data).</div>;
+      body = <div className="text-[11px]">Quick synthetic preview for this area (demo data).</div>;
   }
+
+  return (
+    <div>
+      {body}
+      {action && (
+        <button onClick={action.run} className="mt-1 text-gold hover:underline text-[11px]">
+          {action.text}
+        </button>
+      )}
+      {note && (
+        <div className="mt-2 text-[10px] text-gold-dark bg-gold/10 rounded px-2 py-1">✓ {note}</div>
+      )}
+    </div>
+  );
 }
 
-function getMicroMainContent(label: string) {
-  // Rich micro demos for the main content area when clicking left nav in demo context.
-  // Uses the same synthetic data vibe as the main tour (Southwest TPA, InterQual, etc.)
-  const baseClass = "p-6 text-white bg-[#0a0f1a] min-h-[calc(100vh-56px)]";
-  const cardClass = "bg-[#111827] border border-white/10 rounded-xl p-4 mb-4";
-
+/* Main content micro demos — full stateful synthetic surfaces. */
+function MicroMain({ label }: { label: string }) {
   switch (label) {
-    case 'Mission Control':
-      return (
-        <div className={baseClass}>
-          <div className="max-w-4xl mx-auto">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-semibold">Mission Control <span className="text-xs px-2 py-0.5 bg-gold/20 text-gold rounded">DEMO</span></h2>
-              <button onClick={() => alert('Demo: Synthetic metrics refreshed. 6 cases, 4 briefs ready, 100% SLA.')} className="text-sm px-4 py-2 bg-gold text-navy rounded font-medium">Refresh Synthetic Metrics</button>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              <div className={cardClass}><div className="text-xs text-white/50">ACTIVE CASES</div><div className="text-4xl font-semibold text-gold mt-1">6</div><div className="text-xs">All synthetic</div></div>
-              <div className={cardClass}><div className="text-xs text-white/50">BRIEFS READY</div><div className="text-4xl font-semibold text-gold mt-1">4</div><div className="text-xs">Avg verification 94%</div></div>
-              <div className={cardClass}><div className="text-xs text-white/50">SLA HEALTH</div><div className="text-4xl font-semibold text-emerald-400 mt-1">100%</div><div className="text-xs">On demo cases</div></div>
-            </div>
-            <div className={cardClass}>
-              <div className="text-sm mb-2 text-white/70">Recent Synthetic Activity (from demo data)</div>
-              <div className="text-xs space-y-1 text-white/60">
-                <div>• Maria Santos MRI 72148 → Brief ready, fact-check 96</div>
-                <div>• John Rivera TKA → In LPN review</div>
-                <div>• Infliximab case → Pod assigned</div>
-              </div>
-            </div>
-            <div className="text-xs text-white/40 mt-4">This is a micro demo using the same canned synthetic Southwest TPA data as the main tour. Real pages use live data.</div>
-          </div>
-        </div>
-      );
-
-    case 'Operations':
-      return (
-        <div className={baseClass}>
-          <div className="max-w-4xl mx-auto">
-            <h2 className="text-2xl font-semibold mb-6">Operations <span className="text-xs px-2 py-0.5 bg-gold/20 text-gold rounded">DEMO</span></h2>
-            <div className={cardClass}>
-              <div className="text-sm mb-3">Synthetic Queue (demoCases)</div>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between p-2 bg-white/5 rounded"><span>Maria Santos - MRI 72148</span><span className="text-emerald-400">Brief Ready</span></div>
-                <div className="flex justify-between p-2 bg-white/5 rounded"><span>John Rivera - TKA 27447</span><span className="text-amber-400">LPN Review</span></div>
-                <div className="flex justify-between p-2 bg-white/5 rounded"><span>Robert Garcia - CPAP E0601</span><span className="text-blue-400">Intake</span></div>
-              </div>
-            </div>
-            <div className={cardClass}>
-              <div className="text-sm mb-2">Demo Pods &amp; Staff</div>
-              <div className="text-xs text-white/60">3 pods active • Roster loaded with 3 reviewers • Auto-assign uses SLA scoring on synthetic data.</div>
-              <button onClick={() => alert('Demo: Pod assignment re-scored using current synthetic cases.')} className="mt-3 px-3 py-1.5 bg-gold text-navy text-xs rounded">Re-score assignments (demo)</button>
-            </div>
-          </div>
-        </div>
-      );
-
-    case 'Clients':
-      return (
-        <div className={baseClass}>
-          <div className="max-w-4xl mx-auto">
-            <h2 className="text-2xl font-semibold mb-6">Clients <span className="text-xs px-2 py-0.5 bg-gold/20 text-gold rounded">DEMO</span></h2>
-            <div className={cardClass}>
-              <div className="text-sm mb-3">Demo TPAs (from demoClients)</div>
-              <div className="space-y-3">
-                <div className="p-3 bg-white/5 rounded"><div className="font-medium">Southwest Administrators (TPA)</div><div className="text-xs text-white/60">6 cases • InterQual + CMS • Fully seeded</div></div>
-                <div className="p-3 bg-white/5 rounded"><div className="font-medium">Other Synthetic Plans</div><div className="text-xs text-white/60">Additional clients for demo variety</div></div>
-              </div>
-            </div>
-            <button onClick={() => alert('Demo: New synthetic case intake triggered for selected client.')} className="px-4 py-2 bg-gold text-navy rounded text-sm">Simulate New Intake for Southwest</button>
-          </div>
-        </div>
-      );
-
-    case 'Billing':
-      return (
-        <div className={baseClass}>
-          <div className="max-w-4xl mx-auto">
-            <h2 className="text-2xl font-semibold mb-6">Billing <span className="text-xs px-2 py-0.5 bg-gold/20 text-gold rounded">DEMO</span></h2>
-            <div className={cardClass}>
-              <div className="text-sm mb-2">Synthetic Payouts (demo determinations)</div>
-              <div className="text-xs">Last batch: 4 cases • Modeled ~$1,240 Meow-style payout</div>
-              <div className="text-xs text-white/60 mt-1">All tied to synthetic briefs with 94%+ verification.</div>
-            </div>
-            <button onClick={() => alert('Demo: Invoice/Payout generated from current synthetic cases.')} className="px-4 py-2 bg-gold text-navy rounded text-sm">Generate Demo Payout / Invoice</button>
-          </div>
-        </div>
-      );
-
-    case 'Setup':
-      return (
-        <div className={baseClass}>
-          <div className="max-w-4xl mx-auto">
-            <h2 className="text-2xl font-semibold mb-6">Setup <span className="text-xs px-2 py-0.5 bg-gold/20 text-gold rounded">DEMO</span></h2>
-            <div className={cardClass}>
-              <div className="text-sm mb-2">Demo Environment Status</div>
-              <div className="text-xs space-y-1 text-white/70">
-                <div>✓ Southwest TPA seeded (3 reviewers, 6 cases)</div>
-                <div>✓ Pods &amp; staff configured</div>
-                <div>✓ InterQual + CMS criteria engine active</div>
-                <div>✓ Synthetic audit trail ready</div>
-              </div>
-            </div>
-            <button onClick={() => alert('Demo: Practice invite + kickoff calendar sent for new synthetic TPA.')} className="px-4 py-2 bg-gold text-navy rounded text-sm">Run Demo Onboarding / Invite</button>
-          </div>
-        </div>
-      );
-
+    case 'Mission Control': return <MissionControlDemo />;
+    case 'Operations': return <OperationsDemo />;
+    case 'Clients': return <ClientsDemo />;
+    case 'Billing': return <BillingDemo />;
+    case 'Setup': return <SetupDemo />;
     default:
       return <div className="p-8 text-white">Micro demo content for {label} (synthetic data)</div>;
   }
+}
+
+function MissionControlDemo() {
+  const { toast, showToast } = useMicroToast();
+  const [metrics, setMetrics] = useState({ active: 6, briefs: 4, sla: 100, verify: 94 });
+  const [refreshedAt, setRefreshedAt] = useState<string | null>(null);
+  const [activity, setActivity] = useState<string[]>([
+    'Maria Santos MRI 72148 → Brief ready, fact-check 96',
+    'John Rivera TKA → In LPN review',
+    'Infliximab case → Pod assigned',
+  ]);
+
+  function refresh() {
+    const verify = 93 + Math.floor(Math.random() * 6);
+    const briefs = Math.min(metrics.active, 3 + Math.floor(Math.random() * 4));
+    setMetrics((m) => ({ ...m, verify, briefs }));
+    const stamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    setRefreshedAt(stamp);
+    setActivity((a) => [`Synthetic metrics recomputed at ${stamp}`, ...a].slice(0, 5));
+    showToast('Synthetic metrics refreshed.');
+  }
+
+  return (
+    <div className={microWrap}>
+      <div className="max-w-4xl mx-auto">
+        <MicroHeader title="Mission Control" action={<button onClick={refresh} className={microBtn}>Refresh Synthetic Metrics</button>} />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className={microCard}><div className="text-xs text-white/50">ACTIVE CASES</div><div className="text-4xl font-semibold text-gold mt-1">{metrics.active}</div><div className="text-xs">All synthetic</div></div>
+          <div className={microCard}><div className="text-xs text-white/50">BRIEFS READY</div><div className="text-4xl font-semibold text-gold mt-1">{metrics.briefs}</div><div className="text-xs">Avg verification {metrics.verify}%</div></div>
+          <div className={microCard}><div className="text-xs text-white/50">SLA HEALTH</div><div className="text-4xl font-semibold text-emerald-400 mt-1">{metrics.sla}%</div><div className="text-xs">On demo cases</div></div>
+        </div>
+        <div className={microCard}>
+          <div className="text-sm mb-2 text-white/70">Recent Synthetic Activity (from demo data)</div>
+          <div className="text-xs space-y-1 text-white/60">
+            {activity.map((a, i) => <div key={i}>• {a}</div>)}
+          </div>
+        </div>
+        <div className="text-xs text-white/40 mt-4">
+          {refreshedAt ? `Last recomputed at ${refreshedAt}. ` : ''}This is a micro demo using the same canned synthetic Southwest TPA data as the main tour. Real pages use live data.
+        </div>
+      </div>
+      <MicroToast message={toast} />
+    </div>
+  );
+}
+
+function OperationsDemo() {
+  const { toast, showToast } = useMicroToast();
+  const [queue, setQueue] = useState([
+    { name: 'Maria Santos - MRI 72148', stage: 'Brief Ready' },
+    { name: 'John Rivera - TKA 27447', stage: 'LPN Review' },
+    { name: 'Robert Garcia - CPAP E0601', stage: 'Intake' },
+  ]);
+  const [runs, setRuns] = useState(0);
+
+  function toneFor(stage: string) {
+    if (stage === 'Brief Ready' || stage === 'Determined') return 'text-emerald-400';
+    if (stage === 'LPN Review') return 'text-amber-400';
+    return 'text-blue-400';
+  }
+
+  function rescore() {
+    setQueue((q) =>
+      q.map((c) => {
+        const i = STAGES.indexOf(c.stage as (typeof STAGES)[number]);
+        return { ...c, stage: STAGES[Math.min(i + 1, STAGES.length - 1)] };
+      }),
+    );
+    setRuns((r) => r + 1);
+    showToast('Pod assignments re-scored on current synthetic cases.');
+  }
+
+  return (
+    <div className={microWrap}>
+      <div className="max-w-4xl mx-auto">
+        <MicroHeader title="Operations" />
+        <div className={microCard}>
+          <div className="text-sm mb-3">Synthetic Queue (demoCases)</div>
+          <div className="space-y-2 text-sm">
+            {queue.map((c) => (
+              <div key={c.name} className="flex justify-between p-2 bg-white/5 rounded">
+                <span>{c.name}</span><span className={toneFor(c.stage)}>{c.stage}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className={microCard}>
+          <div className="text-sm mb-2">Demo Pods &amp; Staff</div>
+          <div className="text-xs text-white/60">3 pods active • Roster loaded with 3 reviewers • Auto-assign uses SLA scoring on synthetic data.{runs > 0 ? ` Re-scored ${runs}×.` : ''}</div>
+          <button onClick={rescore} className="mt-3 px-3 py-1.5 bg-gold text-navy text-xs rounded hover:opacity-90 transition">Re-score assignments (demo)</button>
+        </div>
+      </div>
+      <MicroToast message={toast} />
+    </div>
+  );
+}
+
+function ClientsDemo() {
+  const { toast, showToast } = useMicroToast();
+  const [caseCount, setCaseCount] = useState(6);
+  const [intakes, setIntakes] = useState<{ id: string; patient: string; procedure: string }[]>([]);
+
+  function simulateIntake() {
+    const n = caseCount + 1;
+    const id = `SW-2026-${String(1000 + n)}`;
+    const patient = SAMPLE_PATIENTS[n % SAMPLE_PATIENTS.length];
+    const procedure = SAMPLE_PROCEDURES[n % SAMPLE_PROCEDURES.length];
+    setIntakes((list) => [{ id, patient, procedure }, ...list].slice(0, 6));
+    setCaseCount(n);
+    showToast(`New synthetic case ${id} added to Southwest queue.`);
+  }
+
+  return (
+    <div className={microWrap}>
+      <div className="max-w-4xl mx-auto">
+        <MicroHeader title="Clients" />
+        <div className={microCard}>
+          <div className="text-sm mb-3">Demo TPAs (from demoClients)</div>
+          <div className="space-y-3">
+            <div className="p-3 bg-white/5 rounded"><div className="font-medium">Southwest Administrators (TPA)</div><div className="text-xs text-white/60">{caseCount} cases • InterQual + CMS • Fully seeded</div></div>
+            <div className="p-3 bg-white/5 rounded"><div className="font-medium">Other Synthetic Plans</div><div className="text-xs text-white/60">Additional clients for demo variety</div></div>
+          </div>
+        </div>
+        {intakes.length > 0 && (
+          <div className={microCard}>
+            <div className="text-sm mb-3">New Synthetic Intakes</div>
+            <div className="space-y-2 text-sm">
+              {intakes.map((c) => (
+                <div key={c.id} className="flex justify-between p-2 bg-white/5 rounded animate-fade-in">
+                  <span>{c.patient} — {c.procedure}</span>
+                  <span className="text-blue-400 font-mono text-xs">{c.id} • Intake</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        <button onClick={simulateIntake} className={microBtn}>Simulate New Intake for Southwest</button>
+      </div>
+      <MicroToast message={toast} />
+    </div>
+  );
+}
+
+function BillingDemo() {
+  const { toast, showToast } = useMicroToast();
+  const [invoices, setInvoices] = useState<{ number: string; cases: number; amount: number }[]>([]);
+
+  function generate() {
+    const n = invoices.length + 1;
+    const number = `INV-2026-${String(100 + n)}`;
+    const cases = 4 + Math.floor(Math.random() * 3);
+    const amount = cases * (300 + Math.floor(Math.random() * 40));
+    setInvoices((l) => [{ number, cases, amount }, ...l]);
+    showToast(`${number} generated — ${cases} cases, $${amount.toLocaleString()} modeled.`);
+  }
+
+  return (
+    <div className={microWrap}>
+      <div className="max-w-4xl mx-auto">
+        <MicroHeader title="Billing" />
+        <div className={microCard}>
+          <div className="text-sm mb-2">Synthetic Payouts (demo determinations)</div>
+          <div className="text-xs">Last batch: 4 cases • Modeled ~$1,240 Meow-style payout</div>
+          <div className="text-xs text-white/60 mt-1">All tied to synthetic briefs with 94%+ verification.</div>
+        </div>
+        {invoices.length > 0 && (
+          <div className={microCard}>
+            <div className="text-sm mb-3">Generated Invoices</div>
+            <div className="space-y-2 text-sm">
+              {invoices.map((inv) => (
+                <div key={inv.number} className="flex justify-between p-2 bg-white/5 rounded animate-fade-in">
+                  <span className="font-mono text-xs">{inv.number} • {inv.cases} cases</span>
+                  <span className="text-emerald-400">${inv.amount.toLocaleString()}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        <button onClick={generate} className={microBtn}>Generate Demo Payout / Invoice</button>
+      </div>
+      <MicroToast message={toast} />
+    </div>
+  );
+}
+
+function SetupDemo() {
+  const { toast, showToast } = useMicroToast();
+  const baseSteps = [
+    'Southwest TPA seeded (3 reviewers, 6 cases)',
+    'Pods & staff configured',
+    'InterQual + CMS criteria engine active',
+    'Synthetic audit trail ready',
+  ];
+  const [invite, setInvite] = useState<string | null>(null);
+
+  function runOnboarding() {
+    const d = new Date();
+    const add = ((2 - d.getDay() + 7) % 7) || 7; // next Tuesday
+    d.setDate(d.getDate() + add);
+    const when = d.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' });
+    setInvite(`Kickoff invite (.ics) generated for ${when}, 10:00 AM (synthetic)`);
+    showToast('Practice invite + kickoff calendar sent (synthetic).');
+  }
+
+  return (
+    <div className={microWrap}>
+      <div className="max-w-4xl mx-auto">
+        <MicroHeader title="Setup" />
+        <div className={microCard}>
+          <div className="text-sm mb-2">Demo Environment Status</div>
+          <div className="text-xs space-y-1 text-white/70">
+            {baseSteps.map((s) => <div key={s}>✓ {s}</div>)}
+            <div className={invite ? 'text-emerald-400' : 'text-white/40'}>{invite ? '✓' : '○'} {invite ?? 'Kickoff invite not yet sent'}</div>
+          </div>
+        </div>
+        <button onClick={runOnboarding} className={microBtn}>Run Demo Onboarding / Invite</button>
+      </div>
+      <MicroToast message={toast} />
+    </div>
+  );
 }
 
 /* ─── Top bar ────────────────────────────────────────────────────────── */
