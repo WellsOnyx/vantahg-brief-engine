@@ -532,7 +532,7 @@ export default function DemoTourPage() {
 
             {/* Easy play: jump to full app surfaces in this synthetic TPA */}
             <div className="mt-8 pt-6 border-t border-white/10 text-center text-xs text-white/40">
-              Ready to play more? <a href="/cases" className="text-gold underline">Open full cases list</a> · <a href="/quality" className="text-gold underline">Quality audits</a> · <a href="/dashboard" className="text-gold underline">Dashboard</a> (all pre-loaded synthetic data, demo mode)
+              Ready to play more? <a href="/cases" className="text-gold underline">Open full cases list</a> · <a href="/quality" className="text-gold underline">Quality audits</a> · <a href="/dashboard" className="text-gold underline">Dashboard</a> (synthetic data)
             </div>
           </div>
         )}

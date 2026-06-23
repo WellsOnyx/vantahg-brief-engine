@@ -26,7 +26,7 @@ export default function DemoPage() {
           </p>
           <div className="mt-4 flex flex-wrap gap-3 justify-center">
             <a href="/demo-tour" className="px-5 py-2 rounded-full bg-gold text-navy text-sm font-semibold hover:bg-[#d4b25c]">Start Guided Tour (prospect call)</a>
-            <a href="/cases" className="px-5 py-2 rounded-full border border-white/40 text-white/90 text-sm hover:bg-white/10">Jump into full app demo →</a>
+            <a href="/cases" className="px-5 py-2 rounded-full border border-white/40 text-white/90 text-sm hover:bg-white/10">Explore full app UI (synthetic data) →</a>
           </div>
         </div>
       </div>

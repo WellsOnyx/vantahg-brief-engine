@@ -14,6 +14,7 @@ import type {
 } from '@/lib/types';
 import { StatusBadge, PriorityBadge } from '@/components/StatusBadge';
 import { SlaTracker } from '@/components/SlaTracker';
+import { getDemoCases, getDemoReviewers } from '@/lib/demo-mode';
 
 // ── Label maps ──
 
@@ -169,6 +170,7 @@ export default function CasesListPage() {
   const [reviewers, setReviewers] = useState<Reviewer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [usingDemoData, setUsingDemoData] = useState(false);
 
   // Filters
   const [search, setSearch] = useState('');
@@ -198,7 +200,14 @@ export default function CasesListPage() {
     fetch(withTenantScope('/api/reviewers', selectedClientId))
       .then((res) => res.json())
       .then(setReviewers)
-      .catch(() => setReviewers([]));
+      .catch(() => {
+        // Fallback to demo reviewers for prospect full-app-demo flows
+        try {
+          setReviewers(getDemoReviewers());
+        } catch {
+          setReviewers([]);
+        }
+      });
   }, [selectedClientId]);
 
   // Build query params and fetch cases
@@ -228,7 +237,22 @@ export default function CasesListPage() {
       const data = await res.json();
       setCases(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load cases');
+      // Fallback to synthetic demo data (used when clicking "full app demo"
+      // from the marketing site on deploys where backend auth/DB isn't available for demo)
+      const demo = getDemoCases({
+        status: filterStatus || undefined,
+        service_category: filterCategory || undefined,
+        priority: filterPriority || undefined,
+        review_type: filterReviewType || undefined,
+        assigned_reviewer_id: filterReviewer || undefined,
+        date_from: dateFrom || undefined,
+        date_to: dateTo || undefined,
+        search: debouncedSearch || undefined,
+      });
+      setCases(demo);
+      setUsingDemoData(true);
+      // Do not surface a scary error in prospect demo flow
+      setError(null);
     } finally {
       setLoading(false);
     }
@@ -289,6 +313,11 @@ export default function CasesListPage() {
             <TenantScopeBadge />
           </div>
           <p className="text-muted mt-1">View and manage all utilization review cases</p>
+          {usingDemoData && (
+            <div className="mt-1.5 inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-800">
+              Demo • synthetic Southwest TPA data
+            </div>
+          )}
         </div>
         <Link
           href="/cases/new"
