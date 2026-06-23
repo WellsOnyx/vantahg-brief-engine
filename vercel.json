@@ -3,7 +3,7 @@
   "buildCommand": "next build",
   "outputDirectory": ".next",
   "redirects": [
-    { "source": "/", "destination": "/demo-tour", "permanent": false }
+    { "source": "/", "destination": "/demo", "permanent": false }
   ],
   "crons": [
     {
