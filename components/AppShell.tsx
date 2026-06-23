@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { HeaderAuth } from '@/components/HeaderAuth';
 import { TenantScopeProvider } from '@/lib/tenant-scope';
 import { TenantScopeSelector } from '@/components/TenantScopeSelector';
-import { isDemoMode, getDemoCases, getDemoClients } from '@/lib/demo-mode';
+
 
 /**
  * AppShell — the chrome around every authenticated VantaUM surface.
@@ -120,12 +120,22 @@ function Sidebar({
   pathname: string;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const demo = isDemoMode();
+  const [demo, setDemo] = useState(false);
   const [activeMicro, setActiveMicro] = useState<string | null>(null);
 
   // Close mobile drawer on route change
   useEffect(() => {
     setMobileOpen(false);
+  }, [pathname]);
+
+  // Detect demo context client-side (when the DEMO MODE bar from /demo or /demo-tour is present, or explicit demo links)
+  useEffect(() => {
+    const hasDemoSignal = typeof document !== 'undefined' && (
+      !!document.querySelector('[class*="DEMO MODE"], [class*="demo mode"], [class*="synthetic"]') ||
+      window.location.search.includes('demo') ||
+      pathname.includes('/demo')
+    );
+    setDemo(hasDemoSignal);
   }, [pathname]);
 
   function launchMicroDemo(label: string) {
@@ -313,18 +323,15 @@ function isActive(pathname: string, href: string): boolean {
 }
 
 function getMicroDemoContent(label: string) {
-  // Use live demo data where possible for authenticity in prospect demos
-  const demoCaseCount = getDemoCases().length;
-  const demoClientCount = getDemoClients().length;
-
+  // Static but realistic content based on the rich synthetic demo data (6 cases, Southwest TPA, InterQual etc.)
   switch (label) {
     case 'Mission Control':
       return (
         <div className="space-y-2 text-[11px]">
-          <div>Synthetic load: <span className="font-medium">{demoCaseCount} cases</span> in flight.</div>
+          <div>Synthetic load: <span className="font-medium">6 cases</span> in flight.</div>
           <div>Briefs ready today: 4 • Avg verification: 94%</div>
           <div className="text-gold">SLA compliance: 100% on demo cases</div>
-          <button onClick={() => alert('Synthetic workload re-simulated (demo data refreshed in memory).')} className="text-gold hover:underline">Recompute synthetic metrics →</button>
+          <button onClick={() => alert('Synthetic workload re-simulated using demo cases + audits.')} className="text-gold hover:underline">Recompute synthetic metrics →</button>
         </div>
       );
     case 'Operations':
@@ -333,34 +340,35 @@ function getMicroDemoContent(label: string) {
           <div>Active pods: 3 (synthetic)</div>
           <div>Demo staff loaded from roster</div>
           <div>Next auto-assign target: infliximab or TKA case</div>
-          <button onClick={() => alert('Demo pod assignment scored (SLA + load).')} className="text-gold hover:underline">Score next assignment (demo) →</button>
+          <button onClick={() => alert('Demo pod assignment scored (SLA slack + load).')} className="text-gold hover:underline">Score next assignment (demo) →</button>
         </div>
       );
     case 'Clients':
       return (
         <div className="space-y-1 text-[11px]">
-          <div>{demoClientCount} demo TPAs loaded (Southwest + others)</div>
-          {getDemoClients().slice(0,2).map((c,i) => <div key={i}>• {c.name} — {c.type}</div>)}
-          <button onClick={() => alert('Demo client intake triggered — new synthetic case created.')} className="text-gold hover:underline">Simulate intake for Southwest →</button>
+          <div>3+ demo TPAs loaded (incl. Southwest Administrators)</div>
+          <div>• Southwest Administrators (TPA)</div>
+          <div>• Other synthetic plans</div>
+          <button onClick={() => alert('Demo client intake triggered — new synthetic case added to queue.')} className="text-gold hover:underline">Simulate intake for Southwest →</button>
         </div>
       );
     case 'Billing':
       return (
         <div className="space-y-1 text-[11px]">
-          <div>Last synthetic determination: 4 cases • ~$1,240 Meow payout</div>
-          <div>Demo invoices ready for export</div>
-          <button onClick={() => alert('Demo Meow invoice generated from synthetic determinations.')} className="text-gold hover:underline">Generate demo payout →</button>
+          <div>Last synthetic determination batch: 4 cases • ~$1,240 modeled payout</div>
+          <div>Demo invoices + Meow exports ready</div>
+          <button onClick={() => alert('Demo Meow-style payout generated from synthetic determinations.')} className="text-gold hover:underline">Generate demo payout →</button>
         </div>
       );
     case 'Setup':
       return (
         <div className="space-y-1 text-[11px]">
           <div>Demo TPA fully seeded: 3 reviewers, 6 cases, pods ready.</div>
-          <button onClick={() => alert('Demo practice invite + kickoff calendar sent (synthetic).')} className="text-gold hover:underline">Run demo onboarding →</button>
+          <button onClick={() => alert('Demo practice invite + kickoff .ics sent (synthetic).')} className="text-gold hover:underline">Run demo onboarding →</button>
         </div>
       );
     default:
-      return <div className="text-[11px]">Quick synthetic preview for this area.</div>;
+      return <div className="text-[11px]">Quick synthetic preview for this area (demo data).</div>;
   }
 }
 
