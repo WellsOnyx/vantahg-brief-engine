@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { HeaderAuth } from '@/components/HeaderAuth';
 import { TenantScopeProvider } from '@/lib/tenant-scope';
 import { TenantScopeSelector } from '@/components/TenantScopeSelector';
+import { isDemoMode, getDemoCases, getDemoClients, getDemoPods, getDemoStaff } from '@/lib/demo-mode';
 
 /**
  * AppShell — the chrome around every authenticated VantaUM surface.
@@ -119,11 +120,23 @@ function Sidebar({
   pathname: string;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const demo = isDemoMode();
+  const [activeMicro, setActiveMicro] = useState<string | null>(null);
 
   // Close mobile drawer on route change
   useEffect(() => {
     setMobileOpen(false);
   }, [pathname]);
+
+  function launchMicroDemo(label: string) {
+    setActiveMicro(label);
+    // auto close mobile if open
+    setMobileOpen(false);
+  }
+
+  function closeMicro() {
+    setActiveMicro(null);
+  }
 
   return (
     <>
@@ -197,12 +210,39 @@ function Sidebar({
                   </p>
                 )}
                 {group.items.map((item) => (
-                  <SidebarLink key={item.href} item={item} active={isActive(pathname, item.href)} />
+                  demo ? (
+                    <button
+                      key={item.href}
+                      onClick={() => launchMicroDemo(item.label)}
+                      className="w-full text-left relative flex items-center gap-2.5 pl-4 pr-3 py-2 rounded-md text-sm font-medium transition-all text-muted hover:text-navy hover:bg-navy/[0.03]"
+                    >
+                      {item.iconPath && (
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0" aria-hidden>
+                          <path d={item.iconPath} />
+                        </svg>
+                      )}
+                      <span className="flex-1 truncate">{item.label}</span>
+                      <span className="text-[9px] px-1 py-0.5 rounded bg-gold/20 text-gold">demo</span>
+                    </button>
+                  ) : (
+                    <SidebarLink key={item.href} item={item} active={isActive(pathname, item.href)} />
+                  )
                 ))}
               </div>
             ))
           )}
         </nav>
+
+        {/* Micro demo panel for demo flows */}
+        {demo && activeMicro && (
+          <div className="mx-3 mb-3 p-3 rounded-xl border border-gold/30 bg-gold/5 text-xs">
+            <div className="flex justify-between items-center mb-2">
+              <span className="font-semibold text-gold-dark">Micro Demo: {activeMicro}</span>
+              <button onClick={closeMicro} className="text-gold/60 hover:text-gold">×</button>
+            </div>
+            {getMicroDemoContent(activeMicro)}
+          </div>
+        )}
 
         {/* Footer: Wells Onyx mark */}
         <div className="px-5 py-4 border-t border-border">
@@ -270,6 +310,58 @@ function SidebarLink({ item, active }: { item: NavItem; active: boolean }) {
 function isActive(pathname: string, href: string): boolean {
   if (href === '/') return pathname === '/';
   return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+function getMicroDemoContent(label: string) {
+  // Use live demo data where possible for authenticity in prospect demos
+  const demoCaseCount = getDemoCases().length;
+  const demoClientCount = getDemoClients().length;
+
+  switch (label) {
+    case 'Mission Control':
+      return (
+        <div className="space-y-2 text-[11px]">
+          <div>Synthetic load: <span className="font-medium">{demoCaseCount} cases</span> in flight.</div>
+          <div>Briefs ready today: 4 • Avg verification: 94%</div>
+          <div className="text-gold">SLA compliance: 100% on demo cases</div>
+          <button onClick={() => alert('Synthetic workload re-simulated (demo data refreshed in memory).')} className="text-gold hover:underline">Recompute synthetic metrics →</button>
+        </div>
+      );
+    case 'Operations':
+      return (
+        <div className="space-y-1.5 text-[11px]">
+          <div>Active pods: 3 (using demoPods)</div>
+          <div>Staff on demo roster: {getDemoStaff().length}</div>
+          <div>Next auto-assign target: infliximab or TKA case</div>
+          <button onClick={() => alert('Demo pod assignment scored (SLA + load).')} className="text-gold hover:underline">Score next assignment (demo) →</button>
+        </div>
+      );
+    case 'Clients':
+      return (
+        <div className="space-y-1 text-[11px]">
+          <div>{demoClientCount} demo TPAs loaded (Southwest + others)</div>
+          {getDemoClients().slice(0,2).map((c,i) => <div key={i}>• {c.name} — {c.type}</div>)}
+          <button onClick={() => alert('Demo client intake triggered — new synthetic case created.')} className="text-gold hover:underline">Simulate intake for Southwest →</button>
+        </div>
+      );
+    case 'Billing':
+      return (
+        <div className="space-y-1 text-[11px]">
+          <div>Last synthetic determination: 4 cases • ~$1,240 Meow payout</div>
+          <div>Demo invoices ready for export</div>
+          <button onClick={() => alert('Demo Meow invoice generated from synthetic determinations.')} className="text-gold hover:underline">Generate demo payout →</button>
+        </div>
+      );
+    case 'Setup':
+      return (
+        <div className="space-y-1 text-[11px]">
+          <div>Demo TPA fully seeded: 3 reviewers, 6 cases, pods ready.</div>
+          <button onClick={() => alert('Demo practice invite + kickoff calendar sent (synthetic).')} className="text-gold hover:underline">Run demo onboarding →</button>
+        </div>
+      );
+    default:
+      return <div className="text-[11px]">Quick synthetic preview for this area.</div>;
+  }
 }
 
 /* ─── Top bar ────────────────────────────────────────────────────────── */
