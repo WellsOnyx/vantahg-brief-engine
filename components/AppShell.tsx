@@ -84,6 +84,26 @@ export function AppShell({
     return <>{children}</>;
   }
 
+  const [demo, setDemo] = useState(false);
+  const [activeMicro, setActiveMicro] = useState<string | null>(null);
+
+  useEffect(() => {
+    const hasDemoSignal = typeof document !== 'undefined' && (
+      !!document.querySelector('[class*="DEMO MODE"], [class*="demo mode"], [class*="synthetic"]') ||
+      window.location.search.includes('demo') ||
+      pathname.includes('/demo')
+    );
+    setDemo(hasDemoSignal);
+  }, [pathname]);
+
+  function launchMicroDemo(label: string) {
+    setActiveMicro(label);
+  }
+
+  function closeMicro() {
+    setActiveMicro(null);
+  }
+
   const groups: NavGroup[] =
     primaryNav && primaryNav.length > 0
       ? primaryNav
@@ -97,7 +117,15 @@ export function AppShell({
         Skip to main content
       </a>
       <div className="min-h-screen bg-background flex">
-        <Sidebar groups={groups} roleSurface={roleSurface} pathname={pathname} />
+        <Sidebar 
+          groups={groups} 
+          roleSurface={roleSurface} 
+          pathname={pathname} 
+          demo={demo}
+          activeMicro={activeMicro}
+          onLaunchMicro={launchMicroDemo}
+          onCloseMicro={closeMicro}
+        />
 
         <div className="flex-1 flex flex-col min-w-0">
           <TopBar pathname={pathname} secondaryNav={secondaryNav} />
@@ -116,39 +144,25 @@ function Sidebar({
   groups,
   roleSurface,
   pathname,
+  demo = false,
+  activeMicro = null,
+  onLaunchMicro,
+  onCloseMicro,
 }: {
   groups: NavGroup[];
   roleSurface?: string;
   pathname: string;
+  demo?: boolean;
+  activeMicro?: string | null;
+  onLaunchMicro?: (label: string) => void;
+  onCloseMicro?: () => void;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [demo, setDemo] = useState(false);
-  const [activeMicro, setActiveMicro] = useState<string | null>(null);
 
   // Close mobile drawer on route change
   useEffect(() => {
     setMobileOpen(false);
   }, [pathname]);
-
-  // Detect demo context client-side (when the DEMO MODE bar from /demo or /demo-tour is present, or explicit demo links)
-  useEffect(() => {
-    const hasDemoSignal = typeof document !== 'undefined' && (
-      !!document.querySelector('[class*="DEMO MODE"], [class*="demo mode"], [class*="synthetic"]') ||
-      window.location.search.includes('demo') ||
-      pathname.includes('/demo')
-    );
-    setDemo(hasDemoSignal);
-  }, [pathname]);
-
-  function launchMicroDemo(label: string) {
-    setActiveMicro(label);
-    // auto close mobile if open
-    setMobileOpen(false);
-  }
-
-  function closeMicro() {
-    setActiveMicro(null);
-  }
 
   return (
     <>
@@ -225,7 +239,7 @@ function Sidebar({
                   demo ? (
                     <button
                       key={item.href}
-                      onClick={() => launchMicroDemo(item.label)}
+                      onClick={() => onLaunchMicro && onLaunchMicro(item.label)}
                       className="w-full text-left relative flex items-center gap-2.5 pl-4 pr-3 py-2 rounded-md text-sm font-medium transition-all text-muted hover:text-navy hover:bg-navy/[0.03]"
                     >
                       {item.iconPath && (
@@ -250,7 +264,7 @@ function Sidebar({
           <div className="mx-3 mb-3 p-3 rounded-xl border border-gold/30 bg-gold/5 text-xs">
             <div className="flex justify-between items-center mb-2">
               <span className="font-semibold text-gold-dark">Micro Demo: {activeMicro}</span>
-              <button onClick={closeMicro} className="text-gold/60 hover:text-gold">×</button>
+              <button onClick={onCloseMicro} className="text-gold/60 hover:text-gold">×</button>
             </div>
             {getMicroDemoContent(activeMicro)}
           </div>
