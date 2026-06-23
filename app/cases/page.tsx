@@ -14,7 +14,6 @@ import type {
 } from '@/lib/types';
 import { StatusBadge, PriorityBadge } from '@/components/StatusBadge';
 import { SlaTracker } from '@/components/SlaTracker';
-import { getDemoCases, getDemoReviewers } from '@/lib/demo-mode';
 
 // ── Label maps ──
 
@@ -201,12 +200,7 @@ export default function CasesListPage() {
       .then((res) => res.json())
       .then(setReviewers)
       .catch(() => {
-        // Fallback to demo reviewers for prospect full-app-demo flows
-        try {
-          setReviewers(getDemoReviewers());
-        } catch {
-          setReviewers([]);
-        }
+        setReviewers([]);
       });
   }, [selectedClientId]);
 
@@ -237,21 +231,14 @@ export default function CasesListPage() {
       const data = await res.json();
       setCases(data);
     } catch (err) {
-      // Fallback to synthetic demo data (used when clicking "full app demo"
-      // from the marketing site on deploys where backend auth/DB isn't available for demo)
-      const demo = getDemoCases({
-        status: filterStatus || undefined,
-        service_category: filterCategory || undefined,
-        priority: filterPriority || undefined,
-        review_type: filterReviewType || undefined,
-        assigned_reviewer_id: filterReviewer || undefined,
-        date_from: dateFrom || undefined,
-        date_to: dateTo || undefined,
-        search: debouncedSearch || undefined,
-      });
-      setCases(demo);
+      // Lightweight static synthetic fallback for prospect "full app demo" clicks
+      // (avoids pulling demo-mode module in main app bundle for this deploy)
+      const staticDemo = [
+        { id: 'demo-mri', case_number: 'VUM-2026-004821', patient_name: 'Maria Santos', procedure_description: 'MRI Lumbar Spine without Contrast', status: 'brief_ready', priority: 'standard', created_at: new Date().toISOString(), ai_brief: { ai_recommendation: { recommendation: 'approve' } }, fact_check: { overall_score: 96 } } as any,
+        { id: 'demo-tka', case_number: 'VUM-2026-004822', patient_name: 'John Rivera', procedure_description: 'Total Knee Arthroplasty', status: 'lpn_review', priority: 'urgent', created_at: new Date(Date.now()-3600000).toISOString() } as any,
+      ];
+      setCases(staticDemo);
       setUsingDemoData(true);
-      // Do not surface a scary error in prospect demo flow
       setError(null);
     } finally {
       setLoading(false);
