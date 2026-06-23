@@ -101,7 +101,9 @@ export function AppShell({
 
         <div className="flex-1 flex flex-col min-w-0">
           <TopBar pathname={pathname} secondaryNav={secondaryNav} />
-          <main id="main-content" className="flex-1 animate-fade-in" tabIndex={-1}>{children}</main>
+          <main id="main-content" className="flex-1 animate-fade-in overflow-auto" tabIndex={-1}>
+            {demo && activeMicro ? getMicroMainContent(activeMicro) : children}
+          </main>
         </div>
       </div>
     </TenantScopeProvider>
@@ -369,6 +371,117 @@ function getMicroDemoContent(label: string) {
       );
     default:
       return <div className="text-[11px]">Quick synthetic preview for this area (demo data).</div>;
+  }
+}
+
+function getMicroMainContent(label: string) {
+  // Rich micro demos for the main content area when clicking left nav in demo context.
+  // Uses the same synthetic data vibe as the main tour (Southwest TPA, InterQual, etc.)
+  const baseClass = "p-6 text-white bg-[#0a0f1a] min-h-[calc(100vh-56px)]";
+  const cardClass = "bg-[#111827] border border-white/10 rounded-xl p-4 mb-4";
+
+  switch (label) {
+    case 'Mission Control':
+      return (
+        <div className={baseClass}>
+          <div className="max-w-4xl mx-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-semibold">Mission Control <span className="text-xs px-2 py-0.5 bg-gold/20 text-gold rounded">DEMO</span></h2>
+              <button onClick={() => alert('Demo: Synthetic metrics refreshed. 6 cases, 4 briefs ready, 100% SLA.')} className="text-sm px-4 py-2 bg-gold text-navy rounded font-medium">Refresh Synthetic Metrics</button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <div className={cardClass}><div className="text-xs text-white/50">ACTIVE CASES</div><div className="text-4xl font-semibold text-gold mt-1">6</div><div className="text-xs">All synthetic</div></div>
+              <div className={cardClass}><div className="text-xs text-white/50">BRIEFS READY</div><div className="text-4xl font-semibold text-gold mt-1">4</div><div className="text-xs">Avg verification 94%</div></div>
+              <div className={cardClass}><div className="text-xs text-white/50">SLA HEALTH</div><div className="text-4xl font-semibold text-emerald-400 mt-1">100%</div><div className="text-xs">On demo cases</div></div>
+            </div>
+            <div className={cardClass}>
+              <div className="text-sm mb-2 text-white/70">Recent Synthetic Activity (from demo data)</div>
+              <div className="text-xs space-y-1 text-white/60">
+                <div>• Maria Santos MRI 72148 → Brief ready, fact-check 96</div>
+                <div>• John Rivera TKA → In LPN review</div>
+                <div>• Infliximab case → Pod assigned</div>
+              </div>
+            </div>
+            <div className="text-xs text-white/40 mt-4">This is a micro demo using the same canned synthetic Southwest TPA data as the main tour. Real pages use live data.</div>
+          </div>
+        </div>
+      );
+
+    case 'Operations':
+      return (
+        <div className={baseClass}>
+          <div className="max-w-4xl mx-auto">
+            <h2 className="text-2xl font-semibold mb-6">Operations <span className="text-xs px-2 py-0.5 bg-gold/20 text-gold rounded">DEMO</span></h2>
+            <div className={cardClass}>
+              <div className="text-sm mb-3">Synthetic Queue (demoCases)</div>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between p-2 bg-white/5 rounded"><span>Maria Santos - MRI 72148</span><span className="text-emerald-400">Brief Ready</span></div>
+                <div className="flex justify-between p-2 bg-white/5 rounded"><span>John Rivera - TKA 27447</span><span className="text-amber-400">LPN Review</span></div>
+                <div className="flex justify-between p-2 bg-white/5 rounded"><span>Robert Garcia - CPAP E0601</span><span className="text-blue-400">Intake</span></div>
+              </div>
+            </div>
+            <div className={cardClass}>
+              <div className="text-sm mb-2">Demo Pods &amp; Staff</div>
+              <div className="text-xs text-white/60">3 pods active • Roster loaded with 3 reviewers • Auto-assign uses SLA scoring on synthetic data.</div>
+              <button onClick={() => alert('Demo: Pod assignment re-scored using current synthetic cases.')} className="mt-3 px-3 py-1.5 bg-gold text-navy text-xs rounded">Re-score assignments (demo)</button>
+            </div>
+          </div>
+        </div>
+      );
+
+    case 'Clients':
+      return (
+        <div className={baseClass}>
+          <div className="max-w-4xl mx-auto">
+            <h2 className="text-2xl font-semibold mb-6">Clients <span className="text-xs px-2 py-0.5 bg-gold/20 text-gold rounded">DEMO</span></h2>
+            <div className={cardClass}>
+              <div className="text-sm mb-3">Demo TPAs (from demoClients)</div>
+              <div className="space-y-3">
+                <div className="p-3 bg-white/5 rounded"><div className="font-medium">Southwest Administrators (TPA)</div><div className="text-xs text-white/60">6 cases • InterQual + CMS • Fully seeded</div></div>
+                <div className="p-3 bg-white/5 rounded"><div className="font-medium">Other Synthetic Plans</div><div className="text-xs text-white/60">Additional clients for demo variety</div></div>
+              </div>
+            </div>
+            <button onClick={() => alert('Demo: New synthetic case intake triggered for selected client.')} className="px-4 py-2 bg-gold text-navy rounded text-sm">Simulate New Intake for Southwest</button>
+          </div>
+        </div>
+      );
+
+    case 'Billing':
+      return (
+        <div className={baseClass}>
+          <div className="max-w-4xl mx-auto">
+            <h2 className="text-2xl font-semibold mb-6">Billing <span className="text-xs px-2 py-0.5 bg-gold/20 text-gold rounded">DEMO</span></h2>
+            <div className={cardClass}>
+              <div className="text-sm mb-2">Synthetic Payouts (demo determinations)</div>
+              <div className="text-xs">Last batch: 4 cases • Modeled ~$1,240 Meow-style payout</div>
+              <div className="text-xs text-white/60 mt-1">All tied to synthetic briefs with 94%+ verification.</div>
+            </div>
+            <button onClick={() => alert('Demo: Invoice/Payout generated from current synthetic cases.')} className="px-4 py-2 bg-gold text-navy rounded text-sm">Generate Demo Payout / Invoice</button>
+          </div>
+        </div>
+      );
+
+    case 'Setup':
+      return (
+        <div className={baseClass}>
+          <div className="max-w-4xl mx-auto">
+            <h2 className="text-2xl font-semibold mb-6">Setup <span className="text-xs px-2 py-0.5 bg-gold/20 text-gold rounded">DEMO</span></h2>
+            <div className={cardClass}>
+              <div className="text-sm mb-2">Demo Environment Status</div>
+              <div className="text-xs space-y-1 text-white/70">
+                <div>✓ Southwest TPA seeded (3 reviewers, 6 cases)</div>
+                <div>✓ Pods &amp; staff configured</div>
+                <div>✓ InterQual + CMS criteria engine active</div>
+                <div>✓ Synthetic audit trail ready</div>
+              </div>
+            </div>
+            <button onClick={() => alert('Demo: Practice invite + kickoff calendar sent for new synthetic TPA.')} className="px-4 py-2 bg-gold text-navy rounded text-sm">Run Demo Onboarding / Invite</button>
+          </div>
+        </div>
+      );
+
+    default:
+      return <div className="p-8 text-white">Micro demo content for {label} (synthetic data)</div>;
   }
 }
 
