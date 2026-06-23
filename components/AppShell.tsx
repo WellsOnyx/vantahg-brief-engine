@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { HeaderAuth } from '@/components/HeaderAuth';
 import { TenantScopeProvider } from '@/lib/tenant-scope';
 import { TenantScopeSelector } from '@/components/TenantScopeSelector';
-import { isDemoMode, getDemoCases, getDemoClients, getDemoPods, getDemoStaff } from '@/lib/demo-mode';
+import { isDemoMode, getDemoCases, getDemoClients } from '@/lib/demo-mode';
 
 /**
  * AppShell — the chrome around every authenticated VantaUM surface.
@@ -330,8 +330,8 @@ function getMicroDemoContent(label: string) {
     case 'Operations':
       return (
         <div className="space-y-1.5 text-[11px]">
-          <div>Active pods: 3 (using demoPods)</div>
-          <div>Staff on demo roster: {getDemoStaff().length}</div>
+          <div>Active pods: 3 (synthetic)</div>
+          <div>Demo staff loaded from roster</div>
           <div>Next auto-assign target: infliximab or TKA case</div>
           <button onClick={() => alert('Demo pod assignment scored (SLA + load).')} className="text-gold hover:underline">Score next assignment (demo) →</button>
         </div>
