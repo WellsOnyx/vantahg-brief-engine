@@ -1585,8 +1585,6 @@ export const demoCases: Case[] = [
     sla_paused_at: null,
     sla_resumed_at: null,
     sla_pause_total_hours: 0,
-    appeal_of_case_id: null,
-    appeal_status: null,
   } as any,
   {
     id: DEMO_CASE_IDS.idrFacilityFee,
@@ -1660,8 +1658,6 @@ export const demoCases: Case[] = [
     sla_paused_at: null,
     sla_resumed_at: null,
     sla_pause_total_hours: 0,
-    appeal_of_case_id: null,
-    appeal_status: null,
   } as any,
 ];
 
