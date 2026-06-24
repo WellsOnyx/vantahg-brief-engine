@@ -18,6 +18,11 @@ import { getRequestContext } from '@/lib/security';
 
 export const dynamic = 'force-dynamic';
 
+function hasDemoPreviewCookie(request: NextRequest): boolean {
+  const cookie = request.headers.get('cookie') || '';
+  return cookie.includes('demo_access=granted');
+}
+
 export async function GET(request: NextRequest) {
   try {
     const authResult = await requireAuth(request);
@@ -26,7 +31,7 @@ export async function GET(request: NextRequest) {
     if (rateLimited) return rateLimited;
     const { searchParams } = new URL(request.url);
 
-    if (isDemoMode()) {
+    if (isDemoMode() || hasDemoPreviewCookie(request)) {
       const cases = getDemoCases({
         status: searchParams.get('status'),
         vertical: searchParams.get('vertical'),
