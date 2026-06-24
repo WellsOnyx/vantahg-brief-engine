@@ -34,7 +34,7 @@ export type AppealStatus = 'pending' | 'in_review' | 'determined' | 'withdrawn';
 export type PeerToPeerStatus = 'requested' | 'scheduled' | 'completed' | 'declined' | 'no_response';
 export type ReviewerStatus = 'active' | 'inactive' | 'pending' | 'credentialing';
 export type ClientType = 'tpa' | 'health_plan' | 'self_funded_employer' | 'managed_care_org' | 'workers_comp' | 'auto_med';
-export type FacilityType = 'inpatient' | 'outpatient' | 'asc' | 'office' | 'home';
+export type FacilityType = 'inpatient' | 'outpatient' | 'asc' | 'office' | 'home' | 'other';
 
 /** @deprecated Use ServiceCategory instead. Kept for backward compatibility during migration. */
 export type CaseVertical = 'dental' | 'vision' | 'medical';

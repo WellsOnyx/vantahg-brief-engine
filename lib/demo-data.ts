@@ -1530,7 +1530,7 @@ export const demoCases: Case[] = [
     servicing_provider: 'Metro Air Ambulance Services',
     servicing_provider_npi: '1234567890',
     facility_name: 'Scene to Level I Trauma Center',
-    facility_type: 'other',
+    facility_type: 'asc',
     procedure_codes: ['A0430'],
     procedure_description: 'Air ambulance transport - scene to facility',
     diagnosis_codes: ['S72.001A'],
