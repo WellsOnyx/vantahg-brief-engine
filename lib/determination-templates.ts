@@ -110,27 +110,39 @@ export async function buildDeterminationLetter(
   reviewer: Reviewer | null,
   client: Client | null,
 ): Promise<string> {
-  const templateType = caseData.determination === 'approve'
-    ? 'approval'
-    : caseData.determination === 'deny'
-    ? 'denial'
-    : caseData.determination === 'partial_approve'
-    ? 'partial_approval'
-    : 'pend';
+  const isIdr = caseData.case_type === 'payer_idr';
+
+  let templateType: any = 'pend';
+  if (isIdr) {
+    // IDR uses different template types
+    templateType = caseData.determination === 'approve' || caseData.determination === 'partial_approve'
+      ? 'idr_offer_modified'
+      : 'idr_offer_upheld';
+  } else {
+    templateType = caseData.determination === 'approve'
+      ? 'approval'
+      : caseData.determination === 'deny'
+      ? 'denial'
+      : caseData.determination === 'partial_approve'
+      ? 'partial_approval'
+      : 'pend';
+  }
 
   const template = await getTemplateForClient(
     caseData.client_id,
-    templateType as 'approval' | 'denial' | 'partial_approval' | 'pend' | 'modification',
+    templateType,
   );
 
   if (!template) {
-    // Fallback to a simple letter
+    // Fallback
     return `Determination: ${caseData.determination?.toUpperCase()}\n\nPatient: ${caseData.patient_name}\nCase: ${caseData.case_number}\n\n${caseData.determination_rationale || ''}`;
   }
 
   const today = new Date();
   const expirationDate = new Date(today);
   expirationDate.setDate(expirationDate.getDate() + 90);
+
+  const billed = caseData.billed_amount_cents ? (caseData.billed_amount_cents / 100).toFixed(2) : '';
 
   return renderDeterminationLetter(template, {
     patient_name: caseData.patient_name || '',
@@ -146,6 +158,10 @@ export async function buildDeterminationLetter(
     effective_date: today.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
     expiration_date: expirationDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
     case_number: caseData.case_number || '',
+    billed_amount: billed,
+    qpa_amount: caseData.billed_amount_cents ? ((caseData.billed_amount_cents * 0.3) / 100).toFixed(2) : '', // placeholder
+    modified_amount: caseData.billed_amount_cents ? ((caseData.billed_amount_cents * 0.6) / 100).toFixed(2) : '',
+    rationale: caseData.determination_rationale || '',
   });
 }
 

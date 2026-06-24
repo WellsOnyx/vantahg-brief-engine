@@ -78,6 +78,8 @@ export async function PATCH(
       denial_criteria_cited: body.denial_criteria_cited || null,
       alternative_recommended: body.alternative_recommended || null,
       modification_details: body.modification_details || null,
+      // For IDR training: capture key NSA factors the attorney considered
+      idr_factors_considered: (body as any).idr_factors_considered || null,
       determined_by: authResult.user.id,
       determined_at: new Date().toISOString(),
     };

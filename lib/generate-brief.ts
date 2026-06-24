@@ -1,4 +1,5 @@
 import { getCriteriaForCodes } from '@/lib/medical-criteria';
+import { getIdrFactors } from '@/lib/idr-criteria';
 import { factCheckBrief } from './fact-checker';
 import { analyzeTwoMidnightRule, getTwoMidnightBriefContext } from './two-midnight-rule';
 import { isRealAnthropicEnabled } from './env';
@@ -48,14 +49,20 @@ export async function generateBriefForCase(
     );
   }
 
+  const isIdrCase = caseData.case_type === 'payer_idr';
   const isMdReview =
     options.mdReviewMode ||
     caseData.status === 'md_review' ||
     caseData.review_type === 'second_level_review' ||
     caseData.review_type === 'appeal';
 
-  const systemPrompt = buildSystemPrompt(isMdReview);
-  const userPrompt = buildUserPrompt(caseData, options.client ?? null, isMdReview);
+  const systemPrompt = isIdrCase
+    ? buildIdrSystemPrompt()
+    : buildSystemPrompt(isMdReview);
+
+  const userPrompt = isIdrCase
+    ? buildIdrUserPrompt(caseData, options.client ?? null)
+    : buildUserPrompt(caseData, options.client ?? null, isMdReview);
 
   logAuditEvent(caseData.id, 'brief_generation_started', 'system', {
     md_review_mode: isMdReview,
@@ -535,3 +542,68 @@ export async function persistBriefResult(
     human_review_recommended: factCheck.human_review_recommended,
   });
 }
+
+// ============================================================================
+// IDR / Payer IDR Brief Generation (NSA factors)
+// ============================================================================
+
+function buildIdrSystemPrompt(): string {
+  return `You are the intelligence layer behind Vanta Health Group's IDR/IRO engine. Your role is to prepare a structured, defensible pre-review brief for an independent IDR attorney or external reviewer.
+
+You NEVER render the final determination. You analyze the submitted claim against No Surprises Act (NSA) factors so the human reviewer can focus on judgment.
+
+Key NSA IDR factors to analyze:
+- Billed amount vs. Qualifying Payment Amount (QPA)
+- Out-of-network status and whether the service qualifies under NSA
+- Additional circumstances (provider training/experience, market share, case complexity)
+- Any other information submitted by the parties
+
+Be precise, cite the specific factors, note what documentation is present or missing, and surface the key tensions between the payer's offer and the provider's billed charge.
+
+Call the record_clinical_brief tool exactly once with a complete structured brief adapted for IDR. Populate every required field. For IDR cases, focus the criteria_match, procedure_analysis, and ai_recommendation sections on NSA factors rather than clinical medical necessity.`;
+}
+
+function buildIdrUserPrompt(caseData: Case, client: Client | null): string {
+  const idrFactors = getIdrFactors();
+  const factorsContext = JSON.stringify(idrFactors, null, 2);
+
+  let clientContext = '';
+  if (client) {
+    clientContext = `\n\nPAYER CONTEXT: ${client.name} (${client.type || 'payer'}).`;
+    if (client.contracted_sla_hours) {
+      clientContext += ` SLA: ${client.contracted_sla_hours} hours.`;
+    }
+  }
+
+  return `Prepare an IDR (No Surprises Act) pre-review brief for the following payer IDR case.
+
+CASE NUMBER: ${caseData.case_number}
+
+PATIENT:
+- Name: ${caseData.patient_name || 'Not provided'}
+- Member ID: ${caseData.patient_member_id || 'Not provided'}
+
+PROVIDER:
+- Requesting: ${caseData.requesting_provider || 'Not provided'}
+- Servicing: ${caseData.servicing_provider || 'Not provided'}
+- Facility: ${caseData.facility_name || 'Not provided'}
+
+CLAIM DETAILS:
+- Billed Amount (cents): ${caseData.billed_amount_cents ?? 'Not provided'}
+- Out of Network: ${caseData.is_out_of_network ?? 'Not specified'}
+- Procedure Codes: ${caseData.procedure_codes?.join(', ') || 'None'}
+- Description: ${caseData.procedure_description || 'Not provided'}
+- Diagnosis Codes: ${caseData.diagnosis_codes?.join(', ') || 'None'}
+
+CLINICAL QUESTION / CONTEXT:
+${caseData.clinical_question || caseData.procedure_description || 'Payer IDR dispute over appropriate payment for the above services.'}
+
+IDR FACTORS REFERENCE (NSA):
+${factorsContext}
+${clientContext}
+
+Analyze the case strictly against the NSA IDR factors. Produce the structured brief via the tool. Focus on QPA comparison, network status, qualifying service status, and additional circumstances. Flag missing documentation that the IDR reviewer should request.`;
+}
+
+// Note: For full IDR support, future revisions of buildRevision* functions and fact-checker should also branch on case_type === 'payer_idr'.
+

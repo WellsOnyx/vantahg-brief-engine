@@ -10,6 +10,8 @@ export interface DeterminationFields {
   alternative_recommended?: string;
   modification_details?: string;
   p2p_reason?: string;
+  // IDR / NSA specific (for training data)
+  idr_factors_considered?: string[];
   // AI Automation Layer (Track A): human acknowledgment of AI denial/appeal risk signals (required for high-risk)
   ai_risk_acknowledged?: boolean;
   ai_risk_notes?: string;
