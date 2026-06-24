@@ -2,9 +2,7 @@
   "framework": "nextjs",
   "buildCommand": "next build",
   "outputDirectory": ".next",
-  "redirects": [
-    { "source": "/", "destination": "/demo", "permanent": false }
-  ],
+  "redirects": [],
   "crons": [
     {
       "path": "/api/cron/sla-check",
