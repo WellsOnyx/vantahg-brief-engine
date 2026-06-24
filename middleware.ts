@@ -5,7 +5,7 @@ import { isDemoMode } from '@/lib/demo-mode';
 // Public marketing / auth-flow page prefixes. `startsWith` semantics are
 // intentional here because routes like `/signup-tpa` and `/demo-tour` are
 // real pages that should remain reachable without auth.
-const PUBLIC_PAGE_PREFIXES = ['/login', '/signup', '/sign-up', '/magic-link', '/forgot-password', '/welcome', '/demo', '/site'];
+const PUBLIC_PAGE_PREFIXES = ['/login', '/signup', '/sign-up', '/magic-link', '/forgot-password', '/welcome', '/demo', '/demo-password', '/site'];
 
 // Protected portal paths — these require an authenticated + approved TPA / Provider
 const TPA_PORTAL_PREFIX = '/portal/tpa';
@@ -25,6 +25,7 @@ const PUBLIC_EXACT = new Set([
   '/api/auth/request-magic-link', // unauthenticated by definition; rate-limited internally
   '/api/auth/sign-in', // Cognito password sign-in — unauthenticated by definition; rate-limited internally
   '/api/auth/request-access', // Concierge-mediated access request — unauthenticated by definition
+  '/api/verify-demo-password', // password gate for demo preview
 ]);
 
 // Public API prefixes whose sub-paths are themselves public. The trailing
@@ -37,6 +38,23 @@ function isPublicRoute(pathname: string): boolean {
   if (PUBLIC_PAGE_PREFIXES.some((p) => pathname.startsWith(p))) return true;
   if (PUBLIC_API_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + '/'))) return true;
   return false;
+}
+
+function isDemoProtectedRoute(pathname: string): boolean {
+  // Do not protect the password gate itself
+  if (pathname.startsWith('/demo-password')) return false;
+
+  // Protect the main demo experiences and the "full app UI" demo surfaces
+  const protectedPrefixes = [
+    '/demo',
+    '/demo-tour',
+    '/cases',
+    '/dashboard',
+    '/quality',
+    '/mission-control',
+    '/ops',
+  ];
+  return protectedPrefixes.some((p) => pathname === p || pathname.startsWith(p + '/'));
 }
 
 // Edge-runtime-safe Cognito session presence check. Reads the
@@ -63,6 +81,28 @@ function hasValidCognitoSession(request: NextRequest): boolean {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // Support sharing direct links with password: vantaum.com?pw=SECRET or vantaum.com/demo?pw=SECRET
+  const pw = request.nextUrl.searchParams.get('pw');
+  const correctPw = process.env.DEMO_PASSWORD;
+  if (pw && correctPw && pw === correctPw) {
+    const res = NextResponse.redirect(
+      new URL(pathname === '/' ? '/demo' : pathname, request.url)
+    );
+    // Clean the ?pw from the final URL
+    const finalUrl = new URL(res.headers.get('location') || request.url);
+    finalUrl.searchParams.delete('pw');
+    res.headers.set('location', finalUrl.toString());
+
+    res.cookies.set('demo_access', 'granted', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 60 * 60 * 24 * 30,
+    });
+    return res;
+  }
+
   if (isPublicRoute(pathname)) {
     return NextResponse.next();
   }
@@ -74,6 +114,18 @@ export async function middleware(request: NextRequest) {
     pathname.includes('.')
   ) {
     return NextResponse.next();
+  }
+
+  // Demo password protection for exclusive preview access
+  // Protects the canned demo + full app demo surfaces so only people with the password can see it.
+  if (isDemoProtectedRoute(pathname)) {
+    const hasDemoAccess = request.cookies.get('demo_access')?.value === 'granted';
+    if (!hasDemoAccess) {
+      const passwordUrl = request.nextUrl.clone();
+      passwordUrl.pathname = '/demo-password';
+      passwordUrl.searchParams.set('next', pathname + request.nextUrl.search);
+      return NextResponse.redirect(passwordUrl);
+    }
   }
 
   // Cognito session short-circuit: if the caller has a plausible
