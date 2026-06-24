@@ -12,7 +12,7 @@ import type { DeterminationTemplate, Case, Reviewer, Client } from '@/lib/types'
  */
 export async function getTemplateForClient(
   clientId: string | null,
-  templateType: 'approval' | 'denial' | 'partial_approval' | 'pend' | 'modification',
+  templateType: 'approval' | 'denial' | 'partial_approval' | 'pend' | 'modification' | 'idr_offer_upheld' | 'idr_offer_modified',
 ): Promise<DeterminationTemplate | null> {
   if (isDemoMode()) {
     const templates = getDemoDeterminationTemplates(clientId ?? undefined);

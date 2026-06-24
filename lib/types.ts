@@ -421,7 +421,7 @@ export interface DeterminationTemplate {
   id: string;
   created_at: string;
   client_id: string | null; // null = default template
-  template_type: 'approval' | 'denial' | 'partial_approval' | 'pend' | 'modification';
+  template_type: 'approval' | 'denial' | 'partial_approval' | 'pend' | 'modification' | 'idr_offer_upheld' | 'idr_offer_modified';
   name: string;
   body_template: string; // Handlebars-style template
   appeal_instructions: string | null;
