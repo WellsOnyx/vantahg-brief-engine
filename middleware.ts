@@ -94,7 +94,7 @@ export async function middleware(request: NextRequest) {
     res.headers.set('location', finalUrl.toString());
 
     res.cookies.set('demo_access', 'granted', {
-      httpOnly: true,
+      // not httpOnly so client pages can detect it for synthetic data fallback
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       path: '/',

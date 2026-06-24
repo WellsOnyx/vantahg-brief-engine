@@ -24,7 +24,8 @@ export async function POST(request: NextRequest) {
     // Success — set cookie and return ok
     const res = NextResponse.json({ ok: true });
     res.cookies.set('demo_access', 'granted', {
-      httpOnly: true,
+      // not httpOnly so client-side pages (dashboard, cases) can detect the cookie
+      // and force synthetic data instead of hitting protected APIs that 401 in prod demo
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       path: '/',
@@ -49,7 +50,7 @@ export async function GET(request: NextRequest) {
 
   const res = NextResponse.redirect(new URL('/demo', request.url));
   res.cookies.set('demo_access', 'granted', {
-    httpOnly: true,
+    // not httpOnly for client detection of synthetic mode
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
     path: '/',
