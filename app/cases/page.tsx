@@ -199,13 +199,12 @@ export default function CasesListPage() {
     fetch(withTenantScope('/api/reviewers', selectedClientId))
       .then((res) => res.json())
       .then(setReviewers)
-      .catch(async () => {
-        try {
-          const { getDemoReviewers } = await import('@/lib/demo-mode');
-          setReviewers(getDemoReviewers());
-        } catch {
-          setReviewers([]);
-        }
+      .catch(() => {
+        // simple static for demo
+        setReviewers([
+          { id: 'rev1', name: 'Dr. Priya Patel' },
+          { id: 'rev2', name: 'Dr. James Richardson' }
+        ] as any);
       });
   }, [selectedClientId]);
 
@@ -236,61 +235,71 @@ export default function CasesListPage() {
       const data = await res.json();
       setCases(data);
     } catch (err) {
-      // Fallback to real synthetic demo data for "explore full app UI" from canned demo
-      // Use dynamic import to avoid top-level bundling issues on some deploys
+      // Static synthetic demo data fallback for "explore full app UI" from canned demo.
+      // Complete fields to avoid render errors in table/sorts/SLA etc.
+      // Mirrors the rich demo-data used by /demo-tour.
       setUsingDemoData(true);
       setError(null);
-      try {
-        const { getDemoCases } = await import('@/lib/demo-mode');
-        const demo = getDemoCases({
-          status: filterStatus || undefined,
-          service_category: filterCategory || undefined,
-          priority: filterPriority || undefined,
-          review_type: filterReviewType || undefined,
-          assigned_reviewer_id: filterReviewer || undefined,
-          date_from: dateFrom || undefined,
-          date_to: dateTo || undefined,
-          search: debouncedSearch || undefined,
-        });
-        setCases(demo);
-      } catch (e) {
-        // ultimate static fallback with complete fields to prevent render crashes
-        const staticDemo = [
-          {
-            id: 'demo-mri',
-            case_number: 'VUM-2026-004821',
-            patient_name: 'Maria Santos',
-            patient_member_id: 'SWA-2026-88421',
-            procedure_codes: ['72148'],
-            procedure_description: 'MRI Lumbar Spine without Contrast',
-            diagnosis_codes: ['M54.5', 'M54.16'],
-            service_category: 'imaging',
-            review_type: 'prior_auth',
-            priority: 'standard',
-            status: 'brief_ready',
-            created_at: new Date().toISOString(),
-            turnaround_deadline: new Date(Date.now() + 2 * 86400000).toISOString(),
-            ai_brief: { ai_recommendation: { recommendation: 'approve' } },
-            fact_check: { overall_score: 96 },
-            reviewer: { name: 'Dr. Priya Patel' }
-          } as any,
-          {
-            id: 'demo-tka',
-            case_number: 'VUM-2026-004822',
-            patient_name: 'John Rivera',
-            procedure_codes: ['27447'],
-            procedure_description: 'Total Knee Arthroplasty',
-            service_category: 'surgery',
-            review_type: 'prior_auth',
-            priority: 'urgent',
-            status: 'lpn_review',
-            created_at: new Date(Date.now() - 3600000).toISOString(),
-            turnaround_deadline: new Date(Date.now() + 86400000).toISOString(),
-            reviewer: null
-          } as any,
-        ];
-        setCases(staticDemo);
-      }
+      const now = Date.now();
+      const staticDemo = [
+        {
+          id: 'demo-mri',
+          case_number: 'VUM-2026-004821',
+          patient_name: 'Maria Santos',
+          patient_member_id: 'SWA-2026-88421',
+          requesting_provider: 'Dr. Sarah Chen, MD',
+          procedure_codes: ['72148'],
+          procedure_description: 'MRI Lumbar Spine without Contrast',
+          diagnosis_codes: ['M54.5', 'M54.16'],
+          service_category: 'imaging',
+          review_type: 'prior_auth',
+          priority: 'standard',
+          status: 'brief_ready',
+          created_at: new Date(now - 1000 * 60 * 60 * 2).toISOString(),
+          turnaround_deadline: new Date(now + 1000 * 60 * 60 * 46).toISOString(),
+          ai_brief: { ai_recommendation: { recommendation: 'approve' } },
+          fact_check: { overall_score: 96 },
+          reviewer: { name: 'Dr. Priya Patel' },
+          client: { name: 'Southwest Administrators' }
+        } as any,
+        {
+          id: 'demo-tka',
+          case_number: 'VUM-2026-004822',
+          patient_name: 'John Rivera',
+          patient_member_id: 'SWA-2026-88422',
+          requesting_provider: 'Dr. Michael Torres, MD',
+          procedure_codes: ['27447'],
+          procedure_description: 'Total Knee Arthroplasty',
+          diagnosis_codes: ['M17.11'],
+          service_category: 'surgery',
+          review_type: 'prior_auth',
+          priority: 'urgent',
+          status: 'lpn_review',
+          created_at: new Date(now - 1000 * 60 * 60 * 5).toISOString(),
+          turnaround_deadline: new Date(now + 1000 * 60 * 60 * 20).toISOString(),
+          reviewer: { name: 'Dr. James Richardson' },
+          client: { name: 'Southwest Administrators' }
+        } as any,
+        {
+          id: 'demo-cpap',
+          case_number: 'VUM-2026-004823',
+          patient_name: 'Robert Garcia',
+          patient_member_id: 'SWA-2026-88423',
+          requesting_provider: 'Dr. Lisa Wong, MD',
+          procedure_codes: ['E0601'],
+          procedure_description: 'Continuous positive airway pressure (CPAP) device',
+          diagnosis_codes: ['G47.33'],
+          service_category: 'dme',
+          review_type: 'prior_auth',
+          priority: 'standard',
+          status: 'intake',
+          created_at: new Date(now - 1000 * 60 * 30).toISOString(),
+          turnaround_deadline: new Date(now + 1000 * 60 * 60 * 23).toISOString(),
+          reviewer: null,
+          client: { name: 'Southwest Administrators' }
+        } as any,
+      ];
+      setCases(staticDemo);
     } finally {
       setLoading(false);
     }
