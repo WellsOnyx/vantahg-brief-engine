@@ -54,11 +54,16 @@ export interface AuthUser {
  * where a misconfigured prod (Supabase keys empty in the AWS secrets
  * vault) silently handed admin access to anyone on the internet.
  */
+function hasDemoPreviewCookie(request: Request): boolean {
+  const cookie = request.headers.get('cookie') || '';
+  return cookie.includes('demo_access=granted');
+}
+
 export async function requireAuth(
   request: Request
 ): Promise<{ user: AuthUser } | NextResponse> {
-  if (isDemoMode()) {
-    if (process.env.NODE_ENV === 'production') {
+  if (isDemoMode() || hasDemoPreviewCookie(request)) {
+    if (isDemoMode() && process.env.NODE_ENV === 'production' && !hasDemoPreviewCookie(request)) {
       const ctx = getRequestContext(request);
       await logSecurityEvent(
         'auth_failure',

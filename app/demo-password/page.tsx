@@ -89,7 +89,7 @@ function DemoPasswordForm() {
         </form>
 
         <p className="text-xs text-white/40 mt-6 text-center">
-          Password provided by the VantaUM team only.
+          This preview is by invitation only. Password provided exclusively by the VantaUM team.
         </p>
       </div>
     </div>
