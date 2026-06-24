@@ -199,8 +199,13 @@ export default function CasesListPage() {
     fetch(withTenantScope('/api/reviewers', selectedClientId))
       .then((res) => res.json())
       .then(setReviewers)
-      .catch(() => {
-        setReviewers([]);
+      .catch(async () => {
+        try {
+          const { getDemoReviewers } = await import('@/lib/demo-mode');
+          setReviewers(getDemoReviewers());
+        } catch {
+          setReviewers([]);
+        }
       });
   }, [selectedClientId]);
 
@@ -231,15 +236,61 @@ export default function CasesListPage() {
       const data = await res.json();
       setCases(data);
     } catch (err) {
-      // Lightweight static synthetic fallback for prospect "full app demo" clicks
-      // (avoids pulling demo-mode module in main app bundle for this deploy)
-      const staticDemo = [
-        { id: 'demo-mri', case_number: 'VUM-2026-004821', patient_name: 'Maria Santos', procedure_description: 'MRI Lumbar Spine without Contrast', status: 'brief_ready', priority: 'standard', created_at: new Date().toISOString(), ai_brief: { ai_recommendation: { recommendation: 'approve' } }, fact_check: { overall_score: 96 } } as any,
-        { id: 'demo-tka', case_number: 'VUM-2026-004822', patient_name: 'John Rivera', procedure_description: 'Total Knee Arthroplasty', status: 'lpn_review', priority: 'urgent', created_at: new Date(Date.now()-3600000).toISOString() } as any,
-      ];
-      setCases(staticDemo);
+      // Fallback to real synthetic demo data for "explore full app UI" from canned demo
+      // Use dynamic import to avoid top-level bundling issues on some deploys
       setUsingDemoData(true);
       setError(null);
+      try {
+        const { getDemoCases } = await import('@/lib/demo-mode');
+        const demo = getDemoCases({
+          status: filterStatus || undefined,
+          service_category: filterCategory || undefined,
+          priority: filterPriority || undefined,
+          review_type: filterReviewType || undefined,
+          assigned_reviewer_id: filterReviewer || undefined,
+          date_from: dateFrom || undefined,
+          date_to: dateTo || undefined,
+          search: debouncedSearch || undefined,
+        });
+        setCases(demo);
+      } catch (e) {
+        // ultimate static fallback with complete fields to prevent render crashes
+        const staticDemo = [
+          {
+            id: 'demo-mri',
+            case_number: 'VUM-2026-004821',
+            patient_name: 'Maria Santos',
+            patient_member_id: 'SWA-2026-88421',
+            procedure_codes: ['72148'],
+            procedure_description: 'MRI Lumbar Spine without Contrast',
+            diagnosis_codes: ['M54.5', 'M54.16'],
+            service_category: 'imaging',
+            review_type: 'prior_auth',
+            priority: 'standard',
+            status: 'brief_ready',
+            created_at: new Date().toISOString(),
+            turnaround_deadline: new Date(Date.now() + 2 * 86400000).toISOString(),
+            ai_brief: { ai_recommendation: { recommendation: 'approve' } },
+            fact_check: { overall_score: 96 },
+            reviewer: { name: 'Dr. Priya Patel' }
+          } as any,
+          {
+            id: 'demo-tka',
+            case_number: 'VUM-2026-004822',
+            patient_name: 'John Rivera',
+            procedure_codes: ['27447'],
+            procedure_description: 'Total Knee Arthroplasty',
+            service_category: 'surgery',
+            review_type: 'prior_auth',
+            priority: 'urgent',
+            status: 'lpn_review',
+            created_at: new Date(Date.now() - 3600000).toISOString(),
+            turnaround_deadline: new Date(Date.now() + 86400000).toISOString(),
+            reviewer: null
+          } as any,
+        ];
+        setCases(staticDemo);
+      }
     } finally {
       setLoading(false);
     }
