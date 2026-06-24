@@ -212,6 +212,50 @@ export default function DashboardPage() {
   }, []);
 
   async function fetchCases() {
+    // If demo cookie present (from password-protected preview), use synthetic data directly
+    // so the "full app UI" shows canned cases instead of failing to load.
+    const hasDemoCookie = typeof document !== 'undefined' && document.cookie.includes('demo_access=granted');
+    if (hasDemoCookie) {
+      setLoading(true);
+      setError(null);
+      const now = Date.now();
+      const staticDemo = [
+        {
+          id: 'demo-mri',
+          case_number: 'VUM-2026-004821',
+          patient_name: 'Maria Santos',
+          status: 'brief_ready',
+          priority: 'standard',
+          created_at: new Date(now - 1000 * 60 * 60 * 2).toISOString(),
+          turnaround_deadline: new Date(now + 1000 * 60 * 60 * 46).toISOString(),
+          service_category: 'imaging',
+        } as any,
+        {
+          id: 'demo-tka',
+          case_number: 'VUM-2026-004822',
+          patient_name: 'John Rivera',
+          status: 'lpn_review',
+          priority: 'urgent',
+          created_at: new Date(now - 1000 * 60 * 60 * 5).toISOString(),
+          turnaround_deadline: new Date(now + 1000 * 60 * 60 * 20).toISOString(),
+          service_category: 'surgery',
+        } as any,
+        {
+          id: 'demo-cpap',
+          case_number: 'VUM-2026-004823',
+          patient_name: 'Robert Garcia',
+          status: 'intake',
+          priority: 'standard',
+          created_at: new Date(now - 1000 * 60 * 30).toISOString(),
+          turnaround_deadline: new Date(now + 1000 * 60 * 60 * 23).toISOString(),
+          service_category: 'dme',
+        } as any,
+      ];
+      setCases(staticDemo);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setError(null);
     try {
