@@ -3,6 +3,11 @@ import { logAuditEvent } from '@/lib/audit';
 import { isDemoMode, getDemoReviewers, getDemoCase } from '@/lib/demo-mode';
 import type { Case, Reviewer } from '@/lib/types';
 import { redactName } from '@/lib/security';
+import {
+  filterIndependentReviewers,
+  supabaseLineageLoader,
+  demoLineageLoader,
+} from '@/lib/reviewer-independence';
 
 export interface AssignmentResult {
   assigned: boolean;
@@ -19,7 +24,7 @@ export interface AssignmentResult {
 export async function autoAssignReviewer(caseId: string): Promise<AssignmentResult> {
   // Demo mode
   if (isDemoMode()) {
-    return autoAssignDemo(caseId);
+    return await autoAssignDemo(caseId);
   }
 
   const supabase = getServiceClient();
@@ -88,15 +93,34 @@ export async function autoAssignReviewer(caseId: string): Promise<AssignmentResu
     return { assigned: false, reason: 'All matching reviewers at daily capacity' };
   }
 
+  // 3b. Reviewer independence (central enforcement — lib/reviewer-independence.ts).
+  // A reviewer who touched the original case cannot review its appeal/IRO/
+  // external review. Empty exclusions for first-pass cases → the ~90% UM path
+  // is unchanged. Fail-closed: if no independent reviewer remains, REFUSE.
+  const independent = await filterIndependentReviewers(
+    caseData as Case,
+    eligible,
+    supabaseLineageLoader(supabase),
+  );
+  if (independent.length === 0) {
+    await logAuditEvent(caseId, 'reviewer_independence_block', 'system', {
+      reason: 'no_independent_reviewer',
+      service_category: serviceCategory,
+      candidates_excluded: eligible.length,
+      appeal_of_case_id: caseData.appeal_of_case_id ?? null,
+    });
+    return { assigned: false, reason: 'no_independent_reviewer' };
+  }
+
   // 4. Sort by avg_turnaround_hours ASC (fastest first), then cases_completed ASC (spread load)
-  eligible.sort((a, b) => {
+  independent.sort((a, b) => {
     const aHours = a.avg_turnaround_hours ?? 999;
     const bHours = b.avg_turnaround_hours ?? 999;
     if (aHours !== bHours) return aHours - bHours;
     return (a.cases_completed ?? 0) - (b.cases_completed ?? 0);
   });
 
-  const selected = eligible[0];
+  const selected = independent[0];
 
   // 5. Assign the reviewer
   const { error: updateError } = await supabase
@@ -127,7 +151,7 @@ export async function autoAssignReviewer(caseId: string): Promise<AssignmentResu
   };
 }
 
-function autoAssignDemo(caseId: string): AssignmentResult {
+async function autoAssignDemo(caseId: string): Promise<AssignmentResult> {
   const caseData = getDemoCase(caseId);
   if (!caseData) {
     return { assigned: false, reason: 'Case not found (demo)' };
@@ -136,10 +160,24 @@ function autoAssignDemo(caseId: string): AssignmentResult {
   const reviewers = getDemoReviewers();
   const serviceCategory = caseData.service_category || 'other';
 
-  const match = reviewers.find(
+  const matches = reviewers.filter(
     (r) => r.status === 'active' && r.approved_service_categories?.includes(serviceCategory)
   );
 
+  // Independence applies in demo too — prod currently runs in demo mode.
+  const independent = await filterIndependentReviewers(
+    caseData,
+    matches,
+    demoLineageLoader(getDemoCase),
+  );
+
+  // Fail-closed: matching reviewers existed but every one is conflicted.
+  if (matches.length > 0 && independent.length === 0) {
+    console.log(`[AUTO-ASSIGN DEMO] All matching reviewers conflicted for ${caseData.case_number} — refusing (independence)`);
+    return { assigned: false, reason: 'no_independent_reviewer' };
+  }
+
+  const match = independent[0];
   if (match) {
     console.log(`[AUTO-ASSIGN DEMO] Case ${caseData.case_number} → ${redactName(match.name)} (${match.id}, ${serviceCategory})`);
     return { assigned: true, reviewerId: match.id, reviewerName: match.name };

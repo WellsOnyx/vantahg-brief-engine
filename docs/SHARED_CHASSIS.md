@@ -229,4 +229,26 @@ One new module, called from every reviewer-assignment chokepoint, **fail-closed*
 
 ## STOP — awaiting review
 
-Diagnosis complete, committed to `fix/shared-reviewer-independence`. **No code changed, `main` untouched.** On Jonah's "go": Phase B implements `lib/reviewer-independence.ts`, wires the four chokepoints, and ships tests that prove a conflicted reviewer is **REFUSED** (raw output), with zero regressions against the 305-pass baseline.
+Diagnosis complete, committed to `fix/shared-reviewer-independence`. **No code changed, `main` untouched.** On Jonah's "go": Phase B implements `lib/reviewer-independence.ts`, wires the four chokepoints, and ships tests that prove a conflicted reviewer is **REFUSED** (raw output), with zero regressions against the baseline.
+
+## ✅ Phase B — IMPLEMENTED (approved 2026-06-26)
+
+Built on `fix/shared-reviewer-independence`. `main` untouched; not pushed/merged; no secrets.
+
+**Shipped:**
+- `lib/reviewer-independence.ts` — `getConflictedReviewerIds` (empty for first-pass → no-regression), `filterIndependentReviewers`, `assertReviewerIndependent` (throws `ReviewerIndependenceError`), loader-injected (supabase + demo). Fail-closed.
+- Wired chokepoints: `autoAssignReviewer` (`assignment-engine.ts`, live + demo), `assignToPod` (`pod-assignment-engine.ts`, live + demo), manual `PATCH` (`app/api/cases/[id]/route.ts`, returns **409** + `independence_block` audit, before any write). Appeal intake re-entry is covered transitively: an appeal case (`appeal_of_case_id`) flowing into those routers is filtered.
+
+**Scope decision (per the independent-trace refinement) — flagged for the record:**
+- **Physician independence is enforced for certain.** Both the direct auto-assign and the pod's `escalate_to_md → autoAssignReviewer` path (`pod-assignment-engine.ts:292`) route through chokepoint #1, so a conflicted physician cannot be assigned by either route.
+- **Decision: the original RN/LPN ARE also barred from the appeal's nursing pass.** `getConflictedReviewerIds` includes the original case's `assigned_rn_id` and `assigned_lpn_id` (and `determined_by`, which is the RN on the ~90% nursing-level approvals). `assignToPod` filters conflicted LPNs and **fails closed if the matched pod's RN is the original decider** (rather than silently letting the same nurse re-review). Rationale: complete independence (URAC), and fail-closed routes the case to manual escalation instead of violating it. Trade-off accepted: a single-RN pod cannot auto-handle an appeal of its own RN's decision — by design.
+
+**Test (load-bearing) — `__tests__/lib/reviewer-independence.test.ts`, 13 tests, all green, refusal actually exercised:**
+- Core primitives: first-pass = 0 conflicts; appeal = excludes reviewer/decider/RN/LPN/denier; `assert` throws on denier; `filter` removes conflicted + fails closed.
+- Path 1 + 3 (autoAssignReviewer / appeal re-entry): refuses rev-001 when sole candidate; picks the independent reviewer when both exist; first-pass still assigns (no regression).
+- Path 2 (assignToPod): refuses when the only pod LPN is the original decider; assigns the independent LPN otherwise.
+- Path 4 (manual PATCH, live): refuses rev-001 with **409** and **never writes**; lets an independent reviewer through.
+
+**Regression proof:** baseline (Phase B stashed) = 26 failed / 287 passed / 3 todo; with Phase B = 26 failed / **300** passed / 3 todo. Same 9 pre-existing-noise files fail in both → **+13 passing, zero new regressions.**
+
+**Hooks for the other streams:** Medical Review's `assignToPanel` should call `assertReviewerIndependent`; IRO should drop its own partial wall and rely on these chokepoints (merge order: this → IRO → Medical Review).
