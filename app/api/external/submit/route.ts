@@ -10,6 +10,7 @@ import {
   computeSubmissionFingerprint,
   findDuplicateCase,
 } from '@/lib/intake/efax/storage';
+import { finalizeIntakeCase, isChannelAgnosticIntakeEnabled } from '@/lib/intake/finalize-case';
 import crypto from 'crypto';
 
 export const dynamic = 'force-dynamic';
@@ -248,6 +249,13 @@ export async function POST(request: NextRequest) {
       authorization_number: authNumber,
       api_key_prefix: apiKey?.substring(0, 8),
     });
+
+    // Channel-agnostic intake: run the shared downstream chassis so an
+    // API-submitted case lands the same as a portal case. Gated; off = current
+    // behavior (case + receipt only, no downstream).
+    if (isChannelAgnosticIntakeEnabled()) {
+      await finalizeIntakeCase(newCase.id, { channel: 'api' });
+    }
 
     return NextResponse.json({
       success: true,

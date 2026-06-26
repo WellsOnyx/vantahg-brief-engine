@@ -9,6 +9,7 @@ import {
   computeSubmissionFingerprint,
   findDuplicateCase,
 } from '@/lib/intake/efax/storage';
+import { finalizeIntakeCase, isChannelAgnosticIntakeEnabled } from '@/lib/intake/finalize-case';
 import { apiError } from '@/lib/api-error';
 import { getRequestContext } from '@/lib/security';
 
@@ -372,6 +373,13 @@ export async function POST(request: NextRequest) {
           email_id: emailId,
           auto_created: true,
         });
+
+        // Channel-agnostic intake: run the shared downstream chassis (concierge
+        // follow-up + brief + clinician routing) so an emailed case lands the
+        // same as a portal case. Gated; off = current behavior (no downstream).
+        if (caseId && isChannelAgnosticIntakeEnabled()) {
+          await finalizeIntakeCase(caseId, { channel: 'email' });
+        }
       }
     }
 
