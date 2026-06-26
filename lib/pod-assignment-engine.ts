@@ -1,10 +1,15 @@
 import { getServiceClient } from '@/lib/supabase';
 import { logAuditEvent } from '@/lib/audit';
-import { isDemoMode, getDemoCases, getDemoStaff, getDemoPods } from '@/lib/demo-mode';
+import { isDemoMode, getDemoCases, getDemoCase, getDemoStaff, getDemoPods } from '@/lib/demo-mode';
 import { autoAssignReviewer } from '@/lib/assignment-engine';
 import { pickLpnByScore, scoreLpnForCase } from '@/lib/delivery/lpn-scoring';
 import type { Case, Staff, Pod, LpnDetermination, RnDetermination } from '@/lib/types';
 import { redactName } from '@/lib/security';
+import {
+  getConflictedReviewerIds,
+  supabaseLineageLoader,
+  demoLineageLoader,
+} from '@/lib/reviewer-independence';
 
 // ============================================================================
 // Types
@@ -36,7 +41,7 @@ export interface NursingReviewResult {
  */
 export async function assignToPod(caseId: string): Promise<PodAssignmentResult> {
   if (isDemoMode()) {
-    return assignToPodDemo(caseId);
+    return await assignToPodDemo(caseId);
   }
 
   const supabase = getServiceClient();
@@ -116,13 +121,29 @@ export async function assignToPod(caseId: string): Promise<PodAssignmentResult> 
     return { assigned: false, reason: 'All LPNs at capacity' };
   }
 
+  // Reviewer independence (central enforcement — lib/reviewer-independence.ts).
+  // A nurse who decided the original case cannot review its appeal/IRO. Empty
+  // exclusions for first-pass cases → no change to the ~90% UM path. Fail-closed.
+  const conflicted = await getConflictedReviewerIds(caseData as Case, supabaseLineageLoader(supabase));
+  const independentLpns = lpnWithLoad.filter((l) => !conflicted.has(l.id));
+  const rnConflicted = !!selectedPod.rn_id && conflicted.has(selectedPod.rn_id);
+  if (independentLpns.length === 0 || rnConflicted) {
+    await logAuditEvent(caseId, 'reviewer_independence_block', 'system', {
+      reason: rnConflicted ? 'pod_rn_conflicted' : 'no_independent_lpn',
+      pod_id: selectedPod.id,
+      appeal_of_case_id: caseData.appeal_of_case_id ?? null,
+      lpns_excluded: lpnWithLoad.length - independentLpns.length,
+    });
+    return { assigned: false, reason: 'no_independent_reviewer' };
+  }
+
   // SLA-aware LPN selection. The legacy sort (load asc, turnaround
   // asc) under-weights speed when a case is approaching its
   // deadline. pickLpnByScore picks the LPN MOST LIKELY to complete
   // the case before its turnaround_deadline, with a light tiebreaker
   // toward lower load. Falls back to the legacy ordering when the
   // case has no SLA deadline. See lib/delivery/lpn-scoring.ts.
-  const selectedLpn = pickLpnByScore(lpnWithLoad, caseData);
+  const selectedLpn = pickLpnByScore(independentLpns, caseData);
   if (!selectedLpn) {
     return { assigned: false, reason: 'No scoreable LPN in pod' };
   }
@@ -299,7 +320,7 @@ export async function submitRnReview(
 // Demo Implementation
 // ============================================================================
 
-function assignToPodDemo(caseId: string): PodAssignmentResult {
+async function assignToPodDemo(caseId: string): Promise<PodAssignmentResult> {
   const cases = getDemoCases();
   const caseData = cases.find((c) => c.id === caseId);
   if (!caseData) {
@@ -318,9 +339,19 @@ function assignToPodDemo(caseId: string): PodAssignmentResult {
     return { assigned: false, reason: `No demo pod for ${serviceCategory}` };
   }
 
-  // Pick first LPN
+  // Reviewer independence (central enforcement). Demo too — prod runs in demo mode.
+  const conflicted = await getConflictedReviewerIds(caseData, demoLineageLoader(getDemoCase));
   const staff = getDemoStaff('lpn');
-  const lpn = staff.find((s) => pod.lpn_ids.includes(s.id));
+  const podLpns = staff.filter((s) => pod.lpn_ids.includes(s.id));
+  const independentLpns = podLpns.filter((s) => !conflicted.has(s.id));
+  const rnConflicted = !!(pod as { rn_id?: string }).rn_id && conflicted.has((pod as { rn_id?: string }).rn_id!);
+
+  if (podLpns.length > 0 && (independentLpns.length === 0 || rnConflicted)) {
+    console.log(`[POD ASSIGN DEMO] Pod nurses conflicted for ${caseData.case_number} — refusing (independence)`);
+    return { assigned: false, reason: 'no_independent_reviewer' };
+  }
+
+  const lpn = independentLpns[0];
 
   if (!lpn) {
     return { assigned: false, reason: 'No LPN in demo pod' };

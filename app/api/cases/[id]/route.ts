@@ -7,6 +7,12 @@ import { requireAuth } from '@/lib/auth-guard';
 import { applyRateLimit } from '@/lib/rate-limit-middleware';
 import { apiError } from '@/lib/api-error';
 import { getRequestContext } from '@/lib/security';
+import {
+  assertReviewerIndependent,
+  ReviewerIndependenceError,
+  supabaseLineageLoader,
+  demoLineageLoader,
+} from '@/lib/reviewer-independence';
 
 export const dynamic = 'force-dynamic';
 
@@ -101,6 +107,56 @@ export async function PATCH(
     const body = await request.json();
     const actor = body.updated_by || authResult.user.email || 'system';
     const requestContext = getRequestContext(request);
+
+    // Reviewer-independence gate (central enforcement — lib/reviewer-independence.ts).
+    // A reviewer who touched the original case cannot be hand-assigned to its
+    // appeal/IRO/external review. Guards the manual write path so the rule can't
+    // be routed around. No-op for first-pass cases (no appeal_of_case_id).
+    if (body.assigned_reviewer_id) {
+      let appealOfCaseId: string | null = null;
+      let loader;
+      if (isDemoMode()) {
+        loader = demoLineageLoader(getDemoCase as (i: string) => any);
+        appealOfCaseId =
+          (getDemoCase(id) as { appeal_of_case_id?: string | null } | null | undefined)
+            ?.appeal_of_case_id ?? null;
+      } else {
+        const sb = getServiceClient();
+        loader = supabaseLineageLoader(sb);
+        const { data: lineageRow } = await sb
+          .from('cases')
+          .select('id, appeal_of_case_id')
+          .eq('id', id)
+          .single();
+        appealOfCaseId = lineageRow?.appeal_of_case_id ?? null;
+      }
+      try {
+        await assertReviewerIndependent(
+          { id, appeal_of_case_id: appealOfCaseId },
+          body.assigned_reviewer_id,
+          loader,
+        );
+      } catch (e) {
+        if (e instanceof ReviewerIndependenceError) {
+          await logAuditEvent(
+            id,
+            'reviewer_independence_block',
+            actor,
+            { attempted_reviewer_id: body.assigned_reviewer_id, path: 'manual_patch', appeal_of_case_id: appealOfCaseId },
+            requestContext,
+          );
+          return NextResponse.json(
+            {
+              error:
+                'Reviewer is not independent of the original determination and cannot be assigned to this case.',
+              code: e.code,
+            },
+            { status: 409 },
+          );
+        }
+        throw e;
+      }
+    }
 
     // ── Demo mode: mutate in-memory demo data + fire audits (console) ──
     if (isDemoMode()) {
