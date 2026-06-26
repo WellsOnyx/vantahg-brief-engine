@@ -80,6 +80,10 @@ export async function PATCH(
       modification_details: body.modification_details || null,
       // For IDR training: capture key NSA factors the attorney considered
       idr_factors_considered: (body as any).idr_factors_considered || null,
+      // Additional IDR training / letter data
+      qpa_amount_cents: (body as any).qpa_amount_cents ?? null,
+      payer_offer_cents: (body as any).payer_offer_cents ?? null,
+      key_documents_reviewed: (body as any).key_documents_reviewed || null,
       determined_by: authResult.user.id,
       determined_at: new Date().toISOString(),
     };

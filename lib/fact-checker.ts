@@ -18,6 +18,7 @@ import type {
 import { medicalCriteria } from './medical-criteria';
 import { findKnownGuideline, isRecognizedRegulatoryFormat } from './known-guidelines';
 import { analyzeTwoMidnightRule } from './two-midnight-rule';
+import { getIdrFactors } from './idr-criteria';
 
 // ── Code Format Validators ──────────────────────────────────────────────────
 
@@ -545,20 +546,98 @@ function runConsistencyChecks(brief: AIBrief): ConsistencyCheck[] {
   return checks;
 }
 
+// ── IDR / NSA Fact Verification (for payer_idr, iro, ire cases) ──────────────
+function verifyIdrFactors(
+  brief: AIBrief,
+  caseData: Case
+): SectionVerification {
+  const claims: ClaimVerification[] = [];
+  const flags: string[] = [];
+  const idrFactors = getIdrFactors();
+
+  // Check for billed amount vs QPA signals in the brief
+  const hasBilled = typeof caseData.billed_amount_cents === 'number' && caseData.billed_amount_cents > 0;
+  if (hasBilled) {
+    claims.push({
+      claim: `Billed amount present: $${(caseData.billed_amount_cents! / 100).toFixed(2)}`,
+      status: 'verified',
+      source: 'Case data',
+      explanation: 'Billed charge available for QPA comparison',
+    });
+  } else {
+    flags.push('Missing billed amount — critical for IDR QPA analysis');
+  }
+
+  if (caseData.is_out_of_network != null) {
+    claims.push({
+      claim: `Out-of-network status: ${caseData.is_out_of_network}`,
+      status: 'verified',
+      source: 'Case data',
+      explanation: 'Network status documented for NSA applicability check',
+    });
+  } else {
+    flags.push('Out-of-network status not explicitly recorded');
+  }
+
+  // Check that the brief references IDR/NSA factors
+  const briefText = JSON.stringify(brief).toLowerCase();
+  const factorKeywords = ['qpa', 'qualifying payment', 'out-of-network', 'no surprises', 'nsa', 'additional circumstances'];
+  let referenced = 0;
+  for (const kw of factorKeywords) {
+    if (briefText.includes(kw)) referenced++;
+  }
+
+  if (referenced >= 2) {
+    claims.push({
+      claim: 'Brief references multiple NSA IDR factors',
+      status: 'verified',
+      source: 'AI brief content',
+      explanation: `Brief mentions ${referenced} key IDR concepts (QPA, OON, NSA, etc.)`,
+    });
+  } else {
+    claims.push({
+      claim: 'Brief coverage of NSA IDR factors',
+      status: 'unverified',
+      source: null,
+      explanation: 'Brief should explicitly analyze QPA comparison, network status, and additional circumstances',
+    });
+    flags.push('IDR brief may under-emphasize NSA statutory factors');
+  }
+
+  // Surface the known IDR factors for the human reviewer
+  claims.push({
+    claim: `IDR factors available for review: ${idrFactors.length}`,
+    status: 'verified',
+    source: 'VantaUM IDR Criteria',
+    explanation: idrFactors.map(f => f.name).join('; '),
+  });
+
+  return { section: 'IDR / NSA Factors', claims, flags };
+}
+
 // ── Main Fact-Check Function ────────────────────────────────────────────────
 
 export function factCheckBrief(
   brief: AIBrief,
   caseData: Case
 ): FactCheckResult {
-  const sections: SectionVerification[] = [
-    verifyCriteriaMatch(brief, caseData),
-    verifyProcedureCodes(brief, caseData),
-    verifyDocumentation(brief),
-    verifyRecommendation(brief),
-    verifyTwoMidnight(brief, caseData),
-    verifyDataFidelity(brief, caseData),
-  ];
+  const isIdrCase = caseData.case_type === 'payer_idr' || caseData.case_type === 'iro' || caseData.case_type === 'ire';
+
+  const sections: SectionVerification[] = isIdrCase
+    ? [
+        verifyIdrFactors(brief, caseData),
+        verifyDocumentation(brief),
+        verifyRecommendation(brief),
+        verifyDataFidelity(brief, caseData),
+      ]
+    : [
+        verifyCriteriaMatch(brief, caseData),
+        verifyProcedureCodes(brief, caseData),
+        verifyDocumentation(brief),
+        verifyRecommendation(brief),
+        verifyTwoMidnight(brief, caseData),
+        verifyDataFidelity(brief, caseData),
+      ];
 
   const consistencyChecks = runConsistencyChecks(brief);
 

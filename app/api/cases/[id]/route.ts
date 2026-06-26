@@ -155,6 +155,27 @@ export async function PATCH(
 
     // ── Live path ──
     const supabase = getServiceClient();
+
+    // IRO/IRE independence wall enforcement in determination (Phase B)
+    // Behind ENABLE_IRO_STREAM flag. Prevents reviewer who touched original from determining IRO.
+    const { data: currentCase } = await supabase
+      .from('cases')
+      .select('case_type, appeal_of_case_id, assigned_reviewer_id')
+      .eq('id', id)
+      .single();
+    const ENABLE_IRO_STREAM = true; // feature flag for IRO/IRE stream
+    if (ENABLE_IRO_STREAM && body.determination && currentCase && (currentCase.case_type === 'iro' || currentCase.case_type === 'ire') && currentCase.appeal_of_case_id && currentCase.assigned_reviewer_id) {
+      const { data: orig } = await supabase
+        .from('cases')
+        .select('assigned_reviewer_id, determined_by')
+        .eq('id', currentCase.appeal_of_case_id)
+        .single();
+      const origRev = orig?.assigned_reviewer_id || orig?.determined_by;
+      if (origRev && currentCase.assigned_reviewer_id === origRev) {
+        return NextResponse.json({ error: 'Independence wall violation: reviewer previously assigned to the original case' }, { status: 403 });
+      }
+    }
+
     const updates: Record<string, unknown> = { ...body };
 
     // When a determination is set, record the timestamp

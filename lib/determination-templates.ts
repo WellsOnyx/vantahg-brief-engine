@@ -111,6 +111,7 @@ export async function buildDeterminationLetter(
   client: Client | null,
 ): Promise<string> {
   const isIdr = caseData.case_type === 'payer_idr';
+  const isIro = caseData.case_type === 'iro' || caseData.case_type === 'ire';
 
   let templateType: any = 'pend';
   if (isIdr) {
@@ -118,6 +119,11 @@ export async function buildDeterminationLetter(
     templateType = caseData.determination === 'approve' || caseData.determination === 'partial_approve'
       ? 'idr_offer_modified'
       : 'idr_offer_upheld';
+  } else if (isIro) {
+    // IRO/IRE external review templates (new in Phase B)
+    templateType = caseData.determination === 'approve' || caseData.determination === 'partial_approve'
+      ? 'iro_approved'
+      : 'iro_denied';
   } else {
     templateType = caseData.determination === 'approve'
       ? 'approval'

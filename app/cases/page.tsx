@@ -416,6 +416,10 @@ export default function CasesListPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="-mt-1 mb-3 text-xs">
+        <Link href="/dashboard" className="text-gold-dark hover:underline">← Back to unified shared dashboard</Link>
+        <span className="ml-2 text-muted">Clinicians, concierge, IDRs &amp; IRO collaborate here. Switch views on the dashboard.</span>
+      </div>
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
         <div>
