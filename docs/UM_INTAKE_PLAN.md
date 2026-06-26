@@ -31,7 +31,10 @@ run after the insert**. That divergence is the entire problem this work closes.
 | 3c | **eFax cron worker** | `GET/POST /api/cron/efax-process` | `lib/intake/efax/ocr.ts` + `ai-extractor.ts` | reads `efax_queue` | inline (worker) |
 | 3d | **eFax CSR triage promote** | `PATCH /api/intake/efax/queue` (`promote`) | reuses worker extraction | `efax_queue` → `cases` | inline |
 | 4 | **External / partner API** | `POST /api/external/submit` (`app/api/external/submit/route.ts`) | n/a (structured JSON, HMAC-auth) | — | inline |
-| 5 | **Gravity Rail (voice)** | `lib/gravity-rails.ts` + `app/api/gr/*` | — | — | **no case-creation webhook yet** |
+| 5 | **Gravity Rail (voice)** | `POST /api/intake/voice` (`app/api/intake/voice/route.ts`) | `field_values` (GR assistant) → else transcript via `parseEmailPayload` | — | inline (`intake_channel = 'phone'`) |
+
+> Channel 5 (voice) was added on this branch — see §4. It reuses the existing GR
+> client (`lib/gravity-rails.ts`, `app/api/gr/*`) for the assumed payload shape.
 
 ### 1.2 Shared intake primitives (already channel-agnostic)
 
@@ -75,6 +78,7 @@ Which channels actually run that chassis today:
 | **HIPAA email** | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
 | **eFax cron worker** | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
 | **External API** | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| **Gravity Rail voice** | — (new channel) | — | — | — | — | — |
 
 > **Consequence today:** a case that arrives by email, auto-processed eFax, or
 > API lands in the queue in status `intake` with **no brief, no pod, no
@@ -131,6 +135,7 @@ loads the canonical row, and runs the identical chassis.
 | `app/api/intake/email/route.ts` | after `case_created`, `if (isChannelAgnosticIntakeEnabled()) await finalizeIntakeCase(caseId, { channel: 'email' })` |
 | `app/api/external/submit/route.ts` | same, `channel: 'api'` |
 | `app/api/cron/efax-process/route.ts` | same in the worker's case-created branch, `channel: 'efax'` |
+| `app/api/intake/voice/route.ts` | **new** Gravity Rail voice webhook; on auto-create, `finalizeIntakeCase(caseId, { channel: 'phone' })` |
 | `app/api/cases/route.ts` (portal) | already runs brief/pod inline; behind the flag, **also** fire `notifyConciergeNewIntake` so portal gains the concierge follow-up. Brief/pod left as-is to avoid double-generation. |
 
 > Convergence of portal + triage-promote onto `finalizeIntakeCase` itself (so
@@ -183,13 +188,19 @@ existing intake test conventions (`vi.mock`, `vi.stubEnv`, dynamic import after
 
 ## 4. Out of scope (flagged for other branches / future work)
 
-- **Gravity Rail case-creation webhook.** The GR client + chat endpoints exist
-  (`lib/gravity-rails.ts`, `app/api/gr/*`) but there is no inbound
-  voice-intake → case webhook yet. When the GR team ships their voice workflow,
-  add `POST /api/intake/voice` (or `/api/gr/webhook`) that normalizes the GR
-  payload and calls the **same** `finalizeIntakeCase`. The finalizer is built to
-  make that a thin adapter. Tracked in `ROADMAP.md` ("Gravity Rail webhook
-  live").
+- **Gravity Rail voice webhook — BUILT on this branch (`POST /api/intake/voice`),
+  ASSUMED CONTRACT.** Normalizes a GR `phone-voice` completion into a `cases`
+  row (`intake_channel = 'phone'`) and calls the same `finalizeIntakeCase`.
+  Prefers GR's structured `field_values`; falls back to transcript extraction
+  via the shared text parser. Auto-creates on a lenient gate (patient name + a
+  procedure code); sparse calls return `queued_for_review`. Optional HMAC via
+  `GRAVITY_RAIL_WEBHOOK_SECRET`; whitelisted in `middleware.ts` (`PUBLIC_EXACT`,
+  strict match). **The exact GR webhook payload is owned by the GR team and was
+  not finalized — confirm the field names + signature scheme before go-live**
+  (the payload interface in the route is built to absorb reasonable variants).
+  Remaining future work: a dedicated `voice_queue` table + CSR triage for
+  low-confidence calls (today they're returned for manual handling, no row).
+  Tracked in `ROADMAP.md` ("Gravity Rail webhook live").
 - **Real receipt delivery.** `sendReceiptConfirmation` still logs rather than
   sending a real fax/email (its own TODO). Independent of this work.
 - **Cross-stream chassis convergence.** See `docs/SHARED_CHASSIS.md` — UM,
