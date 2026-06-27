@@ -56,10 +56,10 @@ const tpaClientNav: NavGroup[] = [
 const conciergeNav: NavGroup[] = [
   {
     items: [
+      { href: "/dashboard", label: "Work Dashboard" },
       { href: "/concierge", label: "My Queue" },
       { href: "/intake", label: "Intake Triage" },
       { href: "/cases", label: "Cases" },
-      { href: "/help", label: "Help" },
     ],
   },
 ];
@@ -67,9 +67,9 @@ const conciergeNav: NavGroup[] = [
 const clinicianNav: NavGroup[] = [
   {
     items: [
+      { href: "/dashboard", label: "Work Dashboard" },
       { href: "/queue", label: "My Queue" },
       { href: "/cases", label: "Cases" },
-      { href: "/cases?status=brief_ready", label: "Briefs" },
       { href: "/quality", label: "Quality" },
     ],
   },
@@ -78,9 +78,9 @@ const clinicianNav: NavGroup[] = [
 const idrAttorneyNav: NavGroup[] = [
   {
     items: [
+      { href: "/dashboard", label: "Work Dashboard" },
       { href: "/attorney/cases", label: "My Cases" },
-      { href: "/cases", label: "Documents" },
-      { href: "/queue", label: "Calendar" },
+      { href: "/cases", label: "Cases" },
     ],
   },
 ];
@@ -88,11 +88,11 @@ const idrAttorneyNav: NavGroup[] = [
 const adminInternalNav: NavGroup[] = [
   {
     items: [
+      { href: "/dashboard", label: "Work Dashboard" },
       { href: "/mission-control", label: "Mission Control" },
       { href: "/ops", label: "Operations" },
       { href: "/clients", label: "Clients" },
       { href: "/admin/billing", label: "Billing" },
-      { href: "/admin/setup", label: "Setup" },
     ],
   },
 ];

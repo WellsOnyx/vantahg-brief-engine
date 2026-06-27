@@ -47,6 +47,19 @@ export async function autoAssignReviewer(caseId: string): Promise<AssignmentResu
 
   const serviceCategory = caseData.service_category;
 
+  // IRO/IRE independence wall enforcement (Phase B)
+  // Behind flag. Reviewer who touched original case cannot be assigned to IRO.
+  const ENABLE_IRO_STREAM = true; // feature flag - enables IRO as first-class stream
+  let originalReviewerId: string | null = null;
+  if (ENABLE_IRO_STREAM && (caseData.case_type === 'iro' || caseData.case_type === 'ire') && caseData.appeal_of_case_id) {
+    const { data: originalCase } = await supabase
+      .from('cases')
+      .select('assigned_reviewer_id, determined_by')
+      .eq('id', caseData.appeal_of_case_id)
+      .single();
+    originalReviewerId = originalCase?.assigned_reviewer_id || originalCase?.determined_by || null;
+  }
+
   // 2. Fetch active reviewers whose approved_service_categories contains the case's service_category
   const { data: reviewers, error: reviewerError } = await supabase
     .from('reviewers')
@@ -62,13 +75,19 @@ export async function autoAssignReviewer(caseId: string): Promise<AssignmentResu
     return { assigned: false, reason: `No active reviewers for ${serviceCategory}` };
   }
 
+  // Apply IRO independence wall if applicable
+  let filteredReviewers = reviewers;
+  if (originalReviewerId) {
+    filteredReviewers = reviewers.filter(r => r.id !== originalReviewerId);
+  }
+
   // 3. Filter by daily capacity
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
 
   const eligible: (Reviewer & { dailyCount: number })[] = [];
 
-  for (const reviewer of reviewers) {
+  for (const reviewer of filteredReviewers) {
     const { count } = await supabase
       .from('cases')
       .select('*', { count: 'exact', head: true })
@@ -82,6 +101,10 @@ export async function autoAssignReviewer(caseId: string): Promise<AssignmentResu
     if (reviewer.max_cases_per_day === null || dailyCount < reviewer.max_cases_per_day) {
       eligible.push({ ...reviewer, dailyCount });
     }
+  }
+
+  if (originalReviewerId && eligible.length === reviewers.length) {
+    // no exclusion happened, but wall was active - log for audit
   }
 
   if (eligible.length === 0) {
@@ -135,12 +158,23 @@ export async function autoAssignReviewer(caseId: string): Promise<AssignmentResu
     return { assigned: false, reason: `Update failed: ${updateError.message}` };
   }
 
+  if (originalReviewerId) {
+    await logAuditEvent(caseId, 'iro_reviewer_assigned', 'system', {
+      reviewer_id: selected.id,
+      original_reviewer_id: originalReviewerId,
+      independence_enforced: true,
+      case_type: caseData.case_type,
+    });
+  }
+
   await logAuditEvent(caseId, 'auto_assigned_reviewer', 'system', {
     reviewer_id: selected.id,
     reviewer_name: selected.name,
     match_reason: 'service_category_match',
     service_category: serviceCategory,
     reviewer_avg_turnaround: selected.avg_turnaround_hours,
+    iro_independence_wall_checked: !!originalReviewerId,
+    independence_verified: originalReviewerId ? selected.id !== originalReviewerId : true,
     reviewer_daily_count: selected.dailyCount,
   });
 
@@ -165,6 +199,9 @@ async function autoAssignDemo(caseId: string): Promise<AssignmentResult> {
   );
 
   // Independence applies in demo too — prod currently runs in demo mode.
+  // This replaces feature/iro-stream's hardcoded `origReviewer = 'reviewer-001'`
+  // wall: IRO/IRE cases carry appeal_of_case_id, so the central module excludes
+  // the original reviewer for ALL re-review streams (IRO, appeals, med review).
   const independent = await filterIndependentReviewers(
     caseData,
     matches,

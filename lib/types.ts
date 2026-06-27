@@ -38,7 +38,7 @@ export type FacilityType = 'inpatient' | 'outpatient' | 'asc' | 'office' | 'home
 
 /** @deprecated Use ServiceCategory instead. Kept for backward compatibility during migration. */
 export type CaseVertical = 'dental' | 'vision' | 'medical';
-export type CaseType = 'um' | 'payer_idr';
+export type CaseType = 'um' | 'payer_idr' | 'iro' | 'ire';
 
 export interface Case {
   id: string;
@@ -472,7 +472,7 @@ export interface QueueMeta {
 export type { ChatMessage, ChatMode, StreamChunk, ChatRequest } from './chat/types';
 
 export interface CaseFormData {
-  case_type?: CaseType; // defaults to 'um' when omitted
+  case_type?: CaseType; // defaults to 'um' when omitted ('um' | 'payer_idr' | 'iro' | 'ire')
   service_category: ServiceCategory;
   priority: CasePriority;
   review_type: ReviewType;

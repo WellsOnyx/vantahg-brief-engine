@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
-import type { Case, CaseStatus, CasePriority, CaseVertical } from '@/lib/types';
+import type { Case, CaseStatus, CasePriority, CaseVertical, CaseType } from '@/lib/types';
 import { StatusBadge, PriorityBadge } from './StatusBadge';
 import { SlaTracker } from './SlaTracker';
 
@@ -55,6 +55,22 @@ const priorityLabels: Record<CasePriority, string> = {
   expedited: 'Expedited',
 };
 
+const caseTypeLabels: Record<CaseType, string> = {
+  um: 'UM',
+  payer_idr: 'IDR',
+  iro: 'IRO',
+  ire: 'IRE',
+};
+
+const allCaseTypes: CaseType[] = ['um', 'payer_idr', 'iro', 'ire'];
+
+const caseTypeColors: Record<CaseType, string> = {
+  um: 'bg-blue-100 text-blue-800 border-blue-200',
+  payer_idr: 'bg-violet-100 text-violet-800 border-violet-200',
+  iro: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+  ire: 'bg-teal-100 text-teal-800 border-teal-200',
+};
+
 function formatDate(dateStr: string): string {
   const date = new Date(dateStr);
   return date.toLocaleDateString('en-US', {
@@ -68,17 +84,20 @@ export function CaseTable({ cases, showFilters = false }: CaseTableProps) {
   const [filterVertical, setFilterVertical] = useState<CaseVertical | ''>('');
   const [filterStatus, setFilterStatus] = useState<CaseStatus | ''>('');
   const [filterPriority, setFilterPriority] = useState<CasePriority | ''>('');
+  const [filterCaseType, setFilterCaseType] = useState<CaseType | ''>('');
 
   const filteredCases = useMemo(() => {
     return cases.filter((c) => {
       if (filterVertical && c.vertical !== filterVertical) return false;
       if (filterStatus && c.status !== filterStatus) return false;
       if (filterPriority && c.priority !== filterPriority) return false;
+      const ct = (c.case_type || 'um') as CaseType;
+      if (filterCaseType && ct !== filterCaseType) return false;
       return true;
     });
-  }, [cases, filterVertical, filterStatus, filterPriority]);
+  }, [cases, filterVertical, filterStatus, filterPriority, filterCaseType]);
 
-  const hasActiveFilters = filterVertical || filterStatus || filterPriority;
+  const hasActiveFilters = filterVertical || filterStatus || filterPriority || filterCaseType;
 
   return (
     <div className="w-full animate-fade-in">
@@ -130,12 +149,26 @@ export function CaseTable({ cases, showFilters = false }: CaseTableProps) {
             ))}
           </select>
 
+          <select
+            value={filterCaseType}
+            onChange={(e) => setFilterCaseType(e.target.value as CaseType | '')}
+            className="text-sm border border-border rounded-lg px-3 py-1.5 bg-white"
+          >
+            <option value="">All Types</option>
+            {allCaseTypes.map((t) => (
+              <option key={t} value={t}>
+                {caseTypeLabels[t]}
+              </option>
+            ))}
+          </select>
+
           {hasActiveFilters && (
             <button
               onClick={() => {
                 setFilterVertical('');
                 setFilterStatus('');
                 setFilterPriority('');
+                setFilterCaseType('');
               }}
               className="text-sm text-gold-dark hover:text-gold font-medium inline-flex items-center gap-1 transition-colors ml-1"
             >
@@ -193,6 +226,7 @@ export function CaseTable({ cases, showFilters = false }: CaseTableProps) {
             <thead>
               <tr className="border-b border-border bg-gray-50/80">
                 <th className="text-left px-5 py-3.5 font-semibold text-navy text-xs uppercase tracking-wider">Case #</th>
+                <th className="text-left px-4 py-3.5 font-semibold text-navy text-xs uppercase tracking-wider">Type</th>
                 <th className="text-left px-5 py-3.5 font-semibold text-navy text-xs uppercase tracking-wider">Patient</th>
                 <th className="text-left px-5 py-3.5 font-semibold text-navy text-xs uppercase tracking-wider hidden lg:table-cell">Procedure</th>
                 <th className="text-left px-5 py-3.5 font-semibold text-navy text-xs uppercase tracking-wider hidden sm:table-cell">Vertical</th>
@@ -219,6 +253,16 @@ export function CaseTable({ cases, showFilters = false }: CaseTableProps) {
                         <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
                       </svg>
                     </Link>
+                  </td>
+                  <td className="px-4 py-3.5">
+                    {(() => {
+                      const ct = (c.case_type || 'um') as CaseType;
+                      return (
+                        <span className={`inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded border ${caseTypeColors[ct] || 'bg-gray-100 text-gray-700 border-gray-200'}`}>
+                          {caseTypeLabels[ct] || ct}
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td className="px-5 py-3.5 text-foreground">
                     {c.patient_name || <span className="text-muted italic">Not provided</span>}

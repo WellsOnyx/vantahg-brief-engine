@@ -5,6 +5,66 @@ Future Claude/Cole/Jonah sessions: read this first.
 
 ---
 
+## 📌 KEY INSIGHTS — 2026-06-25 (Internal Tool + Cross-Stream Velocity)
+
+**Insight 1: The Brief Engine is for ourselves (internal tooling).**
+
+We are a service company using a platform, not primarily a software company selling a platform to clients.
+
+- Clients only interact at the edges: marketing site + data stream connectors (eFax, portal, Gravity Rail, batch, API, etc.).
+- They never log into the engine.
+- **Our own team** (arbiters, clinicians/MDs, CX/concierge, admins, etc.) are the users and operators of the full platform.
+- This is a monumental simplification:
+  - No need for heavy multi-tenant client UX, client admin portals, per-seat billing, etc.
+  - Build the engine to make *our people* superhuman.
+  - Sell the *outcome* (high-quality, fast, defensible determinations) not the tool.
+  - Fits the "humans made superhuman" thesis perfectly — the engine is force-multiplier for credentialed operators; the people are the product.
+
+**Insight 2: Cross-stream velocity + labor arbitrage (the recursive cell economics).**
+
+Current analog: IDR arbiter ~25 cases/day.
+
+Target with engine (95% automation on clerical/brief/criteria/draft/audit): **25 cases/hour** (design target).
+
+One trained person (with proper credentials) can then run multiple streams at that velocity:
+- IDR (NSA factors)
+- UM (medical criteria)
+- Medical Review (clinical judgment)
+- IRO/IRE
+
+One high-skill operator can credibly handle the work of 2, 3, or (ambitiously) 4 streams.
+
+Comp model opportunity:
+- Pay them at 1/2 (or competitive but not 4x) their "traditional" salary equivalent.
+- They can earn toward 2-4x output/income depending on ambition and credential coverage.
+- Drastically lower labor cost per case for the company.
+- Life-changing upside for the people who stay and master the tool.
+
+**Stress-test / bounds (important — do not treat targets as measured doctrine):**
+- 25/hr and "work of 4" are design targets, not yet proven throughput.
+- The agnostic 95% (intake, brief, fact-check, draft, routing, SLA, basic audit, template population) transfers cleanly across streams.
+- The judgment 5% is still gated by credentials and expertise:
+  - Attorney/arbiter for IDR weight-of-evidence (NSA factors, QPA, additional circumstances).
+  - Clinician/MD for UM/medical necessity and Medical Review.
+  - Cannot freely swap without the right license/qualification.
+- Actual multiple (10x? 20x? 25x?) and sustainable quality will be measured once the engine runs real cases across streams.
+- Build the comp promise and pricing on the *measured* velocity, not the aspirational target (same discipline as conservative clear-rate pricing).
+
+**Synthesis for the model:**
+The engine turns one credentialed operator into a multi-stream force multiplier. 
+- Labor cost collapse at company level.
+- Income explosion (with ceiling) for operators.
+- Bounded by real credentials on the human judgment step.
+- Sized on what the engine actually delivers in production, not the slide.
+
+Banked. This is now core to how we think about the platform, staffing, and economics.
+
+(The specific internal compensation bands are managed outside this repo and not published here.)
+
+---
+
+## 📱 MOBILE HANDOFF — 2026-05-13 (4:09 PM ET)
+
 ## 📱 MOBILE HANDOFF — 2026-05-13 (4:09 PM ET)
 
 Jonah is heading out. Fresh thread on the phone Claude app should pick up here.

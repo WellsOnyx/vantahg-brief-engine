@@ -12,6 +12,10 @@ export interface DeterminationFields {
   p2p_reason?: string;
   // IDR / NSA specific (for training data)
   idr_factors_considered?: string[];
+  // Additional IDR data for better training + letter generation
+  qpa_amount_cents?: number;
+  payer_offer_cents?: number;
+  key_documents_reviewed?: string[];
   // AI Automation Layer (Track A): human acknowledgment of AI denial/appeal risk signals (required for high-risk)
   ai_risk_acknowledged?: boolean;
   ai_risk_notes?: string;
@@ -146,6 +150,12 @@ export function DeterminationForm({ onSubmit, isSubmitting, isAppeal = false, or
   const [aiRiskAcknowledged, setAiRiskAcknowledged] = useState(false);
   const [aiRiskNotes, setAiRiskNotes] = useState('');
 
+  // IDR-specific training fields
+  const [idrFactors, setIdrFactors] = useState<string[]>([]);
+  const [qpaCents, setQpaCents] = useState<string>('');
+  const [offerCents, setOfferCents] = useState<string>('');
+  const [documentsReviewed, setDocumentsReviewed] = useState('');
+
   const showDenialFields = determination === 'deny' || determination === 'partial_approve';
   const showModifyFields = determination === 'modify';
   const showP2pFields = determination === 'peer_to_peer_requested';
@@ -208,6 +218,11 @@ export function DeterminationForm({ onSubmit, isSubmitting, isAppeal = false, or
         ai_risk_acknowledged: aiRiskAcknowledged,
         ai_risk_notes: aiRiskNotes.trim() || undefined,
       }),
+      // IDR training signals
+      ...(idrFactors.length > 0 && { idr_factors_considered: idrFactors }),
+      ...(qpaCents && { qpa_amount_cents: parseInt(qpaCents, 10) }),
+      ...(offerCents && { payer_offer_cents: parseInt(offerCents, 10) }),
+      ...(documentsReviewed.trim() && { key_documents_reviewed: documentsReviewed.trim().split(',').map(s => s.trim()) }),
     });
   };
 
@@ -503,6 +518,59 @@ export function DeterminationForm({ onSubmit, isSubmitting, isAppeal = false, or
             <p className="text-sm text-red-700 font-medium">{error}</p>
           </div>
         )}
+
+        {/* IDR / NSA Training Section (always available for richer data capture on IDR/IRO cases) */}
+        <div className="border-t border-border pt-4">
+          <div className="text-sm font-semibold text-foreground mb-2 flex items-center gap-2">
+            IDR / NSA Factors (training + better letters)
+            <span className="text-[10px] uppercase tracking-wider text-violet-600 font-medium">Helpful for payer_idr / iro</span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+            <div>
+              <label className="block text-xs text-muted mb-1">Key NSA factors considered</label>
+              <input
+                type="text"
+                value={idrFactors.join(', ')}
+                onChange={(e) => setIdrFactors(e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+                placeholder="qpa_comparison, network_status, additional_circumstances"
+                className="w-full border border-border rounded px-3 py-1.5 text-sm"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs text-muted mb-1">QPA amount (cents)</label>
+                <input
+                  type="number"
+                  value={qpaCents}
+                  onChange={(e) => setQpaCents(e.target.value)}
+                  placeholder="125000"
+                  className="w-full border border-border rounded px-3 py-1.5 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-muted mb-1">Payer offer (cents)</label>
+                <input
+                  type="number"
+                  value={offerCents}
+                  onChange={(e) => setOfferCents(e.target.value)}
+                  placeholder="98000"
+                  className="w-full border border-border rounded px-3 py-1.5 text-sm"
+                />
+              </div>
+            </div>
+          </div>
+          <div className="mt-3">
+            <label className="block text-xs text-muted mb-1">Key documents reviewed (comma sep.)</label>
+            <input
+              type="text"
+              value={documentsReviewed}
+              onChange={(e) => setDocumentsReviewed(e.target.value)}
+              placeholder="denial_letter.pdf, claim_form, medical_records"
+              className="w-full border border-border rounded px-3 py-1.5 text-sm"
+            />
+          </div>
+          <p className="text-[10px] text-muted mt-1">These power IDR-specific letters and capture real attorney judgment for training.</p>
+        </div>
 
         {/* Submit button */}
         <button

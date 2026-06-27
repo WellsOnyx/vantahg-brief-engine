@@ -62,6 +62,10 @@ export default function CaseDetailPage() {
   const [showAppealModal, setShowAppealModal] = useState(false);
   const [appealSuccessInfo, setAppealSuccessInfo] = useState<{ caseId: string; caseNumber: string } | null>(null);
 
+  // Demo-only: simulate "only clinician access can enter clinician review"
+  // In real app this would come from authenticated user.role === 'reviewer' / credential check.
+  const [demoIsClinician, setDemoIsClinician] = useState(true);
+
   // AI Automation Layer: Streaming brief for white-glove live generation UX (Track A)
   const streamingBrief = useStreamingBrief();
 
@@ -502,6 +506,15 @@ export default function CaseDetailPage() {
           <button onClick={() => setError(null)} className="ml-4 underline">Dismiss</button>
         </div>
       )}
+
+      {/* Demo clinician gate control (real implementation uses authenticated role + credential flags) */}
+      <div className="mb-3 text-[10px] flex items-center gap-2 text-muted">
+        Demo gate: 
+        <button onClick={() => setDemoIsClinician(!demoIsClinician)} className="underline text-navy">
+          {demoIsClinician ? 'Clinician access ON' : 'Clinician access OFF'}
+        </button>
+        <span>— only clinicians see &amp; can submit the DeterminationForm.</span>
+      </div>
 
       {/* Main Content */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -1062,26 +1075,35 @@ export default function CaseDetailPage() {
                   This is an appeal review. Provide your independent re-evaluation. You were not the original denying reviewer.
                 </p>
               )}
-              <DeterminationForm 
-                onSubmit={handleDetermination} 
-                isSubmitting={submittingDetermination} 
-                isAppeal={caseData.review_type === 'appeal'}
-                originalDetermination={caseData.review_type === 'appeal' ? 'see original context banner' : undefined}
-                // AI Automation Layer (Track A): pass live denial strength + appeal likelihood signal (computed by engine via preview or prior storage)
-                // Enables the risk banner + required human ack gate exactly when the clinician is making the deny decision.
-                denialRiskSignal={caseData.denial_strength_score != null ? {
-                  score: caseData.denial_strength_score,
-                  grade: caseData.denial_strength_grade || undefined,
-                  appeal_likelihood: (caseData as any).appeal_likelihood ?? (caseData.ai_brief ? Math.round(100 - (caseData.denial_strength_score || 50)) : undefined), // placeholder until full preview fetch wired
-                  appeal_risk_assessment: 'AI signal: review factors in banner. Your rationale must address flagged risks.',
-                } : (caseData.ai_brief ? {
-                  // Fallback signal derived from brief for cases without prior score (demo/real preview path ready)
-                  score: 65,
-                  appeal_likelihood: caseData.fact_check ? Math.min(90, Math.max(20, 100 - (caseData.fact_check.overall_score || 70))) : 55,
-                  appeal_risk_grade: 'medium',
-                  appeal_risk_assessment: 'Pre-decision AI signal (fact-check + brief coherence). Fetch full via denial-strength API for precise factors before finalizing high-risk denials.',
-                } : undefined)}
-              />
+              {/* STRICT GATE: ONLY clinician access can enter/submit a clinician review */}
+              {demoIsClinician ? (
+                <DeterminationForm 
+                  onSubmit={handleDetermination} 
+                  isSubmitting={submittingDetermination} 
+                  isAppeal={caseData.review_type === 'appeal'}
+                  originalDetermination={caseData.review_type === 'appeal' ? 'see original context banner' : undefined}
+                  // AI Automation Layer (Track A): pass live denial strength + appeal likelihood signal (computed by engine via preview or prior storage)
+                  // Enables the risk banner + required human ack gate exactly when the clinician is making the deny decision.
+                  denialRiskSignal={caseData.denial_strength_score != null ? {
+                    score: caseData.denial_strength_score,
+                    grade: caseData.denial_strength_grade || undefined,
+                    appeal_likelihood: (caseData as any).appeal_likelihood ?? (caseData.ai_brief ? Math.round(100 - (caseData.denial_strength_score || 50)) : undefined), // placeholder until full preview fetch wired
+                    appeal_risk_assessment: 'AI signal: review factors in banner. Your rationale must address flagged risks.',
+                  } : (caseData.ai_brief ? {
+                    // Fallback signal derived from brief for cases without prior score (demo/real preview path ready)
+                    score: 65,
+                    appeal_likelihood: caseData.fact_check ? Math.min(90, Math.max(20, 100 - (caseData.fact_check.overall_score || 70))) : 55,
+                    appeal_risk_grade: 'medium',
+                    appeal_risk_assessment: 'Pre-decision AI signal (fact-check + brief coherence). Fetch full via denial-strength API for precise factors before finalizing high-risk denials.',
+                  } : undefined)}
+                />
+              ) : (
+                <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg text-sm">
+                  <div className="font-semibold text-amber-900">Clinician-only action</div>
+                  <p className="text-amber-800 mt-1">This is the clinician review / final determination form. Only clinician access can submit here.</p>
+                  <button onClick={() => setDemoIsClinician(true)} className="mt-2 text-xs font-medium underline text-amber-900">Enable clinician access (demo)</button>
+                </div>
+              )}
             </div>
           ) : null}
 

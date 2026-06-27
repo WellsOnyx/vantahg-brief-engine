@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { pickLeastLoadedConcierge, type ConciergeWithLoad } from '@/lib/delivery/assignment';
+import { filterIndependentReviewers, type LineageLoader } from '@/lib/reviewer-independence';
 
 function makeConcierge(overrides: Partial<ConciergeWithLoad> = {}): ConciergeWithLoad {
   return {
@@ -61,5 +62,33 @@ describe('pickLeastLoadedConcierge', () => {
     ];
     // small-cap has spare = 40; big-cap has spare = 400. big-cap should win.
     expect(pickLeastLoadedConcierge(pool, 30)?.id).toBe('big-cap');
+  });
+});
+
+// IRO/IRE independence — REAL test against the central module that replaced the
+// hardcoded `reviewer-001` wall. An IRO case carries appeal_of_case_id, so the
+// reviewer who decided the original case is excluded from the IRO review.
+describe('IRO independence via the central reviewer-independence module', () => {
+  // IRO case VUM-IRO-0401 links to its original via appeal_of_case_id; the
+  // original was decided by rev-001 (see lib/demo-data.ts iro case).
+  const iroCase = { id: 'iro-401', appeal_of_case_id: 'orig-mri' };
+  const loader: LineageLoader = {
+    loadCaseTouchpoints: async () => ({ assigned_reviewer_id: 'rev-001', determined_by: 'rev-001' }),
+    loadOriginalDenyingReviewerId: async () => 'rev-001',
+  };
+
+  it('EXCLUDES the original reviewer (rev-001) from the IRO review pool', async () => {
+    const out = await filterIndependentReviewers(
+      iroCase,
+      [{ id: 'rev-001' }, { id: 'rev-009' }],
+      loader,
+    );
+    expect(out.map((r) => r.id)).toEqual(['rev-009']);
+    expect(out.some((r) => r.id === 'rev-001')).toBe(false);
+  });
+
+  it('FAILS CLOSED (empty pool) when rev-001 is the only candidate for the IRO', async () => {
+    const out = await filterIndependentReviewers(iroCase, [{ id: 'rev-001' }], loader);
+    expect(out).toHaveLength(0);
   });
 });
