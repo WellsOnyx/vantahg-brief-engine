@@ -23,6 +23,7 @@ export type NotificationType =
   | 'p2p_scheduled'
   | 'appeal_created'
   | 'intake_confirmation'
+  | 'concierge_intake_assigned'
   | 'quality_audit_assigned'
   | 'contract_partially_signed'
   | 'contract_fully_executed'

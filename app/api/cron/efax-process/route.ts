@@ -47,6 +47,7 @@ import {
 import { runOcr, type OcrInput } from '@/lib/intake/efax/ocr';
 import { extractClinicalDataFromFax } from '@/lib/intake/efax/ai-extractor';
 import { getPhaxioAuth } from '@/lib/intake/efax/providers/phaxio';
+import { finalizeIntakeCase, isChannelAgnosticIntakeEnabled } from '@/lib/intake/finalize-case';
 import type { ParsedFaxData } from '@/lib/intake/efax-parser';
 
 export const dynamic = 'force-dynamic';
@@ -549,6 +550,14 @@ async function processFaxRow(row: EfaxQueueRow): Promise<ProcessResult> {
     extraction_method: extraction.method,
     ocr_provider: ocrResult.provider,
   });
+
+  // 16. Channel-agnostic intake: run the shared downstream chassis (concierge
+  // follow-up + brief + clinician routing) so an auto-processed fax lands the
+  // same as a portal case or a manually-promoted fax. Gated; off = current
+  // behavior (case + receipt only). Non-blocking on the worker result.
+  if (isChannelAgnosticIntakeEnabled()) {
+    await finalizeIntakeCase(caseId, { channel: 'efax' });
+  }
 
   return { status: 'case_created', case_id: caseId };
 }

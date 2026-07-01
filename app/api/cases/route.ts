@@ -13,6 +13,8 @@ import {
   computeSubmissionFingerprint,
   findDuplicateCase,
 } from '@/lib/intake/efax/storage';
+import { isChannelAgnosticIntakeEnabled } from '@/lib/intake/finalize-case';
+import { notifyConciergeNewIntake } from '@/lib/notifications/concierge-intake';
 import { apiError } from '@/lib/api-error';
 import { getRequestContext } from '@/lib/security';
 
@@ -313,6 +315,13 @@ export async function POST(request: NextRequest) {
       notifyIntakeConfirmation(data.id, caseNumber, authNumber, body.requesting_provider).catch(console.error);
       // Mark confirmation sent
       supabase.from('cases').update({ intake_confirmation_sent: true }).eq('id', data.id).then(() => {});
+    }
+
+    // Channel-agnostic intake: notify the concierge for follow-up. Portal
+    // already runs brief + pod inline below; this adds the concierge follow-up
+    // signal so portal matches the other channels. Gated; fire-and-forget.
+    if (isChannelAgnosticIntakeEnabled()) {
+      notifyConciergeNewIntake(data.id, { caseNumber, channel: 'portal' }).catch(() => {});
     }
 
     // Trigger brief generation in the background (non-blocking, with client criteria context)
