@@ -1,4 +1,6 @@
-export type CaseStatus = 
+import type { LaborMetricResult, BriefDirection } from './labor-metric';
+
+export type CaseStatus =
   | 'intake' | 'processing' | 'brief_ready' | 'lpn_review' | 'rn_review' | 'md_review' | 'pend_missing_info' | 'determination_made' | 'delivered'
   // Payer IDR statuses (Task 8)
   | 'submitted' | 'under_attorney_review' | 'attorney_determined' | 'closed';
@@ -182,6 +184,17 @@ export interface Case {
   // Two-Midnight Rule (Medicare)
   two_midnight_applies: boolean;
   payer_classification: 'traditional_medicare' | 'medicare_advantage' | 'commercial' | 'unknown' | null;
+
+  // Labor-reduction metric (see docs/LABOR_METRIC.md). Per-case field consumed by
+  // the cockpit metric slot. Computed via lib/labor-metric.ts (canonical). Null
+  // until computed. Weights are estimates pending calibration.
+  labor_metric?: LaborMetricResult | null;
+  confidence_resolution?: {
+    directional_confidence: number;
+    brief_complete: boolean;
+    recommendation: BriefDirection | null;
+    resolved: boolean;
+  } | null;
 
   // Joined fields
   reviewer?: Reviewer;
@@ -421,7 +434,7 @@ export interface DeterminationTemplate {
   id: string;
   created_at: string;
   client_id: string | null; // null = default template
-  template_type: 'approval' | 'denial' | 'partial_approval' | 'pend' | 'modification' | 'idr_offer_upheld' | 'idr_offer_modified';
+  template_type: 'approval' | 'denial' | 'partial_approval' | 'pend' | 'modification' | 'idr_offer_upheld' | 'idr_offer_modified' | 'iro_approved' | 'iro_denied';
   name: string;
   body_template: string; // Handlebars-style template
   appeal_instructions: string | null;

@@ -1,81 +1,73 @@
-# Labor-Reduction Metric — DRAFT (NOT canonical)
+# Labor-Reduction Metric — CANONICAL
 
-> **⚠️ DRAFT for Jonah's sign-off. Do NOT compute against this or treat it as canonical until approved.**
-> Every stream (UM / IDR / IRO / Medical Review) and the synthetic harness will
-> compute against this definition, so the numbers below (labor weights) are
-> **illustrative placeholders** until calibrated from real time-motion data.
-> No weight here is a claimed/measured result.
+> **Status: CANONICAL (approved 2026-07-02).** Every stream and consumer computes
+> against this. **Weights are ESTIMATES pending calibration** (`weights_basis =
+> "estimated_pending_calibration"`). Do NOT present any output as *measured* until
+> calibrated from real time-motion data at the operational MVP onsite.
 
-## The one-line question this answers
+## Contract (stable — do not fork)
 
-> "For this case, how much of the total work did the *engine* do on its own, and
-> how much required a *human*?" Output: **"X% engine-labor, Y% human-judgment"** (X + Y = 100).
+- **Canonical formula + weights:** `lib/labor-metric.ts` (single source of truth).
+- **Synthetic harness reads it via:** `lib/synthetic/labor-metric.ts` (a thin re-export of the canonical module, so it computes **identical** percentages).
+- **Per-case cockpit field:** `cases.labor_metric` and `cases.confidence_resolution` (types in `lib/types.ts`).
+- **Audit surface:** `lib/labor-metric-record.ts` emits a PHI-safe `labor_metric_computed` event; flag `ENABLE_LABOR_METRIC` (default off).
 
-This is the number behind the doctrine "humans made superhuman by the AI is the product": the engine carries the labor, a credentialed human renders the judgment.
+---
 
-## Definitions
+## Metric 1 — Labor-reduction %
 
-- **Labor unit (LU):** a calibrated measure of the manual effort a step would take *if a person did it by hand*, expressed in **standard clerical minutes**. Each pipeline step carries a **labor weight** = estimated manual minutes for that step. (DRAFT weights below; real values come from time-motion calibration.)
-- **Step attribution** (per case, per step):
-  - **ENGINE** — the step completed autonomously, no human input required → its weight counts as **engine labor**.
-  - **HUMAN** — the step required a person to add judgment, correction, validation, or a determination → its weight counts as **human labor**.
-  - **HYBRID** — the engine drafts and a human reviews. The weight is **split**: the drafting share → engine, the review/judgment share → human.
+**Question:** for one case, how much of the total work did the engine do on its own vs. what a human had to do? Output: **"X% engine-labor, Y% human-judgment"** (X + Y = 100).
 
-## The fraction
+- **Labor unit (LU):** estimated manual-minutes a step would take by hand.
+- **Attribution per step:** each step has a `weight` (total LU) and an `engineShare` (LU the engine carries). `humanShare = weight − engineShare`.
+  - pure engine → `engineShare === weight`
+  - pure human → `engineShare === 0`
+  - **hybrid (SPLIT)** → `0 < engineShare < weight`: the engine gets the drafting labor, the human gets the judgment layer. Applies to concierge validation and clinical/panel review. *(Decision locked 2026-07-02.)*
+- **The fraction:**
+  - numerator = Σ `engineShare` over all steps
+  - denominator = Σ `weight` over all steps
+  - **labor_reduction_pct = round(engine ÷ total × 100)**, `human_judgment_pct = 100 − labor_reduction_pct`.
+- **Invariant (95% rule):** the determination step is always `engineShare = 0`, so the metric can never read 100% engine.
 
-- **Numerator (top)** = Σ engine labor units across every step the engine did autonomously (plus the engine share of hybrid steps).
-- **Denominator (bottom)** = Σ *all* labor units for the case = engine labor + human labor.
-- **Labor-reduction %** = numerator ÷ denominator.
-- **Human-judgment %** = human labor ÷ total = 1 − labor-reduction %.
+### Canonical UM step table (estimated weights)
 
-## Non-negotiable invariant (the 95% rule)
+| Step | weight | engineShare | humanShare |
+|---|--:|--:|--:|
+| Intake / OCR | 6 | 6 | 0 |
+| Data extraction | 8 | 8 | 0 |
+| Dedup | 2 | 2 | 0 |
+| Brief generation | 12 | 12 | 0 |
+| Fact-check | 5 | 5 | 0 |
+| Routing / SLA | 2 | 2 | 0 |
+| Concierge validation *(hybrid)* | 3 | 1 | 2 |
+| Clinical review LPN/RN *(hybrid)* | 10 | 4 | 6 |
+| **Determination** *(pure human)* | 4 | 0 | 4 |
+| Letter render | 3 | 3 | 0 |
+| Audit | 1 | 1 | 0 |
+| **Totals** | **56** | **44** | **12** |
 
-The **determination step is ALWAYS human** — the engine never auto-decides a case. Therefore human labor is never zero and the metric can **never read 100% engine**. This is by design and encodes the clinical-safety rule directly into the number.
+**→ 44 / 56 ≈ 79% engine-labor, 21% human-judgment.** (Medical Review mirrors UM with a panel reviewer; Payer IDR drops the clinical tier and adds an attorney weight-of-evidence determination; IRO adds independence enforcement + an external independent reviewer. All defined in `lib/labor-metric.ts`.)
 
-## Per-stream step tables (DRAFT weights, illustrative)
+Live per-case computation starts from the estimated stream table and applies **actual overrides** (e.g. if a human had to re-do extraction, that step's `engineShare` drops), so the number reflects what actually happened as calibration data accrues.
 
-Streams share the chassis (intake → brief → criteria → routing → determination → letter → audit) and differ in a few steps/weights.
+---
 
-### UM / Medical Review
+## Metric 2 — Confidence-resolution rate
 
-| Step | Manual-minute weight | Attribution |
-|---|---|---|
-| Intake / OCR | 6 | Engine |
-| Data extraction | 8 | Engine |
-| Dedup | 2 | Engine |
-| Brief generation (criteria match) | 12 | Engine |
-| Fact-check | 5 | Engine |
-| Routing / SLA | 2 | Engine |
-| Concierge validation of brief | 3 | Human |
-| Clinical criteria review (LPN/RN) | 10 | Human |
-| **Determination (clinical judgment)** | 4 | **Human (always)** |
-| Letter render | 3 | Engine |
-| Audit | 1 | Engine |
+**Question:** what share of inbound cases did the engine lift to **≥85% directional confidence** (approve / deny / modify) with a **complete evidentiary brief**?
 
-*(Medical Review adds panel-reviewer routing; determination weight sits with the panel reviewer.)*
+- **Per case (`confidence_resolution.resolved`):** `directional_confidence ≥ 85` AND `brief_complete === true` AND a directional `recommendation ∈ {approve, deny, modify}`. This is a property of the **engine's brief**, independent of the human's final determination.
+- **Book-level rate:** `round(resolved ÷ inbound × 100)`.
+- Threshold `CONFIDENCE_THRESHOLD = 85`. Same estimates-now / calibrate-later discipline.
 
-### Payer IDR
-As UM, minus clinical-tier review, plus **attorney weight-of-evidence determination** (Human, higher weight) and NSA-factor brief context (Engine).
+---
 
-### IRO / IRE
-As UM, plus **independence enforcement** (Engine, small) and an **external independent reviewer determination** (Human).
+## How one real case reads
 
-## Worked example — one real case (illustrative)
+Southwest TPA, MRI lumbar prior-auth (UM): engine handled intake, extraction, brief, fact-check, routing, letter, audit + the drafting share of validation/review (44 LU); the human handled the validation/clinical judgment + determination (12 LU). **"79% engine-labor, 21% human-judgment."** If the engine's brief hit 92% directional confidence with a complete brief recommending approve, the case is **confidence-resolved**.
 
-Southwest TPA, MRI lumbar prior-auth (UM), using the DRAFT weights above:
+*(All figures estimated, pending onsite calibration.)*
 
-- **Engine steps:** intake/OCR 6 + extraction 8 + dedup 2 + brief 12 + fact-check 5 + routing 2 + letter 3 + audit 1 = **39 LU**
-- **Human steps:** concierge validation 3 + clinical review 10 + determination 4 = **17 LU**
-- **Total:** 56 LU
-- **Labor-reduction % = 39 / 56 ≈ 70%** → this case reports **"70% engine-labor, 30% human-judgment."**
+## Calibration path
 
-## How it is captured (Part B, not yet built)
-
-For every case: record the timestamp at each step, a per-step boolean (engine-autonomous vs human-touched), the weights, and the computed %. Surface via `lib/audit.ts` as a PHI-safe `labor_metric_computed` event (step ids, weights, durations, booleans only — never clinical content). Behind a flag.
-
-## Open calibration questions (need Jonah's input before canonical)
-
-1. **Weights:** measure real manual minutes per step (time-motion), or start with these estimates and refine?
-2. **Hybrid split:** for concierge validation and clinical review, is the human share the *whole* step, or a split (engine drafted, human overlaid judgment)?
-3. **Unit basis:** manual-minutes (effort) vs. count-of-steps (simpler) vs. wall-clock time (includes waiting — probably not).
-4. **Does "engine-labor %" headline the case, the day, or the book of business?** (Per-case here; roll-ups average by case or by volume.)
+Estimated weights ship now; real per-step manual-minutes get measured at the operational MVP onsite and replace the estimates. Until then, `weights_basis` stays `estimated_pending_calibration` and the numbers are never labeled "measured."
