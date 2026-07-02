@@ -5,6 +5,7 @@ import { generateBriefForCase, persistBriefResult } from '@/lib/generate-brief';
 import { autoAssignReviewer } from '@/lib/assignment-engine';
 import { notifyCaseAssigned } from '@/lib/notifications';
 import { assignToPod } from '@/lib/pod-assignment-engine';
+import { recordLaborMetricForCase, isLaborMetricEnabled } from '@/lib/labor-metric-record';
 import { notifyLpnCaseAssigned, notifyIntakeConfirmation } from '@/lib/notifications';
 import { isDemoMode, getDemoCases } from '@/lib/demo-mode';
 import { requireAuth } from '@/lib/auth-guard';
@@ -342,6 +343,17 @@ export async function POST(request: NextRequest) {
           if (assignment.assigned && assignment.reviewerId) {
             notifyCaseAssigned(data.id, assignment.reviewerId).catch(console.error);
           }
+        }
+
+        // Labor-reduction metric (flag-gated, default off). Once the brief +
+        // fact-check exist, emit the per-case number. No-op unless ENABLE_LABOR_METRIC.
+        if (isLaborMetricEnabled()) {
+          const { data: withBrief } = await supabase
+            .from('cases')
+            .select('id, case_type, ai_brief, fact_check')
+            .eq('id', data.id)
+            .single();
+          if (withBrief) await recordLaborMetricForCase(withBrief, supabase);
         }
       }
     }).catch((err) => {

@@ -13,6 +13,7 @@ import {
   supabaseLineageLoader,
   demoLineageLoader,
 } from '@/lib/reviewer-independence';
+import { recordLaborMetricForCase, isLaborMetricEnabled } from '@/lib/labor-metric-record';
 
 export const dynamic = 'force-dynamic';
 
@@ -335,6 +336,17 @@ export async function PATCH(
             }, requestContext);
           }
         }).catch(console.error);
+      }
+
+      // Labor-reduction metric at determination time (flag-gated, default off).
+      // Recomputes/finalizes the per-case number now the determination exists.
+      if (isLaborMetricEnabled()) {
+        const { data: forMetric } = await supabase
+          .from('cases')
+          .select('id, case_type, ai_brief, fact_check')
+          .eq('id', id)
+          .single();
+        if (forMetric) await recordLaborMetricForCase(forMetric, supabase);
       }
     }
 

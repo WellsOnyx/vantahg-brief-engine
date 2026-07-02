@@ -1,9 +1,10 @@
 /**
- * Surfaces the labor metric for a case via the audit layer + returns the values
- * for the per-case cockpit field. Kept separate from the pure canonical module
+ * Surfaces the labor metric for a case via the audit layer + persists the
+ * per-case cockpit field. Kept separate from the pure canonical module
  * (lib/labor-metric.ts) so the synthetic harness never pulls in audit/supabase.
  *
- * Flag-gated: ENABLE_LABOR_METRIC (default off). PHI-safe — only stream, weights,
+ * Flag-gated: ENABLE_LABOR_METRIC (default off). Wired into case-create (after
+ * the brief) and the determination path. PHI-safe — only stream, weights,
  * percentages and booleans are logged; never clinical content.
  */
 import { logAuditEvent } from '@/lib/audit';
@@ -29,19 +30,50 @@ export interface CaseLaborMetric {
   confidence_resolution: ConfidenceSignals & { resolved: boolean };
 }
 
+/** Minimal case shape this module reads (avoids importing the full Case type). */
+interface CaseForMetric {
+  id: string;
+  case_type?: string | null;
+  ai_brief?: unknown;
+  fact_check?: unknown;
+}
+
+type SupabaseLike = { from: (table: string) => any };
+
 /**
- * Compute the labor metric + confidence-resolution for a case and (if enabled)
- * emit a PHI-safe `labor_metric_computed` audit event. Returns the values to
- * persist on the case (cases.labor_metric / cases.confidence_resolution) — or
- * null when the flag is off, so callers no-op cleanly.
+ * Derive the confidence-resolution signals from the engine's brief + fact-check:
+ *  - directional_confidence ← fact_check.overall_score (0–100)
+ *  - recommendation        ← ai_brief.ai_recommendation.recommendation (approve/deny)
+ *  - brief_complete        ← a brief + fact-check exist and did not fail
+ */
+export function deriveConfidenceSignals(caseRow: CaseForMetric): ConfidenceSignals {
+  const brief = caseRow.ai_brief as { ai_recommendation?: { recommendation?: string } } | null | undefined;
+  const fc = caseRow.fact_check as { overall_score?: number; overall_status?: string } | null | undefined;
+
+  const directional_confidence = typeof fc?.overall_score === 'number' ? fc.overall_score : 0;
+  const brief_complete = !!brief && !!fc && fc.overall_status !== 'fail';
+  const rec = brief?.ai_recommendation?.recommendation;
+  const recommendation: BriefDirection | null = rec === 'approve' ? 'approve' : rec === 'deny' ? 'deny' : null;
+
+  return { directional_confidence, brief_complete, recommendation };
+}
+
+/**
+ * Compute the labor metric + confidence-resolution for a case, emit a PHI-safe
+ * `labor_metric_computed` audit event, and (best-effort) persist the per-case
+ * cockpit fields. Returns the values, or null when the flag is off (callers
+ * no-op cleanly). The column write is guarded — it silently no-ops until
+ * migration 027 adds cases.labor_metric / cases.confidence_resolution, so it can
+ * never break case-create or determination.
  */
 export async function recordLaborMetricForCase(
-  caseRow: { id: string; case_type?: string | null },
-  confidence: ConfidenceSignals,
+  caseRow: CaseForMetric,
+  supabase?: SupabaseLike,
   overrides?: Record<string, number>,
 ): Promise<CaseLaborMetric | null> {
   if (!isLaborMetricEnabled()) return null;
 
+  const confidence = deriveConfidenceSignals(caseRow);
   const labor_metric = computeLaborMetricForCase(caseRow, overrides);
   const resolved = isConfidenceResolved(confidence);
   const confidence_resolution = { ...confidence, resolved };
@@ -60,6 +92,14 @@ export async function recordLaborMetricForCase(
   }).catch(() => {
     /* audit is non-blocking */
   });
+
+  if (supabase) {
+    try {
+      await supabase.from('cases').update({ labor_metric, confidence_resolution }).eq('id', caseRow.id);
+    } catch {
+      /* column may not exist until migration 027 is applied; audit event still carries it */
+    }
+  }
 
   return { labor_metric, confidence_resolution };
 }
