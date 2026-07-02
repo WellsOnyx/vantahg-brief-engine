@@ -58,6 +58,7 @@ export interface AppShellProps {
 const CHROMELESS_PATHS = new Set(['/']);
 const CHROMELESS_PREFIXES = [
   '/demo',
+  '/cockpit', // full-bleed command-deck walkthrough (its own Stage chrome)
   '/site',
   '/signup-tpa',
   '/login',
