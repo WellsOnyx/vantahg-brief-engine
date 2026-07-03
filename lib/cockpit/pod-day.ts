@@ -41,6 +41,7 @@ export interface PodCase {
   sla_minutes_remaining: number;
   labor: LaborMetricResult;
   confidence_resolved: boolean;
+  case_state?: string | null;
 }
 
 export interface PodTelemetry {
@@ -85,7 +86,7 @@ const RAW_CASES: Omit<PodCase, 'labor' | 'confidence_resolved'>[] = [
   // ── CX make-whole stop: files arriving incomplete, CX resolving gaps ──
   { id: 'c1', case_number: 'VUM-CARD-0412', patient: 'M. Santos', procedure: 'MRI lumbar 72148', stream: 'um', stop: 'cx',
     directional_confidence: 61, brief_complete: false, recommendation: null,
-    missing: ['Conservative-therapy notes', 'Prior imaging report'], independent: true, sla_minutes_remaining: 174 },
+    missing: ['Conservative-therapy notes', 'Prior imaging report'], independent: true, sla_minutes_remaining: 174, case_state: 'TX' as any },
   { id: 'c2', case_number: 'VUM-ORTH-0413', patient: 'J. Rivera', procedure: 'TKA 27447', stream: 'um', stop: 'cx',
     directional_confidence: 74, brief_complete: false, recommendation: null,
     missing: ['KL grade documentation'], independent: true, sla_minutes_remaining: 208 },

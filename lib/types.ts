@@ -200,6 +200,10 @@ export interface Case {
   // Audit log is the product. Everything labeled estimated_pending_calibration.
   attestation?: { flags_acknowledged: boolean; attested_at: string } | null;
 
+  // Licensure case_state (real column, for prod routing match to reviewer license_states).
+  // Not demo only. Backfill required for historical.
+  case_state?: string | null;
+
   // Joined fields
   reviewer?: Reviewer;
   client?: Client;

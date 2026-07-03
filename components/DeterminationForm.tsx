@@ -19,6 +19,11 @@ export interface DeterminationFields {
   // AI Automation Layer (Track A): human acknowledgment of AI denial/appeal risk signals (required for high-risk)
   ai_risk_acknowledged?: boolean;
   ai_risk_notes?: string;
+
+  // Attestation envelope persisted on determination write (the audit record is the product).
+  // flags_acknowledged + attested_at. estimated_pending_calibration. Wall holds.
+  flags_acknowledged?: boolean;
+  attested_at?: string;
 }
 
 interface DeterminationFormProps {

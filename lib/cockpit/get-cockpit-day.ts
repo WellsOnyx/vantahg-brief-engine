@@ -26,7 +26,7 @@ export async function getCockpitDay(): Promise<PodDay> {
     const supabase = getServiceClient();
     const { data, error } = await supabase
       .from('cases')
-      .select('id, case_number, patient_name, procedure_description, case_type, status, labor_metric, confidence_resolution')
+      .select('id, case_number, patient_name, procedure_description, case_type, status, labor_metric, confidence_resolution, case_state')
       .order('created_at', { ascending: false })
       .limit(60);
 

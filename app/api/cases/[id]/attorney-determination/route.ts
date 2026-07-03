@@ -71,8 +71,17 @@ export async function PATCH(
       );
     }
 
+    // Extract attestation envelope (if provided on determination submit)
+    const attestation: AttestationEnvelope | null =
+      (body as any).flags_acknowledged !== undefined
+        ? {
+            flags_acknowledged: !!(body as any).flags_acknowledged,
+            attested_at: (body as any).attested_at || new Date().toISOString(),
+          }
+        : null;
+
     // Update the case with determination
-    const determinationPayload = {
+    const determinationPayload: any = {
       determination: body.determination,
       rationale: body.rationale.trim(),
       denial_reason: body.denial_reason || null,
@@ -87,6 +96,8 @@ export async function PATCH(
       key_documents_reviewed: (body as any).key_documents_reviewed || null,
       determined_by: authResult.user.id,
       determined_at: new Date().toISOString(),
+      // Attestation envelope (if present)
+      attestation: (body as any).flags_acknowledged !== undefined ? { flags_acknowledged: !!(body as any).flags_acknowledged, attested_at: (body as any).attested_at || new Date().toISOString() } : null,
     };
 
     const { error: updateErr } = await supabase
@@ -106,19 +117,12 @@ export async function PATCH(
       });
     }
 
-    // Persist attestation envelope on determination write (audit is the product).
-    // Everything labeled estimated_pending_calibration. Wall holds.
-    const attestation: AttestationEnvelope | null =
-      body.flags_acknowledged !== undefined
-        ? {
-            flags_acknowledged: !!body.flags_acknowledged,
-            attested_at: (body as any).attested_at || new Date().toISOString(),
-          }
-        : null;
-    if (attestation) {
-      await recordAttestationForDetermination(caseId, authResult.user.email, attestation, supabase);
-      // also attach to the payload we already wrote (best effort)
-      determinationPayload.attestation = attestation as any;
+    // Persist attestation (using body directly to avoid scope issues)
+    const att = (body as any).flags_acknowledged !== undefined
+      ? { flags_acknowledged: !!(body as any).flags_acknowledged, attested_at: (body as any).attested_at || new Date().toISOString() }
+      : null;
+    if (att) {
+      await recordAttestationForDetermination(caseId, authResult.user.email, att, supabase);
     }
 
     // Audit - Task 11: Basic audit logging for attorney decisions and rationale
@@ -134,7 +138,7 @@ export async function PATCH(
         attorney_id: authResult.user.id,
         attorney_email: authResult.user.email,
         previous_status: existingCase.status,
-        attestation: attestation || null,
+        attestation: att || null,
       },
       getRequestContext(request)
     );

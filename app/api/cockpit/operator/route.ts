@@ -15,7 +15,7 @@ import { getRequestContext } from '@/lib/security';
  * Returns counts of determination_made / case_delivered by actor, and current streak (consecutive days with activity, back from today).
  */
 export async function GET(request: NextRequest) {
-  const authResult = await requireRole(request, ['admin', 'delivery_lead']);
+  const authResult = await requireRole(request, ['admin', 'delivery-lead']);
   if (authResult instanceof NextResponse) return authResult;
   const rateLimited = await applyRateLimit(request, { maxRequests: 100 });
   if (rateLimited) return rateLimited;
