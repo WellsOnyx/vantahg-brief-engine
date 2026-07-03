@@ -2,7 +2,8 @@
  * Cockpit data source. Returns the demo pod day EVERYWHERE by default. Only when
  * ENABLE_LABOR_METRIC is on (MVP calibration env) AND Supabase is configured does
  * it read real cases and their persisted labor_metric / confidence_resolution.
- * Flag off → no DB call at all, pure demo seed.
+ * Flag off → no DB call at all, pure demo seed. The flag stays default-off everywhere else.
+ * Live per-case labor_metric read wired for the cockpit metric slot (LaborBar, StatTile etc).
  */
 import { getPodDay, telemetryFrom, type PodDay, type PodCase, type GauntletStop } from './pod-day';
 import { isLaborMetricEnabled } from '@/lib/labor-metric-record';
