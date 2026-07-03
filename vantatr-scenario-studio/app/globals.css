@@ -1,0 +1,141 @@
+@import "tailwindcss";
+
+@theme {
+  --color-navy: #183b6d;
+  --color-navy-900: #10294c;
+  --color-navy-800: #183b6d;
+  --color-navy-700: #21497f;
+  --color-navy-600: #2f5a95;
+  --color-gold: #dba63f;
+  --color-gold-soft: #e7c079;
+  --color-gold-deep: #b9862a;
+  --color-ink: #14213a;
+  --color-mist: #f5f3ee;
+  --color-parchment: #faf8f3;
+  --color-sage: #4c8b7a;
+  --color-slate-line: #dcd7cc;
+
+  --font-serif: "Spectral", Georgia, "Times New Roman", serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--color-parchment);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Range slider — navy track, gold thumb */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  background: transparent;
+  cursor: pointer;
+}
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--color-navy) 0%,
+    var(--color-navy) var(--_fill, 50%),
+    #e4ddd0 var(--_fill, 50%),
+    #e4ddd0 100%
+  );
+}
+input[type="range"]::-moz-range-track {
+  height: 6px;
+  border-radius: 999px;
+  background: #e4ddd0;
+}
+input[type="range"]::-moz-range-progress {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--color-navy);
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 20px;
+  width: 20px;
+  margin-top: -7px;
+  border-radius: 999px;
+  background: var(--color-gold);
+  border: 3px solid #fffdf8;
+  box-shadow: 0 2px 6px rgba(24, 59, 109, 0.35);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.12);
+  box-shadow: 0 3px 10px rgba(24, 59, 109, 0.45);
+}
+input[type="range"]::-moz-range-thumb {
+  height: 20px;
+  width: 20px;
+  border-radius: 999px;
+  background: var(--color-gold);
+  border: 3px solid #fffdf8;
+  box-shadow: 0 2px 6px rgba(24, 59, 109, 0.35);
+}
+
+/* Fade / rise entrance */
+@keyframes riseIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.rise-in {
+  animation: riseIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes drawerIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.drawer-in {
+  animation: drawerIn 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.bar-grow {
+  transition: height 0.65s cubic-bezier(0.22, 1, 0.36, 1),
+    y 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+::selection {
+  background: rgba(219, 166, 63, 0.28);
+}
+
+/* Thin custom scrollbar for lever column */
+.lux-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+.lux-scroll::-webkit-scrollbar-thumb {
+  background: #d8d1c2;
+  border-radius: 999px;
+}
+.lux-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
