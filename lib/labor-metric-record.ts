@@ -14,10 +14,10 @@ import {
   type LaborMetricResult,
   type BriefDirection,
 } from '@/lib/labor-metric';
+import { isLaborMetricEnabled } from '@/lib/env';
 
-export function isLaborMetricEnabled(): boolean {
-  return process.env.ENABLE_LABOR_METRIC === 'true';
-}
+export { isLaborMetricEnabled };
+
 
 export interface ConfidenceSignals {
   directional_confidence: number;
@@ -28,6 +28,11 @@ export interface ConfidenceSignals {
 export interface CaseLaborMetric {
   labor_metric: LaborMetricResult;
   confidence_resolution: ConfidenceSignals & { resolved: boolean };
+}
+
+export interface AttestationEnvelope {
+  flags_acknowledged: boolean;
+  attested_at: string;
 }
 
 /** Minimal case shape this module reads (avoids importing the full Case type). */
@@ -103,3 +108,28 @@ export async function recordLaborMetricForCase(
 
   return { labor_metric, confidence_resolution };
 }
+
+export async function recordAttestationForDetermination(
+  caseId: string,
+  actor: string,
+  attestation: AttestationEnvelope | null,
+  supabase?: SupabaseLike,
+): Promise<void> {
+  if (!attestation) return;
+
+  await logAuditEvent(caseId, 'determination_attested', actor, {
+    flags_acknowledged: attestation.flags_acknowledged,
+    attested_at: attestation.attested_at,
+  }).catch(() => {
+    /* audit non-blocking */
+  });
+
+  if (supabase) {
+    try {
+      await supabase.from('cases').update({ attestation }).eq('id', caseId);
+    } catch {
+      /* column may not exist until 028; audit still has the record */
+    }
+  }
+}
+

@@ -5,6 +5,7 @@ import { getServiceClient } from '@/lib/supabase';
 import { apiError } from '@/lib/api-error';
 import { logAuditEvent } from '@/lib/audit';
 import { getRequestContext } from '@/lib/security';
+import { recordAttestationForDetermination, type AttestationEnvelope } from '@/lib/labor-metric-record';
 import type { DeterminationFields } from '@/components/DeterminationForm';
 
 export const dynamic = 'force-dynamic';
@@ -105,6 +106,21 @@ export async function PATCH(
       });
     }
 
+    // Persist attestation envelope on determination write (audit is the product).
+    // Everything labeled estimated_pending_calibration. Wall holds.
+    const attestation: AttestationEnvelope | null =
+      body.flags_acknowledged !== undefined
+        ? {
+            flags_acknowledged: !!body.flags_acknowledged,
+            attested_at: (body as any).attested_at || new Date().toISOString(),
+          }
+        : null;
+    if (attestation) {
+      await recordAttestationForDetermination(caseId, authResult.user.email, attestation, supabase);
+      // also attach to the payload we already wrote (best effort)
+      determinationPayload.attestation = attestation as any;
+    }
+
     // Audit - Task 11: Basic audit logging for attorney decisions and rationale
     await logAuditEvent(
       caseId,
@@ -118,6 +134,7 @@ export async function PATCH(
         attorney_id: authResult.user.id,
         attorney_email: authResult.user.email,
         previous_status: existingCase.status,
+        attestation: attestation || null,
       },
       getRequestContext(request)
     );

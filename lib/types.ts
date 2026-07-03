@@ -196,6 +196,10 @@ export interface Case {
     resolved: boolean;
   } | null;
 
+  // Attestation envelope persisted on determination write (flags_acknowledged, attested_at).
+  // Audit log is the product. Everything labeled estimated_pending_calibration.
+  attestation?: { flags_acknowledged: boolean; attested_at: string } | null;
+
   // Joined fields
   reviewer?: Reviewer;
   client?: Client;

@@ -74,6 +74,10 @@ const EnvSchema = z.object({
   MEOW_COLLECTION_ACCOUNT_ID: z.string().uuid().optional(),
   MEOW_VANTAUM_PRODUCT_ID: z.string().uuid().optional(),
   ENABLE_REAL_MEOW: z.coerce.boolean().default(false),
+
+  // Synthetic stress harness (for calibration only) and labor metric (MVP env only)
+  ENABLE_SYNTHETIC_STRESS: z.coerce.boolean().default(false),
+  ENABLE_LABOR_METRIC: z.coerce.boolean().default(false),
 });
 
 export type Env = z.infer<typeof EnvSchema>;
@@ -199,4 +203,14 @@ export function requireCronSecret(authorizationHeader: string | null | undefined
   if (authorizationHeader !== `Bearer ${expected}`) {
     throw new Error('Invalid CRON_SECRET');
   }
+}
+
+export function isSyntheticStressEnabled(): boolean {
+  const env = getEnv();
+  return env.ENABLE_SYNTHETIC_STRESS === true;
+}
+
+export function isLaborMetricEnabled(): boolean {
+  const env = getEnv();
+  return env.ENABLE_LABOR_METRIC === true;
 }
