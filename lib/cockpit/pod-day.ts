@@ -115,7 +115,7 @@ const RAW_CASES: Omit<PodCase, 'labor' | 'confidence_resolved'>[] = [
     directional_confidence: 85, brief_complete: true, recommendation: 'modify', missing: [], independent: true, sla_minutes_remaining: 0 },
 ];
 
-function buildTelemetry(cases: PodCase[]): PodTelemetry {
+export function telemetryFrom(cases: PodCase[]): PodTelemetry {
   const n = cases.length;
   const avg = (xs: number[]) => (xs.length ? Math.round(xs.reduce((a, b) => a + b, 0) / xs.length) : 0);
   const engine_lu = cases.reduce((a, c) => a + c.labor.engine_lu, 0);
@@ -149,7 +149,7 @@ export function getPodDay(): PodDay {
     physician: MD,
     delivery_lead: DL,
     cases,
-    telemetry: buildTelemetry(cases),
+    telemetry: telemetryFrom(cases),
   };
 }
 

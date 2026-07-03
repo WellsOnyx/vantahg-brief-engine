@@ -90,6 +90,7 @@ const adminInternalNav: NavGroup[] = [
     items: [
       { href: "/dashboard", label: "Work Dashboard" },
       { href: "/mission-control", label: "Mission Control" },
+      { href: "/cockpit", label: "Command Cockpit" },
       { href: "/ops", label: "Operations" },
       { href: "/clients", label: "Clients" },
       { href: "/admin/billing", label: "Billing" },
