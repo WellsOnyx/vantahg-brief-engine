@@ -1,6 +1,6 @@
 {
   "framework": null,
-  "installCommand": "npm --prefix vantatr-scenario-studio install",
-  "buildCommand": "npm --prefix vantatr-scenario-studio run build",
-  "outputDirectory": "vantatr-scenario-studio/out"
+  "installCommand": "echo no-install-needed",
+  "buildCommand": "echo serving-prebuilt-static-export",
+  "outputDirectory": "studio-preview"
 }
