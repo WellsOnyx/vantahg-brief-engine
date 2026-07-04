@@ -1,20 +1,6 @@
 {
-  "framework": "nextjs",
-  "buildCommand": "next build",
-  "outputDirectory": ".next",
-  "redirects": [],
-  "crons": [
-    {
-      "path": "/api/cron/sla-check",
-      "schedule": "*/15 * * * *"
-    },
-    {
-      "path": "/api/cron/efax-process",
-      "schedule": "* * * * *"
-    },
-    {
-      "path": "/api/cron/meow-invoice-sync",
-      "schedule": "*/30 * * * *"
-    }
-  ]
+  "framework": null,
+  "installCommand": "npm --prefix vantatr-scenario-studio install",
+  "buildCommand": "npm --prefix vantatr-scenario-studio run build",
+  "outputDirectory": "vantatr-scenario-studio/out"
 }
