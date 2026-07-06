@@ -83,6 +83,13 @@ const EnvSchema = z.object({
   GRAVITY_RAIL_API_KEY: z.string().min(1).optional(),
   GRAVITY_RAIL_WORKSPACE_ID: z.string().min(1).optional(),
   GRAVITY_RAIL_WEBHOOK_SECRET: z.string().min(1).optional(),
+  // Second active intake-webhook secret (Canonical Intake Contract §5.4):
+  // during rotation both validate, so GR can flip signing keys with zero
+  // downtime. Clear after rotation completes.
+  GRAVITY_RAIL_WEBHOOK_SECRET_SECONDARY: z.string().min(1).optional(),
+  // Environment-scoped sandbox for intake verification (MVP env only —
+  // never set in production). See docs/INTAKE_CONTRACT.md §9.
+  INTAKE_SANDBOX_ENABLED: z.coerce.boolean().default(false),
 });
 
 export type Env = z.infer<typeof EnvSchema>;
