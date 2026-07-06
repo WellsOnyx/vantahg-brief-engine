@@ -69,11 +69,11 @@ export function CopilotSidebar({ caseData }: Props) {
           <ChatPanel
             messages={chat.messages}
             extractedData={chat.extractedData}
-            isReady={false}
+            isReady={chat.isReady ?? true}
             isStreaming={chat.isStreaming}
             mode="review"
             onSend={chat.sendMessage}
-            placeholder={`Ask about case ${caseData.case_number}...`}
+            placeholder={`Ask about case ${caseData.case_number} (medical review, IRO, IDR supported)...`}
           />
         </div>
       </div>

@@ -9,6 +9,7 @@ import {
   PageSectionHeading,
   StatCard,
 } from '@/components/layouts/PageLayouts';
+import { GravityRailChat } from '@/components/GravityRailChat';
 
 /**
  * Concierge front-line dashboard.
@@ -361,6 +362,21 @@ export default function ConciergePage() {
           Your gate is the one that holds in audit.
         </p>
       </PageDashboard.Help>
+
+      {/* Gravity Rail floating widget for this concierge (AI copilot + intake assist).
+          Uses the provisioned workspace for this operator when set.
+          Enables efficient handling of high-volume medical review / IRO / IDR cases via chat. */}
+      {process.env.NEXT_PUBLIC_GRAVITY_RAIL_WORKSPACE_ID && process.env.NEXT_PUBLIC_GRAVITY_RAIL_SITE_ID && (
+        <GravityRailChat
+          workspaceId={process.env.NEXT_PUBLIC_GRAVITY_RAIL_WORKSPACE_ID}
+          siteId={process.env.NEXT_PUBLIC_GRAVITY_RAIL_SITE_ID}
+          workflowSlug={process.env.NEXT_PUBLIC_GRAVITY_RAIL_WORKFLOW_SLUG || 'vantaum-intake-handoff'}
+          title="Ask VantaUM Copilot"
+          subtitle="Briefs, criteria, handoff for medical review / IRO / IDR"
+          buttonText="Chat"
+          voice={false}
+        />
+      )}
     </PageDashboard>
   );
 }

@@ -238,6 +238,10 @@ export class GravityRailClient {
     return this.request('GET', `/w/${wid}`);
   }
 
+  createWorkspace(name: string, slug?: string): Promise<GRWorkspace> {
+    return this.request('POST', '/w', { name, slug: slug || name.toLowerCase().replace(/\s+/g, '-') });
+  }
+
   // ── Chats ───────────────────────────────────────────────────────────────────
 
   listChats(wid: string, page = 1, pageSize = 50): Promise<GRPaginatedResponse<GRChat>> {

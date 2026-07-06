@@ -78,6 +78,11 @@ const EnvSchema = z.object({
   // Synthetic stress harness (for calibration only) and labor metric (MVP env only)
   ENABLE_SYNTHETIC_STRESS: z.coerce.boolean().default(false),
   ENABLE_LABOR_METRIC: z.coerce.boolean().default(false),
+
+  // Gravity Rail (external AI platform for operator copilot + voice/sms intake)
+  GRAVITY_RAIL_API_KEY: z.string().min(1).optional(),
+  GRAVITY_RAIL_WORKSPACE_ID: z.string().min(1).optional(),
+  GRAVITY_RAIL_WEBHOOK_SECRET: z.string().min(1).optional(),
 });
 
 export type Env = z.infer<typeof EnvSchema>;
@@ -213,4 +218,18 @@ export function isSyntheticStressEnabled(): boolean {
 export function isLaborMetricEnabled(): boolean {
   const env = getEnv();
   return env.ENABLE_LABOR_METRIC === true;
+}
+
+export function getGravityRailConfig() {
+  const env = getEnv();
+  return {
+    apiKey: env.GRAVITY_RAIL_API_KEY,
+    workspaceId: env.GRAVITY_RAIL_WORKSPACE_ID,
+    webhookSecret: env.GRAVITY_RAIL_WEBHOOK_SECRET,
+  };
+}
+
+export function isGravityRailEnabled(): boolean {
+  const { apiKey } = getGravityRailConfig();
+  return !!apiKey;
 }
