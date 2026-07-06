@@ -37,7 +37,7 @@ async function main() {
   // Simulate determination flow -> attestation write + audit
   console.log('\n2. Simulating determination flow -> recordAttestationForDetermination + audit');
   const attestation = { flags_acknowledged: true, attested_at: new Date().toISOString() };
-  await recordAttestationForDetermination(testCaseRow.id, 'smoke-operator', attestation as any, null);
+  await recordAttestationForDetermination(testCaseRow.id, 'smoke-operator', attestation as any, undefined);
   console.log('attestation envelope written (via record)');
   // Fire audit manually as in flow
   await logAuditEvent(testCaseRow.id, 'determination_made', 'smoke-operator', {

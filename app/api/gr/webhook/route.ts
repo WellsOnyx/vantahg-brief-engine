@@ -4,6 +4,7 @@ import { logAuditEvent } from '@/lib/audit';
 import { finalizeIntakeCase } from '@/lib/intake/finalize-case';
 import { isDemoMode } from '@/lib/demo-mode';
 import { applyRateLimit } from '@/lib/rate-limit-middleware';
+import { parseEmailPayload } from '@/lib/intake/email-parser';
 
 /**
  * POST /api/gr/webhook
@@ -77,14 +78,14 @@ export async function POST(request: NextRequest) {
         case_number: `GR-${payload.chat_id || Date.now()}`,
         status: 'intake',
         intake_channel: 'phone',
-        patient_name: parsed.patient_name || intakeData.from || 'GR Member',
-        patient_dob: parsed.patient_dob || null,
-        patient_member_id: parsed.patient_member_id || null,
-        procedure_codes: parsed.procedure_codes || [],
-        diagnosis_codes: parsed.diagnosis_codes || [],
-        procedure_description: parsed.procedure_description || intakeData.title || 'Gravity Rail intake',
-        clinical_question: parsed.clinical_question || null,
-        requesting_provider: parsed.requesting_provider || null,
+        patient_name: (parsed as any).patient_name || intakeData.from || 'GR Member',
+        patient_dob: (parsed as any).patient_dob || null,
+        patient_member_id: (parsed as any).patient_member_id || null,
+        procedure_codes: (parsed as any).procedure_codes || [],
+        diagnosis_codes: (parsed as any).diagnosis_codes || [],
+        procedure_description: (parsed as any).procedure_description || intakeData.title || 'Gravity Rail intake',
+        clinical_question: (parsed as any).clinical_question || null,
+        requesting_provider: (parsed as any).requesting_provider || null,
         assigned_concierge_id: conciergeId,
         // add other fields from parsed
       })

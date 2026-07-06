@@ -21,7 +21,7 @@ import {
   GravityRailClient,
   type GRWorkspace,
   type GRWorkflow,
-} from './gravity-rails';  // relative, or adjust
+} from '../gravity-rails';
 
 export interface ProvisionResult {
   staffId: string;
