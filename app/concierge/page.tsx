@@ -366,17 +366,22 @@ export default function ConciergePage() {
       {/* Gravity Rail floating widget for this concierge (AI copilot + intake assist).
           Uses the provisioned workspace for this operator when set.
           Enables efficient handling of high-volume medical review / IRO / IDR cases via chat. */}
-      {process.env.NEXT_PUBLIC_GRAVITY_RAIL_WORKSPACE_ID && process.env.NEXT_PUBLIC_GRAVITY_RAIL_SITE_ID && (
-        <GravityRailChat
-          workspaceId={process.env.NEXT_PUBLIC_GRAVITY_RAIL_WORKSPACE_ID}
-          siteId={process.env.NEXT_PUBLIC_GRAVITY_RAIL_SITE_ID}
-          workflowSlug={process.env.NEXT_PUBLIC_GRAVITY_RAIL_WORKFLOW_SLUG || 'vantaum-intake-handoff'}
-          title="Ask VantaUM Copilot"
-          subtitle="Briefs, criteria, handoff for medical review / IRO / IDR"
-          buttonText="Chat"
-          voice={false}
-        />
-      )}
+      {(() => {
+        const ws = process.env.NEXT_PUBLIC_GRAVITY_RAIL_WORKSPACE_ID;
+        const site = process.env.NEXT_PUBLIC_GRAVITY_RAIL_SITE_ID;
+        const slug = process.env.NEXT_PUBLIC_GRAVITY_RAIL_WORKFLOW_SLUG || 'vantaum-intake-handoff';
+        return ws && site ? (
+          <GravityRailChat
+            workspaceId={ws}
+            siteId={site}
+            workflowSlug={slug}
+            title="Ask VantaUM Copilot"
+            subtitle="Briefs, criteria, handoff for medical review / IRO / IDR"
+            buttonText="Chat"
+            voice={false}
+          />
+        ) : null;
+      })()}
     </PageDashboard>
   );
 }
