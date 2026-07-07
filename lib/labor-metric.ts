@@ -20,7 +20,7 @@ export const WEIGHTS_BASIS = 'estimated_pending_calibration' as const;
 /** Directional-confidence threshold for the confidence-resolution metric. */
 export const CONFIDENCE_THRESHOLD = 85;
 
-export type LaborStream = 'um' | 'medical_review' | 'payer_idr' | 'iro';
+export type LaborStream = 'um' | 'medical_review' | 'payer_idr' | 'iro' | 'ire';
 
 /**
  * One pipeline step's labor. `weight` = estimated manual-minutes if done by hand.
@@ -94,7 +94,7 @@ const IDR_STEPS: LaborStep[] = [
   { id: 'audit', label: 'Audit', weight: 1, engineShare: 1 },
 ];
 
-// IRO / IRE — like UM plus independence enforcement; an external independent
+// IRO — like UM plus independence enforcement; an external independent
 // reviewer renders the determination.
 const IRO_STEPS: LaborStep[] = [
   ...UM_STEPS.filter((s) => s.id !== 'clinical_review' && s.id !== 'determination'),
@@ -103,11 +103,21 @@ const IRO_STEPS: LaborStep[] = [
   { id: 'determination', label: 'Independent determination', weight: 4, engineShare: 0 },
 ];
 
+// IRE rail config — specialized for IRE (Independent Review Entity) track; mirrors IRO
+// but surfaced distinctly for volume routing, metrics, and prompt specialization.
+const IRE_STEPS: LaborStep[] = [
+  ...UM_STEPS.filter((s) => s.id !== 'clinical_review' && s.id !== 'determination'),
+  { id: 'independence_enforcement', label: 'Reviewer independence enforcement (IRE)', weight: 1, engineShare: 1 },
+  { id: 'independent_review', label: 'Independent reviewer review (IRE)', weight: 10, engineShare: 4 },
+  { id: 'determination', label: 'Independent determination (IRE)', weight: 4, engineShare: 0 },
+];
+
 const STREAM_STEPS: Record<LaborStream, LaborStep[]> = {
   um: UM_STEPS,
   medical_review: MEDICAL_REVIEW_STEPS,
   payer_idr: IDR_STEPS,
   iro: IRO_STEPS,
+  ire: IRE_STEPS,
 };
 
 /** The canonical estimated step table for a stream (defensive copy). */
@@ -154,7 +164,9 @@ export function computeLaborMetricForCase(
     input.stream ??
     (input.case_type === 'payer_idr'
       ? 'payer_idr'
-      : input.case_type === 'iro' || input.case_type === 'ire'
+      : input.case_type === 'ire'
+      ? 'ire'
+      : input.case_type === 'iro'
         ? 'iro'
         : input.case_type === 'medical_review'
           ? 'medical_review'

@@ -42,7 +42,9 @@ export async function generateBriefForCase(
   // Gate at the lib boundary so any caller (route, cron, ad-hoc script) is
   // protected — not just the /api/generate-brief route. Demo-mode callers
   // should use getDemoBrief() from lib/demo-mode.ts; this function is for
-  // real Anthropic calls only.
+  // real Anthropic calls ONLY.
+  // For 333k/yr real volume: no shortcuts, no demo data, no isDemoMode bypasses
+  // are permitted in this path. Engine-critical decontamination complete.
   if (!isRealAnthropicEnabled()) {
     throw new Error(
       'generateBriefForCase requires real Anthropic. Caller should use getDemoBrief() in demo mode.',
@@ -50,19 +52,48 @@ export async function generateBriefForCase(
   }
 
   const isIdrCase = caseData.case_type === 'payer_idr';
+  const isIroCase = caseData.case_type === 'iro' || caseData.case_type === 'ire';
   const isMdReview =
     options.mdReviewMode ||
     caseData.status === 'md_review' ||
     caseData.review_type === 'second_level_review' ||
-    caseData.review_type === 'appeal';
+    caseData.review_type === 'appeal' ||
+    caseData.case_type === 'medical_review';
 
-  const systemPrompt = isIdrCase
-    ? buildIdrSystemPrompt()
-    : buildSystemPrompt(isMdReview);
+  let systemPrompt: string;
+  let userPrompt: string;
 
-  const userPrompt = isIdrCase
-    ? buildIdrUserPrompt(caseData, options.client ?? null)
-    : buildUserPrompt(caseData, options.client ?? null, isMdReview);
+  if (isIdrCase) {
+    systemPrompt = buildIdrSystemPrompt();
+    userPrompt = buildIdrUserPrompt(caseData, options.client ?? null);
+  } else if (isIroCase) {
+    systemPrompt = buildIroSystemPrompt();
+    userPrompt = buildIroUserPrompt(caseData, options.client ?? null);
+  } else {
+    systemPrompt = buildSystemPrompt(isMdReview);
+    userPrompt = buildUserPrompt(caseData, options.client ?? null, isMdReview);
+  }
+
+  // For revision passes we branch on same stream types (IDR/IRO get their specialized base + critique)
+  const getRevisionPrompts = (prior: PassResult | null) => {
+    if (!prior?.critique) return { system: systemPrompt, user: userPrompt };
+    if (isIroCase) {
+      return {
+        system: buildIroRevisionSystemPrompt(prior.critique),
+        user: buildIroRevisionUserPrompt(caseData, options.client ?? null, prior.brief, prior.factCheck, prior.critique),
+      };
+    }
+    if (isIdrCase) {
+      return {
+        system: buildIdrRevisionSystemPrompt(prior.critique),
+        user: buildIdrRevisionUserPrompt(caseData, options.client ?? null, prior.brief, prior.factCheck, prior.critique),
+      };
+    }
+    return {
+      system: buildRevisionSystemPrompt(isMdReview, prior.critique),
+      user: buildRevisionUserPrompt(caseData, options.client ?? null, isMdReview, prior.brief, prior.factCheck, prior.critique),
+    };
+  };
 
   logAuditEvent(caseData.id, 'brief_generation_started', 'system', {
     md_review_mode: isMdReview,
@@ -81,22 +112,14 @@ export async function generateBriefForCase(
 
     // Build the prompt for this pass (initial vs. revision informed by prior critique + fact-check)
     let promptForPass = userPrompt;
+    let currentSystem = systemPrompt;
     if (isRevisionPass && prior?.critique) {
-      promptForPass = buildRevisionUserPrompt(
-        caseData,
-        options.client ?? null,
-        isMdReview,
-        prior.brief,
-        prior.factCheck,
-        prior.critique,
-      );
+      const rev = getRevisionPrompts(prior);
+      promptForPass = rev.user;
+      currentSystem = rev.system;
     } else if (lastValidationReason) {
       promptForPass = `${userPrompt}\n\n---\nNOTE: Your previous response failed schema validation. Issues: ${lastValidationReason}. Re-emit the tool call with all required fields populated and correct types.`;
     }
-
-    const currentSystem = isRevisionPass
-      ? buildRevisionSystemPrompt(isMdReview, prior?.critique)
-      : systemPrompt;
 
     // Per-pass schema validation retry (distinct from content self-critique)
     let passBrief: AIBrief | null = null;
@@ -605,5 +628,153 @@ ${clientContext}
 Analyze the case strictly against the NSA IDR factors. Produce the structured brief via the tool. Focus on QPA comparison, network status, qualifying service status, and additional circumstances. Flag missing documentation that the IDR reviewer should request.`;
 }
 
-// Note: For full IDR support, future revisions of buildRevision* functions and fact-checker should also branch on case_type === 'payer_idr'.
+// Note: Revision passes now branch for IDR / IRO / IRE (and medical via isMdReview). Fact-checker already dispatches on iro/ire/idr.
+
+// ============================================================================
+// IRO / IRE Brief Generation (Independent Review)
+// ============================================================================
+
+function buildIroSystemPrompt(): string {
+  return `You are the intelligence layer behind Vanta Health Group's IRO/IRE engine. Your role is to prepare a structured, defensible pre-review brief for an independent external reviewer (IRO/IRE).
+
+You NEVER render the final determination. You analyze the case in the context of an appeal or independent review, paying special attention to:
+- The linked original case (via appeal_of_case_id) and any prior determination.
+- Whether the independent reviewer would have access to the same information.
+- Clinical defensibility, documentation gaps, and any independence or conflict considerations (data only).
+- How the case differs from or aligns with the original UM/MR review.
+
+Focus the brief on what an external independent reviewer needs: clear summary of facts, criteria application in the original, any new information, and key issues for independent adjudication.
+
+Call the record_clinical_brief tool exactly once with a complete structured brief. Adapt criteria_match and ai_recommendation for independent review context. Flag any documentation that was (or was not) available to the original reviewer.`;
+}
+
+function buildIroUserPrompt(caseData: Case, client: Client | null): string {
+  const idrFactors = getIdrFactors(); // reuse NSA-like factors where relevant, plus general clinical
+  const factorsContext = JSON.stringify(idrFactors, null, 2);
+
+  let appealContext = '';
+  if (caseData.appeal_of_case_id) {
+    appealContext = `\n\nAPPEAL CONTEXT: This is an IRO/IRE on appeal_of_case_id=${caseData.appeal_of_case_id}. Emphasize what an independent reviewer would see differently or needs to re-evaluate.`;
+  }
+
+  let clientContext = '';
+  if (client) {
+    clientContext = `\n\nPAYER / CLIENT CONTEXT: ${client.name} (${client.type || 'payer'}).`;
+  }
+
+  return `Prepare an IRO/IRE (Independent Review) pre-review brief for the following case.
+
+CASE NUMBER: ${caseData.case_number}
+${appealContext}
+
+PATIENT:
+- Name: ${caseData.patient_name || 'Not provided'}
+- Member ID: ${caseData.patient_member_id || 'Not provided'}
+
+PROVIDER / FACILITY:
+- Requesting: ${caseData.requesting_provider || 'Not provided'}
+- Servicing: ${caseData.servicing_provider || 'Not provided'}
+- Facility: ${caseData.facility_name || 'Not provided'}
+
+CLAIM DETAILS:
+- Procedure Codes: ${caseData.procedure_codes?.join(', ') || 'None'}
+- Description: ${caseData.procedure_description || 'Not provided'}
+- Diagnosis Codes: ${caseData.diagnosis_codes?.join(', ') || 'None'}
+- Billed Amount (if applicable): ${caseData.billed_amount_cents ?? 'N/A'}
+- OON (if applicable): ${caseData.is_out_of_network ?? 'N/A'}
+
+CLINICAL QUESTION / CONTEXT:
+${caseData.clinical_question || caseData.procedure_description || 'Independent review of prior determination.'}
+
+ORIGINAL REVIEW CONTEXT (for IRO/IRE):
+${factorsContext}
+${clientContext}
+
+Analyze with the perspective of an independent external reviewer. Produce the structured brief via the tool. Highlight differences from any prior determination, documentation gaps, and clinical issues that warrant independent adjudication. Note any independence-related data points.`;
+}
+
+// ── Stream-specific revision helpers (for IRO/IRE + IDR; MD/UM use the original) ──
+
+function buildIroRevisionSystemPrompt(priorCritique?: BriefCritique): string {
+  const base = buildIroSystemPrompt();
+  const critiqueDirective = priorCritique
+    ? `
+
+SELF-CRITIQUE REVISION DIRECTIVE (MANDATORY):
+You previously produced a draft that was fact-checked and self-critiqued. The following issues were identified by your own clinical reasoning engine:
+${priorCritique.issues_identified.map((i, idx) => `${idx + 1}. ${i}`).join('\n')}
+
+You MUST produce a REVISED IRO/IRE brief that directly addresses EVERY issue above.
+- Strengthen independence context, appeal linkage, and documentation gap notes where flagged.
+- Adapt criteria_match / ai_recommendation for external reviewer lens.
+- Fix any prior-determination alignment or conflict issues explicitly called out.
+Output the COMPLETE revised brief via the record_clinical_brief tool. Do not omit fields.`
+    : '';
+  return base + critiqueDirective;
+}
+
+function buildIroRevisionUserPrompt(
+  caseData: Case,
+  client: Client | null,
+  priorBrief: AIBrief,
+  priorFactCheck: FactCheckResult,
+  critique: BriefCritique,
+): string {
+  const base = buildIroUserPrompt(caseData, client);
+  return `${base}
+
+--- PRIOR DRAFT IRO/IRE BRIEF (for targeted revision) ---
+Draft AI Recommendation: ${priorBrief.ai_recommendation.recommendation} (confidence: ${priorBrief.ai_recommendation.confidence})
+Draft Fact-Check Score: ${priorFactCheck.overall_score}/100 (status: ${priorFactCheck.overall_status})
+
+SELF-CRITIQUE FROM PREVIOUS PASS:
+${critique.critique_summary}
+
+Issues to explicitly resolve in this revision:
+${critique.issues_identified.map((i) => `• ${i}`).join('\n')}
+
+Recommended fixes (incorporate):
+${critique.recommended_fixes.map((f) => `• ${f}`).join('\n')}
+
+Produce the FULL REVISED structured IRO/IRE brief via the tool call. Your revised output will be re-fact-checked.`;
+}
+
+function buildIdrRevisionSystemPrompt(priorCritique?: BriefCritique): string {
+  const base = buildIdrSystemPrompt();
+  const critiqueDirective = priorCritique
+    ? `
+
+SELF-CRITIQUE REVISION DIRECTIVE (MANDATORY):
+You previously produced a draft that was fact-checked and self-critiqued. The following issues were identified:
+${priorCritique.issues_identified.map((i, idx) => `${idx + 1}. ${i}`).join('\n')}
+
+You MUST produce a REVISED IDR brief that addresses EVERY issue.
+- Strengthen NSA/QPA, OON, and additional-circumstances analysis where flagged.
+Output the COMPLETE revised brief via the record_clinical_brief tool.`
+    : '';
+  return base + critiqueDirective;
+}
+
+function buildIdrRevisionUserPrompt(
+  caseData: Case,
+  client: Client | null,
+  priorBrief: AIBrief,
+  priorFactCheck: FactCheckResult,
+  critique: BriefCritique,
+): string {
+  const base = buildIdrUserPrompt(caseData, client);
+  return `${base}
+
+--- PRIOR DRAFT IDR BRIEF (for targeted revision) ---
+Draft AI Recommendation: ${priorBrief.ai_recommendation.recommendation} (confidence: ${priorBrief.ai_recommendation.confidence})
+Draft Fact-Check Score: ${priorFactCheck.overall_score}/100
+
+SELF-CRITIQUE:
+${critique.critique_summary}
+
+Issues:
+${critique.issues_identified.map((i) => `• ${i}`).join('\n')}
+
+Produce the FULL REVISED NSA/IDR brief via the tool.`;
+}
 

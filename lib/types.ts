@@ -40,7 +40,7 @@ export type FacilityType = 'inpatient' | 'outpatient' | 'asc' | 'office' | 'home
 
 /** @deprecated Use ServiceCategory instead. Kept for backward compatibility during migration. */
 export type CaseVertical = 'dental' | 'vision' | 'medical';
-export type CaseType = 'um' | 'payer_idr' | 'iro' | 'ire';
+export type CaseType = 'um' | 'payer_idr' | 'iro' | 'ire' | 'medical_review';
 
 export interface Case {
   id: string;
@@ -51,7 +51,7 @@ export interface Case {
   priority: CasePriority;
 
   // Top-level case classification (introduced for Payer IDR support)
-  case_type?: CaseType; // 'um' | 'payer_idr' — defaults to 'um' in most creation paths
+  case_type?: CaseType; // 'um' | 'payer_idr' | 'iro' | 'ire' | 'medical_review' — defaults to 'um' in most creation paths
 
   // IDR attorney assignment (Task 5)
   assigned_idr_attorney_id?: string | null;
@@ -498,7 +498,7 @@ export interface QueueMeta {
 export type { ChatMessage, ChatMode, StreamChunk, ChatRequest } from './chat/types';
 
 export interface CaseFormData {
-  case_type?: CaseType; // defaults to 'um' when omitted ('um' | 'payer_idr' | 'iro' | 'ire')
+  case_type?: CaseType; // defaults to 'um' when omitted ('um' | 'payer_idr' | 'iro' | 'ire' | 'medical_review')
   service_category: ServiceCategory;
   priority: CasePriority;
   review_type: ReviewType;

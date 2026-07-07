@@ -50,7 +50,7 @@ describe('labor-reduction metric — canonical formula', () => {
   });
 
   it('streams route correctly and always sum to 100', () => {
-    for (const ct of ['um', 'payer_idr', 'iro', 'medical_review'] as const) {
+    for (const ct of ['um', 'payer_idr', 'iro', 'ire', 'medical_review'] as const) {
       const m = computeLaborMetricForCase({ case_type: ct });
       expect(m.total_lu).toBeGreaterThan(0);
       expect(m.labor_reduction_pct + m.human_judgment_pct).toBe(100);
@@ -91,7 +91,7 @@ describe('confidence-resolution metric', () => {
 
 describe('contract stability — synthetic harness computes IDENTICAL percentages', () => {
   it('lib/synthetic/labor-metric re-exports the canonical formula (identical results)', () => {
-    for (const ct of ['um', 'payer_idr', 'iro', 'medical_review'] as const) {
+    for (const ct of ['um', 'payer_idr', 'iro', 'ire', 'medical_review'] as const) {
       const canonical = computeLaborMetricForCase({ case_type: ct });
       const viaHarness = synthetic.computeLaborMetricForCase({ case_type: ct });
       expect(viaHarness).toEqual(canonical);
