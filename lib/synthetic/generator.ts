@@ -14,7 +14,7 @@ import { computeSubmissionFingerprint } from '../intake/efax/storage';
 export interface SyntheticOptions {
   count: number;
   stream: LaborStream | 'mixed';
-  scenario?: 'clean' | 'complex' | 'malformed' | 'conflicted';
+  scenario?: 'clean' | 'complex' | 'malformed' | 'conflicted' | 'timing-edge' | 'incomplete-data' | 'conflicting-data';
   seed?: number;
 }
 
@@ -59,29 +59,56 @@ export function generateSyntheticCases(opts: SyntheticOptions): SyntheticCase[] 
     const isIdr = stream === 'payer_idr';
     const isIre = stream === 'ire';
 
+    // Adversarial / malformed data injection per stream and scenario for edge hardening
+    let procCodes = isIdr ? ['A0430'] : ['27447'];
+    let diagCodes = ['M17.12'];
+    let clinQ = `Synthetic question for load test ${stream}`;
+    let billed = isIdr ? 2500000 : undefined;
+    let oon = isIdr ? true : undefined;
+    let appeal = isIro ? `orig-${i % 100}` : undefined;
+    let turnDeadline: string | null = (scenario === 'malformed' || (isIre && i % 3 === 0)) ? null : new Date(Date.now() + 72*3600*1000).toISOString();
+    let slaH = isIro ? 72 : undefined;
+
+    if (scenario === 'malformed' || scenario === 'incomplete-data') {
+      procCodes = i % 2 === 0 ? ['INVALID-CODE', '99999'] : [];
+      clinQ = i % 3 === 0 ? '' : clinQ;
+      if (isIdr) { billed = undefined; oon = null as any; }
+      if (isIre) appeal = undefined; // missing linkage for IRE independence/timing edge
+      if (isMedical) clinQ = 'Insufficient details provided for medical review.';
+    }
+    if (scenario === 'conflicting-data') {
+      procCodes = ['27447', 'BAD'];
+      diagCodes = ['Z99.9']; // unlikely match
+      if (isIdr) { billed = 100; oon = false; } // conflicting for NSA
+    }
+    if (scenario === 'timing-edge') {
+      turnDeadline = new Date(Date.now() - 1000*3600).toISOString(); // past/overdue
+      slaH = 1; // very tight for IRE rail
+    }
+
     const syn: SyntheticCase = {
       id: `synth-${stream}-${i}`,
       case_number: `SYNTH-${stream.toUpperCase()}-${i.toString().padStart(5, '0')}`,
       case_type: caseType,
       status: scenario === 'complex' || scenario === 'malformed' ? 'md_review' : 'brief_ready',
-      priority: scenario === 'conflicted' ? 'urgent' : 'standard',
+      priority: (scenario === 'conflicted' || scenario === 'timing-edge') ? 'urgent' : 'standard',
       service_category: 'other',
       review_type: isMedical ? 'second_level_review' : isIro ? 'appeal' : 'prior_auth',
       patient_name: fakePatient(i),
       patient_dob: '1980-01-01',
       patient_member_id: `SYNTH-MBR-${i}`,
       requesting_provider: `SYNTH-PROV-${i}`,
-      procedure_codes: isIdr ? ['A0430'] : ['27447'],
-      diagnosis_codes: ['M17.12'],
+      procedure_codes: procCodes,
+      diagnosis_codes: diagCodes,
       procedure_description: `Synthetic ${stream} procedure`,
-      clinical_question: `Synthetic question for load test ${stream}`,
+      clinical_question: clinQ,
       payer_name: 'SYNTH-PAYER',
-      billed_amount_cents: isIdr ? 2500000 : undefined,
-      is_out_of_network: isIdr ? true : undefined,
-      appeal_of_case_id: isIro ? `orig-${i % 100}` : undefined,
-      // Timing edge for IRE-rail + mixed batches: sometimes no deadline (adversarial/malformed)
-      turnaround_deadline: (scenario === 'malformed' || (isIre && i % 3 === 0)) ? null : new Date(Date.now() + 72*3600*1000).toISOString(),
-      sla_hours: isIro ? 72 : undefined,
+      billed_amount_cents: billed,
+      is_out_of_network: oon,
+      appeal_of_case_id: appeal,
+      // Timing edge for IRE-rail + mixed batches
+      turnaround_deadline: turnDeadline,
+      sla_hours: slaH,
       synthetic: true,
       syntheticMetadata: {
         stream,
@@ -91,13 +118,20 @@ export function generateSyntheticCases(opts: SyntheticOptions): SyntheticCase[] 
       created_at: new Date(Date.now() - i * 1000).toISOString(),
     };
 
-    // For load test, attach minimal brief-like for downstream
-    if (scenario !== 'malformed') {
+    // For load test / pipeline, attach stub brief-like; vary for adversarial/malformed to stress fact-checker + prompts
+    const isHard = scenario === 'malformed' || scenario === 'incomplete-data' || scenario === 'conflicting-data' || scenario === 'timing-edge';
+    if (!isHard) {
       (syn as any).ai_brief = {
         clinical_question: syn.clinical_question,
         ai_recommendation: { recommendation: 'approve', confidence: 'high' },
       };
       (syn as any).fact_check = { overall_score: 85, overall_status: 'pass' };
+    } else {
+      (syn as any).ai_brief = {
+        clinical_question: syn.clinical_question || 'incomplete',
+        ai_recommendation: { recommendation: 'approve', confidence: 'low' },
+      };
+      (syn as any).fact_check = { overall_score: 40, overall_status: 'fail' }; // stresses flags
     }
 
     cases.push(syn);

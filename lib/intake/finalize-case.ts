@@ -1,6 +1,6 @@
 import { getServiceClient } from '@/lib/supabase';
 import { logAuditEvent } from '@/lib/audit';
-import { generateBriefForCase, persistBriefResult } from '@/lib/generate-brief';
+import { generateBriefForCase, persistBriefResult, type BriefResult } from '@/lib/generate-brief';
 import { assignToPod } from '@/lib/pod-assignment-engine';
 import { autoAssignReviewer } from '@/lib/assignment-engine';
 import { notifyLpnCaseAssigned, notifyCaseAssigned } from '@/lib/notifications';
@@ -118,11 +118,11 @@ export async function finalizeIntakeCase(
 
   // 2. Brief generation + persistence.
   try {
-    const brief = await generateBriefForCase(caseData, {
+    const briefResult = await generateBriefForCase(caseData, {
       client: (caseData.client as Case['client']) ?? null,
     });
-    if (brief) {
-      await persistBriefResult(caseId, brief, supabase, {
+    if (briefResult?.brief) {
+      await persistBriefResult(caseId, briefResult, supabase, {
         generatedFrom: `intake_${opts.channel ?? 'unknown'}`,
       });
       result.brief_generated = true;

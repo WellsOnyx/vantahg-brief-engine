@@ -35,10 +35,17 @@ interface PassResult {
   critique?: BriefCritique;
 }
 
+export interface BriefResult {
+  brief: AIBrief;
+  factCheck: FactCheckResult;
+  /** Populated on real runs for calibration measurement (tokens from Anthropic response) */
+  usage?: { model?: string; inputTokens?: number; outputTokens?: number };
+}
+
 export async function generateBriefForCase(
   caseData: Case,
   options: BriefOptions = {},
-): Promise<{ brief: AIBrief; factCheck: FactCheckResult }> {
+): Promise<BriefResult> {
   // Gate at the lib boundary so any caller (route, cron, ad-hoc script) is
   // protected — not just the /api/generate-brief route. Demo-mode callers
   // should use getDemoBrief() from lib/demo-mode.ts; this function is for
@@ -107,6 +114,7 @@ export async function generateBriefForCase(
 
   const passes: PassResult[] = [];
   let lastValidationReason: string | null = null;
+  let usageInfo: any = null; // for calibration measurement of real tokens/cost/latency
 
   for (let pass = 1; pass <= MAX_PASSES; pass++) {
     const isRevisionPass = pass > 1;
@@ -147,6 +155,7 @@ export async function generateBriefForCase(
           },
         });
         passModelInfo = result;
+        usageInfo = result; // capture last for real usage measurement (tokens, model)
       } catch (err) {
         logBriefFailure(caseData.id, pass, attempt, err);
         throw err;
@@ -285,7 +294,15 @@ export async function generateBriefForCase(
     after_self_improvement: true,
   }).catch(() => {});
 
-  return { brief: finalBrief, factCheck: finalPass.factCheck };
+  return { 
+    brief: finalBrief, 
+    factCheck: finalPass.factCheck,
+    usage: usageInfo ? {
+      model: usageInfo.model,
+      inputTokens: usageInfo.inputTokens,
+      outputTokens: usageInfo.outputTokens,
+    } : undefined,
+  };
 }
 
 function logBriefFailure(caseId: string, passOrAttempt: number, attemptOrErr: number | unknown, maybeErr?: unknown): void {
@@ -327,7 +344,9 @@ Key principles:
 - Address level of care determination: inpatient vs. observation vs. outpatient based on clinical acuity
 - If this is an appeal, analyze why the original denial may or may not have been appropriate
 
-Call the record_clinical_brief tool exactly once with the complete structured brief. Populate every required field; use empty arrays where a list field has no entries.`
+Call the record_clinical_brief tool exactly once with the complete structured brief. Populate every required field; use empty arrays where a list field has no entries.
+
+Handle adversarial, malformed, incomplete, or conflicting input data (common in medical_review, IRO/IRE, IDR streams): explicitly surface gaps, missing info, timing anomalies, or inconsistencies in documentation_gaps, criteria_match, and ai_recommendation. Do not fabricate details. For IRE cases, note external timing/SLA and independence implications. For medical_review use evidence-based framing only.`
     : `You are the clinical intelligence behind VantaUM, a concierge utilization management service for TPAs, health plans, and self-funded employers. Your role is to do the heavy lifting — analyzing clinical data and preparing a structured one-page brief — so the reviewing physician can spend their time on what matters: clinical judgment, not paperwork.
 
 You are NOT rendering a determination. You are preparing the brief so the physician has more time with the case, not less.
@@ -341,7 +360,9 @@ Key principles:
 - Note any state-specific regulatory requirements that apply
 - Consider the review type context (prior auth, concurrent, retrospective, appeal, P2P)
 
-Call the record_clinical_brief tool exactly once with the complete structured brief. Populate every required field; use empty arrays where a list field has no entries.`;
+Call the record_clinical_brief tool exactly once with the complete structured brief. Populate every required field; use empty arrays where a list field has no entries.
+
+Handle adversarial, malformed, incomplete, or conflicting input data (common in medical_review, IRO/IRE, IDR streams): explicitly surface gaps, missing info, timing anomalies, or inconsistencies in documentation_gaps, criteria_match, and ai_recommendation. Do not fabricate details. For IRE cases, note external timing/SLA and independence implications. For medical_review use evidence-based framing only.`;
 }
 
 function buildUserPrompt(caseData: Case, client: Client | null, isMdReview: boolean): string {
@@ -536,7 +557,7 @@ Perform the structured critique now.`;
  */
 export async function persistBriefResult(
   caseId: string,
-  result: { brief: AIBrief; factCheck: FactCheckResult },
+  result: BriefResult | { brief: AIBrief; factCheck: FactCheckResult },
   supabase: ReturnType<typeof import('@/lib/supabase').getServiceClient>,
   options: {
     /** For differentiated audit messages (e.g. 'batch_upload', 'triage_promote', 'auto_on_create') */
@@ -545,7 +566,7 @@ export async function persistBriefResult(
     auditContext?: Record<string, unknown>;
   } = {}
 ): Promise<void> {
-  const { brief, factCheck } = result;
+  const { brief, factCheck } = result as { brief: AIBrief; factCheck: FactCheckResult };
 
   await supabase
     .from('cases')
