@@ -47,8 +47,10 @@ async function main() {
 
   const start = Date.now();
 
-  // Generate per stream with scenario mix for hard cases (conflicted/malformed for realism)
-  const mrCases = generateSyntheticCases({ count: MR_COUNT, stream: 'medical_review', scenario: 'clean', seed: 1001 });
+  // Generate per stream with scenario mix for hard/adversarial cases (malformed, conflicted, timing edges for IRE-rail)
+  const mrClean = generateSyntheticCases({ count: Math.floor(MR_COUNT * 0.8), stream: 'medical_review', scenario: 'clean', seed: 1001 });
+  const mrAdversarial = generateSyntheticCases({ count: MR_COUNT - mrClean.length, stream: 'medical_review', scenario: 'malformed', seed: 1002 });
+  const mrCases = [...mrClean, ...mrAdversarial];
   const iroCases = generateSyntheticCases({ count: Math.floor(IRO_COUNT / 2), stream: 'iro', scenario: 'complex', seed: 2002 })
     .concat(generateSyntheticCases({ count: Math.ceil(IRO_COUNT / 2), stream: 'ire', scenario: 'conflicted', seed: 2003 }));
   const idrCases = generateSyntheticCases({ count: IDR_COUNT, stream: 'payer_idr', scenario: 'malformed', seed: 3003 });
@@ -101,10 +103,10 @@ async function main() {
     } as unknown as AIBrief;
   }
 
-  // Cost + labor accumulators
+  // Cost + labor accumulators + fact-check edge stats for adversarial
   let totalTokensEst = 0;
   let totalLaborPctSum = 0;
-  let byStream: Record<string, { count: number; laborSum: number; costSum: number }> = {};
+  let byStream: Record<string, { count: number; laborSum: number; costSum: number; fcScores: number[]; flagsTotal: number }> = {};
 
   // 12-pod concurrent processor
   async function processBatch(batch: LoadCase[]): Promise<void> {
@@ -120,7 +122,7 @@ async function main() {
         const labor = computeLaborMetricForCase({ case_type: c.case_type, stream });
         totalLaborPctSum += labor.labor_reduction_pct;
 
-        // Exercise fact-checker specialized path (IDR vs clinical)
+        // Exercise fact-checker specialized path (IDR vs clinical) + adversarial edges
         const stubBrief = makeStubBrief(c);
         const fc: FactCheckResult = factCheckBrief(stubBrief, c as unknown as Case);
 
@@ -130,10 +132,12 @@ async function main() {
         const caseCost = (tokens / 1_000_000) * USD_PER_MILLION_TOKENS;
 
         const s = stream;
-        if (!byStream[s]) byStream[s] = { count: 0, laborSum: 0, costSum: 0 };
+        if (!byStream[s]) byStream[s] = { count: 0, laborSum: 0, costSum: 0, fcScores: [], flagsTotal: 0 };
         byStream[s].count += 1;
         byStream[s].laborSum += labor.labor_reduction_pct;
         byStream[s].costSum += caseCost;
+        byStream[s].fcScores.push(fc.overall_score);
+        byStream[s].flagsTotal += (fc.summary?.flagged || 0) + (Array.isArray(fc.sections) ? fc.sections.reduce((a: number, sec: any) => a + (sec.flags?.length || 0), 0) : 0);
       })
     );
   }
@@ -155,11 +159,13 @@ async function main() {
   const costPerCase = totalCases > 0 ? totalEstCost / totalCases : 0;
   const vsBenchmark = (costPerCase - TARGET_COST_PER_CASE).toFixed(4);
 
-  console.log('\n=== PER-STREAM RESULTS (labor rails + fact-check dispatch) ===');
+  console.log('\n=== PER-STREAM RESULTS (labor rails + fact-check dispatch + adversarial edges) ===');
   for (const [s, stats] of Object.entries(byStream)) {
     const avgL = (stats.laborSum / stats.count).toFixed(1);
     const avgC = (stats.costSum / stats.count).toFixed(4);
-    console.log(`  ${s}: ${stats.count} cases | avg labor ${avgL}% | est cost/case $${avgC}`);
+    const avgFc = (stats.fcScores.reduce((a, b) => a + b, 0) / stats.fcScores.length).toFixed(1);
+    const avgFlags = (stats.flagsTotal / stats.count).toFixed(1);
+    console.log(`  ${s}: ${stats.count} cases | avg labor ${avgL}% | est cost/case $${avgC} | avg fc score ${avgFc} | avg flags ${avgFlags}`);
   }
 
   console.log('\n=== AGGREGATE (12-pod sim) ===');

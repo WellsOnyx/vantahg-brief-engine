@@ -54,6 +54,48 @@ function fuzzyContains(haystack: string[], needle: string): boolean {
   return haystack.some((h) => fuzzyMatch(h, needle));
 }
 
+// ── Defensive accessors for adversarial / malformed briefs (new streams) ────
+function getProcedureCodes(brief: AIBrief): string[] {
+  const pa: any = brief.procedure_analysis || {};
+  return Array.isArray(pa.codes) ? pa.codes : [];
+}
+function getCriteriaMet(brief: AIBrief): string[] {
+  const cm: any = brief.criteria_match || {};
+  return Array.isArray(cm.criteria_met) ? cm.criteria_met : [];
+}
+function getCriteriaNotMet(brief: AIBrief): string[] {
+  const cm: any = brief.criteria_match || {};
+  return Array.isArray(cm.criteria_not_met) ? cm.criteria_not_met : [];
+}
+function getCriteriaUnable(brief: AIBrief): string[] {
+  const cm: any = brief.criteria_match || {};
+  return Array.isArray(cm.criteria_unable_to_assess) ? cm.criteria_unable_to_assess : [];
+}
+function getMissingDocs(brief: AIBrief): string[] {
+  const dr: any = brief.documentation_review || {};
+  return Array.isArray(dr.missing_documentation) ? dr.missing_documentation : [];
+}
+function getAdditionalInfoNeeded(brief: AIBrief): string[] {
+  const ra: any = brief.reviewer_action || {};
+  return Array.isArray(ra.additional_info_needed) ? ra.additional_info_needed : [];
+}
+function getStateReqs(brief: AIBrief): string[] {
+  const ra: any = brief.reviewer_action || {};
+  return Array.isArray(ra.state_specific_requirements) ? ra.state_specific_requirements : [];
+}
+function getRecommendation(brief: AIBrief): string | null {
+  const ar: any = brief.ai_recommendation || {};
+  return ar.recommendation || null;
+}
+function getConfidence(brief: AIBrief): string | null {
+  const ar: any = brief.ai_recommendation || {};
+  return ar.confidence || null;
+}
+function getComplexity(brief: AIBrief): string {
+  const pa: any = brief.procedure_analysis || {};
+  return pa.complexity_level || 'moderate';
+}
+
 // ── Section Verifiers ───────────────────────────────────────────────────────
 
 function verifyCriteriaMatch(
@@ -76,7 +118,7 @@ function verifyCriteriaMatch(
     (c) => c.typical_criteria
   );
 
-  for (const criterion of brief.criteria_match.criteria_met) {
+  for (const criterion of getCriteriaMet(brief)) {
     if (allKnownCriteria.length === 0) {
       // No reference criteria available - mark unverified
       claims.push({
@@ -103,7 +145,7 @@ function verifyCriteriaMatch(
     }
   }
 
-  for (const criterion of brief.criteria_match.criteria_not_met) {
+  for (const criterion of getCriteriaNotMet(brief)) {
     if (allKnownCriteria.length > 0 && fuzzyContains(allKnownCriteria, criterion)) {
       claims.push({
         claim: criterion,
@@ -122,7 +164,7 @@ function verifyCriteriaMatch(
   }
 
   // 2. Verify guideline source
-  const guidelineSource = brief.criteria_match.guideline_source;
+  const guidelineSource = (brief.criteria_match as any)?.guideline_source;
   if (guidelineSource) {
     const parts = guidelineSource.split(/[\/,;]+/).map((s) => s.trim()).filter(Boolean);
     for (const part of parts) {
@@ -157,7 +199,7 @@ function verifyCriteriaMatch(
   }
 
   // 3. Verify applicable_guideline
-  const applicableGuideline = brief.criteria_match.applicable_guideline;
+  const applicableGuideline = (brief.criteria_match as any)?.applicable_guideline;
   if (applicableGuideline) {
     const match = findKnownGuideline(applicableGuideline);
     if (match) {
@@ -199,7 +241,7 @@ function verifyProcedureCodes(
   const flags: string[] = [];
 
   // Verify procedure codes from the brief
-  for (const codeEntry of brief.procedure_analysis.codes) {
+  for (const codeEntry of getProcedureCodes(brief)) {
     const code = codeEntry.split(/[\s\-–—]/)[0].trim();
     if (isValidMedicalCode(code)) {
       claims.push({
@@ -220,8 +262,8 @@ function verifyProcedureCodes(
   }
 
   // Verify diagnosis codes from the brief
-  if (brief.diagnosis_analysis) {
-    const primaryDx = brief.diagnosis_analysis.primary_diagnosis;
+  if ((brief as any).diagnosis_analysis) {
+    const primaryDx = ((brief as any).diagnosis_analysis.primary_diagnosis || '');
     const dxCode = primaryDx.split(/[\s\-–—]/)[0].trim();
     if (isValidICD10(dxCode)) {
       claims.push({
@@ -244,7 +286,7 @@ function verifyProcedureCodes(
   const caseCodes = new Set(
     (caseData.procedure_codes || []).map((c) => c.trim().toUpperCase())
   );
-  for (const codeEntry of brief.procedure_analysis.codes) {
+  for (const codeEntry of getProcedureCodes(brief)) {
     const code = codeEntry.split(/[\s\-–—]/)[0].trim().toUpperCase();
     if (caseCodes.size > 0 && !caseCodes.has(code) && isValidMedicalCode(code)) {
       flags.push(
@@ -261,9 +303,8 @@ function verifyDocumentation(brief: AIBrief): SectionVerification {
   const flags: string[] = [];
 
   // Check that missing documentation items appear in additional_info_needed
-  const additionalInfoNeeded =
-    brief.reviewer_action.additional_info_needed || [];
-  const missingDocs = brief.documentation_review.missing_documentation || [];
+  const additionalInfoNeeded = getAdditionalInfoNeeded(brief);
+  const missingDocs = getMissingDocs(brief);
 
   for (const missing of missingDocs) {
     const referenced = additionalInfoNeeded.some((info) =>
@@ -296,7 +337,7 @@ function verifyRecommendation(brief: AIBrief): SectionVerification {
   const flags: string[] = [];
 
   // Check for state-specific citations that look fabricated
-  const stateReqs = brief.reviewer_action.state_specific_requirements || [];
+  const stateReqs = getStateReqs(brief);
   for (const req of stateReqs) {
     if (isRecognizedRegulatoryFormat(req)) {
       claims.push({
@@ -327,7 +368,7 @@ function verifyTwoMidnight(brief: AIBrief, caseData: Case): SectionVerification 
   const flags: string[] = [];
 
   const tm = analyzeTwoMidnightRule(caseData);
-  const rec = brief.ai_recommendation.recommendation;
+  const rec = getRecommendation(brief);
 
   if (tm.applies) {
     claims.push({
@@ -372,7 +413,7 @@ function verifyDataFidelity(brief: AIBrief, caseData: Case): SectionVerification
 
   // Procedure code fidelity — catch hallucinated codes not in the actual request
   const caseProc = new Set((caseData.procedure_codes || []).map((c) => c.trim().toUpperCase()));
-  for (const codeEntry of brief.procedure_analysis.codes) {
+  for (const codeEntry of getProcedureCodes(brief)) {
     const code = codeEntry.split(/[\s\-–—]/)[0].trim().toUpperCase();
     if (isValidMedicalCode(code)) {
       if (caseProc.size > 0 && !caseProc.has(code)) {
@@ -421,7 +462,7 @@ function verifyDataFidelity(brief: AIBrief, caseData: Case): SectionVerification
 
   // Missing documentation fidelity (does brief over- or under- flag vs what we know is absent)
   const caseMissing = (caseData as any).missing_clinical_info || [];
-  const briefMissing = brief.documentation_review.missing_documentation || [];
+  const briefMissing = getMissingDocs(brief);
   if (briefMissing.length > 0 && caseMissing.length === 0) {
     // brief flagged gaps but case record shows none — still ok, but note
     claims.push({
@@ -441,9 +482,9 @@ function runConsistencyChecks(brief: AIBrief): ConsistencyCheck[] {
   const checks: ConsistencyCheck[] = [];
 
   // 1. Recommendation vs criteria balance
-  const metCount = brief.criteria_match.criteria_met.length;
-  const notMetCount = brief.criteria_match.criteria_not_met.length;
-  const recommendation = brief.ai_recommendation.recommendation;
+  const metCount = getCriteriaMet(brief).length;
+  const notMetCount = getCriteriaNotMet(brief).length;
+  const recommendation = getRecommendation(brief);
 
   if (recommendation === 'approve' && notMetCount > metCount && metCount > 0) {
     checks.push({
@@ -470,8 +511,8 @@ function runConsistencyChecks(brief: AIBrief): ConsistencyCheck[] {
   }
 
   // 2. High confidence with many unable-to-assess
-  const unableCount = brief.criteria_match.criteria_unable_to_assess.length;
-  const confidence = brief.ai_recommendation.confidence;
+  const unableCount = getCriteriaUnable(brief).length;
+  const confidence = getConfidence(brief);
 
   if (confidence === 'high' && unableCount >= 3) {
     checks.push({
@@ -488,8 +529,8 @@ function runConsistencyChecks(brief: AIBrief): ConsistencyCheck[] {
   }
 
   // 3. Missing documentation should drive pend/info-needed
-  const missingDocs = brief.documentation_review.missing_documentation.length;
-  const additionalInfo = brief.reviewer_action.additional_info_needed.length;
+  const missingDocs = getMissingDocs(brief).length;
+  const additionalInfo = getAdditionalInfoNeeded(brief).length;
 
   if (missingDocs >= 3 && recommendation === 'approve' && additionalInfo === 0) {
     checks.push({
@@ -506,8 +547,9 @@ function runConsistencyChecks(brief: AIBrief): ConsistencyCheck[] {
   }
 
   // 4. Peer-to-peer consistency
+  const ra: any = brief.reviewer_action || {};
   if (
-    brief.reviewer_action.peer_to_peer_suggested &&
+    !!ra.peer_to_peer_suggested &&
     recommendation === 'approve' &&
     confidence === 'high'
   ) {
@@ -527,8 +569,8 @@ function runConsistencyChecks(brief: AIBrief): ConsistencyCheck[] {
 
   // 5. Complexity-confidence coherence (AI Automation Layer — Track B enhancement)
   // Helps surface cases where the brief's self-reported certainty may not match clinical complexity for the human reviewer gate.
-  const complexity = brief.procedure_analysis.complexity_level;
-  const unableCountForCoherence = brief.criteria_match.criteria_unable_to_assess.length;
+  const complexity = getComplexity(brief);
+  const unableCountForCoherence = getCriteriaUnable(brief).length;
   if (complexity === 'complex' && confidence === 'high' && (notMetCount > 0 || unableCountForCoherence > 1)) {
     checks.push({
       check: 'Complexity-confidence coherence',
@@ -612,6 +654,22 @@ function verifyIdrFactors(
     explanation: idrFactors.map(f => f.name).join('; '),
   });
 
+  // IRO/IRE specific adversarial hardening + timing/appeal context (edge cases)
+  const ct = caseData.case_type;
+  const isIre = ct === 'ire';
+  const hasAppeal = !!caseData.appeal_of_case_id;
+  if (ct === 'iro' || isIre) {
+    claims.push({
+      claim: `Independent ${isIre ? 'Review Entity (IRE)' : 'Review Organization (IRO)'} path`,
+      status: 'verified',
+      source: 'Case type',
+      explanation: `Case routed as ${isIre ? 'IRE' : 'IRO'} external review${hasAppeal ? ` (appeal of ${caseData.appeal_of_case_id})` : ''}. Independence + prior-determination gap analysis required.`,
+    });
+    if (!hasAppeal) {
+      flags.push('IRO/IRE case missing appeal_of_case_id — verify original linkage for independence enforcement');
+    }
+  }
+
   return { section: 'IDR / NSA Factors', claims, flags };
 }
 
@@ -621,7 +679,24 @@ export function factCheckBrief(
   brief: AIBrief,
   caseData: Case
 ): FactCheckResult {
+  if (!brief || typeof brief !== 'object' || !brief.ai_recommendation || !brief.criteria_match) {
+    return {
+      overall_score: 0,
+      overall_status: 'fail',
+      sections: [],
+      summary: { verified: 0, unverified: 0, flagged: 0 },
+      consistency_checks: [],
+      checked_at: new Date().toISOString(),
+      human_review_recommended: true,
+      review_reasons: ['Malformed or missing brief payload — adversarial or generation failure'],
+    } as FactCheckResult;
+  }
+
   const isIdrCase = caseData.case_type === 'payer_idr' || caseData.case_type === 'iro' || caseData.case_type === 'ire';
+  // medical_review deliberately takes the clinical/EBM path (not IDR/NSA) even if it reuses some shared verifiers
+  const isMedicalReviewCase = caseData.case_type === 'medical_review' ||
+    caseData.review_type === 'second_level_review' ||
+    caseData.status === 'md_review';
 
   const sections: SectionVerification[] = isIdrCase
     ? [

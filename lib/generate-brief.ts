@@ -67,8 +67,9 @@ export async function generateBriefForCase(
     systemPrompt = buildIdrSystemPrompt();
     userPrompt = buildIdrUserPrompt(caseData, options.client ?? null);
   } else if (isIroCase) {
-    systemPrompt = buildIroSystemPrompt();
-    userPrompt = buildIroUserPrompt(caseData, options.client ?? null);
+    const isIre = caseData.case_type === 'ire';
+    systemPrompt = buildIroSystemPrompt(isIre);
+    userPrompt = buildIroUserPrompt(caseData, options.client ?? null, isIre);
   } else {
     systemPrompt = buildSystemPrompt(isMdReview);
     userPrompt = buildUserPrompt(caseData, options.client ?? null, isMdReview);
@@ -78,9 +79,10 @@ export async function generateBriefForCase(
   const getRevisionPrompts = (prior: PassResult | null) => {
     if (!prior?.critique) return { system: systemPrompt, user: userPrompt };
     if (isIroCase) {
+      const isIre = caseData.case_type === 'ire';
       return {
-        system: buildIroRevisionSystemPrompt(prior.critique),
-        user: buildIroRevisionUserPrompt(caseData, options.client ?? null, prior.brief, prior.factCheck, prior.critique),
+        system: buildIroRevisionSystemPrompt(prior.critique, isIre),
+        user: buildIroRevisionUserPrompt(caseData, options.client ?? null, prior.brief, prior.factCheck, prior.critique, isIre),
       };
     }
     if (isIdrCase) {
@@ -634,27 +636,32 @@ Analyze the case strictly against the NSA IDR factors. Produce the structured br
 // IRO / IRE Brief Generation (Independent Review)
 // ============================================================================
 
-function buildIroSystemPrompt(): string {
-  return `You are the intelligence layer behind Vanta Health Group's IRO/IRE engine. Your role is to prepare a structured, defensible pre-review brief for an independent external reviewer (IRO/IRE).
+function buildIroSystemPrompt(isIre: boolean = false): string {
+  const entity = isIre ? 'IRE (Independent Review Entity)' : 'IRO (Independent Review Organization)';
+  return `You are the intelligence layer behind Vanta Health Group's IRO/IRE engine. Your role is to prepare a structured, defensible pre-review brief for an independent external reviewer (${entity}).
 
 You NEVER render the final determination. You analyze the case in the context of an appeal or independent review, paying special attention to:
 - The linked original case (via appeal_of_case_id) and any prior determination.
-- Whether the independent reviewer would have access to the same information.
+- Whether the independent reviewer would have access to the same information (including timing of receipt).
 - Clinical defensibility, documentation gaps, and any independence or conflict considerations (data only).
 - How the case differs from or aligns with the original UM/MR review.
+- External review timing/SLA implications and urgency for the independent reviewer.
 
-Focus the brief on what an external independent reviewer needs: clear summary of facts, criteria application in the original, any new information, and key issues for independent adjudication.
+Focus the brief on what an external independent reviewer needs: clear summary of facts, criteria application in the original, any new information, and key issues for independent adjudication. Explicitly call out any missing appeal linkage or timing deltas.
 
 Call the record_clinical_brief tool exactly once with a complete structured brief. Adapt criteria_match and ai_recommendation for independent review context. Flag any documentation that was (or was not) available to the original reviewer.`;
 }
 
-function buildIroUserPrompt(caseData: Case, client: Client | null): string {
+function buildIroUserPrompt(caseData: Case, client: Client | null, isIre: boolean = false): string {
   const idrFactors = getIdrFactors(); // reuse NSA-like factors where relevant, plus general clinical
   const factorsContext = JSON.stringify(idrFactors, null, 2);
+  const entity = isIre ? 'IRE' : 'IRO/IRE';
 
   let appealContext = '';
   if (caseData.appeal_of_case_id) {
-    appealContext = `\n\nAPPEAL CONTEXT: This is an IRO/IRE on appeal_of_case_id=${caseData.appeal_of_case_id}. Emphasize what an independent reviewer would see differently or needs to re-evaluate.`;
+    appealContext = `\n\nAPPEAL CONTEXT: This is an ${entity} on appeal_of_case_id=${caseData.appeal_of_case_id}. Emphasize what an independent reviewer would see differently or needs to re-evaluate, including any timing or info deltas since original.`;
+  } else {
+    appealContext = `\n\nADVERSARIAL NOTE: No appeal_of_case_id present — flag this explicitly for independence verification and possible re-linkage.`;
   }
 
   let clientContext = '';
@@ -662,7 +669,7 @@ function buildIroUserPrompt(caseData: Case, client: Client | null): string {
     clientContext = `\n\nPAYER / CLIENT CONTEXT: ${client.name} (${client.type || 'payer'}).`;
   }
 
-  return `Prepare an IRO/IRE (Independent Review) pre-review brief for the following case.
+  return `Prepare an ${entity} (Independent Review) pre-review brief for the following case.
 
 CASE NUMBER: ${caseData.case_number}
 ${appealContext}
@@ -686,17 +693,18 @@ CLAIM DETAILS:
 CLINICAL QUESTION / CONTEXT:
 ${caseData.clinical_question || caseData.procedure_description || 'Independent review of prior determination.'}
 
-ORIGINAL REVIEW CONTEXT (for IRO/IRE):
+ORIGINAL REVIEW CONTEXT (for ${entity}):
 ${factorsContext}
 ${clientContext}
 
-Analyze with the perspective of an independent external reviewer. Produce the structured brief via the tool. Highlight differences from any prior determination, documentation gaps, and clinical issues that warrant independent adjudication. Note any independence-related data points.`;
+Analyze with the perspective of an independent external reviewer. Produce the structured brief via the tool. Highlight differences from any prior determination, documentation gaps, and clinical issues that warrant independent adjudication. Note any independence-related data points, timing/SLA considerations, and missing linkage for the external reviewer. Be robust to malformed or incomplete input data — surface gaps explicitly.`;
 }
 
 // ── Stream-specific revision helpers (for IRO/IRE + IDR; MD/UM use the original) ──
 
-function buildIroRevisionSystemPrompt(priorCritique?: BriefCritique): string {
-  const base = buildIroSystemPrompt();
+function buildIroRevisionSystemPrompt(priorCritique?: BriefCritique, isIre: boolean = false): string {
+  const base = buildIroSystemPrompt(isIre);
+  const entity = isIre ? 'IRE' : 'IRO/IRE';
   const critiqueDirective = priorCritique
     ? `
 
@@ -704,8 +712,8 @@ SELF-CRITIQUE REVISION DIRECTIVE (MANDATORY):
 You previously produced a draft that was fact-checked and self-critiqued. The following issues were identified by your own clinical reasoning engine:
 ${priorCritique.issues_identified.map((i, idx) => `${idx + 1}. ${i}`).join('\n')}
 
-You MUST produce a REVISED IRO/IRE brief that directly addresses EVERY issue above.
-- Strengthen independence context, appeal linkage, and documentation gap notes where flagged.
+You MUST produce a REVISED ${entity} brief that directly addresses EVERY issue above.
+- Strengthen independence context, appeal linkage, timing deltas, and documentation gap notes where flagged.
 - Adapt criteria_match / ai_recommendation for external reviewer lens.
 - Fix any prior-determination alignment or conflict issues explicitly called out.
 Output the COMPLETE revised brief via the record_clinical_brief tool. Do not omit fields.`
@@ -719,11 +727,13 @@ function buildIroRevisionUserPrompt(
   priorBrief: AIBrief,
   priorFactCheck: FactCheckResult,
   critique: BriefCritique,
+  isIre: boolean = false,
 ): string {
-  const base = buildIroUserPrompt(caseData, client);
+  const base = buildIroUserPrompt(caseData, client, isIre);
+  const entity = isIre ? 'IRE' : 'IRO/IRE';
   return `${base}
 
---- PRIOR DRAFT IRO/IRE BRIEF (for targeted revision) ---
+--- PRIOR DRAFT ${entity} BRIEF (for targeted revision) ---
 Draft AI Recommendation: ${priorBrief.ai_recommendation.recommendation} (confidence: ${priorBrief.ai_recommendation.confidence})
 Draft Fact-Check Score: ${priorFactCheck.overall_score}/100 (status: ${priorFactCheck.overall_status})
 
@@ -736,7 +746,7 @@ ${critique.issues_identified.map((i) => `• ${i}`).join('\n')}
 Recommended fixes (incorporate):
 ${critique.recommended_fixes.map((f) => `• ${f}`).join('\n')}
 
-Produce the FULL REVISED structured IRO/IRE brief via the tool call. Your revised output will be re-fact-checked.`;
+Produce the FULL REVISED structured ${entity} brief via the tool call. Your revised output will be re-fact-checked. Be robust to any malformed prior data.`;
 }
 
 function buildIdrRevisionSystemPrompt(priorCritique?: BriefCritique): string {

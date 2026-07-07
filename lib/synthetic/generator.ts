@@ -57,15 +57,16 @@ export function generateSyntheticCases(opts: SyntheticOptions): SyntheticCase[] 
     const isMedical = stream === 'medical_review';
     const isIro = stream === 'iro' || stream === 'ire';
     const isIdr = stream === 'payer_idr';
+    const isIre = stream === 'ire';
 
     const syn: SyntheticCase = {
       id: `synth-${stream}-${i}`,
       case_number: `SYNTH-${stream.toUpperCase()}-${i.toString().padStart(5, '0')}`,
       case_type: caseType,
-      status: scenario === 'complex' ? 'md_review' : 'brief_ready',
-      priority: 'standard',
+      status: scenario === 'complex' || scenario === 'malformed' ? 'md_review' : 'brief_ready',
+      priority: scenario === 'conflicted' ? 'urgent' : 'standard',
       service_category: 'other',
-      review_type: isMedical ? 'second_level_review' : 'prior_auth',
+      review_type: isMedical ? 'second_level_review' : isIro ? 'appeal' : 'prior_auth',
       patient_name: fakePatient(i),
       patient_dob: '1980-01-01',
       patient_member_id: `SYNTH-MBR-${i}`,
@@ -78,6 +79,9 @@ export function generateSyntheticCases(opts: SyntheticOptions): SyntheticCase[] 
       billed_amount_cents: isIdr ? 2500000 : undefined,
       is_out_of_network: isIdr ? true : undefined,
       appeal_of_case_id: isIro ? `orig-${i % 100}` : undefined,
+      // Timing edge for IRE-rail + mixed batches: sometimes no deadline (adversarial/malformed)
+      turnaround_deadline: (scenario === 'malformed' || (isIre && i % 3 === 0)) ? null : new Date(Date.now() + 72*3600*1000).toISOString(),
+      sla_hours: isIro ? 72 : undefined,
       synthetic: true,
       syntheticMetadata: {
         stream,
