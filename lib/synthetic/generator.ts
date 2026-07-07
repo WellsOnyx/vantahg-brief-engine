@@ -7,7 +7,8 @@
  * Everything labeled estimated_pending_calibration.
  */
 
-import type { Case, CaseType, LaborStream } from '../types';
+import type { Case, CaseType } from '../types';
+import type { LaborStream } from '../labor-metric';
 import { computeSubmissionFingerprint } from '../intake/efax/storage';
 
 export interface SyntheticOptions {

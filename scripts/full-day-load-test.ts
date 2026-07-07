@@ -60,6 +60,8 @@ async function main() {
   // Prepare minimal real-ish brief for fact-check (exercises stream dispatch in fact-checker)
   function makeStubBrief(c: LoadCase): AIBrief {
     const isIdrLike = c.case_type === 'payer_idr' || c.case_type === 'iro' || c.case_type === 'ire';
+    const procCode = (c.procedure_codes?.[0] || '27447') + ' - synthetic';
+    const dxCode = (c.diagnosis_codes?.[0] || 'M17.12') + ' - synthetic';
     return {
       clinical_question: c.clinical_question || '',
       procedure_analysis: {
@@ -67,6 +69,11 @@ async function main() {
         diagnosis_support: 'synthetic support',
         alternatives: [],
         complexity_level: 'moderate',
+        codes: [procCode], // required by verifyProcedureCodes
+      },
+      diagnosis_analysis: {
+        primary_diagnosis: dxCode,
+        secondary_diagnoses: [],
       },
       criteria_match: {
         applicable_guideline: isIdrLike ? 'NSA IDR factors' : 'VantaUM Medical Criteria',
@@ -75,12 +82,14 @@ async function main() {
         criteria_unable_to_assess: [],
       },
       documentation_gaps: [],
+      documentation_review: { missing_documentation: [] },
       two_midnight: { applies: false, rationale: 'N/A for synthetic load' },
       reviewer_action: {
         decision_required: 'review',
         time_sensitivity: 'standard',
         peer_to_peer_suggested: false,
         state_specific_requirements: [],
+        additional_info_needed: [],
       },
       ai_recommendation: {
         recommendation: 'approve',
@@ -89,7 +98,7 @@ async function main() {
         key_considerations: ['synthetic only'],
       },
       generation_metadata: { passes_completed: 1, self_improvement_applied: false } as any,
-    } as AIBrief;
+    } as unknown as AIBrief;
   }
 
   // Cost + labor accumulators
