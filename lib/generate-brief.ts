@@ -344,6 +344,8 @@ Key principles:
 - Address level of care determination: inpatient vs. observation vs. outpatient based on clinical acuity
 - If this is an appeal, analyze why the original denial may or may not have been appropriate
 
+For medical_review stream adversarial/malformed cases: the input may be incomplete, have conflicting data, wrong review_type signals, or missing details. Explicitly flag gaps in documentation_review and ai_recommendation. Use evidence-based only.
+
 Call the record_clinical_brief tool exactly once with the complete structured brief. Populate every required field; use empty arrays where a list field has no entries.
 
 Handle adversarial, malformed, incomplete, or conflicting input data (common in medical_review, IRO/IRE, IDR streams): explicitly surface gaps, missing info, timing anomalies, or inconsistencies in documentation_gaps, criteria_match, and ai_recommendation. Do not fabricate details. For IRE cases, note external timing/SLA and independence implications. For medical_review use evidence-based framing only.`

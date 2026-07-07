@@ -68,6 +68,8 @@ export function generateSyntheticCases(opts: SyntheticOptions): SyntheticCase[] 
     let appeal = isIro ? `orig-${i % 100}` : undefined;
     let turnDeadline: string | null = (scenario === 'malformed' || (isIre && i % 3 === 0)) ? null : new Date(Date.now() + 72*3600*1000).toISOString();
     let slaH = isIro ? 72 : undefined;
+    let reviewType = isMedical ? 'second_level_review' : isIro ? 'appeal' : 'prior_auth';
+    let caseStatus = scenario === 'complex' || scenario === 'malformed' ? 'md_review' : 'brief_ready';
 
     if (scenario === 'malformed' || scenario === 'incomplete-data') {
       procCodes = i % 2 === 0 ? ['INVALID-CODE', '99999'] : [];
@@ -85,15 +87,37 @@ export function generateSyntheticCases(opts: SyntheticOptions): SyntheticCase[] 
       turnDeadline = new Date(Date.now() - 1000*3600).toISOString(); // past/overdue
       slaH = 1; // very tight for IRE rail
     }
+    if (scenario === 'incomplete-data' || scenario === 'malformed') {
+      if (stream === 'medical_review') {
+        reviewType = 'prior_auth'; // wrong for medical_review stream
+      }
+    }
+    // Additional per-stream adversarial for edge hardening (set via lets)
+    if (scenario === 'incomplete-data' || scenario === 'malformed') {
+      if (stream === 'medical_review') {
+        // wrong review_type for medical stream
+        // will be overridden in object for some, but we can force bad clinQ
+        clinQ = 'Insufficient details for second level medical review - adversarial';
+      }
+      if (stream === 'ire' || stream === 'iro') {
+        appeal = undefined; // missing for independence/timing edge
+        if (stream === 'ire') turnDeadline = null;
+      }
+      if (stream === 'payer_idr') {
+        billed = 0;
+        oon = undefined;
+        procCodes = ['BAD'];
+      }
+    }
 
     const syn: SyntheticCase = {
       id: `synth-${stream}-${i}`,
       case_number: `SYNTH-${stream.toUpperCase()}-${i.toString().padStart(5, '0')}`,
       case_type: caseType,
-      status: scenario === 'complex' || scenario === 'malformed' ? 'md_review' : 'brief_ready',
+      status: caseStatus,
       priority: (scenario === 'conflicted' || scenario === 'timing-edge') ? 'urgent' : 'standard',
       service_category: 'other',
-      review_type: isMedical ? 'second_level_review' : isIro ? 'appeal' : 'prior_auth',
+      review_type: reviewType,
       patient_name: fakePatient(i),
       patient_dob: '1980-01-01',
       patient_member_id: `SYNTH-MBR-${i}`,

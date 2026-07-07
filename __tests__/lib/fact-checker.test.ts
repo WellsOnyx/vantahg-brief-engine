@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { factCheckBrief } from '@/lib/fact-checker';
 import type { AIBrief, Case } from '@/lib/types';
+import { generateSyntheticCases } from '@/lib/synthetic/generator';
 
 function makeBrief(overrides: Partial<AIBrief> = {}): AIBrief {
   return {
@@ -253,5 +254,28 @@ describe('factCheckBrief', () => {
     // Either flags the missing or still produces result (defensive)
     expect(result.overall_score).toBeGreaterThanOrEqual(0);
     expect(Array.isArray(result.review_reasons)).toBe(true);
+  });
+
+  // Exercise synthetic hard-case suite for adversarial/malformed per stream + mixed
+  it('handles synthetic hard cases for all new streams (medical_review, iro, ire, payer_idr) without crash, produces reasonable scores', () => {
+    const streams = ['medical_review', 'iro', 'ire', 'payer_idr'] as const;
+    for (const stream of streams) {
+      const hardCases = generateSyntheticCases({ count: 2, stream, scenario: 'malformed', seed: 123 + stream.length });
+      for (const c of hardCases) {
+        const stub = (c as any).ai_brief || { ai_recommendation: { recommendation: 'approve', confidence: 'low' } };
+        const res = factCheckBrief(stub as any, c as any);
+        expect(res.overall_score).toBeGreaterThanOrEqual(0);
+        expect(res.overall_score).toBeLessThanOrEqual(100);
+        expect(Array.isArray(res.review_reasons)).toBe(true);
+      }
+    }
+    // mixed batch
+    const mixed = generateSyntheticCases({ count: 4, stream: 'mixed', scenario: 'conflicting-data', seed: 999 });
+    expect(mixed.length).toBe(4);
+    for (const c of mixed) {
+      const stub = (c as any).ai_brief || {};
+      const res = factCheckBrief(stub as any, c as any);
+      expect(typeof res.human_review_recommended).toBe('boolean');
+    }
   });
 });
