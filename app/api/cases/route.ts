@@ -10,6 +10,7 @@ import { notifyLpnCaseAssigned, notifyIntakeConfirmation } from '@/lib/notificat
 import { isDemoMode, getDemoCases } from '@/lib/demo-mode';
 import { requireAuth } from '@/lib/auth-guard';
 import { applyRateLimit } from '@/lib/rate-limit-middleware';
+import { intakePersistenceGuard } from '@/lib/intake/persistence-guard';
 import {
   computeSubmissionFingerprint,
   findDuplicateCase,
@@ -164,6 +165,9 @@ export async function POST(request: NextRequest) {
     if (authResult instanceof NextResponse) return authResult;
     const rateLimited = await applyRateLimit(request, { maxRequests: 30 });
     if (rateLimited) return rateLimited;
+
+    const persistenceBlocked = intakePersistenceGuard();
+    if (persistenceBlocked) return persistenceBlocked;
 
     const supabase = getServiceClient();
     const body = await request.json();

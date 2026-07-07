@@ -34,6 +34,17 @@ const PUBLIC_EXACT = new Set([
 // something like `/api/intake/efax/phaxio-queue` if that's ever added.
 const PUBLIC_API_PREFIXES = ['/api/intake/efax/phaxio'];
 
+// Public intake webhooks that WRITE case data. When the env requires real
+// persistence (REQUIRE_REAL_PERSISTENCE=true) but the DB isn't configured,
+// isDemoMode() flips true and these would silently accept-and-drop the intake.
+// Fail closed with a 503 instead. See lib/intake/persistence-guard.ts.
+const INTAKE_WRITE_PATHS = [
+  '/api/external/submit',
+  '/api/intake/efax',
+  '/api/intake/email',
+  '/api/intake/voice',
+];
+
 function isPublicRoute(pathname: string): boolean {
   if (PUBLIC_EXACT.has(pathname)) return true;
   if (PUBLIC_PAGE_PREFIXES.some((p) => pathname.startsWith(p))) return true;
@@ -105,6 +116,23 @@ export async function middleware(request: NextRequest) {
   }
 
   if (isPublicRoute(pathname)) {
+    // Fail-closed: never let a public intake webhook silently demo-drop when the
+    // environment requires real persistence but the DB isn't configured.
+    if (
+      request.method === 'POST' &&
+      process.env.REQUIRE_REAL_PERSISTENCE === 'true' &&
+      isDemoMode() &&
+      INTAKE_WRITE_PATHS.some((p) => pathname === p || pathname.startsWith(p + '/'))
+    ) {
+      return NextResponse.json(
+        {
+          error: 'persistence_unavailable',
+          detail:
+            'Real persistence required but the database is not configured; intake refused rather than dropped.',
+        },
+        { status: 503 },
+      );
+    }
     return NextResponse.next();
   }
 

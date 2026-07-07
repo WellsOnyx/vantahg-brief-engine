@@ -7,6 +7,7 @@ import { applyRateLimit } from '@/lib/rate-limit-middleware';
 import { parseEmailPayload } from '@/lib/intake/email-parser';
 import type { ParsedEmailData } from '@/lib/intake/email-parser';
 import { verifyWebhookSignature } from '@/lib/webhook-verify';
+import { intakePersistenceGuard } from '@/lib/intake/persistence-guard';
 
 /**
  * POST /api/gr/webhook — Canonical Intake Contract (see docs/INTAKE_CONTRACT.md).
@@ -30,7 +31,9 @@ export async function POST(request: NextRequest) {
 
   // 2) Verify the signature. Enforced when a secret is configured; real mode
   //    requires one (never accept unsigned intake into the persistence path).
-  const secret = process.env.GR_WEBHOOK_SECRET;
+  // Standardized on GR_WEBHOOK_SECRET; accept the legacy GRAVITY_RAIL_WEBHOOK_SECRET
+  // as a safety net during the transition.
+  const secret = process.env.GR_WEBHOOK_SECRET || process.env.GRAVITY_RAIL_WEBHOOK_SECRET;
   if (secret) {
     const signature = request.headers.get('x-webhook-signature') || '';
     const ok = await verifyWebhookSignature(rawBody, signature, secret);
@@ -65,6 +68,10 @@ export async function POST(request: NextRequest) {
     );
   }
   const caseNumber = `GR-${idempotencyKey}`;
+
+  // Fail closed if this env requires real persistence but the DB isn't wired.
+  const persistenceBlocked = intakePersistenceGuard();
+  if (persistenceBlocked) return persistenceBlocked;
 
   // Demo mode: acknowledge the (verified) contract without persistence.
   if (isDemoMode()) {
