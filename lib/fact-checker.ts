@@ -166,7 +166,7 @@ function verifyCriteriaMatch(
   // 2. Verify guideline source
   const guidelineSource = (brief.criteria_match as any)?.guideline_source;
   if (guidelineSource) {
-    const parts = guidelineSource.split(/[\/,;]+/).map((s) => s.trim()).filter(Boolean);
+    const parts = guidelineSource.split(/[\/,;]+/).map((s: string) => s.trim()).filter(Boolean);
     for (const part of parts) {
       const match = findKnownGuideline(part);
       if (match) {
