@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { DM_Sans, DM_Serif_Display } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/components/AuthProvider";
-import { AppShell, type NavGroup } from "@/components/AppShell";
+import { DemoPersonaShell } from "@/components/demo/DemoPersonaShell";
 
 const dmSans = DM_Sans({
   variable: "--font-dm-sans",
@@ -38,85 +38,23 @@ export const viewport: Viewport = {
   themeColor: '#0c2340',
 };
 
-// Role-aware navigation per design spec (mesh id=115)
-// Using the 5 role nav arrays verbatim.
-
-const tpaClientNav: NavGroup[] = [
-  {
-    items: [
-      { href: "/portal/tpa", label: "Overview" },
-      { href: "/portal/tpa/submit", label: "Submit Auth" },
-      { href: "/cases", label: "Cases" },
-      { href: "/portal/tpa/practices", label: "Network" },
-      { href: "/admin/billing", label: "Billing" },
-    ],
-  },
-];
-
-const conciergeNav: NavGroup[] = [
-  {
-    items: [
-      { href: "/dashboard", label: "Work Dashboard" },
-      { href: "/concierge", label: "My Queue" },
-      { href: "/intake", label: "Intake Triage" },
-      { href: "/cases", label: "Cases" },
-    ],
-  },
-];
-
-const clinicianNav: NavGroup[] = [
-  {
-    items: [
-      { href: "/dashboard", label: "Work Dashboard" },
-      { href: "/queue", label: "My Queue" },
-      { href: "/cases", label: "Cases" },
-      { href: "/quality", label: "Quality" },
-    ],
-  },
-];
-
-const idrAttorneyNav: NavGroup[] = [
-  {
-    items: [
-      { href: "/dashboard", label: "Work Dashboard" },
-      { href: "/attorney/cases", label: "My Cases" },
-      { href: "/cases", label: "Cases" },
-    ],
-  },
-];
-
-const adminInternalNav: NavGroup[] = [
-  {
-    items: [
-      { href: "/dashboard", label: "Work Dashboard" },
-      { href: "/mission-control", label: "Mission Control" },
-      { href: "/cockpit", label: "Command Cockpit" },
-      { href: "/ops", label: "Operations" },
-      { href: "/clients", label: "Clients" },
-      { href: "/admin/billing", label: "Billing" },
-    ],
-  },
-];
+// Role-aware navigation per design spec (mesh id=115) lives in
+// components/demo/personas.ts — one source shared by this layout's default
+// shell and the demo persona switcher. Non-demo behavior is unchanged: the
+// Admin/Internal nav renders until per-request role resolution ships.
+// (Full role resolution will be added in a follow-up, or via client-side
+// useAuth fallback.)
 
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // For the initial wiring, we pass the Admin/Internal nav as primary.
-  // Full per-request role resolution will be added in a follow-up (or via client-side useAuth fallback).
-  // This satisfies the immediate requirement without blocking.
-
-  const primaryNav = adminInternalNav;
-  const roleSurface = "Admin";
-
   return (
     <html lang="en">
       <body className={`${dmSans.variable} ${dmSerif.variable} antialiased font-[family-name:var(--font-dm-sans)]`}>
         <AuthProvider>
-          <AppShell primaryNav={primaryNav} roleSurface={roleSurface}>
-            {children}
-          </AppShell>
+          <DemoPersonaShell>{children}</DemoPersonaShell>
         </AuthProvider>
       </body>
     </html>
