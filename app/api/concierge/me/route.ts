@@ -51,14 +51,17 @@ const DEMO_PROFILE = {
   weekly_auth_cap: 300,
   delivery_lead_id: 'demo-dl-1',
   active_clients: [
+    { id: 'demo-c-4', name: 'Meridian Benefits Group', contact_email: 'um@meridianbg.test' },
     { id: 'demo-c-1', name: 'Acme TPA', contact_email: 'ops@acme.test' },
     { id: 'demo-c-2', name: 'Sunrise Health Plan', contact_email: 'pat@sunrise.test' },
     { id: 'demo-c-3', name: 'Garrison Benefits', contact_email: 'kim@garrison.test' },
   ],
   weekly_load: 210,
   weekly_cap: 300,
-  cases_in_queue: 14,
-  cases_overdue: 1,
+  // Matches the demo queue fixture on /api/concierge/queue: 11 active rows,
+  // 2 past their turnaround deadline.
+  cases_in_queue: 11,
+  cases_overdue: 2,
 };
 
 export async function GET(request: NextRequest) {

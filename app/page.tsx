@@ -293,7 +293,7 @@ export default function SitePage() {
             <h1>Modern UM.<br />One clinician.<br /><em>Through appeal.</em></h1>
             <p className="hero-body">VantaUM is a next-generation clinical layer for utilization management — concierge intake, the AI Brief Engine, authorization, and first-level appeal, owned end to end by the same clinician. Run it across your whole self-funded book, or aim it at the cases that need it most. Built for independent TPAs, self-insured employers, and the clinical operations inside larger benefit organizations.</p>
             <div className="hero-actions">
-              <a href="/demo-tour" className="btn-primary">Launch Optum Demo →</a>
+              <a href="/demo-tour" className="btn-primary">Launch Live Demo →</a>
               <a href={EA_EMAIL} className="btn-ghost">Talk to Us</a>
             </div>
           </div>
