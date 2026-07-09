@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceClient } from '@/lib/supabase';
 import { logAuditEvent } from '@/lib/audit';
-import { finalizeIntakeCase } from '@/lib/intake/finalize-case';
+import { dispatchFinalization } from '@/lib/intake/brief-queue';
 import { isDemoMode } from '@/lib/demo-mode';
 import { applyRateLimit } from '@/lib/rate-limit-middleware';
 import { parseEmailPayload } from '@/lib/intake/email-parser';
@@ -165,7 +165,7 @@ export async function POST(request: NextRequest) {
     }
 
     const caseId = newCase.id;
-    await finalizeIntakeCase(caseId, { channel: 'phone', actor: 'gravity_rail' });
+    await dispatchFinalization(caseId, { channel: 'phone', actor: 'gravity_rail' });
     await logAuditEvent(caseId, 'gravity_rail_intake_handoff', 'system', {
       idempotency_key: idempotencyKey,
       gr_chat_id: payload.chat_id,

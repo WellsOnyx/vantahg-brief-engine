@@ -12,7 +12,7 @@ import {
   sendReceiptConfirmation,
 } from '@/lib/intake/confirmation';
 import { computeSubmissionFingerprint, findDuplicateCase } from '@/lib/intake/efax/storage';
-import { finalizeIntakeCase, isChannelAgnosticIntakeEnabled } from '@/lib/intake/finalize-case';
+import { dispatchFinalization } from '@/lib/intake/brief-queue';
 import { intakePersistenceGuard } from '@/lib/intake/persistence-guard';
 import { apiError } from '@/lib/api-error';
 import { getRequestContext } from '@/lib/security';
@@ -244,9 +244,7 @@ export async function POST(request: NextRequest) {
 
     sendReceiptConfirmation({ caseId, authorizationNumber: authNumber, channel: 'api' }).catch(() => {});
 
-    if (isChannelAgnosticIntakeEnabled()) {
-      await finalizeIntakeCase(caseId, { channel: 'api', actor: 'partner-api' });
-    }
+    await dispatchFinalization(caseId, { channel: 'api', actor: 'partner-api' });
 
     return NextResponse.json({
       api_version: PARTNER_API_VERSION,

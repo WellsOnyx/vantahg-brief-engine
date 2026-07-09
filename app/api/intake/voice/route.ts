@@ -46,7 +46,7 @@ import {
   computeSubmissionFingerprint,
   findDuplicateCase,
 } from '@/lib/intake/efax/storage';
-import { finalizeIntakeCase, isChannelAgnosticIntakeEnabled } from '@/lib/intake/finalize-case';
+import { dispatchFinalization } from '@/lib/intake/brief-queue';
 import {
   INTAKE_CONTRACT_VERSION,
   SIGNATURE_HEADER,
@@ -515,9 +515,7 @@ export async function POST(request: NextRequest) {
 
     // Channel-agnostic intake: run the shared downstream chassis so a voice
     // case lands the same as a portal case. Gated; off = current behavior.
-    if (isChannelAgnosticIntakeEnabled()) {
-      await finalizeIntakeCase(caseId, { channel: 'phone' });
-    }
+    await dispatchFinalization(caseId, { channel: 'phone' });
 
     return NextResponse.json(
       {

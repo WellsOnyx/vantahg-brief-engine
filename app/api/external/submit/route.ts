@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { dispatchFinalization } from '@/lib/intake/brief-queue';
 import { getServiceClient } from '@/lib/supabase';
 import { isDemoMode } from '@/lib/demo-mode';
 import { logAuditEvent } from '@/lib/audit';
@@ -267,7 +268,7 @@ export async function POST(request: NextRequest) {
     // API-submitted case lands the same as a portal case. Gated; off = current
     // behavior (case + receipt only, no downstream).
     if (isChannelAgnosticIntakeEnabled()) {
-      await finalizeIntakeCase(newCase.id, { channel: 'api' });
+      await dispatchFinalization(newCase.id, { channel: 'api' });
     }
 
     return NextResponse.json({

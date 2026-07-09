@@ -61,3 +61,20 @@ After that, **line 2 scales to burst on this queue alone** (no downstream ceilin
 - **Per-line pricing** attaches to `price_basis` cleanly (per-auth for UM, per-review for IRO/IRE, per-case for IDR, per-provider for credentialing).
 - **Capacity alarms** fire against the *right* resource per line (our headcount for 1/3/4, brief-stage/PSV for 2/5).
 - **Contract flag → line routing**: a client who buys UM-with-MR vs UM-without-MR is one boolean on the client record that flips the case's `service_line`, its cost center, and whether it ever enters our clinical queue.
+
+---
+
+## 6. Shipped: the `brief_jobs` queue (migration 034)
+
+The chassis from §4 is now built (flag-gated, dark by default):
+
+- **`brief_jobs` table + `claim_brief_batch(worker_id, batch_size)`** — the eFax `FOR UPDATE SKIP LOCKED` pattern, cloned. A partial unique index on `brief_jobs(case_id) WHERE status IN (pending,processing)` makes enqueue idempotent (a duplicate intake retry can't double-enqueue a brief).
+- **`dispatchFinalization(caseId, opts)`** (`lib/intake/brief-queue.ts`) — the single seam every request-path intake route now calls instead of `await finalizeIntakeCase(...)`:
+  - `ENABLE_BRIEF_QUEUE=true` → enqueue + return in ms; the worker runs finalization off the request path.
+  - unset (default) → **exactly today's behavior** (inline finalize iff channel-agnostic intake is on). So this ships safe and flips on with one env var.
+- **Worker `/api/cron/brief-worker`** (every minute) — claims a batch, runs jobs with **bounded concurrency** (`BRIEF_WORKER_CONCURRENCY`, default 4) so a burst can't fan out into unbounded simultaneous Anthropic calls. Retryable failures (429/5xx, via `LlmError.retryable`) **re-enqueue with 1/2/4/8/16-min backoff**; non-retryable or exhausted → dead-letter with an audited reason. Scale by raising cron frequency and/or concurrency — SKIP LOCKED makes concurrent invocations correct.
+- **Case-number sequence** (`case_number_seq` + `next_case_seq()`) — replaces the racy `count(*) ILIKE` scan in `POST /api/cases` (duplicate numbers under concurrency + a growing full-scan), with a timestamp-suffix fallback during migration rollout.
+
+**Rollout:** apply migration 034, deploy (behavior unchanged), then set `ENABLE_BRIEF_QUEUE=true` to move brief generation off the request path.
+
+**Known follow-up (not in this change):** the eFax worker (`/api/cron/efax-process`) still runs `finalizeIntakeCase` inline within its own 50s budget. It's already off the request path (a worker), so it's not the acute risk the request-path routes were — but at sustained volume it should also enqueue to `brief_jobs` rather than generate briefs in its OCR budget. One-line swap to `dispatchFinalization`, deferred to keep this change focused on the request-path fix.
