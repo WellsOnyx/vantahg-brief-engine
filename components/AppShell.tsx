@@ -59,6 +59,7 @@ const CHROMELESS_PATHS = new Set(['/']);
 const CHROMELESS_PREFIXES = [
   '/demo',
   '/cockpit', // full-bleed command-deck walkthrough (its own Stage chrome)
+  '/system', // full-bleed 10k-foot system overview (its own dark chrome)
   '/site',
   '/signup-tpa',
   '/login',

@@ -76,6 +76,12 @@ interface FollowUp {
 interface Activity {
   events: ActivityEvent[];
   channel_mix_today: Record<Channel, number>;
+  volume?: {
+    auths_today: number;
+    daily_target: number;
+    arrivals_per_hour: number;
+    lives_supported: number;
+  };
   follow_ups: FollowUp[];
   cx_pulse: {
     first_touch_minutes_avg: number | null;
@@ -381,6 +387,19 @@ export default function ConciergePage() {
               >
                 Intake pulse
               </PageSectionHeading>
+
+              {/* Platform volume strip */}
+              {activity.volume && (
+                <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 mb-3">
+                  <p className="text-sm text-navy">
+                    <span className="font-[family-name:var(--font-display)] text-2xl">{activity.volume.auths_today.toLocaleString()}</span>
+                    <span className="text-muted text-xs"> of ~{activity.volume.daily_target.toLocaleString()} auths today</span>
+                  </p>
+                  <p className="text-xs text-muted">
+                    ~{activity.volume.arrivals_per_hour}/hr right now · {(activity.volume.lives_supported / 1000).toFixed(0)}k lives supported
+                  </p>
+                </div>
+              )}
 
               {/* Channel mix strip */}
               <div className="flex flex-wrap gap-2 mb-4">

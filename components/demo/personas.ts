@@ -47,7 +47,7 @@ export const conciergeNav: NavGroup[] = [
 export const clinicianNav: NavGroup[] = [
   {
     items: [
-      { href: '/dashboard', label: 'Work Dashboard' },
+      { href: '/medical-review', label: 'Medical Review' },
       { href: '/queue', label: 'My Queue' },
       { href: '/cases', label: 'Cases' },
       { href: '/quality', label: 'Quality' },
@@ -69,6 +69,7 @@ export const deliveryLeadNav: NavGroup[] = [
 export const executiveNav: NavGroup[] = [
   {
     items: [
+      { href: '/system', label: 'How It Works' },
       { href: '/command-center', label: 'Command Center' },
       { href: '/mission-control', label: 'Mission Control' },
       { href: '/cockpit', label: 'Command Cockpit' },
@@ -117,10 +118,10 @@ export const DEMO_PERSONAS: DemoPersona[] = [
   {
     id: 'clinical',
     label: 'Medical Review',
-    person: 'Clinical team',
-    blurb: 'LPN → RN → MD worklist with SLA pressure and AI briefs',
+    person: 'Michelle Carter, RN',
+    blurb: 'Clinical dashboard — AI-signaled worklist, brief quality, the wall',
     icon: '🩺',
-    home: '/queue',
+    home: '/medical-review',
     roleSurface: 'Medical Review',
     nav: clinicianNav,
   },

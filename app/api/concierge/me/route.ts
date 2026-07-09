@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceClient } from '@/lib/supabase';
 import { getAuthAdapter } from '@/lib/adapters/auth';
-import { isDemoMode } from '@/lib/demo-mode';
+import { isDemoMode, getDemoClients } from '@/lib/demo-mode';
+import { conciergeQueueStats } from '@/lib/demo-live-queue';
 import { applyRateLimit } from '@/lib/rate-limit-middleware';
 import { apiError } from '@/lib/api-error';
 import { getRequestContext } from '@/lib/security';
@@ -50,18 +51,8 @@ const DEMO_PROFILE = {
   intake_efax: '(786) 555-0182',
   weekly_auth_cap: 300,
   delivery_lead_id: 'demo-dl-1',
-  active_clients: [
-    { id: 'demo-c-4', name: 'Meridian Benefits Group', contact_email: 'um@meridianbg.test' },
-    { id: 'demo-c-1', name: 'Acme TPA', contact_email: 'ops@acme.test' },
-    { id: 'demo-c-2', name: 'Sunrise Health Plan', contact_email: 'pat@sunrise.test' },
-    { id: 'demo-c-3', name: 'Garrison Benefits', contact_email: 'kim@garrison.test' },
-  ],
   weekly_load: 210,
   weekly_cap: 300,
-  // Matches the demo queue fixture on /api/concierge/queue: 11 active rows,
-  // 2 past their turnaround deadline.
-  cases_in_queue: 11,
-  cases_overdue: 2,
 };
 
 export async function GET(request: NextRequest) {
@@ -70,7 +61,26 @@ export async function GET(request: NextRequest) {
     if (rateLimited) return rateLimited;
 
     if (isDemoMode()) {
-      return NextResponse.json(DEMO_PROFILE);
+      // Clients + queue counts come from the same demo layer the queue and
+      // case-detail endpoints read, so the hero numbers, the TPA list, and
+      // the visible queue always agree — and every click-through resolves.
+      const stats = conciergeQueueStats();
+      const active_clients = getDemoClients().map((c) => ({
+        id: c.id,
+        name: c.name,
+        contact_email: c.contact_email ?? null,
+      }));
+      active_clients.push({
+        id: 'demo-c-meridian',
+        name: 'Meridian Benefits Group',
+        contact_email: 'um@meridianbg.test',
+      });
+      return NextResponse.json({
+        ...DEMO_PROFILE,
+        active_clients,
+        cases_in_queue: stats.in_queue,
+        cases_overdue: stats.overdue,
+      });
     }
 
     // Get the signed-in user via the auth adapter (Supabase or Cognito).

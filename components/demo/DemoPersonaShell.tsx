@@ -167,10 +167,13 @@ function PersonaSwitcher({
               );
             })}
           </ul>
-          <div className="px-4 py-2.5 border-t border-navy/10 bg-navy/[0.03]">
+          <div className="px-4 py-2.5 border-t border-navy/10 bg-navy/[0.03] flex items-center justify-between gap-2">
             <p className="text-[10px] text-navy/40">
               Demo environment · synthetic data only · no PHI
             </p>
+            <a href="/demo" className="text-[10px] font-semibold text-navy/60 hover:text-navy whitespace-nowrap">
+              ⌂ Demo hub
+            </a>
           </div>
         </div>
       )}

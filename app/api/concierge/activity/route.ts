@@ -5,6 +5,7 @@ import { isDemoMode } from '@/lib/demo-mode';
 import { applyRateLimit } from '@/lib/rate-limit-middleware';
 import { apiError } from '@/lib/api-error';
 import { getRequestContext } from '@/lib/security';
+import { eventStream, volumeSnapshot } from '@/lib/demo-live';
 
 export const dynamic = 'force-dynamic';
 
@@ -50,68 +51,13 @@ interface FollowUp {
   case_number?: string;
 }
 
-const minsAgo = (m: number) => new Date(Date.now() - m * 60_000).toISOString();
 const minsAhead = (m: number) => new Date(Date.now() + m * 60_000).toISOString();
 
 function demoPayload() {
-  const events: ActivityEvent[] = [
-    {
-      id: 'ev-1',
-      channel: 'phone',
-      headline: 'Voice intake completed — Gravity Rail',
-      detail: 'Caller verified, transcript captured, structured fields extracted (CPT 27447). Case opened automatically.',
-      at: minsAgo(3),
-      case_number: 'VUM-2026-00143',
-    },
-    {
-      id: 'ev-2',
-      channel: 'efax',
-      headline: 'eFax OCR complete',
-      detail: '6-page clinical packet from Coastal Ortho — extraction confidence 94%, routed to brief generation.',
-      at: minsAgo(11),
-      case_number: 'VUM-2026-00142',
-    },
-    {
-      id: 'ev-3',
-      channel: 'portal',
-      headline: 'Portal submission — Meridian Benefits Group',
-      detail: 'MRI lumbar spine w/ 2 PDFs attached. Duplicate check clean, receipt confirmation sent.',
-      at: minsAgo(26),
-      case_number: 'VUM-2026-00141',
-    },
-    {
-      id: 'ev-4',
-      channel: 'phone',
-      headline: 'Member callback completed',
-      detail: 'Status update delivered to R. Garcia — CPAP authorization in RN review, decision expected today.',
-      at: minsAgo(38),
-      case_number: 'VUM-2026-00142',
-    },
-    {
-      id: 'ev-5',
-      channel: 'email',
-      headline: 'HIPAA email parsed',
-      detail: 'PT continuation request from Garrison Benefits network — 8 visits, extracted and queued.',
-      at: minsAgo(52),
-      case_number: 'VUM-2026-00140',
-    },
-    {
-      id: 'ev-6',
-      channel: 'efax',
-      headline: 'Missing-info packet received',
-      detail: 'Sleep study report for pended CPAP case arrived — pend can be lifted after review.',
-      at: minsAgo(74),
-      case_number: 'VUM-2026-00138',
-    },
-    {
-      id: 'ev-7',
-      channel: 'phone',
-      headline: 'Provider line — expedite request',
-      detail: 'Dr. Grant’s office asked to expedite the knee MRI; priority flagged for Delivery Lead approval.',
-      at: minsAgo(96),
-      case_number: 'VUM-2026-00139',
-    },
-  ];
+  // Rolling synthetic stream at platform scale (~1,400 auths/day) — a new
+  // event surfaces every ~20s, so successive polls advance the story.
+  const events: ActivityEvent[] = eventStream(8);
+  const volume = volumeSnapshot();
 
   const follow_ups: FollowUp[] = [
     {
@@ -141,7 +87,13 @@ function demoPayload() {
 
   return {
     events,
-    channel_mix_today: { phone: 9, efax: 14, portal: 11, email: 5 },
+    channel_mix_today: volume.by_channel,
+    volume: {
+      auths_today: volume.auths_today,
+      daily_target: volume.daily_target,
+      arrivals_per_hour: volume.arrivals_per_hour,
+      lives_supported: volume.lives_supported,
+    },
     follow_ups,
     cx_pulse: {
       first_touch_minutes_avg: 12,
