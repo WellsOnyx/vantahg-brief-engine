@@ -82,7 +82,17 @@ const EnvSchema = z.object({
   // Gravity Rail (external AI platform for operator copilot + voice/sms intake)
   GRAVITY_RAIL_API_KEY: z.string().min(1).optional(),
   GRAVITY_RAIL_WORKSPACE_ID: z.string().min(1).optional(),
+  // Intake webhook signing secrets (Canonical Intake Contract v1.1).
+  // GR_WEBHOOK_SECRET is the canonical name (the GR team already has it);
+  // the SECONDARY slot enables zero-downtime rotation (both validate during
+  // the overlap). GRAVITY_RAIL_WEBHOOK_SECRET is the legacy name, still
+  // honored while environments standardize.
+  GR_WEBHOOK_SECRET: z.string().min(1).optional(),
+  GR_WEBHOOK_SECRET_SECONDARY: z.string().min(1).optional(),
   GRAVITY_RAIL_WEBHOOK_SECRET: z.string().min(1).optional(),
+  // Environment-scoped sandbox for intake verification (MVP env only —
+  // never set in production). See docs/INTAKE_CONTRACT.md.
+  INTAKE_SANDBOX_ENABLED: z.coerce.boolean().default(false),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

@@ -60,15 +60,17 @@ const caseTypeLabels: Record<CaseType, string> = {
   payer_idr: 'IDR',
   iro: 'IRO',
   ire: 'IRE',
+  medical_review: 'Med Review',
 };
 
-const allCaseTypes: CaseType[] = ['um', 'payer_idr', 'iro', 'ire'];
+const allCaseTypes: CaseType[] = ['um', 'payer_idr', 'iro', 'ire', 'medical_review'];
 
 const caseTypeColors: Record<CaseType, string> = {
   um: 'bg-blue-100 text-blue-800 border-blue-200',
   payer_idr: 'bg-violet-100 text-violet-800 border-violet-200',
   iro: 'bg-emerald-100 text-emerald-800 border-emerald-200',
   ire: 'bg-teal-100 text-teal-800 border-teal-200',
+  medical_review: 'bg-indigo-100 text-indigo-800 border-indigo-200',
 };
 
 function formatDate(dateStr: string): string {

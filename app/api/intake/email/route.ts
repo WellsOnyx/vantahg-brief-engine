@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { dispatchFinalization } from '@/lib/intake/brief-queue';
 import { getServiceClient } from '@/lib/supabase';
 import { isDemoMode } from '@/lib/demo-mode';
 import { logAuditEvent } from '@/lib/audit';
@@ -378,7 +379,7 @@ export async function POST(request: NextRequest) {
         // follow-up + brief + clinician routing) so an emailed case lands the
         // same as a portal case. Gated; off = current behavior (no downstream).
         if (caseId && isChannelAgnosticIntakeEnabled()) {
-          await finalizeIntakeCase(caseId, { channel: 'email' });
+          await dispatchFinalization(caseId, { channel: 'email' });
         }
       }
     }

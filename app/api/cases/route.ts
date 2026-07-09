@@ -174,7 +174,7 @@ export async function POST(request: NextRequest) {
 
     // === Item 12: Proper tenant scoping on case creation ===
     let effectiveClientId = body.client_id;
-    let effectivePracticeId = body.practice_id || null;
+    const effectivePracticeId = body.practice_id || null;
 
     if (authResult.user.role === 'client') {
       // TPA users: force their own client and validate practice
@@ -226,24 +226,20 @@ export async function POST(request: NextRequest) {
     const categoryPrefix = (body.service_category || body.vertical || 'GENERAL').toUpperCase().replace(/\s+/g, '-');
     const prefix = `VUM-${categoryPrefix}`;
 
-    const { count, error: countError } = await supabase
-      .from('cases')
-      .select('*', { count: 'exact', head: true })
-      .ilike('case_number', `${prefix}-%`);
-
-    if (countError) {
-      return apiError(countError, {
-        operation: 'create_case_count',
-        actor: body.created_by || authResult.user.email,
-        requestContext: getRequestContext(request),
-      });
+    // Race-free case number via the case_number_seq sequence (migration 034),
+    // replacing the old count(*) ILIKE scan (duplicate numbers under
+    // concurrency + a growing full-scan). Falls back to a timestamp suffix
+    // if the sequence isn't present yet (pre-migration rollout safety).
+    let caseNumber: string;
+    const { data: seqVal, error: seqError } = await supabase.rpc('next_case_seq');
+    if (!seqError && seqVal != null) {
+      caseNumber = `${prefix}-${String(seqVal).padStart(6, '0')}`;
+    } else {
+      caseNumber = `${prefix}-${Date.now().toString().slice(-8)}`;
     }
 
-    const nextNumber = ((count ?? 0) + 1).toString().padStart(4, '0');
-    const caseNumber = `${prefix}-${nextNumber}`;
-
     // Generate authorization number
-    const authNumber = `AUTH-${new Date().getFullYear()}-${nextNumber}`;
+    const authNumber = `AUTH-${new Date().getFullYear()}-${caseNumber.slice(-6)}`;
 
     // Cross-channel dedup: same patient + procedure codes within 24h returns
     // the existing case rather than a new one. The fingerprint is also

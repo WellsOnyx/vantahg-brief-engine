@@ -4,6 +4,7 @@ import { applyRateLimit } from '@/lib/rate-limit-middleware';
 import { getServiceClient } from '@/lib/supabase';
 import { apiError } from '@/lib/api-error';
 import { logAuditEvent } from '@/lib/audit';
+import { enqueuePartnerEvent } from '@/lib/partner/webhook-out';
 import { getRequestContext } from '@/lib/security';
 import { recordAttestationForDetermination, type AttestationEnvelope } from '@/lib/labor-metric-record';
 import type { DeterminationFields } from '@/components/DeterminationForm';
@@ -142,6 +143,10 @@ export async function PATCH(
       },
       getRequestContext(request)
     );
+
+    // Decision-out (Partner API v1): IDR determinations previously had no
+    // delivery hook at all — partners now get the same signed webhook.
+    await enqueuePartnerEvent(caseId, 'case.determination');
 
     return NextResponse.json({ success: true });
   } catch (err) {
