@@ -7,7 +7,7 @@
  * Everything labeled estimated_pending_calibration.
  */
 
-import type { Case, CaseType } from '../types';
+import type { Case, CaseType, CaseStatus, ReviewType } from '../types';
 import type { LaborStream } from '../labor-metric';
 import { computeSubmissionFingerprint } from '../intake/efax/storage';
 
@@ -68,8 +68,8 @@ export function generateSyntheticCases(opts: SyntheticOptions): SyntheticCase[] 
     let appeal = isIro ? `orig-${i % 100}` : undefined;
     let turnDeadline: string | null = (scenario === 'malformed' || (isIre && i % 3 === 0)) ? null : new Date(Date.now() + 72*3600*1000).toISOString();
     let slaH = isIro ? 72 : undefined;
-    let reviewType = isMedical ? 'second_level_review' : isIro ? 'appeal' : 'prior_auth';
-    let caseStatus = scenario === 'complex' || scenario === 'malformed' ? 'md_review' : 'brief_ready';
+    let reviewType: ReviewType = isMedical ? 'second_level_review' : isIro ? 'appeal' : 'prior_auth';
+    let caseStatus: CaseStatus = scenario === 'complex' || scenario === 'malformed' ? 'md_review' : 'brief_ready';
 
     if (scenario === 'malformed' || scenario === 'incomplete-data') {
       procCodes = i % 2 === 0 ? ['INVALID-CODE', '99999'] : [];
