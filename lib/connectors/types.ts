@@ -197,3 +197,18 @@ export const SYSTEM_REGISTRY: RegisteredSystem[] = [
 export function systemsByRail(rail: TransportRail): RegisteredSystem[] {
   return SYSTEM_REGISTRY.filter((s) => s.rail === rail);
 }
+
+/**
+ * Which rails have a BUILT, tested inbound endpoint (distinct from a
+ * vendor's verify_status, which stays 'planned' until proven against that
+ * vendor's actual traffic):
+ *   rest_json — /api/partner/v1/cases (docs/PARTNER_API.md)
+ *   fhir_pas  — /api/connect/fhir/Claim/$submit (docs/CONNECTOR_RAILS.md)
+ *   x12_278   — /api/connect/x12/278 (docs/CONNECTOR_RAILS.md)
+ */
+export const RAIL_STATUS: Record<TransportRail, 'built' | 'planned'> = {
+  rest_json: 'built',
+  fhir_pas: 'built',
+  x12_278: 'built',
+  sftp_batch: 'planned',
+};
