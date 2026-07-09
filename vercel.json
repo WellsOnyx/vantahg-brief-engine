@@ -15,6 +15,10 @@
     {
       "path": "/api/cron/meow-invoice-sync",
       "schedule": "*/30 * * * *"
+    },
+    {
+      "path": "/api/cron/partner-webhooks",
+      "schedule": "*/2 * * * *"
     }
   ]
 }

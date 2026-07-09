@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServiceClient } from '@/lib/supabase';
 import { logAuditEvent, logDataAccess } from '@/lib/audit';
 import { deliverToClient } from '@/lib/notifications';
+import { enqueuePartnerEvent } from '@/lib/partner/webhook-out';
 import { isDemoMode, getDemoCase, updateDemoCase } from '@/lib/demo-mode';
 import { requireAuth } from '@/lib/auth-guard';
 import { applyRateLimit } from '@/lib/rate-limit-middleware';
@@ -324,6 +325,11 @@ export async function PATCH(
       // Auto-deliver to client for final determinations (non-blocking)
       const finalDeterminations = ['approve', 'deny', 'partial_approve', 'modify'];
       if (finalDeterminations.includes(body.determination)) {
+        // Decision-out to partner systems (Partner API v1): enqueue a signed
+        // case.determination webhook for every webhook-configured key on the
+        // case's client. Awaited — it's a fast insert, and losing it would
+        // silently break the partner's loop.
+        await enqueuePartnerEvent(id, 'case.determination');
         deliverToClient(id).then(async (delivered) => {
           if (delivered) {
             const supabaseForDelivery = getServiceClient();

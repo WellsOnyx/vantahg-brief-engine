@@ -27,6 +27,10 @@ export const dynamic = 'force-dynamic';
  * This endpoint is whitelisted in middleware.ts (no session required).
  */
 export async function POST(request: NextRequest) {
+  // DEPRECATED for new integrations — use the Partner API v1
+  // (app/api/partner/v1, docs/PARTNER_API.md): per-partner hashed keys with
+  // tenant binding, required idempotency, read endpoints, and decision-out
+  // webhooks. This route remains for existing callers.
   try {
     const rateLimited = await applyRateLimit(request, { maxRequests: 200 });
     if (rateLimited) return rateLimited;
@@ -41,16 +45,25 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'x-api-key header required' }, { status: 401 });
       }
 
-      // Verify API key against configured keys
+      // Verify API key against configured keys. FAIL CLOSED: an empty
+      // EXTERNAL_API_KEYS list means NO key is valid — previously any
+      // non-empty header passed, which made auth "header present" on
+      // deployments that never configured keys.
       const validKeys = (process.env.EXTERNAL_API_KEYS || '').split(',').map((k) => k.trim()).filter(Boolean);
-      if (validKeys.length > 0 && !validKeys.includes(apiKey)) {
+      if (!validKeys.includes(apiKey)) {
         await logAuditEvent(null, 'security:external_submit_invalid_key', 'system', { api_key_prefix: apiKey.substring(0, 8) });
         return NextResponse.json({ error: 'Invalid API key' }, { status: 401 });
       }
 
-      // Verify HMAC signature if secret is configured
+      // Verify HMAC signature whenever a secret is configured. FAIL CLOSED:
+      // omitting x-signature used to skip verification entirely — a signed
+      // deployment must reject unsigned requests, not wave them through.
       const apiSecret = process.env.EXTERNAL_API_SECRET;
-      if (apiSecret && signature) {
+      if (apiSecret) {
+        if (!signature) {
+          await logAuditEvent(null, 'security:external_submit_missing_signature', 'system');
+          return NextResponse.json({ error: 'x-signature header required' }, { status: 401 });
+        }
         const rawBody = await request.clone().text();
         const expectedSig = crypto.createHmac('sha256', apiSecret).update(rawBody).digest('hex');
         if (signature !== expectedSig) {
