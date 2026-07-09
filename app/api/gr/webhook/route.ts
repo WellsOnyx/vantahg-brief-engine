@@ -6,18 +6,31 @@ import { isDemoMode } from '@/lib/demo-mode';
 import { applyRateLimit } from '@/lib/rate-limit-middleware';
 import { parseEmailPayload } from '@/lib/intake/email-parser';
 import type { ParsedEmailData } from '@/lib/intake/email-parser';
-import { verifyWebhookSignature } from '@/lib/webhook-verify';
+import {
+  verifyIntakeSignature,
+  getIntakeWebhookSecrets,
+  SIGNATURE_HEADER,
+  TIMESTAMP_HEADER,
+  LEGACY_SIGNATURE_HEADER,
+} from '@/lib/intake/gr-contract';
 import { intakePersistenceGuard } from '@/lib/intake/persistence-guard';
 
 /**
- * POST /api/gr/webhook — Canonical Intake Contract (see docs/INTAKE_CONTRACT.md).
+ * POST /api/gr/webhook — Canonical Intake Contract v1.1, handoff channel
+ * (see docs/INTAKE_CONTRACT.md). The stable external face for Gravity Rail:
+ * endpoint and GR_WEBHOOK_SECRET are unchanged from v1.
  *
  * Inbound from Gravity Rail when an intake chat (web, sms, voice) reaches handoff.
  * Turned into a VantaUM case via the shared chassis.
  *
- * Security   : HMAC-SHA256 over the RAW body in `X-Webhook-Signature` (hex),
- *              keyed by GR_WEBHOOK_SECRET. Enforced whenever the secret is set;
- *              real mode requires it (fails closed).
+ * Security   : v1.1 — HMAC-SHA256 over `${X-GR-Timestamp}.${rawBody}` in
+ *              `X-GR-Signature`, ±300s replay window, dual-secret rotation
+ *              (GR_WEBHOOK_SECRET / GR_WEBHOOK_SECRET_SECONDARY; legacy
+ *              GRAVITY_RAIL_WEBHOOK_SECRET still honored). The v1 scheme
+ *              (plain body HMAC in `X-Webhook-Signature`) is accepted
+ *              during the transition window — see ACCEPT_V1_LEGACY_SIGNATURES
+ *              in lib/intake/gr-contract.ts. Enforced whenever a secret is
+ *              set; real mode requires one (fails closed).
  * Idempotency: `Idempotency-Key` header, else the GR `chat_id`. Re-delivery of the
  *              same key returns the existing case (200, idempotent:true) instead
  *              of creating a duplicate.
@@ -29,16 +42,27 @@ export async function POST(request: NextRequest) {
   // 1) Read the RAW body once — HMAC must verify the exact bytes GR signed.
   const rawBody = await request.text();
 
-  // 2) Verify the signature. Enforced when a secret is configured; real mode
-  //    requires one (never accept unsigned intake into the persistence path).
-  // Standardized on GR_WEBHOOK_SECRET; accept the legacy GRAVITY_RAIL_WEBHOOK_SECRET
-  // as a safety net during the transition.
-  const secret = process.env.GR_WEBHOOK_SECRET || process.env.GRAVITY_RAIL_WEBHOOK_SECRET;
-  if (secret) {
-    const signature = request.headers.get('x-webhook-signature') || '';
-    const ok = await verifyWebhookSignature(rawBody, signature, secret);
-    if (!ok) {
-      return NextResponse.json({ error: 'invalid_signature' }, { status: 401 });
+  // 2) Verify the signature (shared verifier — same rules as every intake
+  //    channel). Enforced when a secret is configured; real mode requires
+  //    one (never accept unsigned intake into the persistence path).
+  const secrets = getIntakeWebhookSecrets();
+  if (secrets.length > 0) {
+    const verdict = verifyIntakeSignature({
+      rawBody,
+      signatureHeader: request.headers.get(SIGNATURE_HEADER),
+      timestampHeader: request.headers.get(TIMESTAMP_HEADER),
+      legacySignatureHeader: request.headers.get(LEGACY_SIGNATURE_HEADER),
+      secrets,
+    });
+    if (!verdict.ok) {
+      return NextResponse.json({ error: 'invalid_signature', code: verdict.code }, { status: 401 });
+    }
+    if (verdict.scheme === 'v1_legacy') {
+      // Transition-window visibility: shows in the trail until GR flips to
+      // v1.1 signing and the window can be closed.
+      await logAuditEvent(null, 'gr_intake_legacy_signature_used', 'system', {
+        channel: 'gr_webhook',
+      });
     }
   } else if (!isDemoMode()) {
     return NextResponse.json({ error: 'webhook_secret_not_configured' }, { status: 500 });
