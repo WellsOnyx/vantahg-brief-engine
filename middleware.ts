@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { isDemoMode } from '@/lib/demo-mode';
+import { getDemoPassword } from '@/lib/demo-password';
 
 // Public marketing / auth-flow page prefixes. `startsWith` semantics are
 // intentional here because routes like `/signup-tpa` and `/demo-tour` are
@@ -84,8 +85,8 @@ export async function middleware(request: NextRequest) {
 
   // Support sharing direct links with password: vantaum.com?pw=SECRET or vantaum.com/demo?pw=SECRET
   const pw = request.nextUrl.searchParams.get('pw');
-  const correctPw = process.env.DEMO_PASSWORD;
-  if (pw && correctPw && pw === correctPw) {
+  const correctPw = getDemoPassword();
+  if (pw && pw === correctPw) {
     const res = NextResponse.redirect(
       new URL(pathname === '/' ? '/demo' : pathname, request.url)
     );
