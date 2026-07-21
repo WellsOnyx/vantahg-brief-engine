@@ -4,6 +4,7 @@ import { promisify } from 'util';
 import path from 'path';
 import { runCase } from './run-case';
 import { loadLibrary, saveLibrary } from './fingerprint';
+import { assertSafeOutputTarget, defaultOutputRoot } from './output-guard';
 import type { AnswerSheet } from './types';
 
 const execFileAsync = promisify(execFile);
@@ -57,19 +58,27 @@ export async function runBatch(
 ): Promise<BatchResult> {
   const root = path.resolve(rootFolder);
   const now = opts.now ?? new Date();
+
+  // READ-ONLY INPUT: the input tree is never written to — outputs,
+  // including unzipped case files, go to the local output root. Checked
+  // before anything is read or written.
+  const out = path.resolve(opts.outDir ?? path.join(defaultOutputRoot(), path.basename(root)));
+  assertSafeOutputTarget(out, [root]);
+  const libraryPath = opts.libraryPath ?? path.join(process.cwd(), 'lib', 'idr-engine', 'template-library.json');
+  assertSafeOutputTarget(libraryPath, [root], 'template-library file');
+
   const dirents = (await readdir(root, { withFileTypes: true }))
     .filter((e) => !e.name.startsWith('.') && !e.name.startsWith('_'));
 
-  // Cases arrive as ZIPs (live-portal taxonomy) — unzip each into
-  // _unzipped/<name>/ (underscore prefix keeps re-runs from re-discovering
-  // them as extra folders). Plain subfolders still work.
+  // Cases arrive as ZIPs (live-portal taxonomy) — each is unzipped into
+  // the OUTPUT tree (<out>/_unzipped/<name>/), never next to the source.
   const caseFolders: Array<{ name: string; folder: string }> = [];
   for (const e of dirents.filter((d) => d.isDirectory())) {
     caseFolders.push({ name: e.name, folder: path.join(root, e.name) });
   }
   const zips = dirents.filter((d) => d.isFile() && /\.zip$/i.test(d.name));
   if (zips.length > 0) {
-    const unzipRoot = path.join(root, '_unzipped');
+    const unzipRoot = path.join(out, '_unzipped');
     await mkdir(unzipRoot, { recursive: true });
     for (const z of zips) {
       const name = z.name.replace(/\.zip$/i, '');
@@ -89,7 +98,6 @@ export async function runBatch(
 
   // One shared library for the whole batch — loaded once, saved once, so
   // concurrent cases can't clobber each other's auto-registrations.
-  const libraryPath = opts.libraryPath ?? path.join(process.cwd(), 'lib', 'idr-engine', 'template-library.json');
   const library = await loadLibrary(libraryPath);
 
   // Bounded concurrency — the LLM path must not fan out unbounded (same
@@ -100,7 +108,7 @@ export async function runBatch(
     while (next < entries.length) {
       const { name, folder } = entries[next++];
       try {
-        const { sheet, files } = await runCase(folder, { library, now });
+        const { sheet, files } = await runCase(folder, { library, now, outDir: path.join(out, name) });
         ran.push({
           caseId: sheet.caseId,
           folder,
@@ -132,10 +140,10 @@ export async function runBatch(
     return b.gateConfidencePct - a.gateConfidencePct;
   });
 
-  const outDir = opts.outDir ?? path.join(root, '_engine-queue');
-  await mkdir(outDir, { recursive: true });
-  const queueMd = path.join(outDir, 'queue.md');
-  const queueJson = path.join(outDir, 'queue.json');
+  const queueDir = path.join(out, '_queue');
+  await mkdir(queueDir, { recursive: true });
+  const queueMd = path.join(queueDir, 'queue.md');
+  const queueJson = path.join(queueDir, 'queue.json');
 
   const result: BatchResult = { root, generatedAt: now.toISOString(), ran, parked, files: { queueMd, queueJson } };
   await writeFile(queueMd, renderQueueMarkdown(result), 'utf-8');

@@ -14,21 +14,23 @@ Built from **IDR Engine Build Spec v1.1** (`docs/IDR_ENGINE_BUILD_SPEC_v1.1.pdf`
 1. Install Node.js (v20+), then in this repo run `npm install`.
 2. For the real AI analysis, set two environment variables: `ANTHROPIC_API_KEY=<key>` and `ENABLE_REAL_ANTHROPIC=true`. (Without them the tool still runs, but in a limited keyword mode — see "Modes" below.)
 
+> **⛔ READ-ONLY INPUT (hard rule):** the shared case folders are OneDrive-synced to every workspace on the team. The engine **never writes anything** into an input folder or anywhere under OneDrive — no outputs, no unzipped files, nothing. Everything it produces goes to a separate **local** output folder (default: `Desktop/engine-output`; change with `--out <dir>` or the `IDR_OUTPUT_DIR` environment variable). This is enforced in code: the engine **refuses to run** if the output target is inside the input folder or inside a OneDrive path, and a test proves a full run leaves the input tree byte-for-byte untouched.
+
 **Run ONE case.** A case folder is just a folder containing the case's searchable PDFs — the IP notice of offer, NIP notice of offer, IP brief, NIP brief, and any exhibits. From the repo folder, run:
 
 ```bash
 npx tsx scripts/idr-answer-sheet.ts "/path/to/DISP-123456"
 ```
 
-When it finishes it prints where it wrote the results. **Open `engine-output/answer-sheet.html` in the workspace browser** — that's your answer sheet, laid out to mirror the portal's module flow (COI → Non-AA questions → attestation). Work through it **top to bottom next to the portal**: flags first, then COI, factor checkboxes, the rationale paste block, prevailing party (entered in **two** portal places), DLI slots, attestation. The last section is a row you can paste into the IDR Cases Log sheet (also saved as `cases-log-row.tsv`; a markdown twin of the sheet is saved as `answer-sheet.md`).
+When it finishes it prints where it wrote the results — by default `Desktop/engine-output/DISP-123456/`. **Open `answer-sheet.html` there in the workspace browser** — that's your answer sheet, laid out to mirror the portal's module flow (COI → Non-AA questions → attestation). Work through it **top to bottom next to the portal**: flags first, then COI, factor checkboxes, the rationale paste block, prevailing party (entered in **two** portal places), DLI slots, attestation. The last section is a row you can paste into the IDR Cases Log sheet (also saved as `cases-log-row.tsv`; a markdown twin of the sheet is saved as `answer-sheet.md`).
 
-**Run a WHOLE FOLDER of cases.** Point it at a directory of case folders **or case ZIPs** (cases arrive as ZIPs of up to ~60 files — they're unzipped internally into `_unzipped/`):
+**Run a WHOLE FOLDER of cases.** Point it at a directory of case folders **or case ZIPs** (cases arrive as ZIPs of up to ~60 files — they're unzipped into the **output** tree, never next to the source):
 
 ```bash
 npx tsx scripts/idr-batch.ts "/path/to/open-cases"
 ```
 
-Every case gets its own `engine-output/`, and the top-level folder gets `_engine-queue/queue.md` — the work list, **sorted so the fastest reviews are first**: high-confidence unflagged cases at the top, anything flagged at the bottom (those need a full read), and any case that errored listed under "Parked" so nothing silently disappears. Re-running is safe: outputs are regenerated, nothing else is touched.
+Everything lands under the output root (default `Desktop/engine-output/<batch-name>/`): one subfolder of artifacts per case, `_unzipped/` for extracted ZIPs, and `_queue/queue.md` — the work list, **sorted so the fastest reviews are first**: high-confidence unflagged cases at the top, anything flagged at the bottom (those need a full read), and any case that errored listed under "Parked" so nothing silently disappears. Re-running is safe: outputs are regenerated; the input folder is never touched.
 
 **Reading the sheet:**
 - ⚠ / ⛔ **flags** — read these first. ⛔ means the engine refused to recommend on that line; you rule.

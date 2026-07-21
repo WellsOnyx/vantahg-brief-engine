@@ -61,12 +61,14 @@ async function writeFixtureCase(dir: string, overrides: Partial<Record<string, s
 
 let caseDir: string;
 let libPath: string;
+let outDir: string;
 
 beforeEach(async () => {
   const base = await mkdtemp(path.join(tmpdir(), 'idr-phase0-'));
   caseDir = path.join(base, 'DISP-445566');
   await mkdir(caseDir);
   libPath = path.join(base, 'template-library.json');
+  outDir = path.join(base, 'out'); // read-only-input rule: outputs never inside the case folder
 });
 
 // ── End-to-end ─────────────────────────────────────────────────────────────
@@ -74,7 +76,7 @@ beforeEach(async () => {
 describe('runCase (heuristic mode, end to end)', () => {
   it('produces the three artifacts with the DRAFT banner and portal-ordered sheet', async () => {
     await writeFixtureCase(caseDir);
-    const { sheet, files } = await runCase(caseDir, { libraryPath: libPath, now: new Date('2026-07-13T12:00:00Z') });
+    const { sheet, files } = await runCase(caseDir, { libraryPath: libPath, outDir, now: new Date('2026-07-13T12:00:00Z') });
 
     const md = await readFile(files.markdown, 'utf-8');
     expect(md).toContain('DRAFT FOR ARBITER REVIEW');
@@ -110,7 +112,7 @@ describe('runCase (heuristic mode, end to end)', () => {
 
   it('renders the HTML sheet (v1.1 stage 8): portal module order, banners, no engine branding', async () => {
     await writeFixtureCase(caseDir);
-    const { files } = await runCase(caseDir, { libraryPath: libPath });
+    const { files } = await runCase(caseDir, { libraryPath: libPath, outDir });
     const html = await readFile(files.html, 'utf-8');
     expect(html).toContain('DRAFT FOR ARBITER REVIEW');
     expect(html).toContain('NOT FOR DISTRIBUTION');
@@ -128,7 +130,7 @@ describe('runCase (heuristic mode, end to end)', () => {
 
   it('check rule: raised factors carry page-cited evidence (IP factor 5, NIP factor 7)', async () => {
     await writeFixtureCase(caseDir);
-    const { sheet } = await runCase(caseDir, { libraryPath: libPath });
+    const { sheet } = await runCase(caseDir, { libraryPath: libPath, outDir });
     const ip5 = sheet.factorGrid.ip.find((f) => f.factor === 5)!;
     const nip7 = sheet.factorGrid.nip.find((f) => f.factor === 7)!;
     expect(ip5.raised).toBe(true);
@@ -139,7 +141,7 @@ describe('runCase (heuristic mode, end to end)', () => {
 
   it('recommends per line with DLI chaining on the second matching line, confidence capped in heuristic mode', async () => {
     await writeFixtureCase(caseDir);
-    const { sheet, files } = await runCase(caseDir, { libraryPath: libPath });
+    const { sheet, files } = await runCase(caseDir, { libraryPath: libPath, outDir });
     expect(sheet.recommendations).toHaveLength(2);
     const [l1, l2] = sheet.recommendations;
     expect(l1.recommended).toBe('IP'); // factor-5 evidence drives the lean
@@ -160,7 +162,7 @@ describe('edge cases (§6)', () => {
     await writeFixtureCase(caseDir, {
       nipOffer: NIP_OFFER.replace(/Line 1 final payment offer: \$450\.00\./, 'Line 1 final payment offer: $1,150.00.'),
     });
-    const { sheet } = await runCase(caseDir, { libraryPath: libPath });
+    const { sheet } = await runCase(caseDir, { libraryPath: libPath, outDir });
     const l1 = sheet.recommendations.find((r) => r.line === 1)!;
     expect(l1.recommended).toBe('FLAG');
     expect(sheet.flags.some((f) => f.code === 'IDENTICAL_OFFERS' && f.line === 1)).toBe(true);
@@ -168,14 +170,14 @@ describe('edge cases (§6)', () => {
 
   it('missing core document → MISSING_DOC block flag and all lines FLAG', async () => {
     await writeFixtureCase(caseDir, { nipBrief: '__OMIT__' });
-    const { sheet } = await runCase(caseDir, { libraryPath: libPath });
+    const { sheet } = await runCase(caseDir, { libraryPath: libPath, outDir });
     expect(sheet.flags.some((f) => f.code === 'MISSING_DOC')).toBe(true);
     expect(sheet.recommendations.every((r) => r.recommended === 'FLAG')).toBe(true);
   });
 
   it('brief citing exhibits that are not in the folder → MISSING_CITED_EXHIBIT', async () => {
     await writeFixtureCase(caseDir, { exhibitA: '__OMIT__' }); // brief cites Exhibits A and B; folder has none
-    const { sheet } = await runCase(caseDir, { libraryPath: libPath });
+    const { sheet } = await runCase(caseDir, { libraryPath: libPath, outDir });
     expect(sheet.flags.some((f) => f.code === 'MISSING_CITED_EXHIBIT')).toBe(true);
   });
 
@@ -183,7 +185,7 @@ describe('edge cases (§6)', () => {
     await writeFixtureCase(caseDir, {
       nipOffer: NIP_OFFER.replace(/\$450\.00\. Line 2 final payment offer: \$450\.00\./, '$412.18. Line 2 final payment offer: $412.18.'),
     });
-    const { sheet } = await runCase(caseDir, { libraryPath: libPath });
+    const { sheet } = await runCase(caseDir, { libraryPath: libPath, outDir });
     expect(sheet.flags.some((f) => f.code === 'NIP_OFFER_EQUALS_QPA')).toBe(true);
     expect(sheet.recommendations[0].recommended).not.toBe('FLAG');
   });
@@ -194,7 +196,7 @@ describe('edge cases (§6)', () => {
 describe('rationale house template', () => {
   it('orders the IP discussion by importance (5 before 3), uses the weight ladder and the verbatim house paragraphs', async () => {
     await writeFixtureCase(caseDir);
-    const { sheet } = await runCase(caseDir, { libraryPath: libPath });
+    const { sheet } = await runCase(caseDir, { libraryPath: libPath, outDir });
     const r = sheet.rationale;
     const f5 = r.indexOf('good-faith');
     const f3 = r.search(/acuity/i);
@@ -341,7 +343,7 @@ describe('folder taxonomy (live walkthrough)', () => {
     await writeFile(path.join(caseDir, 'idr-coversheet.docx'), 'binary-ish', 'utf-8');
     await writeFile(path.join(caseDir, 'ProofofIncorrectlyBatched.csv'), 'line,claim\n1,x', 'utf-8');
 
-    const { sheet } = await runCase(caseDir, { libraryPath: libPath });
+    const { sheet } = await runCase(caseDir, { libraryPath: libPath, outDir });
     const kinds = Object.fromEntries(sheet.documents.map((d) => [d.file, d.kind]));
     expect(kinds['IDRNoticeOfInitiation.txt']).toBe('cms_filler');
     expect(kinds['IDR Selection Response Form.txt']).toBe('cms_filler');
@@ -358,7 +360,7 @@ describe('folder taxonomy (live walkthrough)', () => {
 
     // Eligibility notes surfaced on the sheet.
     expect(sheet.eligibilityNotes).toEqual([{ username: 'jsmith', date: '2026-07-01', note: 'Eligible per cooling-off review.' }]);
-    const md = await readFile(path.join(caseDir, 'engine-output', 'answer-sheet.md'), 'utf-8');
+    const md = await readFile(path.join(outDir, 'answer-sheet.md'), 'utf-8');
     expect(md).toContain('Eligible per cooling-off review.');
   });
 });

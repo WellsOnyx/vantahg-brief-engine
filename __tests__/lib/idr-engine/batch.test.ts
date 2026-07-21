@@ -26,10 +26,14 @@ function caseFiles(disputeNo: string, opts: { identicalOffers?: boolean } = {}):
 
 let root: string;
 let libPath: string;
+let outDir: string;
 
 beforeEach(async () => {
-  root = await mkdtemp(path.join(tmpdir(), 'idr-batch-'));
-  libPath = path.join(root, 'lib.json');
+  const base = await mkdtemp(path.join(tmpdir(), 'idr-batch-'));
+  root = path.join(base, 'cases');
+  await mkdir(root);
+  libPath = path.join(base, 'lib.json');
+  outDir = path.join(base, 'out'); // read-only-input rule: outputs never inside the input root
 });
 
 async function writeCase(name: string, files: Record<string, string>) {
@@ -45,7 +49,7 @@ describe('runBatch', () => {
     await writeCase('DISP-000003', caseFiles('DISP-000003'));
     await mkdir(path.join(root, 'DISP-000004')); // empty → parked, not dropped
 
-    const result = await runBatch(root, { libraryPath: libPath, now: new Date('2026-07-21T12:00:00Z') });
+    const result = await runBatch(root, { libraryPath: libPath, outDir, now: new Date('2026-07-21T12:00:00Z') });
 
     expect(result.ran).toHaveLength(3);
     expect(result.parked).toHaveLength(1);
@@ -66,14 +70,14 @@ describe('runBatch', () => {
     expect(json.ran).toHaveLength(3);
 
     // Per-case artifacts exist too.
-    const sheet = await readFile(path.join(root, 'DISP-000001', 'engine-output', 'answer-sheet.md'), 'utf-8');
+    const sheet = await readFile(path.join(outDir, 'DISP-000001', 'answer-sheet.md'), 'utf-8');
     expect(sheet).toContain('DRAFT FOR ARBITER REVIEW');
   });
 
   it('shares one template library across the batch: identical NIP template re-used across cases registers once', async () => {
     await writeCase('DISP-000010', caseFiles('DISP-000010'));
     await writeCase('DISP-000011', caseFiles('DISP-000011'));
-    await runBatch(root, { libraryPath: libPath, concurrency: 1 });
+    await runBatch(root, { libraryPath: libPath, outDir, concurrency: 1 });
     const lib = JSON.parse(await readFile(libPath, 'utf-8'));
     // Two briefs per case (IP + NIP), same shells across both cases → 2 templates, each seen twice.
     expect(lib.templates).toHaveLength(2);
@@ -88,14 +92,14 @@ describe('runBatch', () => {
     execFileSync('zip', ['-q', '-j', path.join(root, 'DISP-000020.zip'), ...fileNames.map((f) => path.join(src, f))]);
     await rm(src, { recursive: true });
 
-    const result = await runBatch(root, { libraryPath: libPath });
+    const result = await runBatch(root, { libraryPath: libPath, outDir });
     expect(result.ran).toHaveLength(1);
     expect(result.ran[0].caseId).toBe('DISP-000020');
     expect(result.parked).toHaveLength(0);
-    const sheet = await readFile(path.join(root, '_unzipped', 'DISP-000020', 'engine-output', 'answer-sheet.html'), 'utf-8');
+    const sheet = await readFile(path.join(outDir, 'DISP-000020', 'answer-sheet.html'), 'utf-8');
     expect(sheet).toContain('DRAFT FOR ARBITER REVIEW');
     // Re-running discovers the zip again, not the _unzipped extraction as a second case.
-    const again = await runBatch(root, { libraryPath: libPath });
+    const again = await runBatch(root, { libraryPath: libPath, outDir });
     expect(again.ran).toHaveLength(1);
   });
 });

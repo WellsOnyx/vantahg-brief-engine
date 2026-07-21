@@ -1,7 +1,8 @@
-import { readdir, readFile, writeFile } from 'fs/promises';
+import { mkdir, readdir, readFile, writeFile } from 'fs/promises';
 import path from 'path';
 import { extractPages } from './pdf-text';
 import { classifyDocuments } from './classify';
+import { assertSafeOutputTarget } from './output-guard';
 import { fingerprintBrief, loadLibrary, saveLibrary, type TemplateLibrary } from './fingerprint';
 import { FACTORS } from './factors';
 import type { FactorNumber, Party } from './types';
@@ -87,6 +88,9 @@ export async function buildCalibration(
   const now = opts.now ?? new Date();
   const libraryPath = opts.libraryPath ?? path.join(process.cwd(), 'lib', 'idr-engine', 'template-library.json');
   const outPath = opts.outPath ?? path.join(process.cwd(), 'lib', 'idr-engine', 'calibration-library.json');
+  // READ-ONLY INPUT: the corpus tree is never written to.
+  assertSafeOutputTarget(libraryPath, [root], 'template-library file');
+  assertSafeOutputTarget(outPath, [root], 'calibration-library file');
 
   const caseDirs = (await readdir(root, { withFileTypes: true }))
     .filter((e) => e.isDirectory() && !e.name.startsWith('.') && !e.name.startsWith('_'))
@@ -178,7 +182,9 @@ export async function buildCalibration(
   }
 
   calibration.templates = [...templateStats.values()];
+  await mkdir(path.dirname(libraryPath), { recursive: true });
   await saveLibrary(libraryPath, library);
+  await mkdir(path.dirname(outPath), { recursive: true });
   await writeFile(outPath, JSON.stringify(calibration, null, 2), 'utf-8');
   return { calibration, files: { calibration: outPath, templates: libraryPath } };
 }

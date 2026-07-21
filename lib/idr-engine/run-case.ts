@@ -9,6 +9,7 @@ import { recommendLines } from './recommend';
 import { renderRationale, buildRationaleSections } from './rationale';
 import { buildCoi, buildLogRow, DRAFT_BANNER, renderAnswerSheetMarkdown } from './answer-sheet';
 import { renderAnswerSheetHtml } from './answer-sheet-html';
+import { assertSafeOutputTarget, defaultOutputRoot } from './output-guard';
 import type { AnswerSheet, EdgeFlag, EligibilityNote, FingerprintResult } from './types';
 
 /**
@@ -19,7 +20,10 @@ import type { AnswerSheet, EdgeFlag, EligibilityNote, FingerprintResult } from '
  */
 
 export interface RunCaseOptions {
-  /** Output directory; default <caseFolder>/engine-output */
+  /**
+   * Output directory — ALWAYS outside the input folder (read-only-input
+   * doctrine, see output-guard.ts). Default: <Desktop/engine-output>/<caseId>.
+   */
   outDir?: string;
   /** Template library JSON path; default <repo>/lib/idr-engine/template-library.json */
   libraryPath?: string;
@@ -56,6 +60,12 @@ export async function runCase(caseFolder: string, opts: RunCaseOptions = {}): Pr
   const caseId = path.basename(path.resolve(caseFolder));
   const now = opts.now ?? new Date();
   const libraryPath = opts.libraryPath ?? path.join(process.cwd(), 'lib', 'idr-engine', 'template-library.json');
+
+  // READ-ONLY INPUT: every write target must live outside the input folder
+  // (and outside OneDrive). Checked before anything is read or written.
+  const outDir = opts.outDir ?? path.join(defaultOutputRoot(), caseId);
+  assertSafeOutputTarget(outDir, [caseFolder]);
+  if (!opts.library) assertSafeOutputTarget(libraryPath, [caseFolder], 'template-library file');
 
   // 1 · Ingest — inventory EVERY file (real folders run to ~60); extract
   // text from searchable PDFs/TXT, classify the rest by filename alone.
@@ -128,7 +138,6 @@ export async function runCase(caseFolder: string, opts: RunCaseOptions = {}): Pr
     logRowHeader,
   };
 
-  const outDir = opts.outDir ?? path.join(caseFolder, 'engine-output');
   await mkdir(outDir, { recursive: true });
   const html = path.join(outDir, 'answer-sheet.html'); // the reviewer's artifact (spec v1.1 stage 8)
   const markdown = path.join(outDir, 'answer-sheet.md');
