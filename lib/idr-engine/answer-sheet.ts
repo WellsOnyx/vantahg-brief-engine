@@ -186,7 +186,7 @@ export function buildLogRow(
     record.batch ? 'Y' : 'N',
     '[arbiter name]',
     pp,
-    'House template — importance-ordered (engine-drafted, arbiter-reviewed)',
+    'House template — importance-ordered',
     '[completed date]',
     notes,
     '', // QC

@@ -80,7 +80,7 @@ export async function runBatch(
         ran.push({
           caseId: sheet.caseId,
           folder,
-          answerSheetPath: files.markdown,
+          answerSheetPath: files.html,
           disputeNumber: sheet.record.disputeNumber,
           batch: sheet.record.batch,
           lineCount: sheet.record.lines.length,

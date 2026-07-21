@@ -39,7 +39,7 @@ async function main() {
   if (sheet.flags.length) {
     console.log(`  flags: ${sheet.flags.map((f) => `${f.severity === 'block' ? '⛔' : '⚠'}${f.code}`).join(', ')}`);
   }
-  console.log(`\nWrote:\n  ${files.markdown}\n  ${files.json}\n  ${files.logRow}\n`);
+  console.log(`\nWrote:\n  ${files.html}   ← open this in the workspace browser\n  ${files.markdown}\n  ${files.json}\n  ${files.logRow}\n`);
 }
 
 main().catch((err) => {

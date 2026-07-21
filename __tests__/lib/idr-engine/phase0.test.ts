@@ -102,6 +102,21 @@ describe('runCase (heuristic mode, end to end)', () => {
     expect(tsv).toContain('DISP-445566');
   });
 
+  it('renders the HTML sheet (v1.1 stage 8): portal module order, banners, no engine branding', async () => {
+    await writeFixtureCase(caseDir);
+    const { files } = await runCase(caseDir, { libraryPath: libPath });
+    const html = await readFile(files.html, 'utf-8');
+    expect(html).toContain('DRAFT FOR ARBITER REVIEW');
+    expect(html).toContain('NOT FOR DISTRIBUTION');
+    expect(html.indexOf('Module 1')).toBeLessThan(html.indexOf('Non-AA Questions'));
+    expect(html.indexOf('factor checkboxes')).toBeLessThan(html.indexOf('Rationale — paste block'));
+    expect(html.indexOf('Prevailing party')).toBeLessThan(html.indexOf('DLI sentence slots'));
+    expect(html.indexOf('DLI sentence slots')).toBeLessThan(html.indexOf('Attestation'));
+    expect(html).toContain('☑'); // at least one factor checked
+    expect(html).not.toMatch(/engine/i); // no tooling fingerprints in the artifact
+    expect(html).not.toContain('<script'); // plywood: zero JS
+  });
+
   it('check rule: raised factors carry page-cited evidence (IP factor 5, NIP factor 7)', async () => {
     await writeFixtureCase(caseDir);
     const { sheet } = await runCase(caseDir, { libraryPath: libPath });

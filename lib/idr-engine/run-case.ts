@@ -8,6 +8,7 @@ import { fingerprintBrief, loadLibrary, saveLibrary, type TemplateLibrary } from
 import { recommendLines } from './recommend';
 import { renderRationale } from './rationale';
 import { buildCoi, buildLogRow, DRAFT_BANNER, renderAnswerSheetMarkdown } from './answer-sheet';
+import { renderAnswerSheetHtml } from './answer-sheet-html';
 import type { AnswerSheet, EdgeFlag, FingerprintResult } from './types';
 
 /**
@@ -33,7 +34,7 @@ export interface RunCaseOptions {
 export interface RunCaseResult {
   sheet: AnswerSheet;
   outDir: string;
-  files: { markdown: string; json: string; logRow: string };
+  files: { html: string; markdown: string; json: string; logRow: string };
 }
 
 const DOC_EXT = /\.(pdf|txt)$/i;
@@ -108,14 +109,16 @@ export async function runCase(caseFolder: string, opts: RunCaseOptions = {}): Pr
 
   const outDir = opts.outDir ?? path.join(caseFolder, 'engine-output');
   await mkdir(outDir, { recursive: true });
+  const html = path.join(outDir, 'answer-sheet.html'); // the reviewer's artifact (spec v1.1 stage 8)
   const markdown = path.join(outDir, 'answer-sheet.md');
   const json = path.join(outDir, 'answer-sheet.json');
   const logRowFile = path.join(outDir, 'cases-log-row.tsv');
+  await writeFile(html, renderAnswerSheetHtml(sheet), 'utf-8');
   await writeFile(markdown, renderAnswerSheetMarkdown(sheet), 'utf-8');
   await writeFile(json, JSON.stringify(comparisonView(sheet), null, 2), 'utf-8');
   await writeFile(logRowFile, `${logRowHeader}\n${logRow}\n`, 'utf-8');
 
-  return { sheet, outDir, files: { markdown, json, logRow: logRowFile } };
+  return { sheet, outDir, files: { html, markdown, json, logRow: logRowFile } };
 }
 
 /**

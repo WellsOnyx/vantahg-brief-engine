@@ -1,6 +1,6 @@
 # IDR Engine — Answer-Sheet Generator (single case + batch)
 
-Built from **IDR Engine Build Spec v1**. One arbitration case folder in → one portal-ordered answer sheet out; or a whole directory of case folders in → a review queue sorted by confidence.
+Built from **IDR Engine Build Spec v1.1** (`docs/IDR_ENGINE_BUILD_SPEC_v1.1.pdf`). One arbitration case folder in → one portal-ordered answer sheet out; or a whole directory of case folders in → a review queue sorted by confidence. Plywood doctrine: no auth, no web app, no config screens — run against a folder, get an HTML answer sheet.
 
 **The engine recommends, it never decides.** Every artifact is stamped `DRAFT FOR ARBITER REVIEW — INTERNAL WORK PRODUCT`. This code submits nothing, contacts no portal of any kind, and on every §6 edge case it **flags instead of guessing**.
 
@@ -20,7 +20,7 @@ Built from **IDR Engine Build Spec v1**. One arbitration case folder in → one 
 npx tsx scripts/idr-answer-sheet.ts "/path/to/DISP-123456"
 ```
 
-When it finishes it prints where it wrote the results. Open `engine-output/answer-sheet.md` inside the case folder — that's your answer sheet. Work through it **top to bottom next to the portal**: flags first, then COI, factor checkboxes, the rationale paste block, prevailing party (entered in **two** portal places), DLI slots, attestation. The last section is a row you can paste into the IDR Cases Log sheet (also saved as `cases-log-row.tsv`).
+When it finishes it prints where it wrote the results. **Open `engine-output/answer-sheet.html` in the workspace browser** — that's your answer sheet, laid out to mirror the portal's module flow (COI → Non-AA questions → attestation). Work through it **top to bottom next to the portal**: flags first, then COI, factor checkboxes, the rationale paste block, prevailing party (entered in **two** portal places), DLI slots, attestation. The last section is a row you can paste into the IDR Cases Log sheet (also saved as `cases-log-row.tsv`; a markdown twin of the sheet is saved as `answer-sheet.md`).
 
 **Run a WHOLE FOLDER of cases.** Point it at a directory whose subfolders are case folders:
 
