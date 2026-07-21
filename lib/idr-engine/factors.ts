@@ -70,7 +70,7 @@ export const FACTORS: FactorDefinition[] = [
   },
   {
     factor: 7,
-    title: 'QPA reflects appropriate payment (iMPROve-specific, not legislated)',
+    title: 'QPA reflects appropriate payment (entity-specific, not legislated)',
     proseTitle: 'whether the qualifying payment amount reflects an appropriate payment amount',
     ipStandardArgument: 'IP never argues this — they filed because they reject the QPA',
     nipStandardArgument: 'NIP almost always argues it',

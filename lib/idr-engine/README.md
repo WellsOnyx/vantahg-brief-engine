@@ -2,7 +2,9 @@
 
 Built from **IDR Engine Build Spec v1**. One arbitration case folder in → one portal-ordered answer sheet out; or a whole directory of case folders in → a review queue sorted by confidence.
 
-**The engine recommends, it never decides.** Every artifact is stamped `DRAFT FOR ARBITER REVIEW`. This code submits nothing, contacts no portal (CMS or iMPROve), and on every §6 edge case it **flags instead of guessing**.
+**The engine recommends, it never decides.** Every artifact is stamped `DRAFT FOR ARBITER REVIEW — INTERNAL WORK PRODUCT`. This code submits nothing, contacts no portal of any kind, and on every §6 edge case it **flags instead of guessing**.
+
+**Confidentiality doctrine:** this tooling is internal secret sauce. It is never mentioned, shown, or implied to anyone outside the company — the only externally visible thing is output quality. Answer sheets and queues are internal work product; don't leave them on a shared screen, don't attach them to anything outbound, and never reference the tooling in portal text, log notes, or client communication.
 
 ---
 
@@ -52,7 +54,11 @@ Do **not** run this at scale until it has matched a human. Take a case an arbite
 
 ## Template fingerprint (§5)
 
-Every brief is fingerprinted: a **shell hash** (numbers/dates/amounts stripped → the reusable template) plus a **content hash** (this exact filing). Familiar shell + different case numbers = normal reuse, quiet. Familiar shell + **changed wording or a shifted exhibit count** = 🚨 `TEMPLATE_DEVIATION`, blocking — the lazy-arbiter trap, industrialized. New templates auto-register into `lib/idr-engine/template-library.json`; the batch runner shares one library across the run. **Maria's v3 template doc is the seed library** — when it arrives it is ingested into that same JSON (entries carry a `factorMap` slot for her pre-mapped factor selections).
+Every brief is fingerprinted: a **shell hash** (numbers/dates/amounts stripped → the reusable template) plus a **content hash** (this exact filing). Familiar shell + different case numbers = normal reuse, quiet. Familiar shell + **changed wording or a shifted exhibit count** = 🚨 `TEMPLATE_DEVIATION`, blocking — the lazy-arbiter trap, industrialized. New templates auto-register into `lib/idr-engine/template-library.json`; the batch runner shares one library across the run. **The QA team's v3 template catalog is the seed library** — when it arrives it is ingested into that same JSON (entries carry a `factorMap` slot for its pre-mapped factor selections).
+
+## Portal interaction doctrine
+
+Today, the answer sheet IS the interface: the reviewer transcribes it into the submission portal by hand. The planned later phase is an **in-workspace browser assist** that pre-fills the submission portal's checkboxes and fields directly from `answer-sheet.json` and **hard-stops before submit** — the human reviews every pre-filled field and personally clicks. No CMS portal automation, ever. Like everything else here, that assist is internal-only tooling and is never disclosed externally.
 
 ## PHI
 

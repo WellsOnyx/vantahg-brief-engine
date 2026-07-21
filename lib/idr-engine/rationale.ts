@@ -2,8 +2,8 @@ import { factorDef, IMPORTANCE_ORDER } from './factors';
 import type { CaseRecord, FactorFinding, FactorGrid, LineRecommendation, Party } from './types';
 
 /**
- * Stage 7 — Draft (spec §4): the iMPROve house rationale template,
- * hard-won with Charlene — deviate at your peril.
+ * Stage 7 — Draft (spec §4): the certified IDR entity's house rationale
+ * template — deviate at your peril.
  *
  *   ¶1 — standard, PORTAL-INJECTED and uneditable → not rendered here.
  *   ¶2 — standard reference to the factor chart (editable house language).

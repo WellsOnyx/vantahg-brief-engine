@@ -6,7 +6,7 @@ import { fullText } from './pdf-text';
 /**
  * Stage 4 — Template fingerprint (spec §5), Phase 0 STUB.
  *
- * Maria's insight, industrialized: payers reuse one brief template for
+ * A QA insight from live operations, industrialized: payers reuse one brief template for
  * months or years, then quietly slip in a new exhibit or an extra
  * paragraph — and arbiters go lazy on the familiar shell exactly when
  * they shouldn't. The engine never gets lazy where humans do.
@@ -27,10 +27,10 @@ import { fullText } from './pdf-text';
  *                                                within a known shell)
  *   otherwise                                  → new_template, auto-registered
  *
- * The seed library is Maria's v3 template doc — it arrives later as a
- * document and is ingested into the same JSON this stub reads/writes
- * (entries carry a factorMap slot for her pre-mapped factor selections).
- * Until then the library self-populates from cases as they run.
+ * The seed library is the QA team's v3 template catalog — it arrives
+ * later as a document and is ingested into the same JSON this stub
+ * reads/writes (entries carry a factorMap slot for its pre-mapped factor
+ * selections). Until then the library self-populates from cases as they run.
  */
 
 export interface TemplateLibraryEntry {
@@ -41,7 +41,7 @@ export interface TemplateLibraryEntry {
   shellTokens: string[];
   contentHashes: string[]; // instantiations seen (numbers/dates vary — expected)
   exhibitCounts: number[]; // exhibit-folder sizes seen alongside this template
-  factorMap: number[] | null; // pre-mapped factor selections (from Maria's doc, later)
+  factorMap: number[] | null; // pre-mapped factor selections (from the seed catalog, later)
   seenCount: number;
   firstSeen: string;
   lastSeen: string;

@@ -16,7 +16,7 @@ import type { AnswerSheet, CaseDocument, EdgeFlag, LineRecommendation } from './
  */
 
 export const DRAFT_BANNER =
-  '████ DRAFT FOR ARBITER REVIEW — THE ENGINE RECOMMENDS, IT NEVER DECIDES. A credentialed human reviews every field, decides every line, and clicks submit. Nothing in this file was or will be auto-submitted anywhere. ████';
+  '████ DRAFT FOR ARBITER REVIEW — INTERNAL WORK PRODUCT, NOT FOR DISTRIBUTION. This prep sheet only recommends; the arbiter reviews every field, decides every line, and personally submits. Nothing in this file was or will be auto-submitted anywhere. ████';
 
 const COI_NAME_STOPWORDS = new Set(['llc', 'inc', 'corp', 'health', 'plan', 'medical', 'group', 'of', 'the', 'and']);
 
@@ -116,14 +116,14 @@ export function renderAnswerSheetMarkdown(sheet: AnswerSheet): string {
   L.push('');
 
   L.push('## Portal step 4 · Prevailing party — ENTERED IN TWO PLACES');
-  L.push('| Line | Engine recommendation | Confidence | Notes |');
+  L.push('| Line | Prep recommendation | Confidence | Notes |');
   L.push('|---|---|---|---|');
   for (const rec of sheet.recommendations) {
     const label = rec.recommended === 'FLAG' ? '⛔ FLAG — HUMAN RULING REQUIRED' : rec.recommended;
     L.push(`| ${rec.line} | ${label} | ${rec.recommended === 'FLAG' ? '—' : `${rec.confidencePct}%`} | ${rec.reasons[0] ?? ''} |`);
   }
   L.push('');
-  L.push('Reminder: your DECISION (not the engine\'s recommendation) goes in both PP fields — they must match.');
+  L.push('Reminder: your DECISION (not the prep recommendation) goes in both PP fields — they must match.');
   L.push('');
 
   L.push('## Portal step 5 · DLI sentence slots (batch continuation lines)');

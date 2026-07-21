@@ -125,8 +125,8 @@ export async function runBatch(
 
 function renderQueueMarkdown(r: BatchResult): string {
   const L: string[] = [];
-  L.push('████ DRAFT FOR ARBITER REVIEW — every case below still needs a human decision. This queue only orders the review work. ████', '');
-  L.push(`# Engine review queue — ${r.root}`);
+  L.push('████ DRAFT FOR ARBITER REVIEW — INTERNAL WORK PRODUCT, NOT FOR DISTRIBUTION. Every case below still needs a human decision; this queue only orders the review work. ████', '');
+  L.push(`# Review queue — ${r.root}`);
   L.push(`Generated ${r.generatedAt} · ${r.ran.length} case(s) prepped · ${r.parked.length} parked`);
   L.push('');
   L.push('Work top-down: highest-confidence, unflagged cases first (fastest transcribe-and-decide); blocked/flagged cases need a full read.');
