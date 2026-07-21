@@ -2,16 +2,36 @@ import type { CaseDocument, DocKind, EdgeFlag, PageText } from './types';
 import { fullText } from './pdf-text';
 
 /**
- * Stage 2 — Classify (spec §6): sort a case folder into the FOUR documents
- * that matter (IP offer / NIP offer / IP brief / NIP brief), exhibits, and
- * CMS-generated compliance filler. Deterministic filename+content
- * heuristics — classification must be reproducible and explainable, so no
- * LLM in this stage. A MISSING_DOC flag fires for any absent core doc.
+ * Stage 2 — Classify (spec §6 + live-portal folder taxonomy): cases arrive
+ * as ZIPs of up to ~60 files. Beyond the FOUR documents that matter
+ * (IP/NIP notice of offer, IP/NIP brief), the real folders contain a known
+ * long tail — classified deterministically by filename first, content
+ * second, because classification must be reproducible and explainable:
+ *
+ *   IDRNoticeOfInitiation / IDR (Re)Selection Response Form /
+ *   idr-coversheet(.docx) / ProofofCoolingOffPeriod /
+ *   ProofofIncorrectlyBatched(.csv)          → cms_filler (ignored)
+ *   ProofofOpenNegotiation*(.pdf), multiple  → negotiation_proof — these
+ *     are PRE-LABELED factor-5 evidence (the case-winning factor) and are
+ *     routed straight into factor-5 analysis.
+ *   *eligibility*notes*                      → eligibility_notes (surfaced
+ *     on the sheet; the portal's staff-notes grid must be read either way)
+ *
+ * A MISSING_DOC flag fires for any absent core doc. Files we can't read
+ * (.docx/.csv/images) are still inventoried and classified by name.
  */
 
 const CORE_KINDS: DocKind[] = ['ip_offer', 'nip_offer', 'ip_brief', 'nip_brief'];
 
-const CMS_FILLER_PATTERNS = [
+const FILLER_NAME_PATTERNS: RegExp[] = [
+  /idr\s*notice\s*of\s*initiation|idrnoticeofinitiation/i,
+  /idr\s*(re)?selection\s*response\s*form/i,
+  /idr[-_ ]?coversheet/i,
+  /proof\s*of\s*cooling\s*off|proofofcoolingoff/i,
+  /proof\s*of\s*incorrectly\s*batched|proofofincorrectlybatched/i,
+];
+
+const FILLER_CONTENT_PATTERNS: RegExp[] = [
   /certified.*idr.*entity.*selection/i,
   /notice of.*idr.*initiation/i,
   /administrative fee/i,
@@ -27,6 +47,17 @@ interface Scored {
 function classifyOne(fileName: string, pages: PageText[]): Scored {
   const name = fileName.toLowerCase();
   const text = fullText(pages).toLowerCase().slice(0, 8000);
+
+  // Pre-labeled by filename — the taxonomy the folders actually use.
+  if (/proof\s*of\s*open\s*negotiation|proofofopennegotiation/i.test(name)) {
+    return { kind: 'negotiation_proof', reason: 'ProofofOpenNegotiation — pre-labeled factor-5 evidence' };
+  }
+  if (/eligibilit/.test(name) && /note/.test(name)) {
+    return { kind: 'eligibility_notes', reason: 'eligibility-notes export' };
+  }
+  for (const p of FILLER_NAME_PATTERNS) {
+    if (p.test(name)) return { kind: 'cms_filler', reason: `known compliance-filler filename (${p})` };
+  }
 
   const isIp = /initiating|(^|[^a-z])ip([^a-z]|$)|provider/i;
   const nipHit = /non[- _]?initiating|(^|[^a-z])nip([^a-z]|$)/.test(name) || /non-initiating party/.test(text);
@@ -44,8 +75,8 @@ function classifyOne(fileName: string, pages: PageText[]): Scored {
     if (ipHit) return { kind: 'ip_brief', reason: 'brief + initiating markers' };
   }
 
-  for (const p of CMS_FILLER_PATTERNS) {
-    if (p.test(name) || p.test(text)) return { kind: 'cms_filler', reason: `matches CMS filler pattern ${p}` };
+  for (const p of FILLER_CONTENT_PATTERNS) {
+    if (p.test(text)) return { kind: 'cms_filler', reason: `matches CMS filler pattern ${p}` };
   }
 
   if (/eob|explanation of benefits|operative|operating report|(^|[^a-z])cv([^a-z]|$)|curriculum|exhibit|email/i.test(name)

@@ -70,16 +70,30 @@ export function renderAnswerSheetHtml(sheet: AnswerSheet): string {
   H.push('<h2>Case facts <span class="note">(verify against the documents)</span></h2>');
   H.push('<table><tr><th>IP (provider)</th><th>NIP (payer/TPA)</th><th>QPA (NIP-supplied — display only, never an anchor)</th></tr>');
   H.push(`<tr><td>${esc(r.ipName ?? '— fill from notice of offer —')}</td><td>${esc(r.nipName ?? '— fill from notice of offer —')}</td><td>${money(r.qpa)}</td></tr></table>`);
-  H.push('<table><tr><th>Line</th><th>CPT</th><th>Date of service</th><th>IP offer</th><th>NIP offer</th></tr>');
+  H.push('<table><tr><th>Line</th><th>CPT</th><th>Date of service</th><th>IP offer</th><th>NIP offer</th><th>FH 50th %ile</th></tr>');
   for (const l of r.lines) {
-    H.push(`<tr><td>${l.line}</td><td>${esc(l.cpt ?? '—')}</td><td>${esc(l.dateOfService ?? '—')}</td><td>${money(l.ipOffer)}</td><td>${money(l.nipOffer)}</td></tr>`);
+    H.push(`<tr><td>${l.line}</td><td>${esc(l.cpt ?? '—')}</td><td>${esc(l.dateOfService ?? '—')}</td><td>${money(l.ipOffer)}</td><td>${money(l.nipOffer)}</td><td>${l.fhBenchmark == null ? '—' : money(l.fhBenchmark)}</td></tr>`);
   }
   H.push('</table>');
+  H.push('<div class="note">FH 50th %ile = FAIR Health benchmark from the NIP brief — a neutral reference point, not an offer.</div>');
   H.push(`<div class="note">Documents read: ${sheet.documents.map((d) => `${esc(d.file)} → ${esc(d.kind)}`).join(' · ')}</div>`);
+
+  H.push('<h2>Staff eligibility notes</h2>');
+  H.push('<p><strong>READ the staff eligibility-notes grid on the case screen</strong> (username / date / note) before deciding.</p>');
+  if (sheet.eligibilityNotes.length > 0) {
+    H.push('<table><tr><th>User</th><th>Date</th><th>Note</th></tr>');
+    for (const n of sheet.eligibilityNotes) {
+      H.push(`<tr><td>${esc(n.username ?? '—')}</td><td>${esc(n.date ?? '—')}</td><td>${esc(n.note)}</td></tr>`);
+    }
+    H.push('</table>');
+  } else {
+    H.push('<p class="note">(none found in the case folder — the portal grid may still have entries)</p>');
+  }
 
   // ── Portal module order ──
   H.push('<h2><span class="module">Module 1</span>COI</h2>');
-  H.push(`<p>Answer: <strong>${sheet.coi.answer}</strong> (per policy). Scan the names below for any conflict YOU have — the sheet cannot know your conflicts:</p><ul>`);
+  H.push(`<p>Answer: <strong>${sheet.coi.answer}</strong> (per policy) — check the master <strong>“No To All Questions”</strong> box; each individual conflict question keeps its <strong>No</strong> dropdown and an <strong>empty</strong> text field.</p>`);
+  H.push('<p>Scan the names below for any conflict YOU have — the sheet cannot know your conflicts:</p><ul>');
   if (sheet.coi.namesForReview.length === 0) H.push('<li class="note">(no names extracted — check the party names in Case facts yourself)</li>');
   for (const n of sheet.coi.namesForReview) H.push(`<li>${esc(n)}</li>`);
   H.push('</ul>');
@@ -105,22 +119,23 @@ export function renderAnswerSheetHtml(sheet: AnswerSheet): string {
   H.push('<h2><span class="module">Module 2b</span>Rationale — paste block</h2>');
   H.push(`<pre class="paste">${esc(sheet.rationale)}</pre>`);
 
-  H.push('<h2><span class="module">Module 2b</span>Prevailing party — entered in TWO places</h2>');
-  H.push('<table><tr><th>Line</th><th>Prep recommendation</th><th>Confidence</th><th>Notes</th></tr>');
+  // One "Case Info and Final Resolution" record PER LINE — page 1 of N,
+  // each carrying its Dispute Line Item Name (the DLI number is read off
+  // the portal screen and typed by the human, never pre-filled).
+  const total = sheet.recommendations.length;
   for (const rec of sheet.recommendations) {
-    const label = rec.recommended === 'FLAG' ? '<span class="rec-flag">⛔ FLAG — HUMAN RULING REQUIRED</span>' : `<strong>${rec.recommended}</strong>`;
-    H.push(`<tr><td>${rec.line}</td><td>${label}</td><td>${rec.recommended === 'FLAG' ? '—' : `${rec.confidencePct}%`}</td><td>${esc(rec.reasons[0] ?? '')}</td></tr>`);
-  }
-  H.push('</table>');
-  H.push('<p>Your DECISION (not the prep recommendation) goes in both PP fields — they must match.</p>');
-
-  const chained = sheet.recommendations.filter((x) => x.dliChainToLine !== null);
-  H.push('<h2><span class="module">Module 2b</span>DLI sentence slots</h2>');
-  if (chained.length === 0) H.push('<p class="note">none (single line, or no repeated decisions)</p>');
-  else {
-    H.push('<ul>');
-    for (const rec of chained) H.push(`<li>Line ${rec.line} (matches decision on line ${rec.dliChainToLine}): ${esc(dliSentence())}</li>`);
-    H.push('</ul>');
+    const line = r.lines.find((l) => l.line === rec.line);
+    const label = rec.recommended === 'FLAG'
+      ? '<span class="rec-flag">⛔ FLAG — HUMAN RULING REQUIRED</span>'
+      : `<strong>${rec.recommended}</strong> (${rec.confidencePct}%)`;
+    H.push(`<h2><span class="module">Module 2b</span>Case Info and Final Resolution — page ${rec.line} of ${total}</h2>`);
+    H.push('<table>');
+    H.push(`<tr><th>Dispute Line Item Name</th><td>DLI - [____ ← read off the portal screen]</td></tr>`);
+    H.push(`<tr><th>Line facts</th><td>CPT ${esc(line?.cpt ?? '—')} · IP ${money(line?.ipOffer ?? null)} · NIP ${money(line?.nipOffer ?? null)} · FH 50th %ile ${line?.fhBenchmark == null ? '—' : money(line.fhBenchmark)}</td></tr>`);
+    H.push(`<tr><th>Prep recommendation</th><td>${label} — ${esc(rec.reasons[0] ?? '')}</td></tr>`);
+    H.push('<tr><th>Prevailing party</th><td>Your DECISION — entered in TWO places; they must match.</td></tr>');
+    H.push(`<tr><th>Rationale for this line</th><td>${rec.dliChainToLine !== null ? `matches decision on line ${rec.dliChainToLine}: ${esc(dliSentence())}` : 'the full paste block above'}</td></tr>`);
+    H.push('</table>');
   }
 
   H.push('<h2><span class="module">Module 3</span>Attestation</h2>');

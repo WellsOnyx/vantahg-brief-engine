@@ -19,10 +19,11 @@ const ANCHOR_WEIGHTS: Record<number, number> = {
   7: 0.5, // NIP boilerplate — low signal
 };
 
+// House weight ladder (observed usage): some > modest > less.
 const WEIGHT_MULTIPLIER: Record<string, number> = {
-  'considerable weight': 1.5,
   'some weight': 1.0,
-  'modest weight': 0.6,
+  'modest weight': 0.8,
+  'less weight': 0.5,
 };
 
 function sideScore(grid: FactorGrid, party: Party): { score: number; drivers: string[] } {

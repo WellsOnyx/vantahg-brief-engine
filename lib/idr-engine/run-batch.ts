@@ -1,8 +1,12 @@
 import { readdir, mkdir, writeFile } from 'fs/promises';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
 import path from 'path';
 import { runCase } from './run-case';
 import { loadLibrary, saveLibrary } from './fingerprint';
 import type { AnswerSheet } from './types';
+
+const execFileAsync = promisify(execFile);
 
 /**
  * Batch runner (spec §7 Phase 1): point at a directory whose
@@ -53,11 +57,32 @@ export async function runBatch(
 ): Promise<BatchResult> {
   const root = path.resolve(rootFolder);
   const now = opts.now ?? new Date();
-  const entries = (await readdir(root, { withFileTypes: true }))
-    .filter((e) => e.isDirectory() && !e.name.startsWith('.') && !e.name.startsWith('_'))
-    .map((e) => e.name)
-    .sort();
-  if (entries.length === 0) throw new Error(`No case subfolders found in ${root}`);
+  const dirents = (await readdir(root, { withFileTypes: true }))
+    .filter((e) => !e.name.startsWith('.') && !e.name.startsWith('_'));
+
+  // Cases arrive as ZIPs (live-portal taxonomy) — unzip each into
+  // _unzipped/<name>/ (underscore prefix keeps re-runs from re-discovering
+  // them as extra folders). Plain subfolders still work.
+  const caseFolders: Array<{ name: string; folder: string }> = [];
+  for (const e of dirents.filter((d) => d.isDirectory())) {
+    caseFolders.push({ name: e.name, folder: path.join(root, e.name) });
+  }
+  const zips = dirents.filter((d) => d.isFile() && /\.zip$/i.test(d.name));
+  if (zips.length > 0) {
+    const unzipRoot = path.join(root, '_unzipped');
+    await mkdir(unzipRoot, { recursive: true });
+    for (const z of zips) {
+      const name = z.name.replace(/\.zip$/i, '');
+      const dest = path.join(unzipRoot, name);
+      await mkdir(dest, { recursive: true });
+      // -j flattens zip-internal folders: a case is one flat folder of files.
+      await execFileAsync('unzip', ['-o', '-q', '-j', path.join(root, z.name), '-d', dest]);
+      caseFolders.push({ name, folder: dest });
+    }
+  }
+  caseFolders.sort((a, b) => a.name.localeCompare(b.name));
+  if (caseFolders.length === 0) throw new Error(`No case subfolders or .zip files found in ${root}`);
+  const entries = caseFolders;
 
   const ran: BatchCaseSummary[] = [];
   const parked: BatchResult['parked'] = [];
@@ -73,8 +98,7 @@ export async function runBatch(
   let next = 0;
   async function worker() {
     while (next < entries.length) {
-      const name = entries[next++];
-      const folder = path.join(root, name);
+      const { name, folder } = entries[next++];
       try {
         const { sheet, files } = await runCase(folder, { library, now });
         ran.push({

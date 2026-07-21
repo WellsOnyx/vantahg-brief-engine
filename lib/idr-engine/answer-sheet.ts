@@ -69,21 +69,32 @@ export function renderAnswerSheetMarkdown(sheet: AnswerSheet): string {
   L.push(`- NIP (payer/TPA): ${r.nipName ?? '— fill from notice of offer —'}`);
   L.push(`- QPA (NIP-supplied — display only, never an anchor): ${money(r.qpa)}`);
   L.push('');
-  L.push('| Line | CPT | Date of service | IP offer | NIP offer |');
-  L.push('|---|---|---|---|---|');
+  L.push('| Line | CPT | Date of service | IP offer | NIP offer | FH 50th %ile |');
+  L.push('|---|---|---|---|---|---|');
   for (const line of r.lines) {
-    L.push(`| ${line.line} | ${line.cpt ?? '—'} | ${line.dateOfService ?? '—'} | ${money(line.ipOffer)} | ${money(line.nipOffer)} |`);
+    L.push(`| ${line.line} | ${line.cpt ?? '—'} | ${line.dateOfService ?? '—'} | ${money(line.ipOffer)} | ${money(line.nipOffer)} | ${line.fhBenchmark === null ? '—' : money(line.fhBenchmark)} |`);
   }
+  L.push('');
+  L.push('FH 50th %ile = FAIR Health benchmark from the NIP brief — a neutral reference point, not an offer.');
   L.push('');
   L.push('Documents read:');
   for (const d of sheet.documents) L.push(`- ${d.file} → ${d.kind} (${d.classificationReason})`);
   L.push('');
 
+  // ── Staff eligibility notes ──
+  L.push('## Staff eligibility notes');
+  L.push('READ the staff eligibility-notes grid on the case screen (username / date / note) before deciding.');
+  for (const n of sheet.eligibilityNotes) {
+    L.push(`- ${[n.username, n.date].filter(Boolean).join(' · ')}${n.username || n.date ? ': ' : ''}${n.note}`);
+  }
+  if (sheet.eligibilityNotes.length === 0) L.push('- (none found in the case folder — the portal grid may still have entries)');
+  L.push('');
+
   // ── PORTAL ORDER starts here ──
   L.push('---');
   L.push('## Portal step 1 · COI');
-  L.push(`Answer: **${sheet.coi.answer}** (per policy).`);
-  L.push('Names appearing in this case — scan for any conflict YOU have (the engine cannot know your conflicts):');
+  L.push(`Answer: **${sheet.coi.answer}** (per policy) — check the master **"No To All Questions"** box; each individual conflict question keeps its **No** dropdown and an **empty** text field.`);
+  L.push('Names appearing in this case — scan for any conflict YOU have (the sheet cannot know your conflicts):');
   if (sheet.coi.namesForReview.length === 0) {
     L.push('- (no names extracted — check the party names in Case facts above yourself)');
   }
@@ -115,29 +126,24 @@ export function renderAnswerSheetMarkdown(sheet: AnswerSheet): string {
   L.push('```');
   L.push('');
 
-  L.push('## Portal step 4 · Prevailing party — ENTERED IN TWO PLACES');
-  L.push('| Line | Prep recommendation | Confidence | Notes |');
-  L.push('|---|---|---|---|');
+  L.push('## Portal step 4 · Case Info and Final Resolution — ONE record per line');
+  const total = sheet.recommendations.length;
   for (const rec of sheet.recommendations) {
-    const label = rec.recommended === 'FLAG' ? '⛔ FLAG — HUMAN RULING REQUIRED' : rec.recommended;
-    L.push(`| ${rec.line} | ${label} | ${rec.recommended === 'FLAG' ? '—' : `${rec.confidencePct}%`} | ${rec.reasons[0] ?? ''} |`);
-  }
-  L.push('');
-  L.push('Reminder: your DECISION (not the prep recommendation) goes in both PP fields — they must match.');
-  L.push('');
-
-  L.push('## Portal step 5 · DLI sentence slots (batch continuation lines)');
-  const chained = sheet.recommendations.filter((x) => x.dliChainToLine !== null);
-  if (chained.length === 0) {
-    L.push('- none (single line, or no repeated decisions)');
-  } else {
-    for (const rec of chained) {
-      L.push(`- Line ${rec.line} (matches decision on line ${rec.dliChainToLine}): ${dliSentence()}`);
+    const line = r.lines.find((l) => l.line === rec.line);
+    const label = rec.recommended === 'FLAG' ? '⛔ FLAG — HUMAN RULING REQUIRED' : `${rec.recommended} (${rec.confidencePct}%)`;
+    L.push(`### Page ${rec.line} of ${total} · Dispute Line Item Name: DLI - [____ ← read off the portal screen]`);
+    L.push(`- CPT ${line?.cpt ?? '—'} · IP ${money(line?.ipOffer ?? null)} · NIP ${money(line?.nipOffer ?? null)} · FH 50th %ile ${line?.fhBenchmark == null ? '—' : money(line.fhBenchmark)}`);
+    L.push(`- Prep recommendation: **${label}** — ${rec.reasons[0] ?? ''}`);
+    L.push('- Prevailing party — your DECISION, ENTERED IN TWO PLACES (they must match).');
+    if (rec.dliChainToLine !== null) {
+      L.push(`- Rationale for this line (matches decision on line ${rec.dliChainToLine}): ${dliSentence()}`);
+    } else {
+      L.push('- Rationale for this line: the full paste block from step 3.');
     }
+    L.push('');
   }
-  L.push('');
 
-  L.push('## Portal step 6 · Attestation');
+  L.push('## Portal step 5 · Attestation');
   L.push('- [ ] Attestation completed — type YOUR name and TODAY\'s date on the portal attestation screen.');
   L.push('');
 

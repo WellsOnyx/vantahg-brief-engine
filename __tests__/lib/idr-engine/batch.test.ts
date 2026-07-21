@@ -1,8 +1,10 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { mkdtemp, writeFile, readFile, mkdir } from 'fs/promises';
+import { mkdtemp, writeFile, readFile, mkdir, rm } from 'fs/promises';
+import { execFileSync } from 'child_process';
 import { tmpdir } from 'os';
 import path from 'path';
 import { runBatch } from '@/lib/idr-engine/run-batch';
+import { buildCalibration } from '@/lib/idr-engine/calibrate';
 
 /**
  * Batch runner: processes every case subfolder, sorts the queue by
@@ -76,5 +78,68 @@ describe('runBatch', () => {
     // Two briefs per case (IP + NIP), same shells across both cases → 2 templates, each seen twice.
     expect(lib.templates).toHaveLength(2);
     expect(lib.templates.every((t: { seenCount: number }) => t.seenCount === 2)).toBe(true);
+  });
+
+  it('accepts a directory of ZIPs: unzips internally and runs each as a case', async () => {
+    // Build a case folder, zip it flat, delete the folder — only the zip remains.
+    await writeCase('DISP-000020', caseFiles('DISP-000020'));
+    const src = path.join(root, 'DISP-000020');
+    const fileNames = Object.keys(caseFiles('DISP-000020'));
+    execFileSync('zip', ['-q', '-j', path.join(root, 'DISP-000020.zip'), ...fileNames.map((f) => path.join(src, f))]);
+    await rm(src, { recursive: true });
+
+    const result = await runBatch(root, { libraryPath: libPath });
+    expect(result.ran).toHaveLength(1);
+    expect(result.ran[0].caseId).toBe('DISP-000020');
+    expect(result.parked).toHaveLength(0);
+    const sheet = await readFile(path.join(root, '_unzipped', 'DISP-000020', 'engine-output', 'answer-sheet.html'), 'utf-8');
+    expect(sheet).toContain('DRAFT FOR ARBITER REVIEW');
+    // Re-running discovers the zip again, not the _unzipped extraction as a second case.
+    const again = await runBatch(root, { libraryPath: libPath });
+    expect(again.ran).toHaveLength(1);
+  });
+});
+
+// ── Calibration corpus (spec item 6) ───────────────────────────────────────
+
+describe('buildCalibration', () => {
+  it('ingests completed cases: weight usage mined, outcomes counted, template factorMap seeded, exemplars captured', async () => {
+    const corpus = path.join(root, 'completed');
+    await mkdir(corpus);
+    for (const [name, pp] of [['DISP-900001', 'IP'], ['DISP-900002', 'IP']] as const) {
+      const dir = path.join(corpus, name);
+      await mkdir(dir);
+      for (const [f, c] of Object.entries(caseFiles(name))) await writeFile(path.join(dir, f), c, 'utf-8');
+      await writeFile(
+        path.join(dir, 'submitted-rationale.txt'),
+        'With respect to good-faith negotiation efforts and contracted rates, the Initiating Party submitted prior EOBs; this consideration was given modest weight. ' +
+        'With respect to the acuity of the case, the operating report was given some weight. ' +
+        'The provider training and curriculum vitae were given less weight.',
+        'utf-8',
+      );
+      await writeFile(
+        path.join(dir, 'decision.json'),
+        JSON.stringify({ prevailing_party: pp, factor_checks: { ip: [false, false, true, false, true, true, false], nip: [false, false, true, false, false, false, true] } }),
+        'utf-8',
+      );
+    }
+
+    const { calibration } = await buildCalibration(corpus, {
+      libraryPath: libPath,
+      outPath: path.join(root, 'calibration.json'),
+      now: new Date('2026-07-21T12:00:00Z'),
+    });
+
+    expect(calibration.caseCount).toBe(2);
+    expect(calibration.outcomes).toEqual({ IP: 2, NIP: 0 });
+    expect(calibration.exemplars.length).toBeGreaterThan(0);
+    // Weight ladder mined from the real rationale text:
+    expect(calibration.weightUsage['5']['modest weight']).toBeGreaterThan(0);
+    expect(calibration.weightUsage['3']['some weight']).toBeGreaterThan(0);
+    expect(calibration.weightUsage['1']['less weight']).toBeGreaterThan(0);
+    // Fingerprint library seeded with observed factor checks:
+    const lib = JSON.parse(await readFile(libPath, 'utf-8'));
+    const nipTemplate = lib.templates.find((t: { party: string }) => t.party === 'NIP');
+    expect(nipTemplate.factorMap).toEqual([3, 7]);
   });
 });

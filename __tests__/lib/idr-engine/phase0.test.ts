@@ -39,7 +39,8 @@ Additional information: negotiation email correspondence is attached as Exhibit 
 
 const NIP_BRIEF = `ARBITRATION BRIEF — NON-INITIATING PARTY
 The QPA already accounts for acuity of the typical case in this service code.
-The qualifying payment amount is appropriate and reflects the median contracted rate for the geographic region.`;
+The qualifying payment amount is appropriate and reflects the median contracted rate for the geographic region.
+Line data: FH 50th %ile Allowed Amt: $610.00 for the service at issue.`;
 
 const EXHIBIT_A = `EXHIBIT A — EXPLANATION OF BENEFITS
 Paid amount $1,050.00 for CPT 99284, plan year 2023.`;
@@ -79,16 +80,21 @@ describe('runCase (heuristic mode, end to end)', () => {
     expect(md).toContain('DRAFT FOR ARBITER REVIEW');
     expect(md.indexOf('Portal step 1 · COI')).toBeLessThan(md.indexOf('Portal step 2'));
     expect(md.indexOf('Portal step 2')).toBeLessThan(md.indexOf('Portal step 3 · Rationale'));
-    expect(md.indexOf('Portal step 3')).toBeLessThan(md.indexOf('Portal step 4 · Prevailing party'));
-    expect(md.indexOf('Portal step 4')).toBeLessThan(md.indexOf('Portal step 5 · DLI'));
-    expect(md.indexOf('Portal step 5')).toBeLessThan(md.indexOf('Portal step 6 · Attestation'));
+    expect(md.indexOf('Portal step 3')).toBeLessThan(md.indexOf('Portal step 4 · Case Info and Final Resolution'));
+    expect(md.indexOf('Portal step 4')).toBeLessThan(md.indexOf('Portal step 5 · Attestation'));
+    expect(md).toContain('ONE record per line');
+    expect(md).toContain('Dispute Line Item Name: DLI - [____');
     expect(md).toContain('ENTERED IN TWO PLACES');
+    expect(md).toContain('"No To All Questions"');
+    expect(md).toContain('Staff eligibility notes');
 
     expect(sheet.record.disputeNumber).toBe('DISP-445566');
     expect(sheet.record.qpa).toBe(412.18);
     expect(sheet.record.batch).toBe(true);
     expect(sheet.record.lines.map((l) => l.ipOffer)).toEqual([1150, 1150]);
     expect(sheet.record.lines.map((l) => l.nipOffer)).toEqual([450, 450]);
+    expect(sheet.record.lines.map((l) => l.fhBenchmark)).toEqual([610, 610]); // FH 50th %ile from the NIP brief
+    expect(md).toContain('FH 50th %ile');
     expect(sheet.flags.some((f) => f.code === 'HEURISTIC_MODE')).toBe(true);
 
     const json = JSON.parse(await readFile(files.json, 'utf-8'));
@@ -110,8 +116,11 @@ describe('runCase (heuristic mode, end to end)', () => {
     expect(html).toContain('NOT FOR DISTRIBUTION');
     expect(html.indexOf('Module 1')).toBeLessThan(html.indexOf('Non-AA Questions'));
     expect(html.indexOf('factor checkboxes')).toBeLessThan(html.indexOf('Rationale — paste block'));
-    expect(html.indexOf('Prevailing party')).toBeLessThan(html.indexOf('DLI sentence slots'));
-    expect(html.indexOf('DLI sentence slots')).toBeLessThan(html.indexOf('Attestation'));
+    expect(html.indexOf('Rationale — paste block')).toBeLessThan(html.indexOf('Case Info and Final Resolution — page 1 of 2'));
+    expect(html.indexOf('Case Info and Final Resolution — page 2 of 2')).toBeLessThan(html.indexOf('Attestation'));
+    expect(html).toContain('Dispute Line Item Name');
+    expect(html).toContain('No To All Questions');
+    expect(html).toContain('FH 50th %ile');
     expect(html).toContain('☑'); // at least one factor checked
     expect(html).not.toMatch(/engine/i); // no tooling fingerprints in the artifact
     expect(html).not.toContain('<script'); // plywood: zero JS
@@ -183,7 +192,7 @@ describe('edge cases (§6)', () => {
 // ── Rationale (§4) ─────────────────────────────────────────────────────────
 
 describe('rationale house template', () => {
-  it('orders the IP discussion by importance: factor 5 before factor 3, with CMS weight language and the verbatim close', async () => {
+  it('orders the IP discussion by importance (5 before 3), uses the weight ladder and the verbatim house paragraphs', async () => {
     await writeFixtureCase(caseDir);
     const { sheet } = await runCase(caseDir, { libraryPath: libPath });
     const r = sheet.rationale;
@@ -192,10 +201,16 @@ describe('rationale house template', () => {
     expect(f5).toBeGreaterThan(-1);
     expect(f3).toBeGreaterThan(-1);
     expect(f5).toBeLessThan(f3); // importance order: 5 first, 3 second
-    expect(r).toMatch(/given (considerable|some|modest) weight/);
-    expect(r).toContain("offer is selected as the out-of-network rate that best represents the value");
-    expect(r).toContain('¶1 is portal-injected');
-    expect(r).toContain('VERIFY-VERBATIM');
+    expect(r).toMatch(/given (modest|some|less) weight/); // house ladder only
+    expect(r).not.toMatch(/considerable weight/);
+    // Verbatim house paragraphs from the live walkthrough:
+    expect(r).toContain('the arbiter must select one of two proposed payment amounts');
+    expect(r).toContain('These prohibited factors have not been considered.');
+    expect(r).toContain('The chart above indicates the relevant factors');
+    expect(r).toContain('has been reviewed and considered.');
+    expect(r).toContain('at issue in this dispute.');
+    expect(r).toContain('PORTAL-INJECTED ¶1');
+    expect(r).toContain('[PASTE FROM HERE DOWN]');
   });
 });
 
@@ -286,26 +301,64 @@ describe('split decision rationale', () => {
       caseId: 'x', disputeNumber: null, ipName: null, nipName: null, qpa: null,
       batch: true, extractionMode: 'llm', flags: [],
       lines: [
-        { line: 1, cpt: null, description: null, dateOfService: null, ipOffer: 100, nipOffer: 50 },
-        { line: 2, cpt: null, description: null, dateOfService: null, ipOffer: 100, nipOffer: 50 },
+        { line: 1, cpt: null, description: null, dateOfService: null, ipOffer: 100, nipOffer: 50, fhBenchmark: null },
+        { line: 2, cpt: null, description: null, dateOfService: null, ipOffer: 100, nipOffer: 50, fhBenchmark: null },
       ],
     };
     const grid: FactorGrid = {
-      ip: [{ factor: 5, raised: true, evidence: [{ quote: 'q', page: 1, file: 'f' }], suggestedWeight: 'considerable weight', summary: 'prior contracted rates' }],
+      ip: [{ factor: 5, raised: true, evidence: [{ quote: 'q', page: 1, file: 'f' }], suggestedWeight: 'some weight', summary: 'prior contracted rates' }],
       nip: [],
     };
     const split = renderRationale(record, grid, [
       { line: 1, recommended: 'IP', confidencePct: 80, dliChainToLine: null, reasons: [] },
       { line: 2, recommended: 'NIP', confidencePct: 70, dliChainToLine: null, reasons: [] },
     ]);
-    expect(split).toContain('[ARBITER TO SELECT: IP/NIP]');
+    expect(split).toContain('ARBITER TO SELECT');
     expect(split).toContain('SPLIT DECISION');
-    // Single-party close when not split:
+    // Single-party close when not split — full name first mention, short name second:
     const unified = renderRationale(record, grid, [
       { line: 1, recommended: 'IP', confidencePct: 80, dliChainToLine: null, reasons: [] },
       { line: 2, recommended: 'IP', confidencePct: 80, dliChainToLine: 1, reasons: [] },
     ]);
-    expect(unified).toContain("the IP has presented sufficient credible evidence");
+    expect(unified).toContain('the Initiating Party has presented sufficient credible evidence');
+    expect(unified).toContain("the IP's offer is selected");
     expect(unified).not.toContain('SPLIT DECISION');
+  });
+});
+
+// ── Live-portal folder taxonomy + factor-5 routing ─────────────────────────
+
+describe('folder taxonomy (live walkthrough)', () => {
+  it('classifies the long tail: filler forms ignored, negotiation proofs routed to factor 5, eligibility notes surfaced', async () => {
+    await writeFixtureCase(caseDir);
+    await writeFile(path.join(caseDir, 'IDRNoticeOfInitiation.txt'), 'Notice of IDR initiation form content.', 'utf-8');
+    await writeFile(path.join(caseDir, 'IDR Selection Response Form.txt'), 'Selection response form.', 'utf-8');
+    await writeFile(path.join(caseDir, 'ProofofCoolingOffPeriod.txt'), 'Cooling off period proof.', 'utf-8');
+    await writeFile(path.join(caseDir, 'ProofofOpenNegotiation_1.txt'), 'Open negotiation notice sent 3/1/2026 offering to negotiate the rate for CPT 99284.', 'utf-8');
+    await writeFile(path.join(caseDir, 'ProofofOpenNegotiation_2.txt'), 'Second open negotiation follow-up, no payer response received.', 'utf-8');
+    await writeFile(path.join(caseDir, 'eligibility-notes.txt'), 'jsmith\t2026-07-01\tEligible per cooling-off review.', 'utf-8');
+    // Unreadable-but-inventoried formats, classified by name alone:
+    await writeFile(path.join(caseDir, 'idr-coversheet.docx'), 'binary-ish', 'utf-8');
+    await writeFile(path.join(caseDir, 'ProofofIncorrectlyBatched.csv'), 'line,claim\n1,x', 'utf-8');
+
+    const { sheet } = await runCase(caseDir, { libraryPath: libPath });
+    const kinds = Object.fromEntries(sheet.documents.map((d) => [d.file, d.kind]));
+    expect(kinds['IDRNoticeOfInitiation.txt']).toBe('cms_filler');
+    expect(kinds['IDR Selection Response Form.txt']).toBe('cms_filler');
+    expect(kinds['ProofofCoolingOffPeriod.txt']).toBe('cms_filler');
+    expect(kinds['idr-coversheet.docx']).toBe('cms_filler');
+    expect(kinds['ProofofIncorrectlyBatched.csv']).toBe('cms_filler');
+    expect(kinds['ProofofOpenNegotiation_1.txt']).toBe('negotiation_proof');
+    expect(kinds['eligibility-notes.txt']).toBe('eligibility_notes');
+
+    // Pre-labeled factor-5 evidence lands on the IP side with file cites.
+    const ip5 = sheet.factorGrid.ip.find((f) => f.factor === 5)!;
+    expect(ip5.raised).toBe(true);
+    expect(ip5.evidence.some((e) => e.file.startsWith('ProofofOpenNegotiation'))).toBe(true);
+
+    // Eligibility notes surfaced on the sheet.
+    expect(sheet.eligibilityNotes).toEqual([{ username: 'jsmith', date: '2026-07-01', note: 'Eligible per cooling-off review.' }]);
+    const md = await readFile(path.join(caseDir, 'engine-output', 'answer-sheet.md'), 'utf-8');
+    expect(md).toContain('Eligible per cooling-off review.');
   });
 });

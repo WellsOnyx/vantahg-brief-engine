@@ -3,35 +3,43 @@ import type { CaseRecord, FactorFinding, FactorGrid, LineRecommendation, Party }
 
 /**
  * Stage 7 — Draft (spec §4): the certified IDR entity's house rationale
- * template — deviate at your peril.
+ * template — deviate at your peril. House paragraphs below are VERBATIM
+ * from the live portal walkthrough (they replaced the transcript-derived
+ * placeholders; the VERIFY-VERBATIM sentinel is retired).
  *
- *   ¶1 — standard, PORTAL-INJECTED and uneditable → not rendered here.
- *   ¶2 — standard reference to the factor chart (editable house language).
+ *   ¶1 — standard NSA paragraph. Portal-injected as the first paragraph
+ *        the parties see — rendered here for comparison, NOT re-pasted.
+ *   ¶2 — standard chart-reference paragraph (pasted).
  *   ¶3+ — IP discussion: what the IP ACTUALLY submitted, factor by
- *         factor, ORDERED BY IMPORTANCE (5 first, 3 second), with CMS
- *         weight language. Parties get furious when their arguments go
- *         unacknowledged — the rationale must prove the brief was read.
+ *         factor, ORDERED BY IMPORTANCE (5 first, 3 second), each with
+ *         one rung of the weight ladder: modest / some / less.
  *   ¶  — NIP discussion, same treatment (frequently short).
- *   ¶  — CLOSE: standard verbatim house language with the prevailing
- *         party inserted (the PP is then entered in TWO portal places).
- *
- * BUILD NOTE from the spec, honored here: the exact house paragraphs must
- * be verified verbatim against a completed case in the workspace — the
- * spec text came from a transcript. Sentinels below mark what to verify.
+ *   ¶  — CLOSE: verbatim house language with the prevailing party
+ *         substituted (full name first mention, IP/NIP second); the PP
+ *         is then entered in TWO portal places.
  */
 
-const P2_STANDARD =
-  'In reaching this determination, the certified IDR entity considered the offers submitted by both parties, ' +
-  'the qualifying payment amount, and the additional credible information submitted by the parties as reflected ' +
-  'in the factor selections noted above.';
+const P1_PORTAL_INJECTED =
+  'According to the Federal No Surprises Act ("NSA") and its implementing regulations, the arbiter must select one of ' +
+  'two proposed payment amounts while taking into account evidence submitted by both parties. Furthermore, the NSA ' +
+  'prohibits the arbiter from considering certain factors, such as usual and customary charges, the amount the ' +
+  'provider or facility would have billed in the absence of the NSA, or payment or reimbursement rates under the ' +
+  'Medicare, Medicaid, Children’s Health Insurance, or TRICARE programs. These prohibited factors have not been considered.';
 
-function closeParagraph(pp: Party | '[ARBITER TO SELECT: IP/NIP]'): string {
-  const label = pp === 'IP' ? 'IP' : pp === 'NIP' ? 'NIP' : pp;
+const P2_STANDARD =
+  'The chart above indicates the relevant factors that can be considered in rendering the final determination in this ' +
+  'case and whether the Initiating Party (IP) and/or the Non-Initiating Party (NIP) submitted evidence in support of ' +
+  'the factors. The evidence submitted for each factor listed in this case has been reviewed and considered.';
+
+function closeParagraph(pp: Party | 'ARBITER_SELECTS'): string {
+  const fullName =
+    pp === 'IP' ? 'Initiating Party' : pp === 'NIP' ? 'Non-Initiating Party' : '[Initiating Party / Non-Initiating Party — ARBITER TO SELECT]';
+  const shortName = pp === 'IP' || pp === 'NIP' ? pp : '[IP/NIP]';
   return (
-    `On balance, after considering the offers, the QPA, and the additional information submitted by the parties, ` +
-    `the ${label} has presented sufficient credible evidence to substantiate its offer. Accordingly, the ${label}'s ` +
+    `On balance, after considering the offers, the QPA, and the additional information submitted by the parties, the ` +
+    `${fullName} has presented sufficient credible evidence to substantiate its offer. Accordingly, the ${shortName}'s ` +
     `offer is selected as the out-of-network rate that best represents the value of the qualified IDR service at ` +
-    `issue in the dispute.`
+    `issue in this dispute.`
   );
 }
 
@@ -58,23 +66,23 @@ function partyDiscussion(party: Party, findings: FactorFinding[], partyName: str
   return sentences.join(' ');
 }
 
-export function renderRationale(
+export interface RationaleSections {
+  p1_portal_injected: string;
+  p2_standard: string;
+  ip_discussion: string;
+  nip_discussion: string;
+  close: string;
+  notes: string[];
+}
+
+export function buildRationaleSections(
   record: CaseRecord,
   grid: FactorGrid,
   recommendations: LineRecommendation[],
-): string {
+): RationaleSections {
   const decided = recommendations.filter((r) => r.recommended !== 'FLAG');
   const parties = new Set(decided.map((r) => r.recommended as Party));
-  const pp: Party | '[ARBITER TO SELECT: IP/NIP]' =
-    parties.size === 1 ? (decided[0].recommended as Party) : '[ARBITER TO SELECT: IP/NIP]';
-
-  const blocks = [
-    '[¶1 is portal-injected and uneditable — do not paste anything above this line]',
-    P2_STANDARD,
-    partyDiscussion('IP', grid.ip, record.ipName),
-    partyDiscussion('NIP', grid.nip, record.nipName),
-    closeParagraph(pp),
-  ];
+  const pp: Party | 'ARBITER_SELECTS' = parties.size === 1 ? (decided[0].recommended as Party) : 'ARBITER_SELECTS';
 
   const notes: string[] = [];
   if (parties.size > 1) {
@@ -82,9 +90,33 @@ export function renderRationale(
       'SPLIT DECISION: prevailing party differs across lines — this close paragraph applies to the first divergent group only; each divergent line needs its own full rationale.',
     );
   }
-  notes.push('VERIFY-VERBATIM: ¶2 and the close paragraph must be checked once against a completed case in the workspace (spec §4 build note) before first live use.');
 
-  return blocks.join('\n\n') + '\n\n---\n' + notes.map((n) => `[NOTE — NOT FOR PASTING: ${n}]`).join('\n');
+  return {
+    p1_portal_injected: P1_PORTAL_INJECTED,
+    p2_standard: P2_STANDARD,
+    ip_discussion: partyDiscussion('IP', grid.ip, record.ipName),
+    nip_discussion: partyDiscussion('NIP', grid.nip, record.nipName),
+    close: closeParagraph(pp),
+    notes,
+  };
+}
+
+export function renderRationale(
+  record: CaseRecord,
+  grid: FactorGrid,
+  recommendations: LineRecommendation[],
+): string {
+  const s = buildRationaleSections(record, grid, recommendations);
+  const blocks = [
+    `[PORTAL-INJECTED ¶1 — appears automatically, do NOT re-paste; shown to verify it matches:]\n${s.p1_portal_injected}`,
+    '[PASTE FROM HERE DOWN]',
+    s.p2_standard,
+    s.ip_discussion,
+    s.nip_discussion,
+    s.close,
+  ];
+  const tail = s.notes.length ? '\n\n---\n' + s.notes.map((n) => `[NOTE — NOT FOR PASTING: ${n}]`).join('\n') : '';
+  return blocks.join('\n\n') + tail;
 }
 
 /** Pre-staged DLI sentence (§2) — the number is typed by the human, from the portal screen. */

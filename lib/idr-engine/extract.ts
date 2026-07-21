@@ -40,6 +40,7 @@ const EXTRACT_TOOL = {
             date_of_service: { type: ['string', 'null'] },
             ip_offer: { type: ['number', 'null'], description: 'IP final payment offer for this line, dollars' },
             nip_offer: { type: ['number', 'null'], description: 'NIP final payment offer for this line, dollars' },
+            fh_50th_percentile: { type: ['number', 'null'], description: "The 'FH 50th %ile Allowed Amt' (FAIR Health benchmark) for this line from the NIP brief's table, dollars" },
           },
           required: ['line'],
         },
@@ -50,10 +51,25 @@ const EXTRACT_TOOL = {
 };
 
 function offerDocsText(documents: CaseDocument[]): string {
+  // NIP brief included: its per-line table carries the 'FH 50th %ile
+  // Allowed Amt' column (FAIR Health benchmark) alongside offer/%-of-QPA.
   return documents
-    .filter((d) => d.kind === 'ip_offer' || d.kind === 'nip_offer')
+    .filter((d) => d.kind === 'ip_offer' || d.kind === 'nip_offer' || d.kind === 'nip_brief')
     .map((d) => `=== ${d.kind.toUpperCase()} (${d.file}) ===\n${pageMarkedText(d.pages)}`)
     .join('\n\n');
+}
+
+const FH_RE = /FH\s*50th\s*%?\s*ile[^$\n]{0,60}\$\s?([\d,]+(?:\.\d{2})?)/gi;
+
+/** Per-line FH 50th-percentile amounts, in table order, from the NIP brief. */
+function heuristicFhBenchmarks(documents: CaseDocument[]): number[] {
+  const nipBrief = documents.find((d) => d.kind === 'nip_brief');
+  if (!nipBrief) return [];
+  const out: number[] = [];
+  for (const p of nipBrief.pages) {
+    for (const m of p.text.matchAll(FH_RE)) out.push(money(m[1]));
+  }
+  return out;
 }
 
 // ── Heuristic fallback ─────────────────────────────────────────────────────
@@ -92,6 +108,7 @@ function heuristicExtract(caseId: string, documents: CaseDocument[]): CaseRecord
 
   const ipOffers = heuristicOffers(documents.find((d) => d.kind === 'ip_offer'));
   const nipOffers = heuristicOffers(documents.find((d) => d.kind === 'nip_offer'));
+  const fhAmounts = heuristicFhBenchmarks(documents);
   const lineCount = Math.max(ipOffers.length, nipOffers.length, 1);
 
   const lines: OfferLine[] = Array.from({ length: lineCount }, (_, i) => ({
@@ -101,6 +118,7 @@ function heuristicExtract(caseId: string, documents: CaseDocument[]): CaseRecord
     dateOfService: null,
     ipOffer: ipOffers[i] ?? null,
     nipOffer: nipOffers[i] ?? null,
+    fhBenchmark: fhAmounts[i] ?? (fhAmounts.length === 1 ? fhAmounts[0] : null),
   }));
 
   for (const l of lines) {
@@ -142,6 +160,7 @@ interface LlmExtractShape {
     date_of_service?: string | null;
     ip_offer?: number | null;
     nip_offer?: number | null;
+    fh_50th_percentile?: number | null;
   }>;
 }
 
@@ -161,7 +180,9 @@ export async function extractCaseRecord(caseId: string, documents: CaseDocument[
       'You extract structured facts from federal IDR (No Surprises Act) arbitration documents. ' +
       'Record ONLY what the documents explicitly state; use null for anything absent or ambiguous. ' +
       'The per-line final payment offers from each notice of offer are the critical fields. ' +
-      'Offers are usually identical across batch lines but NOT always — read every line.',
+      'Offers are usually identical across batch lines but NOT always — read every line. ' +
+      "NIP briefs often carry a per-line table with an 'FH 50th %ile Allowed Amt' column (FAIR Health benchmark) " +
+      'alongside the offer, %-of-QPA, and QPA — capture it per line as fh_50th_percentile.',
     user: offerDocsText(documents) || 'No offer documents were classified in this folder.',
     tool: EXTRACT_TOOL,
     maxTokens: 2048,
@@ -176,8 +197,9 @@ export async function extractCaseRecord(caseId: string, documents: CaseDocument[
     dateOfService: l.date_of_service ?? null,
     ipOffer: typeof l.ip_offer === 'number' ? l.ip_offer : null,
     nipOffer: typeof l.nip_offer === 'number' ? l.nip_offer : null,
+    fhBenchmark: typeof l.fh_50th_percentile === 'number' ? l.fh_50th_percentile : null,
   }));
-  if (lines.length === 0) lines.push({ line: 1, cpt: null, description: null, dateOfService: null, ipOffer: null, nipOffer: null });
+  if (lines.length === 0) lines.push({ line: 1, cpt: null, description: null, dateOfService: null, ipOffer: null, nipOffer: null, fhBenchmark: null });
 
   for (const l of lines) {
     if (l.ipOffer === null || l.nipOffer === null) {

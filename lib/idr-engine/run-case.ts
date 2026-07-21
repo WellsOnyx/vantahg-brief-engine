@@ -6,10 +6,10 @@ import { extractCaseRecord } from './extract';
 import { analyzeFactors } from './factor-analysis';
 import { fingerprintBrief, loadLibrary, saveLibrary, type TemplateLibrary } from './fingerprint';
 import { recommendLines } from './recommend';
-import { renderRationale } from './rationale';
+import { renderRationale, buildRationaleSections } from './rationale';
 import { buildCoi, buildLogRow, DRAFT_BANNER, renderAnswerSheetMarkdown } from './answer-sheet';
 import { renderAnswerSheetHtml } from './answer-sheet-html';
-import type { AnswerSheet, EdgeFlag, FingerprintResult } from './types';
+import type { AnswerSheet, EdgeFlag, EligibilityNote, FingerprintResult } from './types';
 
 /**
  * Phase 0 orchestrator — one case folder in, one answer sheet out
@@ -37,23 +37,40 @@ export interface RunCaseResult {
   files: { html: string; markdown: string; json: string; logRow: string };
 }
 
-const DOC_EXT = /\.(pdf|txt)$/i;
+const TEXT_EXT = /\.(pdf|txt)$/i;
+
+/** Parse a staff eligibility-notes export: one note per line, optionally `username <tab|pipe> date <tab|pipe> note`. */
+function parseEligibilityNotes(text: string): EligibilityNote[] {
+  return text
+    .split(/\n+/)
+    .map((l) => l.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const parts = line.split(/\t|\s*\|\s*/);
+      if (parts.length >= 3) return { username: parts[0] || null, date: parts[1] || null, note: parts.slice(2).join(' ') };
+      return { username: null, date: null, note: line };
+    });
+}
 
 export async function runCase(caseFolder: string, opts: RunCaseOptions = {}): Promise<RunCaseResult> {
   const caseId = path.basename(path.resolve(caseFolder));
   const now = opts.now ?? new Date();
   const libraryPath = opts.libraryPath ?? path.join(process.cwd(), 'lib', 'idr-engine', 'template-library.json');
 
-  // 1 · Ingest
+  // 1 · Ingest — inventory EVERY file (real folders run to ~60); extract
+  // text from searchable PDFs/TXT, classify the rest by filename alone.
   const entries = (await readdir(caseFolder, { withFileTypes: true }))
-    .filter((e) => e.isFile() && DOC_EXT.test(e.name) && !e.name.startsWith('.'))
+    .filter((e) => e.isFile() && !e.name.startsWith('.'))
     .map((e) => e.name)
     .sort();
-  if (entries.length === 0) {
+  if (entries.filter((f) => TEXT_EXT.test(f)).length === 0) {
     throw new Error(`No PDF/TXT documents found in ${caseFolder}`);
   }
   const files = await Promise.all(
-    entries.map(async (file) => ({ file, pages: await extractPages(path.join(caseFolder, file)) })),
+    entries.map(async (file) => ({
+      file,
+      pages: TEXT_EXT.test(file) ? await extractPages(path.join(caseFolder, file)) : [],
+    })),
   );
 
   // 2 · Classify
@@ -91,11 +108,15 @@ export async function runCase(caseFolder: string, opts: RunCaseOptions = {}): Pr
 
   // 8 + 9 · Answer sheet + log row
   const { header: logRowHeader, row: logRow } = buildLogRow(record, recommendations, flags);
+  const eligibilityNotes = documents
+    .filter((d) => d.kind === 'eligibility_notes')
+    .flatMap((d) => parseEligibilityNotes(d.pages.map((p) => p.text).join('\n')));
   const sheet: AnswerSheet = {
     caseId,
     generatedAt: now.toISOString(),
     draftBanner: DRAFT_BANNER,
     record,
+    eligibilityNotes,
     documents: documents.map(({ file, kind, classificationReason }) => ({ file, kind, classificationReason })),
     coi: buildCoi(record, documents),
     factorGrid: grid,
@@ -146,12 +167,17 @@ export function comparisonView(sheet: AnswerSheet) {
         cpt: line?.cpt ?? null,
         ip_offer: line?.ipOffer ?? null,
         nip_offer: line?.nipOffer ?? null,
+        fh_50th_percentile: line?.fhBenchmark ?? null,
         recommended_pp: r.recommended,
         confidence_pct: r.recommended === 'FLAG' ? null : r.confidencePct,
         dli_chain_to_line: r.dliChainToLine,
       };
     }),
     qpa: sheet.record.qpa,
+    // Section-by-section for the blind-validation diff (first target:
+    // DISP-5552798) — compare factor checks, PP, and each rationale
+    // section independently against the ground-truth submission.
+    rationale_sections: buildRationaleSections(sheet.record, sheet.factorGrid, sheet.recommendations),
     flags: sheet.flags.map((f) => ({ code: f.code, severity: f.severity, line: f.line ?? null })),
     fingerprints: sheet.fingerprints.map((f) => ({ file: f.file, status: f.status, template_id: f.templateId })),
     rationale: sheet.rationale,

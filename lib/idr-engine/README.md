@@ -22,7 +22,7 @@ npx tsx scripts/idr-answer-sheet.ts "/path/to/DISP-123456"
 
 When it finishes it prints where it wrote the results. **Open `engine-output/answer-sheet.html` in the workspace browser** — that's your answer sheet, laid out to mirror the portal's module flow (COI → Non-AA questions → attestation). Work through it **top to bottom next to the portal**: flags first, then COI, factor checkboxes, the rationale paste block, prevailing party (entered in **two** portal places), DLI slots, attestation. The last section is a row you can paste into the IDR Cases Log sheet (also saved as `cases-log-row.tsv`; a markdown twin of the sheet is saved as `answer-sheet.md`).
 
-**Run a WHOLE FOLDER of cases.** Point it at a directory whose subfolders are case folders:
+**Run a WHOLE FOLDER of cases.** Point it at a directory of case folders **or case ZIPs** (cases arrive as ZIPs of up to ~60 files — they're unzipped internally into `_unzipped/`):
 
 ```bash
 npx tsx scripts/idr-batch.ts "/path/to/open-cases"
@@ -38,7 +38,23 @@ Every case gets its own `engine-output/`, and the top-level folder gets `_engine
 
 ## Milestone 1 — validate before the backlog (spec §7)
 
-Do **not** run this at scale until it has matched a human. Take a case an arbiter already completed, run it through the single-case command, and compare `engine-output/answer-sheet.json` against her real submission — it contains the discrete answers in comparable form: factor checks as two 7-item true/false arrays (factors 1–7 in order, IP and NIP), the recommended prevailing party + confidence per line, DLI chaining, COI answer, QPA, offers per line, and the rationale text. When the factor grid and prevailing party match her submission (and the rationale reads like the house style), run the 3 live cases with the test partner transcribing; only then go to the backlog with the batch runner.
+Do **not** run this at scale until it has matched a human. **First blind-validation case: DISP-5552798** (ground truth already captured). Run it through the single-case command, then:
+
+```bash
+npx tsx scripts/idr-compare.ts "<case>/engine-output/answer-sheet.json" "ground-truth.json"
+```
+
+The compare reports factor checks per party (7 each), prevailing party per line, and the rationale **section-by-section** (¶2, IP discussion, NIP discussion, close — `answer-sheet.json` carries `rationale_sections` for exactly this). When it matches, run the 3 live cases with the test partner transcribing; only then go to the backlog with the batch runner.
+
+## Calibration corpus (few-shot grounding)
+
+Feed the engine COMPLETED, QA-approved cases so its drafts match the house's demonstrated judgment, not just its format:
+
+```bash
+npx tsx scripts/idr-calibrate.ts "/path/to/completed-cases"
+```
+
+Each subfolder = one completed case: its documents **plus** the final submitted rationale (`submitted-*.txt` or `final-*.txt`) and optionally `decision.json` (`{"prevailing_party": "IP", "factor_checks": {"ip": [7 bools], "nip": [7 bools]}}`). The ingest builds `calibration-library.json` (real weight-ladder usage per factor, outcomes, exemplar rationales used as few-shot grounding in LLM mode) **and seeds the fingerprint library** — observed factor checks become each template's `factorMap`. Note: the current template catalog doc is titled "…REV 02" and marked SUPERSEDED — re-run the ingest when the v3 catalog lands.
 
 ## Modes
 
@@ -48,7 +64,7 @@ Do **not** run this at scale until it has matched a human. Take a case an arbite
 ## What the engine enforces (spec §3–§6)
 
 - **Check rule (§3):** a party's factor is checked **only if their brief actually raises it**, and every check carries at least one verbatim quote with a page cite (an AI check without evidence is structurally demoted to unchecked). The rationale must prove the brief was read.
-- **House rationale (§4):** ¶1 portal-injected (the sheet warns not to paste over it) → ¶2 standard → IP discussion **ordered by importance: factor 5 (good-faith/contracted rates) first, factor 3 (acuity) second**, with CMS weight language (`considerable/some/modest weight`) → NIP discussion → verbatim close with the prevailing party. **VERIFY-VERBATIM before first live use:** ¶2 and the close came from the spec transcript — check them once against a completed case (§4 build note); the output carries a non-pasting reminder until then.
+- **House rationale (§4):** the exact house paragraphs from the live portal walkthrough — ¶1 (the NSA/prohibited-factors paragraph; portal-injected, rendered for comparison only, never re-pasted) → ¶2 (the chart-reference paragraph, pasted verbatim) → IP discussion **ordered by importance: factor 5 (good-faith/contracted rates) first, factor 3 (acuity) second** → NIP discussion → verbatim close with the prevailing party (full name at first mention, IP/NIP at second). Every discussed factor carries one rung of the **weight ladder — `modest` / `some` / `less` weight** (observed usage: negotiation emails = modest, acuity op report = some, provider CV = less).
 - **Edge cases (§6) → flags, never guesses:** `IDENTICAL_OFFERS` (IP == NIP on a line → no recommendation, human rules) · `MISSING_DOC` · `MISSING_CITED_EXHIBIT` (brief cites exhibits absent from the folder) · `SPLIT_DECISION` (PP differs across batch lines → full rationale per divergent line, no DLI chaining across the split) · `NIP_OFFER_EQUALS_QPA` · `EXTRACTION_GAP` · `TEMPLATE_DEVIATION` · `HEURISTIC_MODE`. Blocking flags turn the affected line's recommendation into `FLAG`.
 - **QPA (§2):** extracted and displayed, never used as an anchor — it is the NIP's own number.
 

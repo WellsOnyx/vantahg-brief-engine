@@ -84,8 +84,27 @@ export const FACTORS: FactorDefinition[] = [
  */
 export const IMPORTANCE_ORDER: FactorNumber[] = [5, 3, 1, 2, 4, 6, 7];
 
-/** CMS weight language options the rationale must use per factor (§4). */
-export const CMS_WEIGHTS: CmsWeight[] = ['considerable weight', 'some weight', 'modest weight'];
+/**
+ * The house weight ladder (§4, live-portal walkthrough): exactly one rung
+ * per discussed factor. Observed usage anchors the defaults below.
+ */
+export const CMS_WEIGHTS: CmsWeight[] = ['modest weight', 'some weight', 'less weight'];
+
+/**
+ * Default weight per factor from observed house usage: negotiation
+ * evidence (5) = modest · acuity operating report (3) = some · provider
+ * CV/training (1) = less. Everything else starts modest; the calibration
+ * corpus refines these from real submitted rationales.
+ */
+export const OBSERVED_WEIGHT_DEFAULTS: Record<FactorNumber, CmsWeight> = {
+  1: 'less weight',
+  2: 'modest weight',
+  3: 'some weight',
+  4: 'modest weight',
+  5: 'modest weight',
+  6: 'modest weight',
+  7: 'modest weight',
+};
 
 export function factorDef(n: FactorNumber): FactorDefinition {
   const def = FACTORS.find((f) => f.factor === n);

@@ -1,6 +1,7 @@
 import { completeWithTool } from '@/lib/llm';
 import { isRealAnthropicEnabled } from '@/lib/env';
-import { FACTORS } from './factors';
+import { FACTORS, OBSERVED_WEIGHT_DEFAULTS } from './factors';
+import { loadCalibration } from './calibrate';
 import type { CaseDocument, EdgeFlag, EvidenceQuote, FactorFinding, FactorGrid, Party } from './types';
 import { pageMarkedText } from './pdf-text';
 
@@ -29,7 +30,7 @@ const FACTOR_TOOL = {
             factor: { type: 'integer', minimum: 1, maximum: 7 },
             raised: { type: 'boolean' },
             summary: { type: ['string', 'null'], description: 'One sentence: what the party actually argued (null if not raised)' },
-            suggested_weight: { type: ['string', 'null'], enum: ['considerable weight', 'some weight', 'modest weight', null] },
+            suggested_weight: { type: ['string', 'null'], enum: ['modest weight', 'some weight', 'less weight', null] },
             evidence: {
               type: 'array',
               items: {
@@ -79,24 +80,49 @@ function heuristicAnalyzeBrief(brief: CaseDocument): FactorFinding[] {
         }
         // No summary in heuristic mode — the rationale renders a neutral
         // phrase instead; a keyword note must never enter the paste block.
-        finding.suggestedWeight = finding.suggestedWeight ?? 'modest weight';
+        finding.suggestedWeight = finding.suggestedWeight ?? OBSERVED_WEIGHT_DEFAULTS[def.factor];
       }
     }
   }
   return findings;
 }
 
+/** Few-shot grounding from the calibration corpus (QA-approved cases). */
+async function calibrationGrounding(): Promise<string> {
+  const cal = await loadCalibration();
+  if (!cal || cal.caseCount === 0) return '';
+  const usage = Object.entries(cal.weightUsage)
+    .map(([factor, u]) => {
+      const total = u['modest weight'] + u['some weight'] + u['less weight'];
+      if (total === 0) return null;
+      const top = (Object.entries(u) as Array<[string, number]>).sort((a, b) => b[1] - a[1])[0][0];
+      return `factor ${factor}: most often '${top}' (${total} observed)`;
+    })
+    .filter(Boolean)
+    .join(' · ');
+  const exemplar = cal.exemplars[0];
+  return (
+    `\n\nCALIBRATION (from ${cal.caseCount} QA-approved completed cases — match this demonstrated judgment, not just the format):` +
+    (usage ? `\nObserved weight usage: ${usage}.` : '') +
+    (exemplar ? `\nExemplar house rationale excerpt:\n"""${exemplar.excerpt.slice(0, 900)}"""` : '')
+  );
+}
+
 async function llmAnalyzeBrief(brief: CaseDocument, party: Party): Promise<FactorFinding[]> {
   const factorTable = FACTORS.map(
     (f) => `${f.factor}. ${f.title}\n   Typical ${party === 'IP' ? 'IP' : 'NIP'} shape: ${party === 'IP' ? f.ipStandardArgument : f.nipStandardArgument}`,
   ).join('\n');
+  const grounding = await calibrationGrounding();
 
   const { toolInput } = await completeWithTool({
     system:
       `You analyze a federal IDR arbitration brief submitted by the ${party === 'IP' ? 'INITIATING party (the provider)' : 'NON-INITIATING party (the payer/TPA)'}. ` +
       `Decide, for each of the 7 factors below, whether this brief ACTUALLY raises it.\n\n${factorTable}\n\n` +
       'Apply the check rule strictly: raised=true only for factors the brief genuinely argues, each with verbatim quotes and page numbers from the [PAGE n] markers. ' +
-      'Suggest a CMS weight (considerable/some/modest) for raised factors based on the strength of the supporting evidence. Never fabricate quotes.',
+      'IP position statements are often STRUCTURED BY FACTOR with headings (e.g., a "did not negotiate in good faith" section) — use the document structure when present. ' +
+      "Assign each raised factor one rung of the house weight ladder — 'modest weight' / 'some weight' / 'less weight' — matching observed house usage: " +
+      'good-faith negotiation emails = modest weight · acuity operating report = some weight · provider CV/training = less weight. Never fabricate quotes.' +
+      grounding,
     user: pageMarkedText(brief.pages),
     tool: FACTOR_TOOL,
     maxTokens: 3072,
@@ -121,9 +147,9 @@ async function llmAnalyzeBrief(brief: CaseDocument, party: Party): Promise<Facto
     target.evidence = target.raised ? evidence : [];
     target.summary = target.raised ? (f.summary ?? null) : null;
     target.suggestedWeight = target.raised
-      ? (['considerable weight', 'some weight', 'modest weight'].includes(f.suggested_weight ?? '')
+      ? (['modest weight', 'some weight', 'less weight'].includes(f.suggested_weight ?? '')
         ? (f.suggested_weight as FactorFinding['suggestedWeight'])
-        : 'modest weight')
+        : OBSERVED_WEIGHT_DEFAULTS[f.factor as 1 | 2 | 3 | 4 | 5 | 6 | 7])
       : null;
   }
   return findings;
@@ -151,12 +177,37 @@ function missingExhibitFlags(briefs: CaseDocument[], exhibitCount: number): Edge
   return flags;
 }
 
+/**
+ * ProofofOpenNegotiation files are PRE-LABELED factor-5 evidence — the
+ * case-winning factor (§5 of the frame). Their presence is itself the
+ * IP raising good-faith negotiation; route them into the IP's factor-5
+ * findings with file/page cites (text snippet when the PDF has text,
+ * filename cite otherwise).
+ */
+function applyNegotiationProofs(ip: FactorFinding[], proofs: CaseDocument[]): void {
+  if (proofs.length === 0) return;
+  const f5 = ip[4];
+  f5.raised = true;
+  f5.suggestedWeight = f5.suggestedWeight ?? OBSERVED_WEIGHT_DEFAULTS[5];
+  if (!f5.summary) f5.summary = `open-negotiation proof (${proofs.length} file${proofs.length > 1 ? 's' : ''}) documenting good-faith negotiation efforts`;
+  for (const p of proofs) {
+    if (f5.evidence.length >= 6) break;
+    const firstText = p.pages.find((pg) => pg.text.trim());
+    f5.evidence.push(
+      firstText
+        ? { quote: firstText.text.trim().slice(0, 240), page: firstText.page, file: p.file }
+        : { quote: '(open-negotiation proof — see file)', page: 1, file: p.file },
+    );
+  }
+}
+
 export async function analyzeFactors(
   documents: CaseDocument[],
 ): Promise<{ grid: FactorGrid; flags: EdgeFlag[]; mode: 'llm' | 'heuristic' }> {
   const ipBrief = documents.find((d) => d.kind === 'ip_brief');
   const nipBrief = documents.find((d) => d.kind === 'nip_brief');
-  const exhibits = documents.filter((d) => d.kind === 'exhibit');
+  const exhibits = documents.filter((d) => d.kind === 'exhibit' || d.kind === 'negotiation_proof');
+  const proofs = documents.filter((d) => d.kind === 'negotiation_proof');
   const flags = missingExhibitFlags([ipBrief, nipBrief].filter((b): b is CaseDocument => !!b), exhibits.length);
 
   const llm = isRealAnthropicEnabled();
@@ -166,5 +217,6 @@ export async function analyzeFactors(
   };
 
   const [ip, nip] = await Promise.all([analyze(ipBrief, 'IP'), analyze(nipBrief, 'NIP')]);
+  applyNegotiationProofs(ip, proofs);
   return { grid: { ip, nip }, flags, mode: llm ? 'llm' : 'heuristic' };
 }
