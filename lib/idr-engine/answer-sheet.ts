@@ -195,8 +195,21 @@ export function buildLogRow(
 ): { header: string; row: string } {
   const header = ['Dispute', 'IP', 'NIP', 'Arbiter Due', 'Sent', 'Batched', 'Arbiter', 'PP', 'Rationale', 'Completed', 'NOTES', 'QC', 'Sent Date', 'Rework', 'File Owner'].join('\t');
   const decided = new Set(recommendations.filter((x) => x.recommended === 'IP' || x.recommended === 'NIP').map((x) => x.recommended));
-  const pp = decided.size === 1 ? [...decided][0] : recommendations.some((x) => x.recommended === 'FLAG') ? '[PENDING — flags]' : decided.size > 1 ? '[SPLIT — per line]' : '[reviewer selects — identical offers]';
-  const notes = flags.map((f) => f.code).join('; ') || '';
+  const pp = decided.size === 1 ? [...decided][0] : recommendations.some((x) => x.recommended === 'FLAG') ? '[pending review]' : decided.size > 1 ? '[split — per line]' : '[reviewer selects]';
+  // NOTES lands in the shared Cases Log. Compliance rule (Jonah): NOTHING
+  // iMPROve might see may reveal automation. So the NOTES column carries
+  // ONLY plain-language, case-substantive notes a human would write —
+  // never engine flag-code tokens or any tooling fingerprint. Purely
+  // internal engine-state flags are dropped entirely.
+  const HUMAN_NOTE: Partial<Record<string, string>> = {
+    IDENTICAL_OFFERS: 'Identical offers on a line',
+    SPLIT_DECISION: 'Split decision across lines',
+    NIP_OFFER_EQUALS_QPA: 'NIP offer equals QPA',
+    ELIGIBILITY_OBJECTION: 'Eligibility objection — check notes',
+    MISSING_DOC: 'Missing document — verify folder',
+    MISSING_CITED_EXHIBIT: 'Brief cites an exhibit not in the folder',
+  };
+  const notes = [...new Set(flags.map((f) => HUMAN_NOTE[f.code]).filter((n): n is string => !!n))].join('; ');
   const row = [
     record.disputeNumber ?? record.caseId,
     record.ipName ?? '[fill]',
