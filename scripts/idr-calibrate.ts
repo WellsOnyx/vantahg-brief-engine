@@ -1,4 +1,5 @@
 import path from 'path';
+import { loadLocalEnv } from '../lib/idr-engine/env-local';
 import { buildCalibration } from '../lib/idr-engine/calibrate';
 
 /**
@@ -13,6 +14,8 @@ import { buildCalibration } from '../lib/idr-engine/calibrate';
  * calibration-library.json (weight usage, outcomes, exemplars) and
  * template-library.json seeded with observed factorMaps.
  */
+
+loadLocalEnv();
 
 async function main() {
   const args = process.argv.slice(2);

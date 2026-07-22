@@ -1,7 +1,7 @@
 import { mkdir, readdir, readFile, writeFile } from 'fs/promises';
 import path from 'path';
 import { extractPages } from './pdf-text';
-import { classifyDocuments } from './classify';
+import { classifyDocuments, detectEligibilityObjection } from './classify';
 import { assertSafeOutputTarget } from './output-guard';
 import { fingerprintBrief, loadLibrary, saveLibrary, type TemplateLibrary } from './fingerprint';
 import { FACTORS } from './factors';
@@ -152,11 +152,14 @@ export async function buildCalibration(
     }
 
     // Register brief templates; attach observed factor checks as factorMap.
+    // Three-dimensional (field intel §4): provider_side / payer_vendor /
+    // eligibility_objection.
     for (const kind of ['ip_brief', 'nip_brief'] as const) {
       const brief = documents.find((d) => d.kind === kind);
       if (!brief) continue;
       const party: Party = kind === 'ip_brief' ? 'IP' : 'NIP';
-      const { result } = fingerprintBrief(brief, party, exhibitCount, library, now.toISOString());
+      const category = party === 'IP' ? 'provider_side' : detectEligibilityObjection(brief) ? 'eligibility_objection' : 'payer_vendor';
+      const { result } = fingerprintBrief(brief, party, exhibitCount, library, now.toISOString(), category);
       if (!result.templateId) continue;
 
       const checks = party === 'IP' ? decision.factor_checks?.ip : decision.factor_checks?.nip;

@@ -10,9 +10,7 @@ Built from **IDR Engine Build Spec v1.1** (`docs/IDR_ENGINE_BUILD_SPEC_v1.1.pdf`
 
 ## How to run it (no engineering background needed)
 
-**One-time setup** (someone technical does this once per machine/workspace):
-1. Install Node.js (v20+), then in this repo run `npm install`.
-2. For the real AI analysis, set two environment variables: `ANTHROPIC_API_KEY=<key>` and `ENABLE_REAL_ANTHROPIC=true`. (Without them the tool still runs, but in a limited keyword mode — see "Modes" below.)
+**One-time setup: follow `docs/IDR_ENGINE_SETUP.md`** — install Node, `npm install`, put the API key in `.env.idr`, done. **First thing after setup:** run `idr-calibrate` against the folder of ~20 completed historical cases waiting in the workspace, then run one of those cases blind and check it with `idr-compare` (the setup doc walks through it).
 
 > **⛔ READ-ONLY INPUT (hard rule):** the shared case folders are OneDrive-synced to every workspace on the team. The engine **never writes anything** into an input folder or anywhere under OneDrive — no outputs, no unzipped files, nothing. Everything it produces goes to a separate **local** output folder (default: `Desktop/engine-output`; change with `--out <dir>` or the `IDR_OUTPUT_DIR` environment variable). This is enforced in code: the engine **refuses to run** if the output target is inside the input folder or inside a OneDrive path, and a test proves a full run leaves the input tree byte-for-byte untouched.
 
@@ -22,7 +20,7 @@ Built from **IDR Engine Build Spec v1.1** (`docs/IDR_ENGINE_BUILD_SPEC_v1.1.pdf`
 npx tsx scripts/idr-answer-sheet.ts "/path/to/DISP-123456"
 ```
 
-When it finishes it prints where it wrote the results — by default `Desktop/engine-output/DISP-123456/`. **Open `answer-sheet.html` there in the workspace browser** — that's your answer sheet, laid out to mirror the portal's module flow (COI → Non-AA questions → attestation). Work through it **top to bottom next to the portal**: flags first, then COI, factor checkboxes, the rationale paste block, prevailing party (entered in **two** portal places), DLI slots, attestation. The last section is a row you can paste into the IDR Cases Log sheet (also saved as `cases-log-row.tsv`; a markdown twin of the sheet is saved as `answer-sheet.md`).
+When it finishes it prints where it wrote the results — by default `Desktop/engine-output/DISP-123456/`. **Open `answer-sheet.html` there in the workspace browser** — that's the **PORTAL CARD** (field intel): keystrokes and paste blocks only, in exact module order — COI keystrokes, the factor-checkbox keystroke line ("IP: check 3, 5, 6 · NIP: check 3, 7"), the rationale paste block, one Case Info and Final Resolution record per line (DLI slot, PP ×2-places, DLI sentence), attestation, and the Cases Log row. All analysis (evidence quotes, case facts, fingerprints, prior determinations, document inventory) sits **below a fold** — open it when you need the why. If the NIP filed an eligibility **objection** letter instead of a merits brief, the card **leads** with: check the staff eligibility notes; no ruling recorded → send the case back. (A markdown twin is saved as `answer-sheet.md`; the log row also as `cases-log-row.tsv`.)
 
 **Run a WHOLE FOLDER of cases.** Point it at a directory of case folders **or case ZIPs** (cases arrive as ZIPs of up to ~60 files — they're unzipped into the **output** tree, never next to the source):
 

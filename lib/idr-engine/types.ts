@@ -17,10 +17,12 @@ export type DocKind =
   | 'ip_offer' // ① Notice of Offer — Initiating Party (provider)
   | 'nip_offer' // ② Notice of Offer — Non-Initiating Party (payer/TPA)
   | 'ip_brief' // ③ IP arbitration brief / position statement
-  | 'nip_brief' // ④ NIP arbitration brief
+  | 'nip_brief' // ④ NIP arbitration brief (or an eligibility-objection letter — flagged)
   | 'exhibit' // EOBs, operating reports, CVs, negotiation emails
   | 'negotiation_proof' // ProofofOpenNegotiation* — pre-labeled factor-5 evidence
+  | 'prior_determination' // a prior IDR determination submitted as an exhibit — parsed for outcome + date
   | 'eligibility_notes' // staff eligibility-notes export, when present in the folder
+  | 'duplicate' // identical content to another file in the folder — excluded from analysis
   | 'cms_filler' // CMS-generated compliance/eligibility filler — ignored
   | 'unknown';
 
@@ -34,7 +36,8 @@ export interface CaseDocument {
 /** Spec §6 edge cases + guardrail conditions. Any flag = human attention. */
 export type FlagCode =
   | 'MISSING_DOC' // one of the four core documents absent
-  | 'IDENTICAL_OFFERS' // IP offer == NIP offer on a line → no recommendation
+  | 'IDENTICAL_OFFERS' // IP offer == NIP offer on a line → outcome-neutral no-op (field intel)
+  | 'ELIGIBILITY_OBJECTION' // NIP submitted an objection letter, not a merits brief → eligibility first
   | 'NIP_OFFER_EQUALS_QPA' // NIP offer exactly equals the QPA
   | 'MISSING_CITED_EXHIBIT' // a brief references an exhibit not in the folder
   | 'SPLIT_DECISION' // recommended PP differs across batch lines
@@ -112,8 +115,12 @@ export interface FactorGrid {
 
 export interface LineRecommendation {
   line: number;
-  /** 'FLAG' = engine declines to recommend — human ruling required (§6). */
-  recommended: Party | 'FLAG';
+  /**
+   * 'FLAG' = engine declines to recommend — human ruling required (§6).
+   * 'NO_OP' = identical offers, outcome-neutral — either selection yields
+   * the same amount (field intel: handled as a no-op, not a blocker).
+   */
+  recommended: Party | 'FLAG' | 'NO_OP';
   confidencePct: number; // 0–100; heuristic mode is capped low
   /**
    * DLI chaining slot (§2): the sentence is pre-staged; the DLI NUMBER is
@@ -139,6 +146,13 @@ export interface EligibilityNote {
   note: string;
 }
 
+/** A prior IDR determination found among the exhibits (field intel guard). */
+export interface PriorDetermination {
+  file: string;
+  outcome: Party | null; // who prevailed, when the letter's close names them
+  date: string | null;
+}
+
 export interface AnswerSheet {
   caseId: string;
   generatedAt: string;
@@ -146,6 +160,8 @@ export interface AnswerSheet {
   record: CaseRecord;
   /** Staff eligibility notes found in the case folder (portal grid also exists — the sheet reminds the reviewer to read it either way). */
   eligibilityNotes: EligibilityNote[];
+  /** Prior IDR determinations found among the exhibits, with outcomes + dates. */
+  priorDeterminations: PriorDetermination[];
   documents: Array<Pick<CaseDocument, 'file' | 'kind' | 'classificationReason'>>;
   coi: {
     answer: 'No'; // per policy — but every name is surfaced for human COI judgment

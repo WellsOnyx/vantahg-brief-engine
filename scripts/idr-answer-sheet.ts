@@ -1,4 +1,5 @@
 import path from 'path';
+import { loadLocalEnv } from '../lib/idr-engine/env-local';
 import { runCase } from '../lib/idr-engine/run-case';
 
 /**
@@ -13,6 +14,8 @@ import { runCase } from '../lib/idr-engine/run-case';
  * GUARDRAILS: output is a DRAFT FOR ARBITER REVIEW. This tool submits
  * nothing, contacts no portal, and flags rather than guesses.
  */
+
+loadLocalEnv();
 
 async function main() {
   const args = process.argv.slice(2);

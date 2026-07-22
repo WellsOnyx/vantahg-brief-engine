@@ -33,10 +33,19 @@ import { fullText } from './pdf-text';
  * selections). Until then the library self-populates from cases as they run.
  */
 
+/**
+ * Field intel §4: the library is three-dimensional — payer-vendor merits
+ * templates, eligibility-objection templates, and provider-side templates.
+ * Matching never crosses categories (an objection shell must not "match"
+ * a merits shell just because both are boilerplate).
+ */
+export type TemplateCategory = 'payer_vendor' | 'eligibility_objection' | 'provider_side';
+
 export interface TemplateLibraryEntry {
   id: string;
   label: string;
   party: Party;
+  category: TemplateCategory;
   shellHash: string;
   shellTokens: string[];
   contentHashes: string[]; // instantiations seen (numbers/dates vary — expected)
@@ -101,6 +110,7 @@ export function fingerprintBrief(
   exhibitCount: number,
   library: TemplateLibrary,
   now = new Date().toISOString(),
+  category: TemplateCategory = party === 'IP' ? 'provider_side' : 'payer_vendor',
 ): { result: FingerprintResult; flag: EdgeFlag | null } {
   const text = fullText(brief.pages);
   const contentHash = sha(normalize(text));
@@ -110,7 +120,12 @@ export function fingerprintBrief(
 
   const base = { file: brief.file, party, contentHash, shellHash };
 
-  const exact = library.templates.find((t) => t.shellHash === shellHash && t.party === party);
+  // Legacy entries (pre-category) default to the party-derived category.
+  for (const t of library.templates) {
+    if (!t.category) t.category = t.party === 'IP' ? 'provider_side' : 'payer_vendor';
+  }
+
+  const exact = library.templates.find((t) => t.shellHash === shellHash && t.party === party && t.category === category);
   if (exact) {
     exact.seenCount += 1;
     exact.lastSeen = now;
@@ -146,9 +161,10 @@ export function fingerprintBrief(
   }
 
   // Near-match: familiar shell whose CONTENT moved — the loud case (§5).
+  // Same category only: dimensions never cross-match.
   let best: { entry: TemplateLibraryEntry; sim: number } | null = null;
   for (const t of library.templates) {
-    if (t.party !== party) continue;
+    if (t.party !== party || t.category !== category) continue;
     const sim = jaccard(shellTokens, t.shellTokens);
     if (sim >= SIMILARITY_THRESHOLD && (!best || sim > best.sim)) best = { entry: t, sim };
   }
@@ -175,6 +191,7 @@ export function fingerprintBrief(
     id,
     label: `Auto-registered from ${brief.file}`,
     party,
+    category,
     shellHash,
     shellTokens,
     contentHashes: [contentHash],

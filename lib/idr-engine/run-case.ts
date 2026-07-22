@@ -1,7 +1,8 @@
-import { readdir, mkdir, writeFile } from 'fs/promises';
+import { readdir, mkdir, readFile, writeFile } from 'fs/promises';
+import crypto from 'crypto';
 import path from 'path';
 import { extractPages } from './pdf-text';
-import { classifyDocuments } from './classify';
+import { classifyDocuments, detectEligibilityObjection } from './classify';
 import { extractCaseRecord } from './extract';
 import { analyzeFactors } from './factor-analysis';
 import { fingerprintBrief, loadLibrary, saveLibrary, type TemplateLibrary } from './fingerprint';
@@ -10,7 +11,7 @@ import { renderRationale, buildRationaleSections } from './rationale';
 import { buildCoi, buildLogRow, DRAFT_BANNER, renderAnswerSheetMarkdown } from './answer-sheet';
 import { renderAnswerSheetHtml } from './answer-sheet-html';
 import { assertSafeOutputTarget, defaultOutputRoot } from './output-guard';
-import type { AnswerSheet, EdgeFlag, EligibilityNote, FingerprintResult } from './types';
+import type { AnswerSheet, CaseDocument, EdgeFlag, EligibilityNote, FingerprintResult, Party, PriorDetermination } from './types';
 
 /**
  * Phase 0 orchestrator — one case folder in, one answer sheet out
@@ -76,28 +77,77 @@ export async function runCase(caseFolder: string, opts: RunCaseOptions = {}): Pr
   if (entries.filter((f) => TEXT_EXT.test(f)).length === 0) {
     throw new Error(`No PDF/TXT documents found in ${caseFolder}`);
   }
-  const files = await Promise.all(
+  const allFiles = await Promise.all(
     entries.map(async (file) => ({
       file,
+      bytes: await readFile(path.join(caseFolder, file)),
       pages: TEXT_EXT.test(file) ? await extractPages(path.join(caseFolder, file)) : [],
     })),
   );
 
-  // 2 · Classify
-  const { documents, flags: classifyFlags } = classifyDocuments(files);
+  // Duplicate files deduped by CONTENT (field intel guard): identical
+  // bytes under different names — keep the first, exclude the rest from
+  // analysis, list them in the inventory as duplicates.
+  const seenHashes = new Map<string, string>();
+  const files: Array<{ file: string; pages: typeof allFiles[number]['pages'] }> = [];
+  const duplicateDocs: CaseDocument[] = [];
+  for (const f of allFiles) {
+    const hash = crypto.createHash('sha256').update(f.bytes).digest('hex');
+    const firstSeen = seenHashes.get(hash);
+    if (firstSeen) {
+      duplicateDocs.push({ file: f.file, kind: 'duplicate', pages: [], classificationReason: `identical content to ${firstSeen}` });
+      continue;
+    }
+    seenHashes.set(hash, f.file);
+    files.push({ file: f.file, pages: f.pages });
+  }
+
+  // 2 · Classify (+ eligibility-objection detection — field intel §3)
+  const { documents: classified, flags: classifyFlags } = classifyDocuments(files);
+  const documents = [...classified, ...duplicateDocs];
+
+  const nipBrief = classified.find((d) => d.kind === 'nip_brief');
+  const isObjection = detectEligibilityObjection(nipBrief);
+  if (isObjection) {
+    classifyFlags.unshift({
+      code: 'ELIGIBILITY_OBJECTION',
+      severity: 'block',
+      message:
+        'The NIP submission is an eligibility OBJECTION letter, not a merits brief. CHECK THE STAFF ELIGIBILITY NOTES FIRST — ' +
+        'if no eligibility ruling is recorded, SEND THE CASE BACK rather than deciding the merits.',
+    });
+  }
+
+  // Prior determinations parsed as exhibits — outcomes + dates (field intel guard).
+  const priorDeterminations: PriorDetermination[] = classified
+    .filter((d) => d.kind === 'prior_determination')
+    .map((d) => {
+      const text = d.pages.map((p) => p.text).join('\n');
+      const outcome: Party | null = /non-initiating party(?:'s)? (?:offer is selected|has presented sufficient)/i.test(text)
+        ? 'NIP'
+        : /initiating party(?:'s)? (?:offer is selected|has presented sufficient)/i.test(text)
+          ? 'IP'
+          : null;
+      const date = text.match(/\b\d{1,2}\/\d{1,2}\/\d{2,4}\b/)?.[0] ?? text.match(/\b\d{4}-\d{2}-\d{2}\b/)?.[0] ?? null;
+      return { file: d.file, outcome, date };
+    });
 
   // 3 · Extract
   const record = await extractCaseRecord(caseId, documents);
 
-  // 4 · Fingerprint (stub — §5)
+  // 4 · Fingerprint (§5) — three-dimensional library (field intel §4):
+  // provider_side (IP), payer_vendor (NIP merits), eligibility_objection
+  // (NIP objection letters). Dimensions never cross-match.
   const library = opts.library ?? (await loadLibrary(libraryPath));
   const exhibitCount = documents.filter((d) => d.kind === 'exhibit').length;
   const fingerprints: FingerprintResult[] = [];
   const fingerprintFlags: EdgeFlag[] = [];
-  for (const party of ['ip_brief', 'nip_brief'] as const) {
-    const brief = documents.find((d) => d.kind === party);
+  for (const kind of ['ip_brief', 'nip_brief'] as const) {
+    const brief = classified.find((d) => d.kind === kind);
     if (!brief) continue;
-    const { result, flag } = fingerprintBrief(brief, party === 'ip_brief' ? 'IP' : 'NIP', exhibitCount, library, now.toISOString());
+    const party = kind === 'ip_brief' ? 'IP' : 'NIP';
+    const category = party === 'IP' ? 'provider_side' : isObjection ? 'eligibility_objection' : 'payer_vendor';
+    const { result, flag } = fingerprintBrief(brief, party, exhibitCount, library, now.toISOString(), category);
     fingerprints.push(result);
     if (flag) fingerprintFlags.push(flag);
   }
@@ -127,6 +177,7 @@ export async function runCase(caseFolder: string, opts: RunCaseOptions = {}): Pr
     draftBanner: DRAFT_BANNER,
     record,
     eligibilityNotes,
+    priorDeterminations,
     documents: documents.map(({ file, kind, classificationReason }) => ({ file, kind, classificationReason })),
     coi: buildCoi(record, documents),
     factorGrid: grid,

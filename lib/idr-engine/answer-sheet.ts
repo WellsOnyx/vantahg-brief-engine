@@ -102,6 +102,9 @@ export function renderAnswerSheetMarkdown(sheet: AnswerSheet): string {
   L.push('');
 
   L.push('## Portal step 2 · Factor checkboxes (check rule: a party is checked ONLY if their brief raises it)');
+  const checkedList = (side: 'ip' | 'nip') =>
+    sheet.factorGrid[side].filter((f) => f.raised).map((f) => f.factor).join(', ') || 'none';
+  L.push(`**Keystrokes: IP check ${checkedList('ip')} · NIP check ${checkedList('nip')}**`);
   L.push('| # | Factor | IP | NIP |');
   L.push('|---|---|---|---|');
   for (const def of FACTORS) {
@@ -130,7 +133,11 @@ export function renderAnswerSheetMarkdown(sheet: AnswerSheet): string {
   const total = sheet.recommendations.length;
   for (const rec of sheet.recommendations) {
     const line = r.lines.find((l) => l.line === rec.line);
-    const label = rec.recommended === 'FLAG' ? '⛔ FLAG — HUMAN RULING REQUIRED' : `${rec.recommended} (${rec.confidencePct}%)`;
+    const label = rec.recommended === 'FLAG'
+      ? '⛔ FLAG — HUMAN RULING REQUIRED'
+      : rec.recommended === 'NO_OP'
+        ? 'outcome-neutral (identical offers) — either selection yields the same amount'
+        : `${rec.recommended} (${rec.confidencePct}%)`;
     L.push(`### Page ${rec.line} of ${total} · Dispute Line Item Name: DLI - [____ ← read off the portal screen]`);
     L.push(`- CPT ${line?.cpt ?? '—'} · IP ${money(line?.ipOffer ?? null)} · NIP ${money(line?.nipOffer ?? null)} · FH 50th %ile ${line?.fhBenchmark == null ? '—' : money(line.fhBenchmark)}`);
     L.push(`- Prep recommendation: **${label}** — ${rec.reasons[0] ?? ''}`);
@@ -149,6 +156,13 @@ export function renderAnswerSheetMarkdown(sheet: AnswerSheet): string {
 
   // ── Fingerprints + log row ──
   L.push('---');
+  if (sheet.priorDeterminations.length > 0) {
+    L.push('## Prior determinations among the exhibits');
+    for (const pd of sheet.priorDeterminations) {
+      L.push(`- ${pd.file} — outcome: ${pd.outcome ?? 'not stated'}${pd.date ? ` · ${pd.date}` : ''}`);
+    }
+    L.push('');
+  }
   L.push('## Template fingerprints (§5 stub)');
   for (const fp of sheet.fingerprints) {
     L.push(`- ${fp.file} (${fp.party}): ${fp.status === 'DEVIATION' ? '🚨 **DEVIATION**' : fp.status} — ${fp.detail}`);
@@ -180,8 +194,8 @@ export function buildLogRow(
   flags: EdgeFlag[],
 ): { header: string; row: string } {
   const header = ['Dispute', 'IP', 'NIP', 'Arbiter Due', 'Sent', 'Batched', 'Arbiter', 'PP', 'Rationale', 'Completed', 'NOTES', 'QC', 'Sent Date', 'Rework', 'File Owner'].join('\t');
-  const decided = new Set(recommendations.filter((x) => x.recommended !== 'FLAG').map((x) => x.recommended));
-  const pp = decided.size === 1 ? [...decided][0] : recommendations.some((x) => x.recommended === 'FLAG') ? '[PENDING — flags]' : '[SPLIT — per line]';
+  const decided = new Set(recommendations.filter((x) => x.recommended === 'IP' || x.recommended === 'NIP').map((x) => x.recommended));
+  const pp = decided.size === 1 ? [...decided][0] : recommendations.some((x) => x.recommended === 'FLAG') ? '[PENDING — flags]' : decided.size > 1 ? '[SPLIT — per line]' : '[reviewer selects — identical offers]';
   const notes = flags.map((f) => f.code).join('; ') || '';
   const row = [
     record.disputeNumber ?? record.caseId,

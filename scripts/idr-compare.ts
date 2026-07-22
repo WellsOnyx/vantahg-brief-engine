@@ -1,5 +1,6 @@
 import { readFile } from 'fs/promises';
 import path from 'path';
+import { loadLocalEnv } from '../lib/idr-engine/env-local';
 
 /**
  * Blind-validation diff — compare an engine answer-sheet.json against a
@@ -37,6 +38,8 @@ function similarityPct(a: string, b: string): number {
   for (const t of ta) if (tb.has(t)) inter++;
   return Math.round((100 * inter) / (ta.size + tb.size - inter));
 }
+
+loadLocalEnv();
 
 async function main() {
   const [enginePath, truthPath] = process.argv.slice(2).filter((a) => !a.startsWith('--'));
@@ -80,6 +83,11 @@ async function main() {
       continue;
     }
     const got = line.recommended_pp;
+    if (got === 'NO_OP') {
+      // Identical offers: outcome-neutral — any selection in the ground truth is consistent.
+      say(true, `line ${line.line}`, `NO_OP (identical offers — truth's ${expected} selection is outcome-neutral, counts as match)`);
+      continue;
+    }
     say(got === expected, `line ${line.line}`, got === expected ? String(got) : `engine=${got} truth=${expected}${got === 'FLAG' ? ' (engine declined to recommend — check flags)' : ''}`);
   }
 

@@ -45,7 +45,9 @@ async function writeCase(name: string, files: Record<string, string>) {
 describe('runBatch', () => {
   it('runs every case folder, sorts clean-by-confidence with blocked at the bottom, parks empty folders', async () => {
     await writeCase('DISP-000001', caseFiles('DISP-000001'));
-    await writeCase('DISP-000002', caseFiles('DISP-000002', { identicalOffers: true })); // → blocking flag
+    const missingBrief = caseFiles('DISP-000002');
+    delete missingBrief['nip-brief.txt']; // MISSING_DOC → blocking flag (identical offers are no-ops now, not blockers)
+    await writeCase('DISP-000002', missingBrief);
     await writeCase('DISP-000003', caseFiles('DISP-000003'));
     await mkdir(path.join(root, 'DISP-000004')); // empty → parked, not dropped
 

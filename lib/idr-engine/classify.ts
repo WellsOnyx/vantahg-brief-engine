@@ -59,6 +59,13 @@ function classifyOne(fileName: string, pages: PageText[]): Scored {
     if (p.test(name)) return { kind: 'cms_filler', reason: `known compliance-filler filename (${p})` };
   }
 
+  // Prior determinations arrive as exhibits — parsed for outcome + date
+  // (field intel guard: they inform the reviewer, never the recommendation).
+  if (/prior[ _-]*determination|determination[ _-]*(notice|letter)|payment[ _-]*determination/i.test(name)
+    || /offer is selected as the out-of-network rate/.test(text)) {
+    return { kind: 'prior_determination', reason: 'prior IDR determination markers' };
+  }
+
   const isIp = /initiating|(^|[^a-z])ip([^a-z]|$)|provider/i;
   const nipHit = /non[- _]?initiating|(^|[^a-z])nip([^a-z]|$)/.test(name) || /non-initiating party/.test(text);
   const ipHit = !nipHit && (isIp.test(name) || /initiating party/.test(text));
@@ -86,6 +93,25 @@ function classifyOne(fileName: string, pages: PageText[]): Scored {
 
   if (offerHit) return { kind: 'unknown', reason: 'offer markers but party unclear — needs human look' };
   return { kind: 'unknown', reason: 'no classification markers matched' };
+}
+
+const OBJECTION_MARKERS =
+  /object(?:s|ion|ing)? to (?:the )?(?:eligibility|this dispute)|not eligible for (?:the )?(?:federal )?idr|ineligib|improperly batched|incorrectly batched|cooling[- ]off period|open negotiation (?:period|notice) (?:was|has) not/i;
+const MERITS_MARKERS =
+  /statutory factors|acuity|training|market share|good faith|good-faith|contracted rate|teaching status|case mix/gi;
+
+/**
+ * Field intel §3: NIP submissions are sometimes an eligibility-OBJECTION
+ * letter, not a merits brief. When that happens, eligibility comes first:
+ * check the staff eligibility notes; no recorded ruling → send the case
+ * back rather than deciding merits.
+ */
+export function detectEligibilityObjection(nipBrief: CaseDocument | undefined): boolean {
+  if (!nipBrief) return false;
+  const text = fullText(nipBrief.pages).toLowerCase();
+  if (!OBJECTION_MARKERS.test(text)) return false;
+  const meritsHits = text.match(MERITS_MARKERS)?.length ?? 0;
+  return meritsHits <= 1; // objection language with (nearly) no merits argument
 }
 
 export function classifyDocuments(

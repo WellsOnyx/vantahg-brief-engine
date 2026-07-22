@@ -110,13 +110,15 @@ describe('runCase (heuristic mode, end to end)', () => {
     expect(tsv).toContain('DISP-445566');
   });
 
-  it('renders the HTML sheet (v1.1 stage 8): portal module order, banners, no engine branding', async () => {
+  it('renders the PORTAL CARD (field intel): keystrokes + pastes in module order, analysis below the fold', async () => {
     await writeFixtureCase(caseDir);
     const { files } = await runCase(caseDir, { libraryPath: libPath, outDir });
     const html = await readFile(files.html, 'utf-8');
     expect(html).toContain('DRAFT FOR ARBITER REVIEW');
     expect(html).toContain('NOT FOR DISTRIBUTION');
+    // Card, in exact module order:
     expect(html.indexOf('Module 1')).toBeLessThan(html.indexOf('Non-AA Questions'));
+    expect(html).toContain('IP: check <strong>'); // the keystroke line
     expect(html.indexOf('factor checkboxes')).toBeLessThan(html.indexOf('Rationale — paste block'));
     expect(html.indexOf('Rationale — paste block')).toBeLessThan(html.indexOf('Case Info and Final Resolution — page 1 of 2'));
     expect(html.indexOf('Case Info and Final Resolution — page 2 of 2')).toBeLessThan(html.indexOf('Attestation'));
@@ -124,8 +126,13 @@ describe('runCase (heuristic mode, end to end)', () => {
     expect(html).toContain('No To All Questions');
     expect(html).toContain('FH 50th %ile');
     expect(html).toContain('☑'); // at least one factor checked
+    // Analysis strictly BELOW the fold — after the card ends (log row paste).
+    expect(html).toContain('<details class="fold">');
+    expect(html.indexOf('Cases Log row')).toBeLessThan(html.indexOf('<details class="fold">'));
+    expect(html.indexOf('<details class="fold">')).toBeLessThan(html.indexOf('Case facts'));
+    expect(html.indexOf('<details class="fold">')).toBeLessThan(html.indexOf('Evidence backing each factor check'));
     expect(html).not.toMatch(/engine/i); // no tooling fingerprints in the artifact
-    expect(html).not.toContain('<script'); // plywood: zero JS
+    expect(html).not.toContain('<script'); // plywood: zero JS (details/summary is native HTML)
   });
 
   it('check rule: raised factors carry page-cited evidence (IP factor 5, NIP factor 7)', async () => {
@@ -158,14 +165,20 @@ describe('runCase (heuristic mode, end to end)', () => {
 // ── Edge cases: flag, never guess ──────────────────────────────────────────
 
 describe('edge cases (§6)', () => {
-  it('identical IP/NIP offers on a line → FLAG, no recommendation on that line', async () => {
+  it('identical IP/NIP offers on a line → outcome-neutral NO_OP (field intel: not a blocker)', async () => {
     await writeFixtureCase(caseDir, {
       nipOffer: NIP_OFFER.replace(/Line 1 final payment offer: \$450\.00\./, 'Line 1 final payment offer: $1,150.00.'),
     });
-    const { sheet } = await runCase(caseDir, { libraryPath: libPath, outDir });
+    const { sheet, files } = await runCase(caseDir, { libraryPath: libPath, outDir });
     const l1 = sheet.recommendations.find((r) => r.line === 1)!;
-    expect(l1.recommended).toBe('FLAG');
-    expect(sheet.flags.some((f) => f.code === 'IDENTICAL_OFFERS' && f.line === 1)).toBe(true);
+    expect(l1.recommended).toBe('NO_OP');
+    const flag = sheet.flags.find((f) => f.code === 'IDENTICAL_OFFERS' && f.line === 1)!;
+    expect(flag.severity).toBe('warn'); // no-op, not a block
+    expect(flag.message).toContain('outcome-neutral');
+    // The other line still gets a real recommendation — the no-op doesn't block the case.
+    expect(sheet.recommendations.find((r) => r.line === 2)!.recommended).toBe('IP');
+    const html = await readFile(files.html, 'utf-8');
+    expect(html).toContain('either selection yields the same amount');
   });
 
   it('missing core document → MISSING_DOC block flag and all lines FLAG', async () => {
@@ -325,6 +338,85 @@ describe('split decision rationale', () => {
     expect(unified).toContain('the Initiating Party has presented sufficient credible evidence');
     expect(unified).toContain("the IP's offer is selected");
     expect(unified).not.toContain('SPLIT DECISION');
+  });
+});
+
+// ── Field intel guards ─────────────────────────────────────────────────────
+
+describe('field intel guards', () => {
+  it('eligibility objection: card LEADS with check-notes/send-back, all lines flag, objection fingerprint dimension', async () => {
+    await writeFixtureCase(caseDir, {
+      nipBrief:
+        'OBJECTION OF THE NON-INITIATING PARTY\n' +
+        'The Non-Initiating Party objects to the eligibility of this dispute: the open negotiation period has not been completed ' +
+        'and the claims were improperly batched. This dispute is not eligible for the Federal IDR process and should be closed.',
+    });
+    const { sheet, files } = await runCase(caseDir, { libraryPath: libPath, outDir });
+
+    const flag = sheet.flags.find((f) => f.code === 'ELIGIBILITY_OBJECTION')!;
+    expect(flag.severity).toBe('block');
+    expect(flag.message).toContain('SEND THE CASE BACK');
+    expect(sheet.recommendations.every((r) => r.recommended === 'FLAG')).toBe(true); // no merits ruling on an unresolved objection
+
+    const html = await readFile(files.html, 'utf-8');
+    expect(html).toContain('ELIGIBILITY OBJECTION');
+    expect(html).toContain('SEND THE CASE BACK');
+    expect(html.indexOf('ELIGIBILITY OBJECTION')).toBeLessThan(html.indexOf('Module 1')); // it LEADS the card
+
+    const lib = JSON.parse(await readFile(libPath, 'utf-8'));
+    const nipEntry = lib.templates.find((t: { party: string }) => t.party === 'NIP');
+    expect(nipEntry.category).toBe('eligibility_objection');
+  });
+
+  it('prohibited-factor guard: billed charges in the documents never reach recommendations, rationale, or the card', async () => {
+    await writeFixtureCase(caseDir, {
+      ipBrief: IP_BRIEF + '\nFor reference, the total billed charges were $9,876.54.',
+    });
+    const { sheet, files } = await runCase(caseDir, { libraryPath: libPath, outDir });
+    expect(sheet.rationale).not.toContain('9,876.54');
+    expect(JSON.stringify(sheet.recommendations)).not.toContain('9,876.54');
+    expect(await readFile(files.html, 'utf-8')).not.toContain('9,876.54');
+    expect(await readFile(files.markdown, 'utf-8')).not.toContain('9,876.54');
+  });
+
+  it('prior determinations parsed as exhibits: outcome + date surfaced below the fold', async () => {
+    await writeFixtureCase(caseDir);
+    await writeFile(
+      path.join(caseDir, 'prior-determination-2025.txt'),
+      'PAYMENT DETERMINATION NOTICE dated 11/03/2025. On balance, the Initiating Party has presented sufficient credible evidence to substantiate its offer. ' +
+      "Accordingly, the Initiating Party's offer is selected as the out-of-network rate.",
+      'utf-8',
+    );
+    const { sheet, files } = await runCase(caseDir, { libraryPath: libPath, outDir });
+    expect(sheet.priorDeterminations).toEqual([{ file: 'prior-determination-2025.txt', outcome: 'IP', date: '11/03/2025' }]);
+    const html = await readFile(files.html, 'utf-8');
+    expect(html).toContain('Prior determinations among the exhibits');
+    expect(html.indexOf('<details class="fold">')).toBeLessThan(html.indexOf('Prior determinations'));
+  });
+
+  it('duplicate files deduped by content: identical bytes under a second name analyzed once, listed as duplicate', async () => {
+    await writeFixtureCase(caseDir);
+    await writeFile(path.join(caseDir, 'exhibit-a-second-copy.txt'), EXHIBIT_A, 'utf-8'); // same bytes as exhibit-a-eob.txt
+    const { sheet } = await runCase(caseDir, { libraryPath: libPath, outDir });
+    const dup = sheet.documents.find((d) => d.kind === 'duplicate')!;
+    expect(dup.file).toBe('exhibit-a-second-copy.txt');
+    expect(dup.classificationReason).toContain('exhibit-a-eob.txt');
+    // Only ONE exhibit counts toward analysis.
+    expect(sheet.documents.filter((d) => d.kind === 'exhibit')).toHaveLength(1);
+  });
+
+  it('fingerprint dimensions never cross-match: a merits template and an objection template with similar shells stay separate', async () => {
+    const lib = await loadLibrary(libPath);
+    const doc = (text: string): CaseDocument => ({ file: 'nip.pdf', kind: 'nip_brief', pages: [{ page: 1, text }], classificationReason: 't' });
+    const text = 'The Non-Initiating Party respectfully submits this filing regarding dispute DISP-1 and the amount of $100.00 under the applicable rules and procedures of the federal process.';
+    const merits = fingerprintBrief(doc(text), 'NIP', 1, lib, new Date().toISOString(), 'payer_vendor');
+    expect(merits.result.status).toBe('new_template');
+    // Same shell, different DIMENSION → registers separately, no deviation alarm across dimensions.
+    const objection = fingerprintBrief(doc(text), 'NIP', 1, lib, new Date().toISOString(), 'eligibility_objection');
+    expect(objection.result.status).toBe('new_template');
+    expect(objection.flag).toBeNull();
+    expect(lib.templates).toHaveLength(2);
+    expect(new Set(lib.templates.map((t) => t.category))).toEqual(new Set(['payer_vendor', 'eligibility_objection']));
   });
 });
 

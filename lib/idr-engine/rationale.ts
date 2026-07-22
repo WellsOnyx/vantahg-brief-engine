@@ -80,7 +80,7 @@ export function buildRationaleSections(
   grid: FactorGrid,
   recommendations: LineRecommendation[],
 ): RationaleSections {
-  const decided = recommendations.filter((r) => r.recommended !== 'FLAG');
+  const decided = recommendations.filter((r) => r.recommended === 'IP' || r.recommended === 'NIP');
   const parties = new Set(decided.map((r) => r.recommended as Party));
   const pp: Party | 'ARBITER_SELECTS' = parties.size === 1 ? (decided[0].recommended as Party) : 'ARBITER_SELECTS';
 

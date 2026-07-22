@@ -1,4 +1,5 @@
 import path from 'path';
+import { loadLocalEnv } from '../lib/idr-engine/env-local';
 import { runBatch } from '../lib/idr-engine/run-batch';
 
 /**
@@ -14,6 +15,8 @@ import { runBatch } from '../lib/idr-engine/run-batch';
  *
  * GUARDRAILS: drafts only, human decides every case, no portal contact.
  */
+
+loadLocalEnv();
 
 async function main() {
   const args = process.argv.slice(2);

@@ -68,20 +68,23 @@ export function recommendLines(record: CaseRecord, grid: FactorGrid, allFlags: E
   for (const line of record.lines) {
     const reasons: string[] = [];
 
-    // Edge: identical offers on a line → human ruling, no recommendation (§6).
+    // Edge: identical offers on a line → outcome-neutral NO-OP (field
+    // intel supersedes the old block-flag): either selection yields the
+    // same amount, so the reviewer selects per house practice; no separate
+    // merits recommendation is made or needed.
     if (line.ipOffer !== null && line.nipOffer !== null && line.ipOffer === line.nipOffer) {
       flags.push({
         code: 'IDENTICAL_OFFERS',
-        severity: 'block',
+        severity: 'warn',
         line: line.line,
-        message: `Line ${line.line}: IP and NIP offers are IDENTICAL ($${line.ipOffer.toLocaleString()}) — engine does not recommend; human ruling required.`,
+        message: `Line ${line.line}: IP and NIP offers are IDENTICAL ($${line.ipOffer.toLocaleString()}) — outcome-neutral no-op; either selection yields the same amount. Select per house practice.`,
       });
       recommendations.push({
         line: line.line,
-        recommended: 'FLAG',
-        confidencePct: 0,
+        recommended: 'NO_OP',
+        confidencePct: 100,
         dliChainToLine: null,
-        reasons: ['Identical IP/NIP offers — see flag.'],
+        reasons: [`Identical offers ($${line.ipOffer.toLocaleString()}) — outcome-neutral; either selection yields the same amount.`],
       });
       continue;
     }
@@ -124,12 +127,13 @@ export function recommendLines(record: CaseRecord, grid: FactorGrid, allFlags: E
 
   // DLI chaining plan (§2): a line whose decision matches a PREVIOUS line
   // gets the pre-staged sentence; the number itself is read off the portal
-  // screen and typed by the human — never auto-filled.
-  const decided = recommendations.filter((r) => r.recommended !== 'FLAG');
+  // screen and typed by the human — never auto-filled. NO_OP lines don't
+  // chain (no party to match) — the card explains the reuse rule instead.
+  const decided = recommendations.filter((r) => r.recommended === 'IP' || r.recommended === 'NIP');
   const lastLineByParty: Partial<Record<Party, number>> = {};
   for (const rec of recommendations) {
-    if (rec.recommended === 'FLAG') continue;
-    const p = rec.recommended as Party;
+    if (rec.recommended !== 'IP' && rec.recommended !== 'NIP') continue;
+    const p = rec.recommended;
     const prior = lastLineByParty[p];
     if (prior !== undefined) rec.dliChainToLine = prior;
     lastLineByParty[p] = rec.line;
