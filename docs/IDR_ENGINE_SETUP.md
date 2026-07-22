@@ -63,8 +63,10 @@ containing its files):
 npx tsx scripts/idr-answer-sheet.ts "D:\OneDrive\iMPROve documents\DISP-1234567"
 ```
 
-Open the printed `answer-sheet.html` in the browser — that's the portal
-card: keystrokes and paste blocks in portal order, analysis below the fold.
+Open the printed `answer-sheet.html` in the browser — that's the **mirror
+form**: a replica of the portal screens in order, every field pre-filled,
+checkboxes drawn as you should click them, a Copy button on every text
+field, analysis below the fold. Reproduce it on the real portal.
 
 **2 · A whole folder of cases** (subfolders and/or case ZIPs):
 
@@ -110,6 +112,57 @@ The compare prints ✓/✗ per factor check, per line, and per rationale
 section, and says **MATCH** or lists mismatches. Only after a MATCH (or
 explainable near-match) do the 3 live transcribed cases, then the backlog
 with the batch runner.
+
+## Optional — serve mode: many WorkSpaces, one server, zero installs
+
+Instead of every arbiter installing anything, run the engine on ONE machine
+inside the VPC and let the others open it in a browser.
+
+1. On the serving machine, process the cases as usual:
+   `npx tsx scripts/idr-batch.ts "<open-cases folder>" --out "C:\engine-out"`
+2. Pick a shared access code and start the server. Add to `.env.idr`:
+   ```
+   IDR_SERVE_CODE=pick-a-shared-code
+   IDR_SERVE_HOST=10.x.x.x     ← the serving machine's PRIVATE VPC IP (so other
+                                  WorkSpaces can reach it). Omit for 127.0.0.1
+                                  (same-machine only).
+   ```
+   Then: `npx tsx scripts/idr-serve.ts "C:\engine-out"`
+3. It prints a URL like `http://10.x.x.x:8787/`. Arbiters open that URL from
+   their own WorkSpace browser and enter the shared code once. They see the
+   review queue; clicking a case opens its mirror form.
+
+**Guardrails:** the server **refuses to bind to any public interface** (only
+loopback or a private 10.x / 172.16–31.x / 192.168.x address) — it is
+unreachable from the internet by construction. The access code is required.
+The API key and all case processing stay on the serving machine; the other
+WorkSpaces only view pages. Every page is DRAFT-stamped and carries no
+tooling language. Nothing is ever submitted anywhere.
+
+The bookmarklet (below) still works per-arbiter — it's a one-time drag into
+each reviewer's own browser, independent of serve mode.
+
+> **Roll out to more than one workstation only after it works the way you
+> want on a single workstation first.**
+
+## Optional — the portal-assist bookmarklet (Phase 3, internal-only)
+
+For less transcription, generate the assist bookmarklet once:
+
+```bash
+npx tsx scripts/idr-bookmarklet.ts
+```
+
+It writes `idr-portal-assist.html` to your output folder. Open it in the
+**workspace** browser and drag the button to your bookmarks bar. Then, per
+case: open `answer-sheet.json`, copy the `portal_fill` block, open the
+portal screen, click the bookmark, and paste. The current screen's fields
+are pre-filled and outlined gold.
+
+**It never submits.** It never fills the DLI number or the attestation, and
+nothing leaves your browser. Review every field, type the human-only ones,
+and click Save yourself. Re-clicking is safe. Like everything here, it is
+internal tooling and is never disclosed externally.
 
 ## If something goes wrong
 

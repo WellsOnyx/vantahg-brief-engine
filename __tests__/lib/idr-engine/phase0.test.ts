@@ -110,29 +110,33 @@ describe('runCase (heuristic mode, end to end)', () => {
     expect(tsv).toContain('DISP-445566');
   });
 
-  it('renders the PORTAL CARD (field intel): keystrokes + pastes in module order, analysis below the fold', async () => {
+  it('renders the MIRROR FORM: replica screens in module order, checkboxes pre-drawn, copy buttons, analysis below the fold', async () => {
     await writeFixtureCase(caseDir);
     const { files } = await runCase(caseDir, { libraryPath: libPath, outDir });
     const html = await readFile(files.html, 'utf-8');
     expect(html).toContain('DRAFT FOR ARBITER REVIEW');
     expect(html).toContain('NOT FOR DISTRIBUTION');
-    // Card, in exact module order:
-    expect(html.indexOf('Module 1')).toBeLessThan(html.indexOf('Non-AA Questions'));
-    expect(html).toContain('IP: check <strong>'); // the keystroke line
-    expect(html.indexOf('factor checkboxes')).toBeLessThan(html.indexOf('Rationale — paste block'));
-    expect(html.indexOf('Rationale — paste block')).toBeLessThan(html.indexOf('Case Info and Final Resolution — page 1 of 2'));
-    expect(html.indexOf('Case Info and Final Resolution — page 2 of 2')).toBeLessThan(html.indexOf('Attestation'));
-    expect(html).toContain('Dispute Line Item Name');
+    // Replica screens, exact portal order:
+    expect(html.indexOf('Conflict of Interest')).toBeLessThan(html.indexOf('Non-AA Questions — Factors'));
+    expect(html.indexOf('Non-AA Questions — Factors')).toBeLessThan(html.indexOf('Case Info and Final Resolution'));
+    expect(html.indexOf('Case Info and Final Resolution')).toBeLessThan(html.indexOf('Attestation'));
+    // Checkboxes drawn in the state to click them to.
+    expect(html).toContain('class="cb on">☑');
+    expect(html).toContain('class="cb off">☐');
     expect(html).toContain('No To All Questions');
     expect(html).toContain('FH 50th %ile');
-    expect(html).toContain('☑'); // at least one factor checked
-    // Analysis strictly BELOW the fold — after the card ends (log row paste).
-    expect(html).toContain('<details class="fold">');
-    expect(html.indexOf('Cases Log row')).toBeLessThan(html.indexOf('<details class="fold">'));
+    // Copy button per text field; the only JS is the copy handler.
+    expect((html.match(/class="copybtn"/g) ?? []).length).toBeGreaterThanOrEqual(2);
+    expect(html).toContain('function idrCopy');
+    expect(html).not.toMatch(/\.submit\s*\(/); // never submits
+    expect(html).not.toMatch(/fetch\s*\(|XMLHttpRequest/); // nothing leaves the page
+    // Human-only fields left blank.
+    expect(html).toContain('DLI - ____');
+    expect(html).not.toMatch(/DLI - \d/);
+    // Analysis strictly below the fold.
     expect(html.indexOf('<details class="fold">')).toBeLessThan(html.indexOf('Case facts'));
     expect(html.indexOf('<details class="fold">')).toBeLessThan(html.indexOf('Evidence backing each factor check'));
     expect(html).not.toMatch(/engine/i); // no tooling fingerprints in the artifact
-    expect(html).not.toContain('<script'); // plywood: zero JS (details/summary is native HTML)
   });
 
   it('check rule: raised factors carry page-cited evidence (IP factor 5, NIP factor 7)', async () => {

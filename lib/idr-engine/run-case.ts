@@ -8,6 +8,7 @@ import { analyzeFactors } from './factor-analysis';
 import { fingerprintBrief, loadLibrary, saveLibrary, type TemplateLibrary } from './fingerprint';
 import { recommendLines } from './recommend';
 import { renderRationale, buildRationaleSections } from './rationale';
+import { FACTORS, PORTAL_ROW_MARKERS } from './factors';
 import { buildCoi, buildLogRow, DRAFT_BANNER, renderAnswerSheetMarkdown } from './answer-sheet';
 import { renderAnswerSheetHtml } from './answer-sheet-html';
 import { assertSafeOutputTarget, defaultOutputRoot } from './output-guard';
@@ -165,6 +166,8 @@ export async function runCase(caseFolder: string, opts: RunCaseOptions = {}): Pr
 
   // 7 · Draft rationale
   const rationale = renderRationale(record, grid, recommendations);
+  const sections = buildRationaleSections(record, grid, recommendations);
+  const rationalePaste = [sections.p2_standard, sections.ip_discussion, sections.nip_discussion, sections.close].join('\n\n');
 
   // 8 + 9 · Answer sheet + log row
   const { header: logRowHeader, row: logRow } = buildLogRow(record, recommendations, flags);
@@ -182,6 +185,7 @@ export async function runCase(caseFolder: string, opts: RunCaseOptions = {}): Pr
     coi: buildCoi(record, documents),
     factorGrid: grid,
     rationale,
+    rationalePaste,
     recommendations,
     fingerprints,
     flags,
@@ -238,6 +242,31 @@ export function comparisonView(sheet: AnswerSheet) {
     // DISP-5552798) — compare factor checks, PP, and each rationale
     // section independently against the ground-truth submission.
     rationale_sections: buildRationaleSections(sheet.record, sheet.factorGrid, sheet.recommendations),
+    // The portal-assist payload: everything the in-workspace bookmarklet
+    // needs to pre-fill the CURRENT portal screen. It never includes DLI
+    // numbers or attestation values — those are human-only by doctrine.
+    portal_fill: {
+      version: 1,
+      coi: 'no_to_all_questions',
+      factor_rows: FACTORS.map((f) => ({
+        factor: f.factor,
+        markers: PORTAL_ROW_MARKERS[f.factor],
+        ip: sheet.factorGrid.ip.find((x) => x.factor === f.factor)?.raised ?? false,
+        nip: sheet.factorGrid.nip.find((x) => x.factor === f.factor)?.raised ?? false,
+      })),
+      rationale_paste: sheet.rationalePaste,
+      lines: sheet.recommendations.map((r) => ({
+        line: r.line,
+        recommended_pp: r.recommended,
+        dli_chain_to_line: r.dliChainToLine,
+      })),
+      decided_party: (() => {
+        const parties = new Set(
+          sheet.recommendations.filter((r) => r.recommended === 'IP' || r.recommended === 'NIP').map((r) => r.recommended),
+        );
+        return parties.size === 1 ? [...parties][0] : null;
+      })(),
+    },
     flags: sheet.flags.map((f) => ({ code: f.code, severity: f.severity, line: f.line ?? null })),
     fingerprints: sheet.fingerprints.map((f) => ({ file: f.file, status: f.status, template_id: f.templateId })),
     rationale: sheet.rationale,

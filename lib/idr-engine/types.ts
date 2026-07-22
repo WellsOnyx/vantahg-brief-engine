@@ -168,7 +168,9 @@ export interface AnswerSheet {
     namesForReview: string[];
   };
   factorGrid: FactorGrid;
-  rationale: string; // paste-ready, house template (§4)
+  rationale: string; // full annotated block, house template (§4)
+  /** ONLY what gets pasted: ¶2 + IP discussion + NIP discussion + close — no markers, no ¶1. */
+  rationalePaste: string;
   recommendations: LineRecommendation[];
   fingerprints: FingerprintResult[];
   flags: EdgeFlag[];
