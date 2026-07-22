@@ -63,8 +63,10 @@ containing its files):
 npx tsx scripts/idr-answer-sheet.ts "D:\OneDrive\iMPROve documents\DISP-1234567"
 ```
 
-Open the printed `answer-sheet.html` in the browser — that's the portal
-card: keystrokes and paste blocks in portal order, analysis below the fold.
+Open the printed `answer-sheet.html` in the browser — that's the **mirror
+form**: a replica of the portal screens in order, every field pre-filled,
+checkboxes drawn as you should click them, a Copy button on every text
+field, analysis below the fold. Reproduce it on the real portal.
 
 **2 · A whole folder of cases** (subfolders and/or case ZIPs):
 
@@ -110,6 +112,25 @@ The compare prints ✓/✗ per factor check, per line, and per rationale
 section, and says **MATCH** or lists mismatches. Only after a MATCH (or
 explainable near-match) do the 3 live transcribed cases, then the backlog
 with the batch runner.
+
+## Optional — the portal-assist bookmarklet (Phase 3, internal-only)
+
+For less transcription, generate the assist bookmarklet once:
+
+```bash
+npx tsx scripts/idr-bookmarklet.ts
+```
+
+It writes `idr-portal-assist.html` to your output folder. Open it in the
+**workspace** browser and drag the button to your bookmarks bar. Then, per
+case: open `answer-sheet.json`, copy the `portal_fill` block, open the
+portal screen, click the bookmark, and paste. The current screen's fields
+are pre-filled and outlined gold.
+
+**It never submits.** It never fills the DLI number or the attestation, and
+nothing leaves your browser. Review every field, type the human-only ones,
+and click Save yourself. Re-clicking is safe. Like everything here, it is
+internal tooling and is never disclosed externally.
 
 ## If something goes wrong
 

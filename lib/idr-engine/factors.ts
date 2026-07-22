@@ -106,6 +106,21 @@ export const OBSERVED_WEIGHT_DEFAULTS: Record<FactorNumber, CmsWeight> = {
   7: 'modest weight',
 };
 
+/**
+ * Short lowercase markers used to LOCATE each factor's row on the portal
+ * checkbox screen (portal-assist matching + mirror form). Tune after the
+ * first live screen inspection if the portal wording differs.
+ */
+export const PORTAL_ROW_MARKERS: Record<FactorNumber, string[]> = {
+  1: ['training', 'experience'],
+  2: ['market share'],
+  3: ['acuity', 'complexity'],
+  4: ['teaching', 'case mix'],
+  5: ['good faith', 'good-faith', 'contracted rate'],
+  6: ['additional information'],
+  7: ['qualifying payment amount', 'qpa'],
+};
+
 export function factorDef(n: FactorNumber): FactorDefinition {
   const def = FACTORS.find((f) => f.factor === n);
   if (!def) throw new Error(`unknown factor ${n}`);
