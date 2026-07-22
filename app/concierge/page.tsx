@@ -53,6 +53,68 @@ interface QueueCase {
   turnaround_deadline: string | null;
 }
 
+type Channel = 'phone' | 'efax' | 'portal' | 'email';
+
+interface ActivityEvent {
+  id: string;
+  channel: Channel;
+  headline: string;
+  detail: string;
+  at: string;
+  case_number?: string;
+}
+
+interface FollowUp {
+  id: string;
+  kind: 'member_callback' | 'provider_docs' | 'status_update';
+  who: string;
+  about: string;
+  due_at: string;
+  case_number?: string;
+}
+
+interface Activity {
+  events: ActivityEvent[];
+  channel_mix_today: Record<Channel, number>;
+  volume?: {
+    auths_today: number;
+    daily_target: number;
+    arrivals_per_hour: number;
+    lives_supported: number;
+  };
+  follow_ups: FollowUp[];
+  cx_pulse: {
+    first_touch_minutes_avg: number | null;
+    callbacks_completed_today: number | null;
+    members_updated_today: number | null;
+    calibration: string;
+  };
+}
+
+const CHANNEL_META: Record<Channel, { icon: string; label: string; tone: string }> = {
+  phone: { icon: '📞', label: 'Voice', tone: 'bg-purple-50 text-purple-800 border-purple-200' },
+  efax: { icon: '📠', label: 'eFax', tone: 'bg-blue-50 text-blue-800 border-blue-200' },
+  portal: { icon: '🖥️', label: 'Portal', tone: 'bg-teal-50 text-teal-800 border-teal-200' },
+  email: { icon: '✉️', label: 'Email', tone: 'bg-amber-50 text-amber-800 border-amber-200' },
+};
+
+const FOLLOW_UP_KIND_LABEL: Record<FollowUp['kind'], string> = {
+  member_callback: 'Member callback',
+  provider_docs: 'Chase documents',
+  status_update: 'Status update',
+};
+
+function relativeTime(iso: string): string {
+  const ms = Date.now() - new Date(iso).getTime();
+  const mins = Math.round(Math.abs(ms) / 60_000);
+  const suffix = ms >= 0 ? 'ago' : 'from now';
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ${suffix}`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ${mins % 60 ? `${mins % 60}m ` : ''}${suffix}`;
+  return `${Math.floor(hours / 24)}d ${suffix}`;
+}
+
 const STATUS_LABEL: Record<string, string> = {
   intake: 'Intake',
   processing: 'Processing',
@@ -94,6 +156,7 @@ function timeOfDayGreeting(): string {
 export default function ConciergePage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [queue, setQueue] = useState<QueueCase[]>([]);
+  const [activity, setActivity] = useState<Activity | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -103,9 +166,10 @@ export default function ConciergePage() {
     else setLoading(true);
     setError(null);
     try {
-      const [profRes, queueRes] = await Promise.all([
+      const [profRes, queueRes, actRes] = await Promise.all([
         fetch('/api/concierge/me', { cache: 'no-store' }),
         fetch('/api/concierge/queue', { cache: 'no-store' }),
+        fetch('/api/concierge/activity', { cache: 'no-store' }),
       ]);
       if (!profRes.ok) {
         if (profRes.status === 401) {
@@ -123,6 +187,9 @@ export default function ConciergePage() {
         const q = (await queueRes.json()) as { cases: QueueCase[] };
         setQueue(q.cases ?? []);
       }
+      if (actRes.ok) {
+        setActivity((await actRes.json()) as Activity);
+      }
     } catch {
       setError('Network error. Try again.');
     } finally {
@@ -133,6 +200,17 @@ export default function ConciergePage() {
 
   useEffect(() => {
     void load();
+  }, []);
+
+  // Keep the intake pulse feeling live: refresh activity on a slow poll.
+  useEffect(() => {
+    const t = setInterval(() => {
+      fetch('/api/concierge/activity', { cache: 'no-store' })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((a) => a && setActivity(a as Activity))
+        .catch(() => {});
+    }, 15_000);
+    return () => clearInterval(t);
   }, []);
 
   if (loading) {
@@ -233,9 +311,10 @@ export default function ConciergePage() {
         <StatCard label="TPAs covered" value={profile.active_clients.length} />
       </PageDashboard.Stats>
 
-      {/* ── Body: queue + lines/capacity ─────────────────────── */}
+      {/* ── Body: queue + intake pulse + lines/capacity ──────── */}
       <PageDashboard.Body
         main={
+          <div className="space-y-4">
           <div className="card p-5 md:p-6">
             <PageSectionHeading
               hint={<span className="text-xs text-muted">{queue.length} active</span>}
@@ -291,6 +370,80 @@ export default function ConciergePage() {
               </ul>
             )}
           </div>
+
+          {/* Live intake pulse */}
+          {activity && (
+            <div className="card p-5 md:p-6">
+              <PageSectionHeading
+                hint={
+                  <span className="inline-flex items-center gap-1.5 text-xs text-muted">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                    </span>
+                    live · all channels
+                  </span>
+                }
+              >
+                Intake pulse
+              </PageSectionHeading>
+
+              {/* Platform volume strip */}
+              {activity.volume && (
+                <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 mb-3">
+                  <p className="text-sm text-navy">
+                    <span className="font-[family-name:var(--font-display)] text-2xl">{activity.volume.auths_today.toLocaleString()}</span>
+                    <span className="text-muted text-xs"> of ~{activity.volume.daily_target.toLocaleString()} auths today</span>
+                  </p>
+                  <p className="text-xs text-muted">
+                    ~{activity.volume.arrivals_per_hour}/hr right now · {(activity.volume.lives_supported / 1000).toFixed(0)}k lives supported
+                  </p>
+                </div>
+              )}
+
+              {/* Channel mix strip */}
+              <div className="flex flex-wrap gap-2 mb-4">
+                {(Object.keys(CHANNEL_META) as Channel[]).map((ch) => (
+                  <span
+                    key={ch}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border ${CHANNEL_META[ch].tone}`}
+                  >
+                    <span aria-hidden>{CHANNEL_META[ch].icon}</span>
+                    {CHANNEL_META[ch].label}
+                    <span className="font-mono">{activity.channel_mix_today[ch] ?? 0}</span>
+                    <span className="font-normal opacity-70">today</span>
+                  </span>
+                ))}
+              </div>
+
+              <ul className="space-y-0">
+                {activity.events.map((ev, i) => (
+                  <li key={ev.id} className="relative pl-6 pb-4 last:pb-0">
+                    {/* timeline rail */}
+                    {i < activity.events.length - 1 && (
+                      <span className="absolute left-[7px] top-5 bottom-0 w-px bg-border" aria-hidden />
+                    )}
+                    <span
+                      className="absolute left-0 top-1 w-[15px] h-[15px] rounded-full bg-surface border-2 border-gold flex items-center justify-center text-[8px]"
+                      aria-hidden
+                    />
+                    <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+                      <p className="text-sm font-semibold text-navy">
+                        <span className="mr-1.5" aria-hidden>{CHANNEL_META[ev.channel].icon}</span>
+                        {ev.headline}
+                      </p>
+                      <span className="text-[11px] text-muted whitespace-nowrap">{relativeTime(ev.at)}</span>
+                    </div>
+                    <p className="text-xs text-muted mt-0.5">{ev.detail}</p>
+                    {ev.case_number && (
+                      <p className="font-mono text-[11px] text-navy/50 mt-0.5">{ev.case_number}</p>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          </div>
         }
         aside={
           <div className="space-y-4">
@@ -310,6 +463,60 @@ export default function ConciergePage() {
                 </p>
               )}
             </div>
+
+            {/* CX pulse */}
+            {activity && (
+              <div className="card p-5">
+                <div className="flex items-center justify-between gap-2">
+                  <PageEyebrow>Member experience</PageEyebrow>
+                  <span
+                    className="text-[9px] uppercase tracking-wide font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5"
+                    title="Metrics are estimates pending production calibration data"
+                  >
+                    {activity.cx_pulse.calibration.replaceAll('_', ' ')}
+                  </span>
+                </div>
+                <ul className="text-sm space-y-2.5 mt-3">
+                  <Line
+                    label="Avg first touch"
+                    value={
+                      activity.cx_pulse.first_touch_minutes_avg != null
+                        ? `${activity.cx_pulse.first_touch_minutes_avg} min`
+                        : '—'
+                    }
+                  />
+                  <Line
+                    label="Callbacks today"
+                    value={activity.cx_pulse.callbacks_completed_today?.toString() ?? '—'}
+                  />
+                  <Line
+                    label="Members updated"
+                    value={activity.cx_pulse.members_updated_today?.toString() ?? '—'}
+                  />
+                </ul>
+              </div>
+            )}
+
+            {/* Follow-ups due */}
+            {activity && activity.follow_ups.length > 0 && (
+              <div className="card p-5">
+                <PageEyebrow>Follow-ups due</PageEyebrow>
+                <ul className="space-y-3 mt-3">
+                  {activity.follow_ups.map((fu) => (
+                    <li key={fu.id} className="border-l-2 border-gold/60 pl-3">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-navy/50">
+                        {FOLLOW_UP_KIND_LABEL[fu.kind]} · {relativeTime(fu.due_at)}
+                      </p>
+                      <p className="text-sm font-semibold text-navy leading-tight mt-0.5">{fu.who}</p>
+                      <p className="text-xs text-muted mt-0.5">{fu.about}</p>
+                      {fu.case_number && (
+                        <p className="font-mono text-[11px] text-navy/50 mt-0.5">{fu.case_number}</p>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             {/* Lines */}
             <div className="card p-5">

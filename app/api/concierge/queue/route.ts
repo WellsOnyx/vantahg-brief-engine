@@ -5,6 +5,7 @@ import { isDemoMode } from '@/lib/demo-mode';
 import { applyRateLimit } from '@/lib/rate-limit-middleware';
 import { apiError } from '@/lib/api-error';
 import { getRequestContext } from '@/lib/security';
+import { deriveConciergeQueue } from '@/lib/demo-live-queue';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,78 +27,24 @@ export const dynamic = 'force-dynamic';
 
 const ACTIVE_STATUSES = ['intake', 'processing', 'brief_ready', 'lpn_review', 'rn_review', 'md_review', 'pend_missing_info'];
 
-const DEMO_QUEUE = [
-  {
-    id: 'demo-case-q-1',
-    case_number: 'VUM-2026-00142',
-    status: 'rn_review',
-    priority: 'urgent',
-    patient_name: 'R. Garcia',
-    procedure_description: 'CPAP device (HCPCS E0601)',
-    client_name: 'Acme TPA',
-    created_at: new Date(Date.now() - 6 * 3600 * 1000).toISOString(),
-    turnaround_deadline: new Date(Date.now() + 1.5 * 3600 * 1000).toISOString(),
-  },
-  {
-    id: 'demo-case-q-2',
-    case_number: 'VUM-2026-00141',
-    status: 'pend_missing_info',
-    priority: 'standard',
-    patient_name: 'A. Patel',
-    procedure_description: 'MRI lumbar spine',
-    client_name: 'Sunrise Health Plan',
-    created_at: new Date(Date.now() - 28 * 3600 * 1000).toISOString(),
-    turnaround_deadline: new Date(Date.now() - 1.2 * 3600 * 1000).toISOString(),
-  },
-  {
-    id: 'demo-case-q-3',
-    case_number: 'VUM-2026-00140',
-    status: 'lpn_review',
-    priority: 'standard',
-    patient_name: 'M. Wong',
-    procedure_description: 'Physical therapy x 8 visits',
-    client_name: 'Garrison Benefits',
-    created_at: new Date(Date.now() - 4 * 3600 * 1000).toISOString(),
-    turnaround_deadline: new Date(Date.now() + 18 * 3600 * 1000).toISOString(),
-  },
-  // Dedicated review-ready demo item (brief_ready = AI brief complete, concierge human review gate)
-  {
-    id: 'demo-case-q-review-1',
-    case_number: 'VUM-2026-00139',
-    status: 'brief_ready',
-    priority: 'standard',
-    patient_name: 'J. Kim',
-    procedure_description: 'Outpatient knee MRI (CPT 73721)',
-    client_name: 'Acme TPA',
-    created_at: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
-    turnaround_deadline: new Date(Date.now() + 22 * 3600 * 1000).toISOString(),
-    // Sample high-quality AI output for demo of Track B/C quality signal
-    fact_check: {
-      overall_score: 92,
-      overall_status: 'pass',
-      sections: [],
-      summary: { verified: 8, unverified: 1, flagged: 0 },
-      consistency_checks: [{ check: 'All checks', passed: true, detail: 'Coherent' }],
-      checked_at: new Date().toISOString(),
-    },
-  },
-];
-
 export async function GET(request: NextRequest) {
   try {
     const rateLimited = await applyRateLimit(request, { maxRequests: 240 });
     if (rateLimited) return rateLimited;
 
     if (isDemoMode()) {
-      // Respect status / review_ready filters in demo mode for the new concierge review queue
+      // Demo queue is DERIVED from the real demo case layer (lib/demo-data via
+      // lib/demo-live), so every row's id resolves at /cases/[id] with the full
+      // brief / fact-check / audit detail. Respect the status / review_ready
+      // filters for the concierge review queue.
       const requestedStatus = request.nextUrl.searchParams.get('status');
       const reviewReadyOnly = request.nextUrl.searchParams.get('review_ready') === 'true';
 
-      let filtered = DEMO_QUEUE;
+      let filtered = deriveConciergeQueue();
       if (requestedStatus) {
-        filtered = DEMO_QUEUE.filter((c) => c.status === requestedStatus);
+        filtered = filtered.filter((c) => c.status === requestedStatus);
       } else if (reviewReadyOnly) {
-        filtered = DEMO_QUEUE.filter((c) => c.status === 'brief_ready');
+        filtered = filtered.filter((c) => c.status === 'brief_ready');
       }
       return NextResponse.json({ cases: filtered });
     }
