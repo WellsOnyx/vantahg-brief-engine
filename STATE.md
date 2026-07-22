@@ -836,7 +836,7 @@ The deltas, in priority order:
 
 **Backlog from STATE.md remaining:**
 - Auto-book weekly check-in calendar invite
-- TPA system connector framework (FHIR / X12)
+- ~~TPA system connector framework (FHIR / X12)~~ ✅ inbound rails BUILT 2026-07-09 — `POST /api/connect/fhir/Claim/$submit` (Da Vinci PAS) + `POST /api/connect/x12/278` (005010X217), both funneling into the shared ledger-idempotent ingest (`lib/partner/ingest.ts`). See `docs/CONNECTOR_RAILS.md`. Remaining: sftp_batch rail, per-vendor verification, native-dialect webhook push.
 - Meow billing integration (locked decision: not Stripe)
 - RingCentral phone/email/fax auto-provisioning
 - DL upstream/downstream activity view
@@ -950,7 +950,7 @@ The signup → contract → e-sign → onboarding flow exists. Auto-assignment w
 1. ~~Auto-assign DL + Concierge on signup approval~~ ✅ DONE
 2. **Auto-book weekly check-in calendar invite** (~2 hrs) — onboarding wizard captures the time preference, but no calendar invite gets sent. Needs iCal-attachment-in-email or Google Calendar API integration.
 3. **Practices table + per-physician-office concierge routing** (~3 hrs) — `practice_id` reserved on `client_concierge_assignments` but no `practices` table exists yet.
-4. **TPA system connector framework** (~big) — start with one specific connector (FHIR or X12 EDI) once we know which TPA wants in first.
+4. ~~**TPA system connector framework**~~ ✅ FHIR PAS + X12 278 inbound rails built 2026-07-09 (`docs/CONNECTOR_RAILS.md`); first vendor-specific verification still pending a named TPA.
 5. **Real billing collection at signup** (~3 hrs) — Stripe checkout link tied to contract signing.
 6. **Concierge phone/email/fax auto-provisioning via RingCentral** (~4 hrs) — schema fields exist (`ringcentral_phone`, `intake_email`, `intake_efax`), no provisioning happens.
 7. **Activity upstream/downstream view for Delivery Lead** (~2 hrs) — DL sees their team's load; missing: case flow visibility.
