@@ -78,6 +78,10 @@ export default function BlogPost() {
         .footer-logo { font-family:var(--sans);font-size:13px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--white); }
         .footer-logo span { color:var(--teal); }
         .vum-footer p { font-size:12px;color:var(--white-dim); }
+        .footer-nav { display:flex;flex-direction:column;gap:7px;align-items:flex-start; }
+        .footer-nav-label { font-size:10px;font-weight:500;letter-spacing:0.14em;text-transform:uppercase;color:var(--white-dim);margin-bottom:1px; }
+        .footer-nav a { font-size:12px;font-weight:300;color:var(--white-muted);text-decoration:none;transition:color 0.2s; }
+        .footer-nav a:hover { color:var(--teal); }
 
         /* ── Animations ── */
         @keyframes fadeUp { from{opacity:0;transform:translateY(20px);} to{opacity:1;transform:translateY(0);} }
@@ -92,6 +96,7 @@ export default function BlogPost() {
           .nav-links { display:none; }
           .blog-article { padding:100px 20px 72px; }
           .vum-footer { padding:32px 24px;flex-direction:column;text-align:center; }
+          .footer-nav { align-items:center; }
         }
       `}</style>
 
@@ -199,6 +204,11 @@ export default function BlogPost() {
         {/* Footer */}
         <footer className="vum-footer">
           <div className="footer-logo"><span>Vanta</span>UM</div>
+          <nav className="footer-nav" aria-label="Blog">
+            <span className="footer-nav-label">Blog</span>
+            <a href="/blog/can-healthcare-brokers-advisors-improve-healthcare-systems">Can Brokers &amp; Advisors Improve Healthcare?</a>
+            <a href="/site/blog/buying-outcomes-not-infrastructure-utilization-management">The TPA UM Model Is Broken</a>
+          </nav>
           <p>&copy; {new Date().getFullYear()} Wells Onyx. All rights reserved.</p>
         </footer>
       </div>

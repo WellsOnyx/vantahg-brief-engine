@@ -172,10 +172,14 @@ export default function SitePage() {
         .cta-actions { display:flex;gap:20px;justify-content:center;flex-wrap:wrap; }
 
         /* ── Footer ── */
-        .vum-footer { background:var(--black);border-top:1px solid var(--border);padding:40px 56px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px; }
+        .vum-footer { background:var(--black);border-top:1px solid var(--border);padding:40px 56px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:24px; }
         .footer-logo { font-family:var(--sans);font-size:13px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--white); }
         .footer-logo span { color:var(--teal); }
         .vum-footer p { font-size:12px;color:var(--white-dim); }
+        .footer-nav { display:flex;flex-direction:column;gap:7px;align-items:flex-start; }
+        .footer-nav-label { font-size:10px;font-weight:500;letter-spacing:0.14em;text-transform:uppercase;color:var(--white-dim);margin-bottom:1px; }
+        .footer-nav a { font-size:12px;font-weight:300;color:var(--white-muted);text-decoration:none;transition:color 0.2s; }
+        .footer-nav a:hover { color:var(--teal); }
 
         /* ── Role Selector ── */
         .role-hero { min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:170px 56px 80px;position:relative;overflow:hidden; }
@@ -242,6 +246,7 @@ export default function SitePage() {
           .fam-banner { padding:20px 24px;flex-wrap:wrap; }
           .manifesto { padding:60px 24px; }
           .vum-footer { padding:32px 24px;flex-direction:column;text-align:center; }
+          .footer-nav { align-items:center; }
           .demo-cta-row { flex-direction:column;align-items:flex-start; }
           .cta-section { padding:72px 24px; }
         }
@@ -573,6 +578,11 @@ export default function SitePage() {
         {/* Footer */}
         <footer className="vum-footer">
           <div className="footer-logo"><span>Vanta</span>UM</div>
+          <nav className="footer-nav" aria-label="Blog">
+            <span className="footer-nav-label">Blog</span>
+            <a href="/blog/can-healthcare-brokers-advisors-improve-healthcare-systems">Can Brokers &amp; Advisors Improve Healthcare?</a>
+            <a href="/site/blog/buying-outcomes-not-infrastructure-utilization-management">The TPA UM Model Is Broken</a>
+          </nav>
           <p>A Wells Onyx Company &middot; Houston &middot; Miami &middot; Tallahassee</p>
           <p>&copy; 2026 VantaUM. All rights reserved.</p>
         </footer>
