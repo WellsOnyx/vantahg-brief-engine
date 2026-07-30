@@ -74,6 +74,14 @@ const EnvSchema = z.object({
   MEOW_COLLECTION_ACCOUNT_ID: z.string().uuid().optional(),
   MEOW_VANTAUM_PRODUCT_ID: z.string().uuid().optional(),
   ENABLE_REAL_MEOW: z.coerce.boolean().default(false),
+
+  // Review training dataset (de-identified). When true (default), scrubbed
+  // free-text reviewer narrative is included in each sample; set false to emit
+  // a structured/coded-only dataset with no narrative. DATASET_SAMPLE_SALT is
+  // an optional dedicated salt for the pseudonymous sample_ref (falls back to
+  // CRON_SECRET, then a static constant).
+  REVIEW_DATASET_INCLUDE_FREETEXT: z.coerce.boolean().default(true),
+  DATASET_SAMPLE_SALT: z.string().min(1).optional(),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

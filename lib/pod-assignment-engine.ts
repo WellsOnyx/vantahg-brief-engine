@@ -5,6 +5,7 @@ import { autoAssignReviewer } from '@/lib/assignment-engine';
 import { pickLpnByScore, scoreLpnForCase } from '@/lib/delivery/lpn-scoring';
 import type { Case, Staff, Pod, LpnDetermination, RnDetermination } from '@/lib/types';
 import { redactName } from '@/lib/security';
+import { captureReviewSampleAsync } from '@/lib/dataset/review-dataset';
 
 // ============================================================================
 // Types
@@ -265,6 +266,9 @@ export async function submitRnReview(
       determination: 'approve',
       resolved_at_nursing_level: true,
     });
+
+    // Capture a de-identified training sample (non-blocking, idempotent).
+    captureReviewSampleAsync(caseId, rnId, 'rn_determination');
 
     return { success: true, newStatus: 'determination_made' };
   } else {

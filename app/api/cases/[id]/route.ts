@@ -7,6 +7,7 @@ import { requireAuth } from '@/lib/auth-guard';
 import { applyRateLimit } from '@/lib/rate-limit-middleware';
 import { apiError } from '@/lib/api-error';
 import { getRequestContext } from '@/lib/security';
+import { captureReviewSampleAsync } from '@/lib/dataset/review-dataset';
 
 export const dynamic = 'force-dynamic';
 
@@ -227,6 +228,10 @@ export async function PATCH(
         ai_risk_notes: body.ai_risk_notes || null,
         risk_signal_present: !!(body.ai_risk_acknowledged || body.ai_risk_notes),
       }, requestContext);
+
+      // Capture a de-identified training sample for this review (non-blocking,
+      // never affects the response). Idempotent upsert keyed on case id.
+      captureReviewSampleAsync(id, actor, 'md_determination');
 
       // Auto-deliver to client for final determinations (non-blocking)
       const finalDeterminations = ['approve', 'deny', 'partial_approve', 'modify'];
