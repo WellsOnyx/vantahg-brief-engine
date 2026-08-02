@@ -24,6 +24,7 @@ import { buildShareUrl, readStateFromHash } from "@/lib/share";
 import { AddOnToggle, LeverSlider } from "./controls";
 import { OutcomesChart } from "./OutcomesChart";
 import { AnimatedUSD } from "./AnimatedNumber";
+import { PrintSheet } from "./PrintSheet";
 
 type SavedScenario = {
   id: number;
@@ -45,11 +46,12 @@ export default function ScenarioStudio() {
   const [assumptionsOpen, setAssumptionsOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [generatedAt, setGeneratedAt] = useState("");
   const idRef = useRef(1);
 
-  // Hydrate from a shared-scenario link, if the URL carries one. This must run
-  // after mount (not during render): the static export is prerendered without a
-  // URL hash, so reading it during render would trip a hydration mismatch.
+  // Client-only work that must run after mount, not during render: the static
+  // export is prerendered without a URL hash or a stable date, so touching
+  // either during render would trip a hydration mismatch.
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     const shared = readStateFromHash();
@@ -59,6 +61,13 @@ export default function ScenarioStudio() {
       setHorizon(shared.horizon);
       setActivePreset(null);
     }
+    setGeneratedAt(
+      new Date().toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      }),
+    );
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
 
@@ -117,6 +126,10 @@ export default function ScenarioStudio() {
     });
   }
 
+  function downloadOnePager() {
+    if (typeof window !== "undefined") window.print();
+  }
+
   function resetAll() {
     setCompany(SAMPLE_COMPANY);
     setLevers(DEFAULT_LEVERS);
@@ -128,7 +141,8 @@ export default function ScenarioStudio() {
   }
 
   return (
-    <div className="min-h-screen bg-parchment">
+    <>
+    <div className="screen-app min-h-screen bg-parchment">
       {/* ---------------------------------------------------------------- Header */}
       <header className="border-b border-slate-line bg-navy text-white">
         <div className="mx-auto flex max-w-[1360px] items-center justify-between gap-4 px-6 py-4 lg:px-9">
@@ -153,6 +167,12 @@ export default function ScenarioStudio() {
               }`}
             >
               {copied ? "Link copied ✓" : "Share scenario"}
+            </button>
+            <button
+              onClick={downloadOnePager}
+              className="rounded-full bg-gold px-3.5 py-1.5 text-[12px] font-600 text-navy-900 transition-colors hover:bg-gold-soft"
+            >
+              Download one-pager
             </button>
             <button
               onClick={() => setAssumptionsOpen(true)}
@@ -508,6 +528,16 @@ export default function ScenarioStudio() {
         />
       )}
     </div>
+
+      <PrintSheet
+        company={company}
+        levers={levers}
+        outcome={outcome}
+        projection={projection}
+        horizon={horizon}
+        generatedAt={generatedAt}
+      />
+    </>
   );
 }
 
