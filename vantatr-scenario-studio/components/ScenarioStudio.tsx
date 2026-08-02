@@ -139,7 +139,7 @@ export default function ScenarioStudio() {
                 VantaTR Scenario Studio
               </div>
               <div className="mt-1 text-[11.5px] uppercase tracking-[0.16em] text-white/55">
-                Benefits Strategy Modeling
+                Design · Deliver · Compound
               </div>
             </div>
           </div>
@@ -233,7 +233,7 @@ export default function ScenarioStudio() {
       <main className="mx-auto grid max-w-[1360px] grid-cols-1 gap-5 px-6 py-6 lg:grid-cols-[300px_minmax(0,1fr)_290px] lg:px-9">
         {/* ---------------------------------------------------- LEFT — Levers */}
         <section className="lux-scroll rounded-2xl border border-slate-line bg-white p-5 lg:max-h-[calc(100vh-180px)] lg:overflow-y-auto lg:sticky lg:top-5">
-          <ZoneLabel>Design Levers</ZoneLabel>
+          <ZoneLabel>Design</ZoneLabel>
           <LeverSlider
             label="Pre-tax benefit participation"
             hint="Share of employees enrolled in pre-tax benefits."
@@ -346,7 +346,7 @@ export default function ScenarioStudio() {
           {/* Chart */}
           <div className="rounded-2xl border border-slate-line bg-white p-6">
             <div className="mb-1 flex items-baseline justify-between">
-              <ZoneLabel>Live Outcomes</ZoneLabel>
+              <ZoneLabel>Deliver</ZoneLabel>
               <span className="text-[11.5px] text-ink/50">
                 Current vs. redesigned program
               </span>
@@ -376,11 +376,10 @@ export default function ScenarioStudio() {
           {horizon > 1 && (
             <div className="rise-in rounded-2xl border border-slate-line bg-white p-6">
               <div className="mb-4 flex items-baseline justify-between">
-                <ZoneLabel>{horizon}-Year Outlook</ZoneLabel>
+                <ZoneLabel>Compound</ZoneLabel>
                 <span className="text-[11.5px] text-ink/50">
-                  Cumulative {formatUSD(projection.cumulativeSavings, {
-                    compact: true,
-                  })}{" "}
+                  {horizon}-year cumulative{" "}
+                  {formatUSD(projection.cumulativeSavings, { compact: true })}{" "}
                   saved
                 </span>
               </div>
