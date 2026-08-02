@@ -51,6 +51,12 @@ export const ASSUMPTIONS = {
     familyBuilding: 140,
     studentLoan: 110,
   },
+  /**
+   * Illustrative year-over-year benefits-cost trend. Multi-year projections
+   * grow each year's savings and reinvestment by this rate, since program
+   * spend — and therefore the dollars a redesign moves — compounds over time.
+   */
+  annualCostTrend: 0.05,
 } as const;
 
 export const ADD_ONS = [
@@ -223,6 +229,74 @@ export function computeOutcome(
     addOnCost,
     netRewardsBudget,
     redesignedNetCost,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Multi-year projection.
+//
+// Executives budget in years, not months. Given a single-year outcome, we
+// project the savings forward, letting each year grow by the illustrative
+// cost trend. Everything stays transparent — the trend rate lives in the
+// Assumptions drawer alongside every other constant.
+// ---------------------------------------------------------------------------
+
+export type Horizon = 1 | 3 | 5;
+
+export const HORIZONS: Horizon[] = [1, 3, 5];
+
+export type ProjectedYear = {
+  year: number;
+  savings: number;
+  reinvestment: number;
+  costReduction: number;
+  /** Running total of savings through this year. */
+  cumulativeSavings: number;
+};
+
+export type Projection = {
+  years: Horizon;
+  perYear: ProjectedYear[];
+  cumulativeSavings: number;
+  cumulativeReinvestment: number;
+  cumulativeCostReduction: number;
+};
+
+export function projectOutcome(
+  outcome: Outcome,
+  years: Horizon,
+  trend: number = ASSUMPTIONS.annualCostTrend,
+): Projection {
+  const perYear: ProjectedYear[] = [];
+  let cumulativeSavings = 0;
+  let cumulativeReinvestment = 0;
+  let cumulativeCostReduction = 0;
+
+  for (let i = 0; i < years; i++) {
+    const factor = Math.pow(1 + trend, i);
+    const savings = outcome.totalSavings * factor;
+    const reinvestment = outcome.rewardsReinvestment * factor;
+    const costReduction = outcome.costReduction * factor;
+
+    cumulativeSavings += savings;
+    cumulativeReinvestment += reinvestment;
+    cumulativeCostReduction += costReduction;
+
+    perYear.push({
+      year: i + 1,
+      savings,
+      reinvestment,
+      costReduction,
+      cumulativeSavings,
+    });
+  }
+
+  return {
+    years,
+    perYear,
+    cumulativeSavings,
+    cumulativeReinvestment,
+    cumulativeCostReduction,
   };
 }
 

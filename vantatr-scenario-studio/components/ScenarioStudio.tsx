@@ -1,21 +1,26 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ADD_ONS,
   ASSUMPTIONS,
   CompanyProfile,
   DEFAULT_LEVERS,
+  Horizon,
+  HORIZONS,
   Levers,
   Outcome,
   PRESETS,
   PresetKey,
+  Projection,
   SAMPLE_COMPANY,
   computeOutcome,
   formatNumber,
   formatPct,
   formatUSD,
+  projectOutcome,
 } from "@/lib/model";
+import { buildShareUrl, readStateFromHash } from "@/lib/share";
 import { AddOnToggle, LeverSlider } from "./controls";
 import { OutcomesChart } from "./OutcomesChart";
 import { AnimatedUSD } from "./AnimatedNumber";
@@ -34,16 +39,55 @@ const FOOTER =
 export default function ScenarioStudio() {
   const [company, setCompany] = useState<CompanyProfile>(SAMPLE_COMPANY);
   const [levers, setLevers] = useState<Levers>(DEFAULT_LEVERS);
+  const [horizon, setHorizon] = useState<Horizon>(1);
   const [saved, setSaved] = useState<SavedScenario[]>([]);
   const [activePreset, setActivePreset] = useState<PresetKey | null>(null);
   const [assumptionsOpen, setAssumptionsOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(true);
+  const [copied, setCopied] = useState(false);
   const idRef = useRef(1);
+
+  // Hydrate from a shared-scenario link, if the URL carries one. This must run
+  // after mount (not during render): the static export is prerendered without a
+  // URL hash, so reading it during render would trip a hydration mismatch.
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    const shared = readStateFromHash();
+    if (shared) {
+      setCompany(shared.company);
+      setLevers(shared.levers);
+      setHorizon(shared.horizon);
+      setActivePreset(null);
+    }
+  }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const outcome = useMemo(
     () => computeOutcome(company, levers),
     [company, levers],
   );
+
+  const projection = useMemo(
+    () => projectOutcome(outcome, horizon),
+    [outcome, horizon],
+  );
+
+  async function shareScenario() {
+    const url = buildShareUrl({ company, levers, horizon });
+    if (typeof window !== "undefined") {
+      window.history.replaceState(null, "", url);
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard blocked (insecure context / permissions) — the URL bar now
+      // still carries the scenario, so the link is shareable regardless.
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    }
+  }
 
   function setLever<K extends keyof Levers>(key: K, value: Levers[K]) {
     setLevers((prev) => ({ ...prev, [key]: value }));
@@ -76,7 +120,11 @@ export default function ScenarioStudio() {
   function resetAll() {
     setCompany(SAMPLE_COMPANY);
     setLevers(DEFAULT_LEVERS);
+    setHorizon(1);
     setActivePreset(null);
+    if (typeof window !== "undefined" && window.location.hash) {
+      window.history.replaceState(null, "", window.location.pathname);
+    }
   }
 
   return (
@@ -96,6 +144,16 @@ export default function ScenarioStudio() {
             </div>
           </div>
           <div className="flex items-center gap-2.5">
+            <button
+              onClick={shareScenario}
+              className={`rounded-full px-3.5 py-1.5 text-[12px] font-600 transition-colors ${
+                copied
+                  ? "bg-gold text-navy-900"
+                  : "bg-white/10 text-white hover:bg-white/20"
+              }`}
+            >
+              {copied ? "Link copied ✓" : "Share scenario"}
+            </button>
             <button
               onClick={() => setAssumptionsOpen(true)}
               className="rounded-full border border-white/20 px-3.5 py-1.5 text-[12px] font-500 text-white/85 transition-colors hover:border-gold hover:text-white"
@@ -232,16 +290,34 @@ export default function ScenarioStudio() {
           {/* Headline */}
           <div className="relative overflow-hidden rounded-2xl border border-navy-700 bg-navy px-7 py-7 text-white shadow-[0_10px_40px_-18px_rgba(24,59,109,0.7)]">
             <div className="pointer-events-none absolute -right-16 -top-16 h-52 w-52 rounded-full bg-gold/10 blur-2xl" />
-            <div className="text-[12px] font-600 uppercase tracking-[0.18em] text-gold-soft">
-              Total Program Savings / Year
+            <div className="relative flex items-start justify-between gap-4">
+              <div className="text-[12px] font-600 uppercase tracking-[0.18em] text-gold-soft">
+                {horizon === 1
+                  ? "Total Program Savings / Year"
+                  : `${horizon}-Year Cumulative Savings`}
+              </div>
+              <HorizonSelector value={horizon} onChange={setHorizon} />
             </div>
             <AnimatedUSD
-              value={outcome.totalSavings}
+              value={
+                horizon === 1
+                  ? outcome.totalSavings
+                  : projection.cumulativeSavings
+              }
               className="mt-2 block font-serif text-[52px] leading-[1.02] font-700 tracking-tight tabular-nums sm:text-[62px]"
             />
             <div className="mt-2 text-[13px] text-white/65">
-              {formatUSD(outcome.savingsPerEmployee)} per employee ·{" "}
-              {formatNumber(Math.round(outcome.participants))} participants
+              {horizon === 1 ? (
+                <>
+                  {formatUSD(outcome.savingsPerEmployee)} per employee ·{" "}
+                  {formatNumber(Math.round(outcome.participants))} participants
+                </>
+              ) : (
+                <>
+                  {formatUSD(outcome.totalSavings, { compact: true })} in year
+                  one, compounding at {formatPct(ASSUMPTIONS.annualCostTrend)}/yr
+                </>
+              )}
             </div>
           </div>
 
@@ -296,6 +372,35 @@ export default function ScenarioStudio() {
               />
             </div>
           </div>
+          {/* Multi-year outlook */}
+          {horizon > 1 && (
+            <div className="rise-in rounded-2xl border border-slate-line bg-white p-6">
+              <div className="mb-4 flex items-baseline justify-between">
+                <ZoneLabel>{horizon}-Year Outlook</ZoneLabel>
+                <span className="text-[11.5px] text-ink/50">
+                  Cumulative {formatUSD(projection.cumulativeSavings, {
+                    compact: true,
+                  })}{" "}
+                  saved
+                </span>
+              </div>
+              <MultiYearStrip projection={projection} />
+              <div className="mt-4 grid grid-cols-2 gap-3 border-t border-slate-line pt-4 text-[12.5px]">
+                <MiniStat
+                  label={`Reinvested over ${horizon} yrs`}
+                  value={formatUSD(projection.cumulativeReinvestment, {
+                    compact: true,
+                  })}
+                />
+                <MiniStat
+                  label={`Banked over ${horizon} yrs`}
+                  value={formatUSD(projection.cumulativeCostReduction, {
+                    compact: true,
+                  })}
+                />
+              </div>
+            </div>
+          )}
         </section>
 
         {/* ---------------------------------------------------- RIGHT — Scenarios */}
@@ -421,6 +526,58 @@ function Mark() {
   return (
     <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gold/15 ring-1 ring-gold/40">
       <span className="font-serif text-[17px] font-700 text-gold-soft">V</span>
+    </div>
+  );
+}
+
+function HorizonSelector({
+  value,
+  onChange,
+}: {
+  value: Horizon;
+  onChange: (h: Horizon) => void;
+}) {
+  return (
+    <div className="flex shrink-0 rounded-full border border-white/15 bg-white/5 p-0.5">
+      {HORIZONS.map((h) => (
+        <button
+          key={h}
+          onClick={() => onChange(h)}
+          className={`rounded-full px-3 py-1 text-[11.5px] font-600 tabular-nums transition-colors ${
+            value === h
+              ? "bg-gold text-navy-900"
+              : "text-white/60 hover:text-white"
+          }`}
+          aria-pressed={value === h}
+        >
+          {h}yr
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function MultiYearStrip({ projection }: { projection: Projection }) {
+  const max = Math.max(
+    ...projection.perYear.map((y) => y.cumulativeSavings),
+    1,
+  );
+  return (
+    <div className="flex items-end justify-between gap-3">
+      {projection.perYear.map((y) => (
+        <div key={y.year} className="flex flex-1 flex-col items-center gap-2">
+          <div className="font-serif text-[12.5px] font-600 tabular-nums text-navy-900">
+            {formatUSD(y.cumulativeSavings, { compact: true })}
+          </div>
+          <div className="flex h-28 w-full items-end justify-center">
+            <div
+              className="bar-grow w-full max-w-[46px] rounded-t-md bg-gradient-to-t from-navy to-navy-600"
+              style={{ height: `${(y.cumulativeSavings / max) * 100}%` }}
+            />
+          </div>
+          <div className="text-[11px] font-500 text-ink/55">Year {y.year}</div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -588,6 +745,11 @@ function AssumptionsDrawer({
             title="Enrichment costs (per participant / yr)"
             value=""
             note={`Mental health ${formatUSD(ASSUMPTIONS.addOnCostPerParticipant.mentalHealth)} · Family building ${formatUSD(ASSUMPTIONS.addOnCostPerParticipant.familyBuilding)} · Student loan ${formatUSD(ASSUMPTIONS.addOnCostPerParticipant.studentLoan)}.`}
+          />
+          <AssumptionRow
+            title="Annual cost trend"
+            value={`${formatPct(ASSUMPTIONS.annualCostTrend)} / yr`}
+            note="Multi-year outlooks grow each year's savings and reinvestment by this rate, since benefits spend — and the dollars a redesign moves — compounds over time. Applies only to the 3- and 5-year horizons."
           />
 
           <div className="rounded-xl border border-slate-line bg-white p-4">
