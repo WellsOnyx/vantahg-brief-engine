@@ -235,7 +235,7 @@ export function getGravityRailConfig() {
   return {
     apiKey: env.GRAVITY_RAIL_API_KEY,
     workspaceId: env.GRAVITY_RAIL_WORKSPACE_ID,
-    webhookSecret: env.GRAVITY_RAIL_WEBHOOK_SECRET,
+    webhookSecret: env.GR_WEBHOOK_SECRET ?? env.GRAVITY_RAIL_WEBHOOK_SECRET,
   };
 }
 

@@ -217,6 +217,17 @@ describe('POST /api/intake/voice — auth gate', () => {
     const res = await POST(post(raw, { 'x-gr-timestamp': timestamp, 'x-gr-signature': signature }));
     expect(res.status).toBe(202);
   });
+
+  it('fails closed in production when no webhook secret is configured', async () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    vi.stubEnv('GR_WEBHOOK_SECRET', '');
+    vi.stubEnv('GR_WEBHOOK_SECRET_SECONDARY', '');
+    vi.stubEnv('GRAVITY_RAIL_WEBHOOK_SECRET', '');
+    const { POST } = await import('@/app/api/intake/voice/route');
+    const res = await POST(postJson(validBody()));
+    expect(res.status).toBe(503);
+    expect((await res.json()).error.code).toBe('not_configured');
+  });
 });
 
 // ---------------------------------------------------------------------------

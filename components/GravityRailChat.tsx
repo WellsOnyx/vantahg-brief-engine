@@ -2,6 +2,17 @@
 
 import { useEffect, useRef } from 'react';
 
+/**
+ * Public widget IDs must both be real values. Empty / whitespace means the
+ * widget must not inject the Gravity Rail script (no half-configured launcher).
+ */
+export function isGravityRailWidgetConfigured(
+  workspaceId?: string | null,
+  siteId?: string | null,
+): boolean {
+  return Boolean(workspaceId?.trim() && siteId?.trim());
+}
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export interface GravityRailChatProps {
@@ -78,8 +89,10 @@ export function GravityRailChat({
   zIndex,
 }: GravityRailChatProps) {
   const scriptRef = useRef<HTMLScriptElement | null>(null);
+  const configured = isGravityRailWidgetConfigured(workspaceId, siteId);
 
   useEffect(() => {
+    if (!configured) return;
     // Don't double-inject
     if (scriptRef.current) return;
 
@@ -123,8 +136,10 @@ export function GravityRailChat({
     workspaceId, siteId, workflowSlug, locale,
     title, subtitle, buttonText, voice, startOpen,
     launcherWidth, launcherHeight, widgetWidth, widgetHeight,
-    bottom, right, zIndex,
+    bottom, right, zIndex, configured,
   ]);
+
+  if (!configured) return null;
 
   // No visible DOM output — the widget is injected by the GR script
   return null;
@@ -141,8 +156,8 @@ export function VantaMemberChat() {
   const siteId = process.env.NEXT_PUBLIC_GRAVITY_RAIL_SITE_ID;
   const workflowSlug = process.env.NEXT_PUBLIC_GRAVITY_RAIL_WORKFLOW_SLUG ?? 'member-support';
 
-  if (!workspaceId || !siteId) {
-    // Silently no-op in production if not configured; log in dev
+  if (!isGravityRailWidgetConfigured(workspaceId, siteId)) {
+    // Silently no-op if public IDs are not actually set; log in dev only.
     if (process.env.NODE_ENV === 'development') {
       console.warn(
         '[VantaMemberChat] NEXT_PUBLIC_GRAVITY_RAIL_WORKSPACE_ID and ' +

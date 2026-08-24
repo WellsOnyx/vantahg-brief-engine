@@ -414,21 +414,40 @@ export class GravityRailError extends Error {
   }
 }
 
+/** Thrown when GRAVITY_RAIL_API_KEY is missing. Routes map this to HTTP 503. */
+export class GravityRailNotConfiguredError extends GravityRailError {
+  constructor() {
+    super('GRAVITY_RAIL_API_KEY is not configured', 'not_configured', 503);
+    this.name = 'GravityRailNotConfiguredError';
+  }
+}
+
 // ── Singleton factory ─────────────────────────────────────────────────────────
 
 let _client: GravityRailClient | null = null;
 
+export function isGravityRailApiConfigured(): boolean {
+  return Boolean(process.env.GRAVITY_RAIL_API_KEY);
+}
+
+/**
+ * Test-only: drop the cached client so a later getGravityRailClient()
+ * re-reads GRAVITY_RAIL_API_KEY. Never call from request handlers.
+ */
+export function resetGravityRailClientForTests(): void {
+  _client = null;
+}
+
 /**
  * Returns a singleton GravityRailClient using the GRAVITY_RAIL_API_KEY env var.
  * Safe to call server-side only — the API key is never exposed to the browser.
+ * Missing key → GravityRailNotConfiguredError (503), never a fake workspace.
  */
 export function getGravityRailClient(): GravityRailClient {
   if (!_client) {
     const apiKey = process.env.GRAVITY_RAIL_API_KEY;
     if (!apiKey) {
-      throw new Error(
-        'GRAVITY_RAIL_API_KEY is not set. Add it to .env.local — see .env.local.example.',
-      );
+      throw new GravityRailNotConfiguredError();
     }
     _client = new GravityRailClient(apiKey);
   }

@@ -5,6 +5,18 @@ Future Claude/Cole/Jonah sessions: read this first.
 
 ---
 
+## Gravity Rail loop (2026-08-24) — code-complete, NOT live, NOT deal-ready
+
+The inbound/outbound/provisioner loop on `feature/merge-and-instrument` is now closed in code. This is **not production** and **not deal-ready**.
+
+- **Inbound:** `POST /api/gr/webhook` and `POST /api/intake/voice` honor `docs/INTAKE_CONTRACT.md` v1.1. A verified payload creates or idempotently returns a case via `dispatchFinalization`. Production with no `GR_WEBHOOK_SECRET` fails closed. Production never silently demo-drops live intake.
+- **Outbound:** `GravityRailClient` is server-only. Missing `GRAVITY_RAIL_API_KEY` → 503 (`not_configured`), never a fake `ws-*` workspace. The browser widget renders only when `NEXT_PUBLIC_GRAVITY_RAIL_WORKSPACE_ID` and `NEXT_PUBLIC_GRAVITY_RAIL_SITE_ID` are actually set.
+- **Provisioner:** `lib/gravity-rails/provisioner.ts` no longer invents placeholder ids. `persistToStaff` refuses them. Wired to existing `POST /api/staff` when the API key is present. Schema columns already exist (`030_gravity_rail_staff.sql` + RDS twin).
+- **Still Cole/Jonah, not this repo:** live GR workspace, phone numbers, and keys. `ENABLE_BRIEF_QUEUE` stays default-false. Do not put GR secrets on the public vantaum.com Vercel project.
+- External story remains outcome quality. Gravity Rail is never named as the engine.
+
+---
+
 ## 📌 KEY INSIGHTS — 2026-06-25 (Internal Tool + Cross-Stream Velocity)
 
 **Insight 1: The Brief Engine is for ourselves (internal tooling).**
