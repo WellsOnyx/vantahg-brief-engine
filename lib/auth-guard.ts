@@ -4,6 +4,7 @@ import { getServiceClient } from './supabase';
 import { logSecurityEvent } from './audit';
 import { getRequestContext } from './security';
 import { isDemoMode } from './demo-mode';
+import { isProductionRuntime } from './runtime-guard';
 
 export type UserRole =
   | 'admin'
@@ -49,21 +50,18 @@ export interface AuthUser {
  * Returns the authenticated user or a 401 response.
  *
  * Demo mode (no Supabase config) auto-admins ONLY in non-production
- * environments. In production, demo mode + a request to an authenticated
- * route is a 401 — never a free admin session. This closes the bypass
- * where a misconfigured prod (Supabase keys empty in the AWS secrets
- * vault) silently handed admin access to anyone on the internet.
+ * environments. In production, demo mode is a 401 — never a free admin
+ * session, even if a demo_access / ?pw= preview cookie is present.
+ * That cookie may unlock /demo and /demo-tour in middleware only.
  */
-function hasDemoPreviewCookie(request: Request): boolean {
-  const cookie = request.headers.get('cookie') || '';
-  return cookie.includes('demo_access=granted');
-}
-
 export async function requireAuth(
   request: Request
 ): Promise<{ user: AuthUser } | NextResponse> {
-  if (isDemoMode() || hasDemoPreviewCookie(request)) {
-    if (isDemoMode() && process.env.NODE_ENV === 'production' && !hasDemoPreviewCookie(request)) {
+  // Preview cookie is ignored here on purpose. demo_access / ?pw= may
+  // unlock /demo and /demo-tour in middleware only — never an admin
+  // session, never /admin/*, never Partner/IDR APIs, never case mutations.
+  if (isDemoMode()) {
+    if (isProductionRuntime()) {
       const ctx = getRequestContext(request);
       await logSecurityEvent(
         'auth_failure',

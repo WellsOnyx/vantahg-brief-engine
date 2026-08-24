@@ -402,7 +402,7 @@ function ActionPanel({ row, onUpdate }: { row: SignupRow; onUpdate: (next: Signu
               min={0}
               value={pepmDollars}
               onChange={(e) => setPepmDollars(e.target.value)}
-              placeholder="e.g. 2.40"
+              placeholder="e.g. 2.50"
               className="w-full px-3 py-2 border border-border rounded text-sm focus:outline-none focus:ring-2 focus:ring-gold/40"
             />
             <span className="block text-[11px] text-muted mt-1">

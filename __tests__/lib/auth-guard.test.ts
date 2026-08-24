@@ -83,4 +83,52 @@ describe('requireAuth — demo-mode bypass safety', () => {
       expect(result.status).toBe(401);
     }
   });
+
+  it('returns 401 in production demo mode even when demo_access cookie is present', async () => {
+    vi.stubEnv('NODE_ENV', 'production');
+
+    const { requireAuth } = await import('@/lib/auth-guard');
+    const request = new Request('https://app.vantaum.com/api/admin/signups', {
+      headers: { cookie: 'demo_access=granted' },
+    });
+    const result = await requireAuth(request);
+
+    expect(result).not.toHaveProperty('user');
+    if ('status' in result) {
+      expect(result.status).toBe(401);
+    }
+  });
+
+  it('returns 401 in production when NOT in demo mode even with the preview cookie', async () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'https://example.supabase.co');
+    vi.stubEnv('SUPABASE_URL', 'https://example.supabase.co');
+    vi.stubEnv('SUPABASE_SERVICE_ROLE_KEY', 'test-service-role');
+
+    const { requireAuth } = await import('@/lib/auth-guard');
+    const request = new Request('https://app.vantaum.com/api/admin/signups', {
+      headers: { cookie: 'demo_access=granted' },
+    });
+    const result = await requireAuth(request);
+
+    expect(result).not.toHaveProperty('user');
+    if ('status' in result) {
+      expect(result.status).toBe(401);
+    }
+  });
+
+  it('requireRole 401s in production demo mode with the preview cookie', async () => {
+    vi.stubEnv('NODE_ENV', 'production');
+
+    const { requireRole } = await import('@/lib/auth-guard');
+    const request = new Request('https://app.vantaum.com/api/admin/signups', {
+      headers: { cookie: 'demo_access=granted' },
+    });
+    const result = await requireRole(request, ['admin']);
+
+    expect(result).not.toHaveProperty('user');
+    if ('status' in result) {
+      expect(result.status).toBe(401);
+    }
+  });
 });

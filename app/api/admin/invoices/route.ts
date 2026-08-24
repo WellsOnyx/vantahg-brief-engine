@@ -8,6 +8,7 @@ import { logAuditEvent } from '@/lib/audit';
 import { apiError } from '@/lib/api-error';
 import { getRequestContext } from '@/lib/security';
 import { generateInvoice, previousMonthRange, monthRange } from '@/lib/billing/invoice-generator';
+import { UM_PEPM_CENTS } from '@/lib/billing/rate-card-v2';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,9 +28,9 @@ const DEMO_INVOICES = [
     client_name: 'Acme TPA',
     period_start: '2026-04-01',
     period_end: '2026-04-30',
-    pepm_rate_cents: 240,
+    pepm_rate_cents: UM_PEPM_CENTS,
     member_count: 15000,
-    total_cents: 3_600_000,
+    total_cents: UM_PEPM_CENTS * 15000,
     status: 'sent',
     invoice_date: '2026-05-01',
   },
@@ -40,9 +41,9 @@ const DEMO_INVOICES = [
     client_name: 'Sunrise Health Plan',
     period_start: '2026-04-01',
     period_end: '2026-04-30',
-    pepm_rate_cents: 240,
+    pepm_rate_cents: UM_PEPM_CENTS,
     member_count: 8500,
-    total_cents: 2_040_000,
+    total_cents: UM_PEPM_CENTS * 8500,
     status: 'draft',
     invoice_date: '2026-05-01',
   },

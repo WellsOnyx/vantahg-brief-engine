@@ -27,11 +27,11 @@ describe('Meow client - demo mode', () => {
   });
 
   it('createProduct returns a stub with decimal-string price', async () => {
-    const r = await createProduct({ name: 'VantaUM PEPM', default_price: 2.4 });
+    const r = await createProduct({ name: 'VantaUM PEPM', default_price: 2.5 });
     expect(r.ok).toBe(true);
     if (r.ok) {
       expect(r.data.id).toBe('demo-product-vantaum-pepm');
-      expect(r.data.default_price).toBe('2.40');
+      expect(r.data.default_price).toBe('2.50');
     }
   });
 
@@ -44,12 +44,12 @@ describe('Meow client - demo mode', () => {
       payment_method_types: ['BANK_TRANSFER', 'ACH_DIRECT_DEBIT'],
       send_email_on_creation: true,
       line_items: [
-        { product_id: 'p1', quantity: 1500, price: 2.4 },
+        { product_id: 'p1', quantity: 1500, price: 2.5 },
       ],
     });
     expect(r.ok).toBe(true);
     if (r.ok) {
-      expect(r.data.total).toBe('3600.00');
+      expect(r.data.total).toBe('3750.00');
       expect(r.data.status).toBe('OPEN');
     }
   });

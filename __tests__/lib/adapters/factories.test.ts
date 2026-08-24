@@ -28,7 +28,7 @@ describe('storage adapter factory', () => {
     const mod = await import('@/lib/adapters/storage');
     mod.setStorageAdapter(null);
     const { SupabaseStorageAdapter } = await import('@/lib/adapters/storage/supabase');
-    expect(mod.getStorageAdapter()).toBeInstanceOf(SupabaseStorageAdapter);
+    expect(await mod.getStorageAdapter()).toBeInstanceOf(SupabaseStorageAdapter);
   });
 
   it('returns S3 stub adapter when ENABLE_AWS_STORAGE=true', async () => {
@@ -36,7 +36,7 @@ describe('storage adapter factory', () => {
     const mod = await import('@/lib/adapters/storage');
     mod.setStorageAdapter(null);
     const { S3StorageAdapter } = await import('@/lib/adapters/storage/s3');
-    expect(mod.getStorageAdapter()).toBeInstanceOf(S3StorageAdapter);
+    expect(await mod.getStorageAdapter()).toBeInstanceOf(S3StorageAdapter);
   });
 
   it('S3 adapter instantiates without throwing', async () => {
@@ -68,9 +68,14 @@ describe('auth adapter factory', () => {
   it('Cognito stub throws on createUserWithMagicLink', async () => {
     const { CognitoAuthAdapter } = await import('@/lib/adapters/auth/cognito');
     const c = new CognitoAuthAdapter();
-    await expect(
-      c.createUserWithMagicLink({ email: 'a@b.test', redirectUrl: 'https://x.test/' }),
-    ).rejects.toThrow(/not implemented/);
+    const result = await c.createUserWithMagicLink({
+      email: 'a@b.test',
+      redirectUrl: 'https://x.test/',
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.message).toMatch(/COGNITO_USER_POOL_ID|not implemented|must be set/i);
+    }
   });
 });
 
@@ -115,7 +120,7 @@ describe('override seam', () => {
     const mod = await import('@/lib/adapters/storage');
     const fake = { upload: async () => ({ ok: true as const, path: 'x', bytes: 0 }) } as never;
     mod.setStorageAdapter(fake);
-    expect(mod.getStorageAdapter()).toBe(fake);
+    expect(await mod.getStorageAdapter()).toBe(fake);
     mod.setStorageAdapter(null);
   });
 });

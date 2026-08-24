@@ -54,9 +54,9 @@ export async function authenticatePartner(request: Request): Promise<PartnerPrin
   if (!apiKey) return null;
 
   if (isDemoMode()) {
-    // Preview deployments: any non-empty key exercises the demo partner.
-    // Real deployments never take this branch (demo mode is refused
-    // upstream in production without the demo grant).
+    // Local/dev only. Production demo must not mint a partner principal
+    // for any non-empty key — that was a public write.
+    if (process.env.NODE_ENV === 'production') return null;
     return DEMO_PARTNER;
   }
 

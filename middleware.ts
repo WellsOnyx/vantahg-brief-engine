@@ -1,6 +1,12 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { isDemoMode } from '@/lib/demo-mode';
+import { isLocalDemoRuntime } from '@/lib/runtime-guard';
+import {
+  DEMO_PREVIEW_COOKIE,
+  DEMO_PREVIEW_VALUE,
+  demoPreviewCookieOptions,
+} from '@/lib/demo-preview-cookie';
 
 // Public marketing / auth-flow page prefixes. `startsWith` semantics are
 // intentional here because routes like `/signup-tpa` and `/demo-tour` are
@@ -52,21 +58,15 @@ function isPublicRoute(pathname: string): boolean {
   return false;
 }
 
-function isDemoProtectedRoute(pathname: string): boolean {
-  // Do not protect the password gate itself
-  if (pathname.startsWith('/demo-password')) return false;
-
-  // Protect the main demo experiences and the "full app UI" demo surfaces
-  const protectedPrefixes = [
-    '/demo',
-    '/demo-tour',
-    '/cases',
-    '/dashboard',
-    '/quality',
-    '/mission-control',
-    '/ops',
-  ];
-  return protectedPrefixes.some((p) => pathname === p || pathname.startsWith(p + '/'));
+function isPreviewOnlyRoute(pathname: string): boolean {
+  // Preview cookie may unlock /demo and /demo-tour only. Never /admin/*,
+  // never Partner/IDR APIs, never case mutations, never the full-app UI.
+  return (
+    pathname === '/demo' ||
+    pathname.startsWith('/demo/') ||
+    pathname === '/demo-tour' ||
+    pathname.startsWith('/demo-tour/')
+  );
 }
 
 // Edge-runtime-safe Cognito session presence check. Reads the
@@ -97,25 +97,24 @@ export async function middleware(request: NextRequest) {
   const pw = request.nextUrl.searchParams.get('pw');
   const correctPw = process.env.DEMO_PASSWORD;
   if (pw && correctPw && pw === correctPw) {
+    // Cookie may only land on the preview surfaces. A ?pw= on /admin or
+    // any other path must not bounce the caller into a privileged page.
+    const dest = isPreviewOnlyRoute(pathname) ? pathname : '/demo';
     const res = NextResponse.redirect(
-      new URL(pathname === '/' ? '/demo' : pathname, request.url)
+      new URL(dest, request.url)
     );
     // Clean the ?pw from the final URL
     const finalUrl = new URL(res.headers.get('location') || request.url);
     finalUrl.searchParams.delete('pw');
     res.headers.set('location', finalUrl.toString());
 
-    res.cookies.set('demo_access', 'granted', {
-      // not httpOnly so client pages can detect it for synthetic data fallback
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 60 * 60 * 24 * 30,
-    });
+    res.cookies.set(DEMO_PREVIEW_COOKIE, DEMO_PREVIEW_VALUE, demoPreviewCookieOptions());
     return res;
   }
 
-  if (isPublicRoute(pathname)) {
+  if (pathname === '/api/intake/efax' && request.method === 'GET') {
+    // GET is the admin queue lookup (PHI). Not a webhook. Fall through to auth.
+  } else if (isPublicRoute(pathname)) {
     // Fail-closed: never let a public intake webhook silently demo-drop when the
     // environment requires real persistence but the DB isn't configured.
     if (
@@ -145,17 +144,19 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Demo password protection for exclusive preview access
-  // Protects the canned demo + full app demo surfaces so only people with the password can see it.
-  if (isDemoProtectedRoute(pathname)) {
-    const hasDemoAccess = request.cookies.get('demo_access')?.value === 'granted';
+  // Preview cookie unlocks /demo and /demo-tour only.
+  if (isPreviewOnlyRoute(pathname)) {
+    const hasDemoAccess = request.cookies.get(DEMO_PREVIEW_COOKIE)?.value === DEMO_PREVIEW_VALUE;
     if (!hasDemoAccess) {
       const passwordUrl = request.nextUrl.clone();
       passwordUrl.pathname = '/demo-password';
       passwordUrl.searchParams.set('next', pathname + request.nextUrl.search);
       return NextResponse.redirect(passwordUrl);
     }
+    return NextResponse.next();
   }
+
+  // Cookie must never satisfy /admin, partner/IDR APIs, or case surfaces.
 
   // Cognito session short-circuit: if the caller has a plausible
   // vantaum_session cookie, let them through. Per-route auth-guard
@@ -177,7 +178,7 @@ export async function middleware(request: NextRequest) {
   // explicitly opted into. Outside demo mode, missing config means the deploy is broken — block
   // protected routes rather than silently allowing them through.
   if (!supabaseUrl || !supabaseAnonKey) {
-    if (isDemoMode()) {
+    if (isLocalDemoRuntime()) {
       return response;
     }
     if (pathname.startsWith('/api/')) {

@@ -210,72 +210,6 @@ export default function CasesListPage() {
 
   // Build query params and fetch cases
   const fetchCases = useCallback(async () => {
-    // Force synthetic data if we have the demo password cookie (from the protected preview flow).
-    // This makes "Explore full app UI (synthetic data)" actually work instead of erroring.
-    const hasDemoCookie = typeof document !== 'undefined' && document.cookie.includes('demo_access=granted');
-    if (hasDemoCookie) {
-      setLoading(true);
-      setError(null);
-      const now = Date.now();
-      const staticDemo = [
-        {
-          id: 'demo-mri',
-          case_number: 'VUM-2026-004821',
-          patient_name: 'Maria Santos',
-          patient_member_id: 'SWA-2026-88421',
-          requesting_provider: 'Dr. Sarah Chen, MD',
-          procedure_codes: ['72148'],
-          procedure_description: 'MRI Lumbar Spine without Contrast',
-          diagnosis_codes: ['M54.5', 'M54.16'],
-          service_category: 'imaging',
-          review_type: 'prior_auth',
-          priority: 'standard',
-          status: 'brief_ready',
-          created_at: new Date(now - 1000 * 60 * 60 * 2).toISOString(),
-          turnaround_deadline: new Date(now + 1000 * 60 * 60 * 46).toISOString(),
-          ai_brief: { ai_recommendation: { recommendation: 'approve' } },
-          fact_check: { overall_score: 96 },
-          reviewer: { name: 'Dr. Priya Patel' },
-          client: { name: 'Southwest Administrators' }
-        } as any,
-        {
-          id: 'demo-tka',
-          case_number: 'VUM-2026-004822',
-          patient_name: 'John Rivera',
-          procedure_codes: ['27447'],
-          procedure_description: 'Total Knee Arthroplasty',
-          service_category: 'surgery',
-          review_type: 'prior_auth',
-          priority: 'urgent',
-          status: 'lpn_review',
-          created_at: new Date(now - 1000 * 60 * 60 * 5).toISOString(),
-          turnaround_deadline: new Date(now + 1000 * 60 * 60 * 20).toISOString(),
-          reviewer: null,
-          client: { name: 'Southwest Administrators' }
-        } as any,
-        {
-          id: 'demo-cpap',
-          case_number: 'VUM-2026-004823',
-          patient_name: 'Robert Garcia',
-          procedure_codes: ['E0601'],
-          procedure_description: 'Continuous positive airway pressure (CPAP) device',
-          diagnosis_codes: ['G47.33'],
-          service_category: 'dme',
-          review_type: 'prior_auth',
-          priority: 'standard',
-          status: 'intake',
-          created_at: new Date(now - 1000 * 60 * 30).toISOString(),
-          turnaround_deadline: new Date(now + 1000 * 60 * 60 * 23).toISOString(),
-          reviewer: null,
-          client: { name: 'Southwest Administrators' }
-        } as any,
-      ];
-      setCases(staticDemo);
-      setUsingDemoData(true);
-      setLoading(false);
-      return;
-    }
-
     setLoading(true);
     setError(null);
 
@@ -301,71 +235,9 @@ export default function CasesListPage() {
       const data = await res.json();
       setCases(data);
     } catch (err) {
-      // Static synthetic demo data fallback for "explore full app UI" from canned demo.
-      // Complete fields to avoid render errors in table/sorts/SLA etc.
-      // Mirrors the rich demo-data used by /demo-tour.
-      setUsingDemoData(true);
-      setError(null);
-      const now = Date.now();
-      const staticDemo = [
-        {
-          id: 'demo-mri',
-          case_number: 'VUM-2026-004821',
-          patient_name: 'Maria Santos',
-          patient_member_id: 'SWA-2026-88421',
-          requesting_provider: 'Dr. Sarah Chen, MD',
-          procedure_codes: ['72148'],
-          procedure_description: 'MRI Lumbar Spine without Contrast',
-          diagnosis_codes: ['M54.5', 'M54.16'],
-          service_category: 'imaging',
-          review_type: 'prior_auth',
-          priority: 'standard',
-          status: 'brief_ready',
-          created_at: new Date(now - 1000 * 60 * 60 * 2).toISOString(),
-          turnaround_deadline: new Date(now + 1000 * 60 * 60 * 46).toISOString(),
-          ai_brief: { ai_recommendation: { recommendation: 'approve' } },
-          fact_check: { overall_score: 96 },
-          reviewer: { name: 'Dr. Priya Patel' },
-          client: { name: 'Southwest Administrators' }
-        } as any,
-        {
-          id: 'demo-tka',
-          case_number: 'VUM-2026-004822',
-          patient_name: 'John Rivera',
-          patient_member_id: 'SWA-2026-88422',
-          requesting_provider: 'Dr. Michael Torres, MD',
-          procedure_codes: ['27447'],
-          procedure_description: 'Total Knee Arthroplasty',
-          diagnosis_codes: ['M17.11'],
-          service_category: 'surgery',
-          review_type: 'prior_auth',
-          priority: 'urgent',
-          status: 'lpn_review',
-          created_at: new Date(now - 1000 * 60 * 60 * 5).toISOString(),
-          turnaround_deadline: new Date(now + 1000 * 60 * 60 * 20).toISOString(),
-          reviewer: { name: 'Dr. James Richardson' },
-          client: { name: 'Southwest Administrators' }
-        } as any,
-        {
-          id: 'demo-cpap',
-          case_number: 'VUM-2026-004823',
-          patient_name: 'Robert Garcia',
-          patient_member_id: 'SWA-2026-88423',
-          requesting_provider: 'Dr. Lisa Wong, MD',
-          procedure_codes: ['E0601'],
-          procedure_description: 'Continuous positive airway pressure (CPAP) device',
-          diagnosis_codes: ['G47.33'],
-          service_category: 'dme',
-          review_type: 'prior_auth',
-          priority: 'standard',
-          status: 'intake',
-          created_at: new Date(now - 1000 * 60 * 30).toISOString(),
-          turnaround_deadline: new Date(now + 1000 * 60 * 60 * 23).toISOString(),
-          reviewer: null,
-          client: { name: 'Southwest Administrators' }
-        } as any,
-      ];
-      setCases(staticDemo);
+      setUsingDemoData(false);
+      setCases([]);
+      setError(err instanceof Error ? err.message : 'Failed to fetch cases');
     } finally {
       setLoading(false);
     }

@@ -64,9 +64,12 @@ describe('buildKickoffIcal', () => {
       ],
     });
     expect(ics).toContain('ORGANIZER;CN=VantaUM Delivery:mailto:delivery@vantaum.com');
-    expect(ics).toContain('ATTENDEE;CN=Jane TPA;RSVP=TRUE;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION:mailto:jane@acme.example');
+    // RFC 5545 folds at 75 octets, so the mailto: may continue on the next line.
+    expect(ics).toContain('ATTENDEE;CN=Jane TPA;RSVP=TRUE;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION:');
+    expect(ics.replace(/\r\n /g, '')).toContain('mailto:jane@acme.example');
     // rsvp:false should drop the RSVP=TRUE
-    expect(ics).toContain('ATTENDEE;CN=Bob TPA;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION:mailto:bob@acme.example');
+    expect(ics).toContain('ATTENDEE;CN=Bob TPA;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION:');
+    expect(ics.replace(/\r\n /g, '')).toContain('mailto:bob@acme.example');
   });
 
   it('uses CRLF line endings (RFC 5545 compliance)', () => {

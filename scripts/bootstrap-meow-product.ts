@@ -13,6 +13,7 @@
  */
 
 import { createProduct } from '@/lib/billing/meow-client';
+import { UM_PEPM_USD } from '@/lib/billing/rate-card-v2';
 
 async function main() {
   if (process.env.MEOW_VANTAUM_PRODUCT_ID) {
@@ -37,7 +38,7 @@ async function main() {
     name: 'VantaUM PEPM',
     description:
       'Per-eligible-per-member monthly subscription fee for VantaUM Utilization Management services. Invoiced monthly in arrears.',
-    default_price: 2.4, // canonical PEPM placeholder — actual rate overridden per invoice line item
+    default_price: UM_PEPM_USD, // rate card v2.0 UM PEPM — line items may still override
   });
 
   if (!result.ok) {

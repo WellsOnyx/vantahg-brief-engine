@@ -11,7 +11,9 @@
  * normalizers (e.g. Phaxio) live in their own routes under
  * `/api/intake/efax/<provider>/route.ts`.
  *
- * The GET handler remains the admin queue lookup and is unchanged.
+ * GET is the staff queue lookup (PHI). It is auth-gated; it is not a
+ * public webhook. POST is the generic webhook and fail-closes when
+ * EFAX_WEBHOOK_SECRET is unset outside local/dev demo.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -21,6 +23,8 @@ import { logAuditEvent } from '@/lib/audit';
 import { applyRateLimit } from '@/lib/rate-limit-middleware';
 import { type EfaxPayload } from '@/lib/intake/efax-parser';
 import { generateAuthorizationNumber, logIntakeEvent } from '@/lib/intake/confirmation';
+import { requireRole, INTERNAL_STAFF_ROLES } from '@/lib/auth-guard';
+import { rejectIfWebhookSecretMissing } from '@/lib/webhook-fail-closed';
 import crypto from 'crypto';
 
 export const dynamic = 'force-dynamic';
@@ -44,8 +48,10 @@ export async function POST(request: NextRequest) {
     const rateLimited = await applyRateLimit(request, { maxRequests: 60 });
     if (rateLimited) return rateLimited;
 
-    // Verify webhook signature if configured
+    // Fail closed when EFAX_WEBHOOK_SECRET is unset (except local/dev demo).
     const webhookSecret = process.env.EFAX_WEBHOOK_SECRET;
+    const missing = rejectIfWebhookSecretMissing(webhookSecret);
+    if (missing) return missing;
     if (webhookSecret) {
       const signature =
         request.headers.get('x-webhook-signature') ||
@@ -198,6 +204,9 @@ export async function POST(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   try {
+    const authResult = await requireRole(request, [...INTERNAL_STAFF_ROLES]);
+    if (authResult instanceof NextResponse) return authResult;
+
     const rateLimited = await applyRateLimit(request, { maxRequests: 100 });
     if (rateLimited) return rateLimited;
 
