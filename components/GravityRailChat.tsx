@@ -124,9 +124,9 @@ export function GravityRailChat({
     scriptRef.current = script;
 
     return () => {
-      // Remove the script on unmount
+      // Remove the script on unmount (node may already be detached in tests).
       if (scriptRef.current) {
-        document.body.removeChild(scriptRef.current);
+        scriptRef.current.remove();
         scriptRef.current = null;
       }
       // Remove any GR widget iframe the script injected
