@@ -3,6 +3,7 @@ import { verifyWebhookSignature } from '@/lib/webhook-verify';
 import { logAuditEvent } from '@/lib/audit';
 import { applyRateLimit } from '@/lib/rate-limit-middleware';
 import { getRequestContext } from '@/lib/security';
+import { rejectIfWebhookSecretMissing } from '@/lib/webhook-fail-closed';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,6 +15,9 @@ export async function POST(request: NextRequest) {
     const body = await request.text();
     const signature = request.headers.get('x-webhook-signature') || '';
     const secret = process.env.WEBHOOK_SECRET || '';
+
+    const missing = rejectIfWebhookSecretMissing(secret);
+    if (missing) return missing;
 
     // Verify HMAC signature when secret is configured
     if (secret) {

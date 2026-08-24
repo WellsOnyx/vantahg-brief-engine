@@ -1,0 +1,25 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - feature/merge-and-instrument
+      - 'cursor/**'
+  pull_request:
+    branches:
+      - feature/merge-and-instrument
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npm run lint
+      - run: npm run test:ci

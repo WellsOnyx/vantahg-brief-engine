@@ -103,6 +103,6 @@ CREATE POLICY "Internal staff full access to signup_requests"
 COMMENT ON TABLE signup_requests IS
   'TPA self-serve signup submissions. Status flow: pending_review → approved/rejected → signed → live. Tenant creation happens on approve and links via client_id. BAA must exist (uploaded or DocuSign-completed) before approve.';
 COMMENT ON COLUMN signup_requests.pepm_rate_cents IS
-  'PEPM rate in cents to avoid float-comparison issues (e.g. $2.40 = 240).';
+  'PEPM rate in cents to avoid float-comparison issues (e.g. $2.50 = 250).';
 COMMENT ON COLUMN signup_requests.contract_storage_path IS
   'Path in Supabase Storage (Phase 1.0 manual upload). Replaced by DocuSign envelope ID in Phase 1.1.';

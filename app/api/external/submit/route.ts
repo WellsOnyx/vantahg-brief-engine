@@ -13,6 +13,7 @@ import {
 } from '@/lib/intake/efax/storage';
 import { finalizeIntakeCase, isChannelAgnosticIntakeEnabled } from '@/lib/intake/finalize-case';
 import crypto from 'crypto';
+import { isLocalDemoRuntime } from '@/lib/runtime-guard';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,7 +41,10 @@ export async function POST(request: NextRequest) {
     const apiKey = request.headers.get('x-api-key');
     const signature = request.headers.get('x-signature');
 
-    if (!isDemoMode()) {
+    // Local/dev demo may skip key auth. Production — including production
+    // demo mode — rejects when EXTERNAL_API_KEYS is empty. This is not a
+    // public write.
+    if (!isLocalDemoRuntime()) {
       if (!apiKey) {
         await logAuditEvent(null, 'security:external_submit_no_api_key', 'system');
         return NextResponse.json({ error: 'x-api-key header required' }, { status: 401 });
@@ -51,7 +55,7 @@ export async function POST(request: NextRequest) {
       // non-empty header passed, which made auth "header present" on
       // deployments that never configured keys.
       const validKeys = (process.env.EXTERNAL_API_KEYS || '').split(',').map((k) => k.trim()).filter(Boolean);
-      if (!validKeys.includes(apiKey)) {
+      if (validKeys.length === 0 || !validKeys.includes(apiKey)) {
         await logAuditEvent(null, 'security:external_submit_invalid_key', 'system', { api_key_prefix: apiKey.substring(0, 8) });
         return NextResponse.json({ error: 'Invalid API key' }, { status: 401 });
       }

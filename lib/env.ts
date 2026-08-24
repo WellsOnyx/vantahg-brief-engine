@@ -202,16 +202,17 @@ export function getMeowConfig(): MeowConfig {
 }
 
 /**
- * Hard guard for cron endpoints. Demo mode is a no-op (so local `curl`
- * workflows work without auth). Production REQUIRES `CRON_SECRET` to be set
- * AND the request header to match — there is no "silent allow" path.
+ * Hard guard for cron endpoints.
  *
- * Throws on failure. Callers should catch and return 401 (see both cron
- * route handlers for the pattern).
+ * Local/dev demo is a no-op so `curl` workflows still work. Production
+ * REQUIRES `CRON_SECRET` even when isDemoMode() is true (empty DB secrets
+ * must not turn the cron surface into an unauthenticated no-op).
+ *
+ * Throws on failure. Callers should catch and return 401.
  */
 export function requireCronSecret(authorizationHeader: string | null | undefined): void {
-  if (canonicalIsDemoMode()) return;
-  const expected = getEnv().CRON_SECRET;
+  if (canonicalIsDemoMode() && process.env.NODE_ENV !== 'production') return;
+  const expected = process.env.CRON_SECRET || getEnv().CRON_SECRET;
   if (!expected) {
     throw new Error('CRON_SECRET must be set in production');
   }

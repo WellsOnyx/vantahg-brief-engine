@@ -18,9 +18,8 @@
  *     committee workflow (see docs/CREDENTIALING_PLAN.md). It shares the
  *     intake + queue chassis but none of the clinical stages.
  *
- * Every rate here is a placeholder wired to a cost_center + price_basis;
- * real numbers come from the calibrated cost model and the signed rate
- * card. Nothing here sets a price — it sets the STRUCTURE prices attach to.
+ * Dollars live in lib/billing/rate-card-v2.ts (the only dollar source).
+ * This module sets the STRUCTURE those prices attach to — not the amounts.
  */
 
 import type { LaborStream } from '@/lib/labor-metric';

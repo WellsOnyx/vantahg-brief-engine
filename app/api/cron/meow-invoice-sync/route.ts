@@ -47,15 +47,13 @@ type CronOutcome = {
 
 export async function GET(request: NextRequest) {
   try {
-    if (!isDemoMode()) {
-      try {
-        requireCronSecret(request.headers.get('authorization'));
-      } catch (err) {
-        return NextResponse.json(
-          { error: err instanceof Error ? err.message : 'Unauthorized' },
-          { status: 401 },
-        );
-      }
+    try {
+      requireCronSecret(request.headers.get('authorization'));
+    } catch (err) {
+      return NextResponse.json(
+        { error: err instanceof Error ? err.message : 'Unauthorized' },
+        { status: 401 },
+      );
     }
 
     if (isDemoMode()) {

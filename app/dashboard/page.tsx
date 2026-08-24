@@ -212,76 +212,6 @@ export default function DashboardPage() {
   }, []);
 
   async function fetchCases() {
-    // If demo cookie present (from password-protected preview), use synthetic data directly
-    // so the "full app UI" shows canned cases instead of failing to load.
-    const hasDemoCookie = typeof document !== 'undefined' && document.cookie.includes('demo_access=granted');
-    if (hasDemoCookie) {
-      setLoading(true);
-      setError(null);
-      const now = Date.now();
-      const staticDemo = [
-        {
-          id: 'demo-mri',
-          case_number: 'VUM-2026-004821',
-          patient_name: 'Maria Santos',
-          status: 'brief_ready',
-          priority: 'standard',
-          case_type: 'um',
-          created_at: new Date(now - 1000 * 60 * 60 * 2).toISOString(),
-          turnaround_deadline: new Date(now + 1000 * 60 * 60 * 46).toISOString(),
-          service_category: 'imaging',
-        } as any,
-        {
-          id: 'demo-tka',
-          case_number: 'VUM-2026-004822',
-          patient_name: 'John Rivera',
-          status: 'lpn_review',
-          priority: 'urgent',
-          case_type: 'um',
-          created_at: new Date(now - 1000 * 60 * 60 * 5).toISOString(),
-          turnaround_deadline: new Date(now + 1000 * 60 * 60 * 20).toISOString(),
-          service_category: 'surgery',
-        } as any,
-        {
-          id: 'demo-cpap',
-          case_number: 'VUM-2026-004823',
-          patient_name: 'Robert Garcia',
-          status: 'intake',
-          priority: 'standard',
-          case_type: 'um',
-          created_at: new Date(now - 1000 * 60 * 30).toISOString(),
-          turnaround_deadline: new Date(now + 1000 * 60 * 60 * 23).toISOString(),
-          service_category: 'dme',
-        } as any,
-        {
-          id: 'demo-idr-1',
-          case_number: 'VUM-IDR-0301',
-          patient_name: 'Alex Thompson',
-          status: 'under_attorney_review',
-          priority: 'urgent',
-          case_type: 'payer_idr',
-          created_at: new Date(now - 1000 * 60 * 60 * 6).toISOString(),
-          turnaround_deadline: new Date(now + 1000 * 60 * 60 * 30).toISOString(),
-          service_category: 'other',
-          billed_amount_cents: 4850000,
-        } as any,
-        {
-          id: 'demo-iro-1',
-          case_number: 'VUM-IRO-0401',
-          patient_name: 'Marcus Hale',
-          status: 'md_review',
-          priority: 'standard',
-          case_type: 'iro',
-          created_at: new Date(now - 1000 * 60 * 60 * 10).toISOString(),
-          turnaround_deadline: new Date(now + 1000 * 60 * 60 * 50).toISOString(),
-          service_category: 'surgery',
-        } as any,
-      ];
-      setCases(staticDemo);
-      setLoading(false);
-      return;
-    }
-
     setLoading(true);
     setError(null);
     try {
@@ -293,37 +223,8 @@ export default function DashboardPage() {
       setCases(data);
     } catch (err) {
       console.error('Failed to fetch cases:', err);
-      // Always fallback to synthetic for the "explore full app UI" experience
-      const now = Date.now();
-      const staticDemo = [
-        {
-          id: 'demo-mri', case_number: 'VUM-2026-004821', patient_name: 'Maria Santos',
-          status: 'brief_ready', priority: 'standard', case_type: 'um', created_at: new Date(now - 1000 * 60 * 60 * 2).toISOString(),
-          turnaround_deadline: new Date(now + 1000 * 60 * 60 * 46).toISOString(), service_category: 'imaging',
-        } as any,
-        {
-          id: 'demo-tka', case_number: 'VUM-2026-004822', patient_name: 'John Rivera',
-          status: 'lpn_review', priority: 'urgent', case_type: 'um', created_at: new Date(now - 1000 * 60 * 60 * 5).toISOString(),
-          turnaround_deadline: new Date(now + 1000 * 60 * 60 * 20).toISOString(), service_category: 'surgery',
-        } as any,
-        {
-          id: 'demo-cpap', case_number: 'VUM-2026-004823', patient_name: 'Robert Garcia',
-          status: 'intake', priority: 'standard', case_type: 'um', created_at: new Date(now - 1000 * 60 * 30).toISOString(),
-          turnaround_deadline: new Date(now + 1000 * 60 * 60 * 23).toISOString(), service_category: 'dme',
-        } as any,
-        {
-          id: 'demo-idr-1', case_number: 'VUM-IDR-0301', patient_name: 'Alex Thompson',
-          status: 'under_attorney_review', priority: 'urgent', case_type: 'payer_idr', created_at: new Date(now - 1000 * 60 * 60 * 6).toISOString(),
-          turnaround_deadline: new Date(now + 1000 * 60 * 60 * 30).toISOString(), service_category: 'other',
-        } as any,
-        {
-          id: 'demo-iro-1', case_number: 'VUM-IRO-0401', patient_name: 'Marcus Hale',
-          status: 'md_review', priority: 'standard', case_type: 'iro', created_at: new Date(now - 1000 * 60 * 60 * 10).toISOString(),
-          turnaround_deadline: new Date(now + 1000 * 60 * 60 * 50).toISOString(), service_category: 'surgery',
-        } as any,
-      ];
-      setCases(staticDemo);
-      setError(null);
+      setCases([]);
+      setError(err instanceof Error ? err.message : 'Failed to load cases');
     } finally {
       setLoading(false);
     }
@@ -471,14 +372,6 @@ export default function DashboardPage() {
             </button>
           </div>
         </SectionCard>
-      )}
-
-      {/* Synthetic banner (demo mode) */}
-      {typeof document !== 'undefined' && document.cookie.includes('demo_access=granted') && (
-        <div className="mb-4 rounded-lg border border-gold/40 bg-gold/5 px-4 py-2 text-xs text-gold-dark flex items-center gap-2">
-          <span className="font-semibold">DEMO MODE</span>
-          <span>Synthetic data — internal team dashboard. Streams: UM • Medical Review (gated) • IRO/IRE. IDR paused. Role lenses active.</span>
-        </div>
       )}
 
       {/* STREAM VIEWS - Primary for internal team categories */}

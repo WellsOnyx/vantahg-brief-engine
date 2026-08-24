@@ -13,6 +13,7 @@ import {
 import { finalizeIntakeCase, isChannelAgnosticIntakeEnabled } from '@/lib/intake/finalize-case';
 import { apiError } from '@/lib/api-error';
 import { getRequestContext } from '@/lib/security';
+import { rejectIfWebhookSecretMissing, webhookSecretMatches } from '@/lib/webhook-fail-closed';
 
 export const dynamic = 'force-dynamic';
 
@@ -73,6 +74,22 @@ export async function POST(request: NextRequest) {
   try {
     const rateLimited = await applyRateLimit(request, { maxRequests: 60 });
     if (rateLimited) return rateLimited;
+
+    const emailSecret = process.env.EMAIL_WEBHOOK_SECRET;
+    const missing = rejectIfWebhookSecretMissing(emailSecret);
+    if (missing) return missing;
+    if (emailSecret) {
+      const presented =
+        request.headers.get('x-webhook-secret') ||
+        request.headers.get('authorization') ||
+        request.nextUrl.searchParams.get('token');
+      if (!webhookSecretMatches(emailSecret, presented)) {
+        await logAuditEvent(null, 'security:email_webhook_invalid_secret', 'system', {
+          reason: 'invalid_or_missing_secret',
+        });
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+    }
 
     // Parse the multipart/form-data sent by SendGrid Inbound Parse
     const formData = await request.formData();

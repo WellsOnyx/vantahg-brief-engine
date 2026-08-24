@@ -6,6 +6,7 @@ import { createBrowserClient, hasBrowserSupabaseConfig } from '@/lib/supabase-br
 import type { Client, OnboardingStatus } from '@/lib/types';
 import { EmptyState } from '@/components/EmptyState';
 import { PageFrame } from '@/components/PageFrame';
+import { UM_PEPM_USD, formatUsd } from '@/lib/billing/rate-card-v2';
 
 /**
  * Local role type. The shared `BillingRole` in `lib/auth-guard.ts` is narrower
@@ -36,17 +37,16 @@ interface UsageMetricsLite {
  * access-denied state. Demo mode (no Supabase configured) treats the
  * viewer as admin so the page is reachable in local/preview deploys.
  *
- * Phase 1 = foundation. Revenue numbers are stubs ($15K/mo per client,
- * fixed $2.40 PEPM). Real Stripe + member-count plumbing lands in Phase 2.
- * The Anthropic cost line and brief volume are real (sourced from
- * /api/admin/usage-metrics).
+ * Phase 1 = foundation. MRR per client is still a stub ($15K/mo).
+ * PEPM comes from rate card v2.0 (the only dollar source). Member-count
+ * plumbing is not live. The Anthropic cost line and brief volume are
+ * real (sourced from /api/admin/usage-metrics).
  */
 
 const ALLOWED_ROLES: BillingRole[] = ['admin', 'ceo', 'slt'];
 
-// Stub pricing assumptions — replace once Stripe + real PEPM source land.
+// Stub MRR only — PEPM is the locked rate-card line, not a stub.
 const STUB_MRR_PER_CLIENT_USD = 15_000;
-const STUB_PEPM_USD = 2.4;
 
 type GateState =
   | { kind: 'loading' }
@@ -260,7 +260,7 @@ export default function AdminBillingPage() {
         />
         <HeroKpi
           label="PEPM"
-          value={`$${STUB_PEPM_USD.toFixed(2)}`}
+          value={formatUsd(UM_PEPM_USD)}
           sub="Per member, per month"
           tone="navy"
           stub
@@ -410,7 +410,7 @@ function ClientRow({ client }: { client: Client }) {
         </span>
       </Td>
       <Td>
-        <span className="font-mono text-navy/90">$2.40</span>
+        <span className="font-mono text-navy/90">{formatUsd(UM_PEPM_USD)}</span>
         <span className="ml-1 text-[10px] text-amber-700 font-semibold uppercase">
           stub
         </span>

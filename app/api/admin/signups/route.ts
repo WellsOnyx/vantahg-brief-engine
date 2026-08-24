@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
           primary_contact_phone: null,
           signer_name: null, signer_title: null, signer_email: null,
           estimated_members: 12000,
-          pepm_rate_cents: 240,
+          pepm_rate_cents: 250,
           expected_weekly_auths: 45,
           existing_tpa_system: 'Eldorado',
           notes: null,

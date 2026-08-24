@@ -1,4 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
+import {
+  DEMO_PREVIEW_COOKIE,
+  DEMO_PREVIEW_VALUE,
+  demoPreviewCookieOptions,
+} from '@/lib/demo-preview-cookie';
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,14 +28,7 @@ export async function POST(request: NextRequest) {
 
     // Success — set cookie and return ok
     const res = NextResponse.json({ ok: true });
-    res.cookies.set('demo_access', 'granted', {
-      // not httpOnly so client-side pages (dashboard, cases) can detect the cookie
-      // and force synthetic data instead of hitting protected APIs that 401 in prod demo
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 60 * 60 * 24 * 30, // 30 days
-    });
+    res.cookies.set(DEMO_PREVIEW_COOKIE, DEMO_PREVIEW_VALUE, demoPreviewCookieOptions());
 
     return res;
   } catch {
@@ -49,13 +47,7 @@ export async function GET(request: NextRequest) {
   }
 
   const res = NextResponse.redirect(new URL('/demo', request.url));
-  res.cookies.set('demo_access', 'granted', {
-    // not httpOnly for client detection of synthetic mode
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    path: '/',
-    maxAge: 60 * 60 * 24 * 30,
-  });
+  res.cookies.set(DEMO_PREVIEW_COOKIE, DEMO_PREVIEW_VALUE, demoPreviewCookieOptions());
 
   return res;
 }

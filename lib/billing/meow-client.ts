@@ -41,7 +41,7 @@ export interface CreateCustomerParams {
 export interface CreateProductParams {
   name: string;
   description?: string;
-  /** Default price in dollars, e.g. 2.40. Stored as decimal string by Meow. */
+  /** Default price in dollars, e.g. 2.50. Stored as decimal string by Meow. */
   default_price: number;
 }
 
