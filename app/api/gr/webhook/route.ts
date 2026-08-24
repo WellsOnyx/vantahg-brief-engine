@@ -4,8 +4,6 @@ import { logAuditEvent } from '@/lib/audit';
 import { dispatchFinalization } from '@/lib/intake/brief-queue';
 import { isDemoMode } from '@/lib/demo-mode';
 import { applyRateLimit } from '@/lib/rate-limit-middleware';
-import { parseEmailPayload } from '@/lib/intake/email-parser';
-import type { ParsedEmailData } from '@/lib/intake/email-parser';
 import {
   verifyIntakeSignature,
   getIntakeWebhookSecrets,
@@ -14,6 +12,7 @@ import {
   LEGACY_SIGNATURE_HEADER,
 } from '@/lib/intake/gr-contract';
 import { intakePersistenceGuard } from '@/lib/intake/persistence-guard';
+import { normalizeGrHandoff } from '@/lib/intake/gr-handoff';
 
 /**
  * POST /api/gr/webhook — Canonical Intake Contract v1.1, handoff channel
@@ -21,7 +20,7 @@ import { intakePersistenceGuard } from '@/lib/intake/persistence-guard';
  * endpoint and GR_WEBHOOK_SECRET are unchanged from v1.
  *
  * Inbound from Gravity Rail when an intake chat (web, sms, voice) reaches handoff.
- * Turned into a VantaUM case via the shared chassis.
+ * Turned into a VantaUM case via the shared chassis (dispatchFinalization).
  *
  * Security   : v1.1 — HMAC-SHA256 over `${X-GR-Timestamp}.${rawBody}` in
  *              `X-GR-Signature`, ±300s replay window, dual-secret rotation
@@ -29,11 +28,16 @@ import { intakePersistenceGuard } from '@/lib/intake/persistence-guard';
  *              GRAVITY_RAIL_WEBHOOK_SECRET still honored). The v1 scheme
  *              (plain body HMAC in `X-Webhook-Signature`) is accepted
  *              during the transition window — see ACCEPT_V1_LEGACY_SIGNATURES
- *              in lib/intake/gr-contract.ts. Enforced whenever a secret is
- *              set; real mode requires one (fails closed).
+ *              in lib/intake/gr-contract.ts.
+ *              Production with no secret FAILS CLOSED (500
+ *              webhook_secret_not_configured). Live intake is never
+ *              silently demo-dropped.
  * Idempotency: `Idempotency-Key` header, else the GR `chat_id`. Re-delivery of the
  *              same key returns the existing case (200, idempotent:true) instead
  *              of creating a duplicate.
+ *
+ * This route is code-complete against the contract. It is not live-keyed
+ * and is not production-ready until Cole/Jonah provision a real GR workspace.
  */
 export async function POST(request: NextRequest) {
   const rateLimited = await applyRateLimit(request, { maxRequests: 120 });
@@ -42,11 +46,17 @@ export async function POST(request: NextRequest) {
   // 1) Read the RAW body once — HMAC must verify the exact bytes GR signed.
   const rawBody = await request.text();
 
-  // 2) Verify the signature (shared verifier — same rules as every intake
-  //    channel). Enforced when a secret is configured; real mode requires
-  //    one (never accept unsigned intake into the persistence path).
+  // 2) Verify the signature. Production without a secret refuses intake
+  //    (contract §2.3). Demo-mode is not a substitute for a missing secret
+  //    on a production deploy — that was the silent-drop path.
   const secrets = getIntakeWebhookSecrets();
-  if (secrets.length > 0) {
+  if (secrets.length === 0) {
+    if (process.env.NODE_ENV === 'production') {
+      return NextResponse.json({ error: 'webhook_secret_not_configured' }, { status: 500 });
+    }
+    // Dev/test only: unsigned traffic allowed so local HMAC tests and
+    // scripts/gr-intake-verify.ts can run against a demo deploy.
+  } else {
     const verdict = verifyIntakeSignature({
       rawBody,
       signatureHeader: request.headers.get(SIGNATURE_HEADER),
@@ -58,25 +68,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'invalid_signature', code: verdict.code }, { status: 401 });
     }
     if (verdict.scheme === 'v1_legacy') {
-      // Transition-window visibility: shows in the trail until GR flips to
-      // v1.1 signing and the window can be closed.
       await logAuditEvent(null, 'gr_intake_legacy_signature_used', 'system', {
         channel: 'gr_webhook',
       });
     }
-  } else if (!isDemoMode()) {
-    return NextResponse.json({ error: 'webhook_secret_not_configured' }, { status: 500 });
   }
 
   // 3) Parse the verified body.
-  let payload: Record<string, any>;
+  let payload: Record<string, unknown>;
   try {
     payload = JSON.parse(rawBody || '{}');
   } catch {
     return NextResponse.json({ error: 'invalid_json' }, { status: 400 });
   }
 
-  const workspaceId = payload.workspace_id || payload.wid;
+  const workspaceId =
+    (typeof payload.workspace_id === 'string' && payload.workspace_id) ||
+    (typeof payload.wid === 'string' && payload.wid) ||
+    '';
   if (!workspaceId) {
     return NextResponse.json({ error: 'workspace_id required' }, { status: 400 });
   }
@@ -97,8 +106,19 @@ export async function POST(request: NextRequest) {
   const persistenceBlocked = intakePersistenceGuard();
   if (persistenceBlocked) return persistenceBlocked;
 
-  // Demo mode: acknowledge the (verified) contract without persistence.
+  // Production never acknowledges live intake as a demo success. Local/test
+  // demo may acknowledge the contract without a database.
   if (isDemoMode()) {
+    if (process.env.NODE_ENV === 'production') {
+      return NextResponse.json(
+        {
+          error: 'persistence_unavailable',
+          detail:
+            'Production intake cannot be demo-dropped. Configure the database or unset NODE_ENV=production.',
+        },
+        { status: 503 },
+      );
+    }
     return NextResponse.json({ success: true, demo: true, case_number: caseNumber, idempotent: false });
   }
 
@@ -119,18 +139,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, case_id: existing.id, idempotent: true }, { status: 200 });
     }
 
-    // Find the concierge who owns this GR workspace.
+    // Find the concierge who owns this GR workspace (optional — missing is not fatal).
     const { data: staff } = await supabase
       .from('staff')
-      .select('id, name, email')
+      .select('id')
       .eq('gr_workspace_id', workspaceId)
-      .single();
+      .maybeSingle();
     const conciergeId = staff?.id || null;
 
-    const transcript = payload.transcript || payload.field_values?.transcript;
-    const parsed = parseEmailPayload(
-      transcript || JSON.stringify(payload.field_values || {}),
-    ) as ParsedEmailData & Record<string, any>;
+    const fields = normalizeGrHandoff(payload);
 
     const { data: newCase, error: createErr } = await supabase
       .from('cases')
@@ -138,14 +155,18 @@ export async function POST(request: NextRequest) {
         case_number: caseNumber,
         status: 'intake',
         intake_channel: 'phone',
-        patient_name: parsed.patient_name || payload.from_number || payload.member?.email || 'GR Member',
-        patient_dob: parsed.patient_dob || null,
-        patient_member_id: parsed.patient_member_id || null,
-        procedure_codes: parsed.procedure_codes || [],
-        diagnosis_codes: parsed.diagnosis_codes || [],
-        procedure_description: parsed.procedure_description || payload.title || 'Gravity Rail intake',
-        clinical_question: parsed.clinical_question || null,
-        requesting_provider: parsed.requesting_provider || null,
+        priority: fields.priority,
+        patient_name: fields.patient_name,
+        patient_dob: fields.patient_dob,
+        patient_member_id: fields.patient_member_id,
+        procedure_codes: fields.procedure_codes,
+        diagnosis_codes: fields.diagnosis_codes,
+        procedure_description: fields.procedure_description,
+        clinical_question: fields.clinical_question,
+        requesting_provider: fields.requesting_provider,
+        requesting_provider_npi: fields.requesting_provider_npi,
+        facility_name: fields.facility_name,
+        payer_name: fields.payer_name,
         assigned_concierge_id: conciergeId,
       })
       .select('id')
@@ -171,11 +192,14 @@ export async function POST(request: NextRequest) {
       gr_chat_id: payload.chat_id,
       gr_workspace_id: workspaceId,
       concierge_id: conciergeId,
+      extraction_source: fields.extraction_source,
     });
 
     return NextResponse.json({ success: true, case_id: caseId, idempotent: false }, { status: 201 });
   } catch (err) {
-    console.error('GR webhook error', err);
+    // Do not log the payload — it may contain PHI / member identifiers.
+    const errorKind = err instanceof Error ? err.name : typeof err;
+    console.error('GR webhook error', errorKind);
     return NextResponse.json({ error: 'webhook processing failed' }, { status: 500 });
   }
 }

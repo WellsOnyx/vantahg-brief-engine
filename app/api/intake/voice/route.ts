@@ -64,6 +64,7 @@ import {
 } from '@/lib/intake/gr-contract';
 import { apiError } from '@/lib/api-error';
 import { getRequestContext } from '@/lib/security';
+import { intakePersistenceGuard } from '@/lib/intake/persistence-guard';
 
 export const dynamic = 'force-dynamic';
 
@@ -231,6 +232,10 @@ export async function POST(request: NextRequest) {
     }
     const sandbox = sandboxRequested && isIntakeSandboxEnabled();
 
+    // Fail closed if this env requires real persistence but the DB isn't wired.
+    const persistenceBlocked = intakePersistenceGuard();
+    if (persistenceBlocked) return persistenceBlocked;
+
     const { parsed, source } = normalizeVoice(body);
     const authNumber = await generateAuthorizationNumber();
 
@@ -262,7 +267,6 @@ export async function POST(request: NextRequest) {
     await logAuditEvent(null, 'voice_intake_received', 'system', {
       submission_id: body.submission_id,
       gr_chat_id: body.chat_id ?? null,
-      from_number: body.from_number,
       extraction_source: source,
       authorization_number: authNumber,
       needs_manual_review: !canAutoCreate,
@@ -270,8 +274,20 @@ export async function POST(request: NextRequest) {
     });
 
     if (isDemoMode()) {
-      // Local/dev demo only (production demo mode is refused upstream by the
-      // platform guards). No idempotency ledger in demo — nothing persists.
+      // Production never acknowledges live voice intake as a demo success.
+      if (process.env.NODE_ENV === 'production') {
+        return NextResponse.json(
+          {
+            error: {
+              code: 'not_configured' satisfies IntakeErrorCode,
+              message: 'Production intake cannot be demo-dropped. Configure the database.',
+            },
+            contract_version: INTAKE_CONTRACT_VERSION,
+          },
+          { status: 503 },
+        );
+      }
+      // Local/dev demo only. No idempotency ledger in demo — nothing persists.
       return NextResponse.json(
         {
           contract_version: INTAKE_CONTRACT_VERSION,

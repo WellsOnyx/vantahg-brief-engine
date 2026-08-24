@@ -22,6 +22,7 @@ const PUBLIC_EXACT = new Set([
   '/api/intake/efax', // generic webhook (HMAC-protected, see app/api/intake/efax/route.ts)
   '/api/intake/email', // email intake webhook
   '/api/intake/voice', // Gravity Rail voice webhook (HMAC-protected, see app/api/intake/voice/route.ts)
+  '/api/gr/webhook', // Gravity Rail handoff webhook (HMAC-protected, see app/api/gr/webhook/route.ts)
   '/api/auth/callback', // Cognito magic-link landing — user is unauthenticated by definition
   '/api/auth/request-magic-link', // unauthenticated by definition; rate-limited internally
   '/api/auth/sign-in', // Cognito password sign-in — unauthenticated by definition; rate-limited internally
@@ -43,6 +44,7 @@ const INTAKE_WRITE_PATHS = [
   '/api/intake/efax',
   '/api/intake/email',
   '/api/intake/voice',
+  '/api/gr/webhook',
 ];
 
 function isPublicRoute(pathname: string): boolean {

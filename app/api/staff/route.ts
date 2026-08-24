@@ -3,6 +3,8 @@ import { getServiceClient } from '@/lib/supabase';
 import { requireAuth } from '@/lib/auth-guard';
 import { applyRateLimit } from '@/lib/rate-limit-middleware';
 import { isDemoMode, getDemoStaff } from '@/lib/demo-mode';
+import { isGravityRailApiConfigured } from '@/lib/gravity-rails';
+import { GravityRailProvisioner } from '@/lib/gravity-rails/provisioner';
 
 export const dynamic = 'force-dynamic';
 
@@ -57,7 +59,28 @@ export async function POST(request: NextRequest) {
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-    return NextResponse.json(data, { status: 201 });
+    // Existing staff-create path: provision a GR workspace when the server
+    // key is present. If GR create fails we do NOT invent ws-* ids and we
+    // do not roll back the staff row — GR is optional until Cole/Jonah key it.
+    let staff = data;
+    if (isGravityRailApiConfigured() && staff) {
+      try {
+        const provisioner = new GravityRailProvisioner();
+        const result = await provisioner.provisionForStaff(staff);
+        await provisioner.persistToStaff(staff.id, result, supabase);
+        staff = {
+          ...staff,
+          gr_workspace_id: result.workspaceId,
+          gr_workflow_id: result.workflowId,
+          gr_provisioned_at: result.provisionedAt,
+        };
+      } catch (err) {
+        const kind = err instanceof Error ? err.name : 'error';
+        console.error('[gravity-rails] staff provision skipped', kind);
+      }
+    }
+
+    return NextResponse.json(staff, { status: 201 });
   } catch (err) {
     console.error('Staff POST error:', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

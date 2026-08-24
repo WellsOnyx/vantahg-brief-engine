@@ -117,4 +117,24 @@ describe('POST /api/gr/webhook — v1.1 signature gate', () => {
     expect(res.status).toBe(401);
     expect((await res.json()).code).toBe('signature_missing');
   });
+
+  it('fails closed in production when no webhook secret is configured', async () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    vi.stubEnv('GR_WEBHOOK_SECRET', '');
+    vi.stubEnv('GR_WEBHOOK_SECRET_SECONDARY', '');
+    vi.stubEnv('GRAVITY_RAIL_WEBHOOK_SECRET', '');
+    const { POST } = await import('@/app/api/gr/webhook/route');
+    const res = await POST(post(BODY));
+    expect(res.status).toBe(500);
+    expect((await res.json()).error).toBe('webhook_secret_not_configured');
+  });
+
+  it('refuses production demo-drop even when a secret is set (no silent live intake)', async () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    const { POST } = await import('@/app/api/gr/webhook/route');
+    const { timestamp, signature } = signIntakeRequest('handoff-secret', BODY);
+    const res = await POST(post(BODY, { 'x-gr-timestamp': timestamp, 'x-gr-signature': signature }));
+    expect(res.status).toBe(503);
+    expect((await res.json()).error).toBe('persistence_unavailable');
+  });
 });
