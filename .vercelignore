@@ -1,0 +1,3 @@
+# Standalone demo app with its own Vercel project / build.
+# Keep it out of the root VantaUM deployment.
+vantatr-scenario-studio
