@@ -63,10 +63,15 @@ describe('buildKickoffIcal', () => {
         { name: 'Bob TPA', email: 'bob@acme.example', rsvp: false },
       ],
     });
-    expect(ics).toContain('ORGANIZER;CN=VantaUM Delivery:mailto:delivery@vantaum.com');
-    expect(ics).toContain('ATTENDEE;CN=Jane TPA;RSVP=TRUE;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION:mailto:jane@acme.example');
+    // Assert on the LOGICAL (unfolded) lines: RFC 5545 folds any content line
+    // past 75 octets with a CRLF + leading space, so the ATTENDEE rows below
+    // arrive folded. Unfold before matching — the folding itself is verified
+    // by the dedicated "folds lines longer than 75 octets" test.
+    const unfolded = ics.replace(/\r\n /g, '');
+    expect(unfolded).toContain('ORGANIZER;CN=VantaUM Delivery:mailto:delivery@vantaum.com');
+    expect(unfolded).toContain('ATTENDEE;CN=Jane TPA;RSVP=TRUE;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION:mailto:jane@acme.example');
     // rsvp:false should drop the RSVP=TRUE
-    expect(ics).toContain('ATTENDEE;CN=Bob TPA;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION:mailto:bob@acme.example');
+    expect(unfolded).toContain('ATTENDEE;CN=Bob TPA;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION:mailto:bob@acme.example');
   });
 
   it('uses CRLF line endings (RFC 5545 compliance)', () => {

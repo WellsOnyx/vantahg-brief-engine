@@ -5,6 +5,7 @@ import { getServiceClient } from '@/lib/supabase';
 import { apiError } from '@/lib/api-error';
 import { logAuditEvent } from '@/lib/audit';
 import { getRequestContext } from '@/lib/security';
+import { captureReviewSampleAsync } from '@/lib/dataset/review-dataset';
 import type { DeterminationFields } from '@/components/DeterminationForm';
 
 export const dynamic = 'force-dynamic';
@@ -117,6 +118,9 @@ export async function PATCH(
       },
       getRequestContext(request)
     );
+
+    // Capture a de-identified training sample for the IDR review (non-blocking).
+    captureReviewSampleAsync(caseId, authResult.user.email, 'attorney_determination');
 
     return NextResponse.json({ success: true });
   } catch (err) {

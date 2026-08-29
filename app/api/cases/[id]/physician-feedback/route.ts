@@ -4,6 +4,7 @@ import { logAuditEvent } from '@/lib/audit';
 import { isDemoMode } from '@/lib/demo-mode';
 import { requireRole } from '@/lib/auth-guard';
 import { applyRateLimit } from '@/lib/rate-limit-middleware';
+import { captureReviewSampleAsync } from '@/lib/dataset/review-dataset';
 
 export const dynamic = 'force-dynamic';
 
@@ -68,6 +69,10 @@ export async function POST(
       physician_overrode: agreement !== 'agree',
       notes: notes || null,
     });
+
+    // Refresh the training sample so it carries the physician agreement signal
+    // (non-blocking, idempotent upsert).
+    captureReviewSampleAsync(id, body.reviewer_id || 'reviewer', 'physician_feedback');
 
     return NextResponse.json({
       success: true,

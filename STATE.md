@@ -313,6 +313,54 @@ the contract until then.
   not-in-membership 404, and the happy-path signed-URL +
   audit-log assertions.
 
+**De-identified review training dataset (foundation for our own fallback model):**
+- Goal: consolidate every completed medical review into a HIPAA Safe
+  Harbor de-identified dataset so we can train our own clinical-decision
+  model on our own reviewers' decisions on the same cases.
+- Migration `027_review_dataset.sql` — `review_training_samples` table.
+  ONE row per case (unique on case_id), upserted so the label always
+  reflects the latest human decision. `payload` holds ONLY de-identified
+  data (scrub runs at capture time, before write); raw PHI never lands
+  here — it stays on `cases`. `case_id` is internal linkage/idempotency
+  only, RLS-restricted to internal staff (admin/builder/ceo/slt) and
+  STRIPPED from every export. Export carries the pseudonymous `sample_ref`
+  (salted hash of case_id) instead.
+- `lib/deident/safe-harbor.ts` — the compliance-critical scrub. Two-pass:
+  (1) targeted redaction of each case's KNOWN identifiers (patient/provider
+  names, member id, NPIs, phones, address, case/auth numbers) wherever they
+  appear in free text — far stronger than generic NER because we know exactly
+  what to remove; (2) regex safety net for the 18 Safe Harbor identifier
+  SHAPES (dates, phones, emails, SSN, URL, IP, long numeric ids, ages > 89).
+  DOB → bucketed age (90+ aggregated), dates → year. Deliberately PRESERVES
+  5-digit CPT and ICD-10 codes (the signal) — the numeric net only fires on
+  runs of ≥ 7 digits.
+- `lib/dataset/review-dataset.ts` — `captureReviewSample` (idempotent upsert,
+  never throws into its caller), `backfillReviewDataset` (cron sweep),
+  `exportReviewDataset` + `toJsonl`. Handles the polymorphic `determination`
+  column (text enum for UM, JSONB blob for payer IDR). `REVIEW_DATASET_INCLUDE_FREETEXT`
+  env flag (default true) toggles scrubbed narrative vs. structured/coded-only.
+- Built INTO the workflow: fire-and-forget capture hooked into the RN-approve
+  path (`pod-assignment-engine.ts`), the MD determination PATCH
+  (`app/api/cases/[id]/route.ts`), attorney determination, and physician
+  feedback (refreshes the sample with the AI-agreement signal). A capture
+  failure can never block a clinical determination.
+- Nightly cron `GET/POST /api/cron/review-dataset-backfill` (CRON_SECRET
+  guard) self-heals coverage + retroactively captures historical reviews.
+  Scheduled `30 3 * * *` in vercel.json.
+- Export: `GET /api/admin/review-dataset?format=jsonl|json&since=&limit=`
+  (internal-admin gate). Streams the de-identified dataset for model building;
+  audit-logs the export (counts only, no PHI).
+- Tests: 22 (Safe Harbor de-identification — the highest-stakes suite: every
+  identifier category removed, CPT/ICD codes + ages ≤ 89 + year preserved) +
+  12 (dataset assembly, free-text vs structured mode, IDR polymorphism,
+  sample_ref determinism, demo no-op) + 5 (endpoint auth gates).
+- Caveat for future sessions: free-text scrubbing is heuristic — a strong
+  first line, not a substitute for a compliance sign-off on the exported
+  artifact before it leaves the environment. `REVIEW_DATASET_INCLUDE_FREETEXT=false`
+  gives a structured-only dataset if maximum conservatism is wanted.
+- RDS: migration 027 needs applying to RDS via the bastion (same as prior
+  migrations — gated on bastion access). Supabase migration is source of truth.
+
 ---
 
 > ## 🆕 Resuming as a fresh Claude thread? Do this:
