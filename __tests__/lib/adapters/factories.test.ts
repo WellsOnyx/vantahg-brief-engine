@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 /**
  * Adapter factory selection tests.
@@ -7,84 +7,94 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
  *   1. Default is the Supabase / SMTP implementation.
  *   2. ENABLE_AWS_* flag flips to the AWS implementation.
  *   3. setXxxAdapter() override wins regardless of env.
- *
- * The AWS impls throw "not implemented" — we assert on that instead of
- * exercising the surface, since they're stubs by design.
  */
 
-const originalEnv = process.env;
-
 beforeEach(() => {
-  process.env = { ...originalEnv };
+  vi.resetModules();
+  vi.unstubAllEnvs();
 });
 
 afterEach(() => {
-  process.env = originalEnv;
+  vi.unstubAllEnvs();
 });
 
 describe('storage adapter factory', () => {
   it('defaults to SupabaseStorageAdapter', async () => {
-    delete process.env.ENABLE_AWS_STORAGE;
+    vi.stubEnv('ENABLE_AWS_STORAGE', '');
     const mod = await import('@/lib/adapters/storage');
     mod.setStorageAdapter(null);
+    const adapter = await mod.getStorageAdapter();
     const { SupabaseStorageAdapter } = await import('@/lib/adapters/storage/supabase');
-    expect(mod.getStorageAdapter()).toBeInstanceOf(SupabaseStorageAdapter);
+    expect(adapter).toBeInstanceOf(SupabaseStorageAdapter);
   });
 
-  it('returns S3 stub adapter when ENABLE_AWS_STORAGE=true', async () => {
-    process.env.ENABLE_AWS_STORAGE = 'true';
+  it('returns S3StorageAdapter when ENABLE_AWS_STORAGE=true', async () => {
+    vi.stubEnv('ENABLE_AWS_STORAGE', 'true');
     const mod = await import('@/lib/adapters/storage');
     mod.setStorageAdapter(null);
+    const adapter = await mod.getStorageAdapter();
     const { S3StorageAdapter } = await import('@/lib/adapters/storage/s3');
-    expect(mod.getStorageAdapter()).toBeInstanceOf(S3StorageAdapter);
+    expect(adapter).toBeInstanceOf(S3StorageAdapter);
   });
 
   it('S3 adapter instantiates without throwing', async () => {
     const { S3StorageAdapter } = await import('@/lib/adapters/storage/s3');
     expect(() => new S3StorageAdapter()).not.toThrow();
-    // Real S3 calls obviously won't work in tests without credentials -
-    // we don't exercise them here. The validate-rds-shim.mjs pattern
-    // proves the SDK calls work on the bastion.
+  });
+
+  it('getStorageAdapterSync refuses to silently pick Supabase when S3 is flagged', async () => {
+    vi.stubEnv('ENABLE_AWS_STORAGE', 'true');
+    const mod = await import('@/lib/adapters/storage');
+    mod.setStorageAdapter(null);
+    expect(() => mod.getStorageAdapterSync()).toThrow(/getStorageAdapter\(\)/);
   });
 });
 
 describe('auth adapter factory', () => {
   it('defaults to SupabaseAuthAdapter', async () => {
-    delete process.env.ENABLE_AWS_AUTH;
+    vi.stubEnv('ENABLE_AWS_AUTH', '');
     const mod = await import('@/lib/adapters/auth');
     mod.setAuthAdapter(null);
     const { SupabaseAuthAdapter } = await import('@/lib/adapters/auth/supabase');
     expect(mod.getAuthAdapter()).toBeInstanceOf(SupabaseAuthAdapter);
   });
 
-  it('returns Cognito stub when ENABLE_AWS_AUTH=true', async () => {
-    process.env.ENABLE_AWS_AUTH = 'true';
+  it('returns CognitoAuthAdapter when ENABLE_AWS_AUTH=true', async () => {
+    vi.stubEnv('ENABLE_AWS_AUTH', 'true');
     const mod = await import('@/lib/adapters/auth');
     mod.setAuthAdapter(null);
     const { CognitoAuthAdapter } = await import('@/lib/adapters/auth/cognito');
     expect(mod.getAuthAdapter()).toBeInstanceOf(CognitoAuthAdapter);
   });
 
-  it('Cognito stub throws on createUserWithMagicLink', async () => {
+  it('Cognito adapter returns a structured error when pool env is missing', async () => {
+    vi.stubEnv('COGNITO_USER_POOL_ID', '');
+    vi.stubEnv('COGNITO_CLIENT_ID', '');
     const { CognitoAuthAdapter } = await import('@/lib/adapters/auth/cognito');
     const c = new CognitoAuthAdapter();
-    await expect(
-      c.createUserWithMagicLink({ email: 'a@b.test', redirectUrl: 'https://x.test/' }),
-    ).rejects.toThrow(/not implemented/);
+    const result = await c.createUserWithMagicLink({
+      email: 'a@b.test',
+      redirectUrl: 'https://x.test/',
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.code).toBe('unknown');
+      expect(result.message).toMatch(/COGNITO_USER_POOL_ID/);
+    }
   });
 });
 
 describe('email adapter factory', () => {
   it('defaults to SmtpEmailAdapter', async () => {
-    delete process.env.ENABLE_AWS_EMAIL;
+    vi.stubEnv('ENABLE_AWS_EMAIL', '');
     const mod = await import('@/lib/adapters/email');
     mod.setEmailAdapter(null);
     const { SmtpEmailAdapter } = await import('@/lib/adapters/email/smtp');
     expect(mod.getEmailAdapter()).toBeInstanceOf(SmtpEmailAdapter);
   });
 
-  it('returns SES stub when ENABLE_AWS_EMAIL=true', async () => {
-    process.env.ENABLE_AWS_EMAIL = 'true';
+  it('returns SesEmailAdapter when ENABLE_AWS_EMAIL=true', async () => {
+    vi.stubEnv('ENABLE_AWS_EMAIL', 'true');
     const mod = await import('@/lib/adapters/email');
     mod.setEmailAdapter(null);
     const { SesEmailAdapter } = await import('@/lib/adapters/email/ses');
@@ -92,9 +102,9 @@ describe('email adapter factory', () => {
   });
 
   it('SMTP adapter returns stub success when SMTP env is absent', async () => {
-    delete process.env.SMTP_HOST;
-    delete process.env.SMTP_USER;
-    delete process.env.SMTP_PASS;
+    vi.stubEnv('SMTP_HOST', '');
+    vi.stubEnv('SMTP_USER', '');
+    vi.stubEnv('SMTP_PASS', '');
     const { SmtpEmailAdapter } = await import('@/lib/adapters/email/smtp');
     const adapter = new SmtpEmailAdapter();
     const result = await adapter.send({
@@ -111,11 +121,11 @@ describe('email adapter factory', () => {
 
 describe('override seam', () => {
   it('setStorageAdapter override wins over env', async () => {
-    process.env.ENABLE_AWS_STORAGE = 'true';
+    vi.stubEnv('ENABLE_AWS_STORAGE', 'true');
     const mod = await import('@/lib/adapters/storage');
     const fake = { upload: async () => ({ ok: true as const, path: 'x', bytes: 0 }) } as never;
     mod.setStorageAdapter(fake);
-    expect(mod.getStorageAdapter()).toBe(fake);
+    expect(await mod.getStorageAdapter()).toBe(fake);
     mod.setStorageAdapter(null);
   });
 });

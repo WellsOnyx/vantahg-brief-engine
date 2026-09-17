@@ -4,7 +4,9 @@ import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as kms from 'aws-cdk-lib/aws-kms';
 import * as logs from 'aws-cdk-lib/aws-logs';
+import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import { Construct } from 'constructs';
 
@@ -13,6 +15,13 @@ export interface ComputeStackProps extends cdk.StackProps {
   vpc: ec2.IVpc;
   dbSecret: secretsmanager.ISecret;
   dbSecurityGroup: ec2.ISecurityGroup;
+  /** Optional — when omitted, S3 grants and AWS_S3_BUCKET_PREFIX are skipped. */
+  storageKmsKey?: kms.IKey;
+  signupContractsBucket?: s3.IBucket;
+  efaxDocumentsBucket?: s3.IBucket;
+  publicAssetsBucket?: s3.IBucket;
+  /** SES configuration set name from EmailStack. */
+  sesConfigurationSet?: string;
 }
 
 /**
@@ -72,6 +81,18 @@ export class ComputeStack extends cdk.Stack {
     });
     // Grant the task read access to the DB secret.
     dbSecret.grantRead(taskRole);
+
+    if (props.signupContractsBucket) props.signupContractsBucket.grantReadWrite(taskRole);
+    if (props.efaxDocumentsBucket) props.efaxDocumentsBucket.grantReadWrite(taskRole);
+    if (props.publicAssetsBucket) props.publicAssetsBucket.grantReadWrite(taskRole);
+    if (props.storageKmsKey) props.storageKmsKey.grantEncryptDecrypt(taskRole);
+
+    // SES v2 SendEmail / SendEmail Raw. Identities are account-level.
+    taskRole.addToPolicy(new iam.PolicyStatement({
+      sid: 'SesSend',
+      actions: ['ses:SendEmail', 'ses:SendRawEmail'],
+      resources: ['*'],
+    }));
 
     // The execution role is what pulls the image + writes logs (separate
     // from what the running container itself can do).
@@ -168,17 +189,13 @@ export class ComputeStack extends cdk.Stack {
       environment: {
         NODE_ENV: 'production',
         PORT: String(containerPort),
-        // AWS adapter flags - the app routes through S3 / Cognito / SES.
-        ENABLE_AWS_STORAGE: 'true',
-        ENABLE_AWS_AUTH: 'true',
-        ENABLE_AWS_EMAIL: 'true',
-        // Route DB calls through the pg shim against RDS instead of
-        // Supabase Postgres. lib/supabase.ts:27 reads this flag and
-        // substitutes PgShimClient. Auth (auth.getUser) still routes
-        // to Supabase Auth in V1 — see lib/supabase.ts:19-22, which
-        // means the Supabase Auth secrets must still be populated for
-        // authenticated routes to work.
+        // Destination-of-truth flags. Auth stays off until Cognito is
+        // deliberately cut over (locked V1: hybrid Supabase Auth).
         ENABLE_AWS_DB: 'true',
+        ENABLE_AWS_STORAGE: 'true',
+        ENABLE_AWS_EMAIL: 'true',
+        ENABLE_AWS_AUTH: process.env.ENABLE_AWS_AUTH === 'true' ? 'true' : 'false',
+        AWS_S3_BUCKET_PREFIX: `vantaum-${envName}-`,
         ENABLE_REAL_ANTHROPIC: 'true',
         ENABLE_REAL_HELLOSIGN: 'true',
         ENABLE_REAL_EFAX: 'true',
@@ -190,29 +207,29 @@ export class ComputeStack extends cdk.Stack {
         // App URL and SES sender (must be SES-verified domain).
         NEXT_PUBLIC_SITE_URL: 'https://app.vantaum.com',
         APP_URL: 'https://app.vantaum.com',
-        SES_FROM_ADDRESS: 'noreply@vantaum.com',
+        SES_FROM_ADDRESS: process.env.SES_FROM_ADDRESS ?? 'noreply@vantaum.com',
+        ...(props.sesConfigurationSet
+          ? { SES_CONFIGURATION_SET: props.sesConfigurationSet }
+          : {}),
         // Region for AWS SDK clients.
         AWS_REGION: this.region,
-        // Cognito user pool wiring. Without these, the auth adapter falls
-        // back to empty-string defaults and the magic-link route silently
-        // returns 202 with no email actually sent. Pool + Lambdas are
-        // deployed by the vantaum-prod-auth stack.
+        // Cognito ids are present so a later ENABLE_AWS_AUTH=true deploy
+        // does not require a code change. Default flag above is false.
         COGNITO_REGION: this.region,
-        COGNITO_USER_POOL_ID: 'us-east-1_CjZbn5TD4',
-        COGNITO_CLIENT_ID: '4v19mdtmaa8ubns3d6bsi4t2i7',
+        COGNITO_USER_POOL_ID: process.env.COGNITO_USER_POOL_ID ?? 'us-east-1_CjZbn5TD4',
+        COGNITO_CLIENT_ID: process.env.COGNITO_CLIENT_ID ?? '4v19mdtmaa8ubns3d6bsi4t2i7',
       },
       secrets: usePlaceholder
         ? undefined
         : {
-            // RDS connection (available for the future direct-Postgres swap).
+            // RDS — consumed by lib/db/pool.ts when ENABLE_AWS_DB=true.
             DB_HOST: ecs.Secret.fromSecretsManager(dbSecret, 'host'),
             DB_PORT: ecs.Secret.fromSecretsManager(dbSecret, 'port'),
             DB_NAME: ecs.Secret.fromSecretsManager(dbSecret, 'dbname'),
             DB_USER: ecs.Secret.fromSecretsManager(dbSecret, 'username'),
             DB_PASSWORD: ecs.Secret.fromSecretsManager(dbSecret, 'password'),
-            // Supabase connection - V1 app talks to Supabase Postgres
-            // via the @supabase/supabase-js client. Will swap to direct
-            // pg/Drizzle in a later phase.
+            // Supabase Auth leftovers (V1 hybrid). Empty strings keep
+            // the task healthy; hasSupabaseConfig() then relies on RDS.
             NEXT_PUBLIC_SUPABASE_URL: ecs.Secret.fromSecretsManager(thirdPartySecret, 'supabase_url'),
             NEXT_PUBLIC_SUPABASE_ANON_KEY: ecs.Secret.fromSecretsManager(thirdPartySecret, 'supabase_anon_key'),
             SUPABASE_SERVICE_ROLE_KEY: ecs.Secret.fromSecretsManager(thirdPartySecret, 'supabase_service_role_key'),

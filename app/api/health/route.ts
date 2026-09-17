@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { isDemoMode } from '@/lib/demo-mode';
+import { getRuntimeBackends } from '@/lib/runtime-backend';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,11 +38,12 @@ export async function GET() {
     }
   }
 
-  return NextResponse.json({
+    return NextResponse.json({
     status: 'healthy',
     version: '1.0.0',
     timestamp: new Date().toISOString(),
     database: databaseStatus,
+    backends: getRuntimeBackends(),
     uptime: uptimeSeconds,
   });
 }

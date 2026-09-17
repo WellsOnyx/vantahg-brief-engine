@@ -11,11 +11,11 @@
  *
  * Two implementations:
  *   - lib/adapters/email/smtp.ts     (nodemailer; current production)
- *   - lib/adapters/email/ses.ts      (AWS SES native SDK; stubbed)
+ *   - lib/adapters/email/ses.ts      (AWS SES v2 SDK; ENABLE_AWS_EMAIL=true)
  *
- * For the migration: if Cole moves to SES via the existing SMTP path,
- * he only needs to swap env vars. If he wants the SDK features, he
- * fills in ses.ts and flips ENABLE_AWS_EMAIL=true.
+ * SMTP remains the Vercel / local path. Fargate sets ENABLE_AWS_EMAIL=true
+ * and SES_FROM_ADDRESS. Domain verification is an operator step — the
+ * adapter returns a structured error if the identity is missing.
  */
 
 export interface SendEmailParams {

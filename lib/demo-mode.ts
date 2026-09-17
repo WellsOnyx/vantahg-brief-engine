@@ -19,15 +19,16 @@ import { getTimeRemaining } from './sla-calculator';
 import { hasSupabaseConfig } from './supabase';
 
 /**
- * Returns true when the app is running without a Supabase connection.
- * This enables the full demo data layer so the app works at conferences
- * and in local development without any external dependencies.
+ * Returns true when the app should serve deterministic fixtures.
  *
- * Uses hasSupabaseConfig() which checks both build-time NEXT_PUBLIC_
- * vars and server-only runtime vars, so API routes correctly detect
- * live mode even when Vercel build cache didn't inline the vars.
+ * Forced on by NEXT_PUBLIC_DEMO_MODE=true (no secrets required).
+ * Otherwise follows hasSupabaseConfig() — which is true for either
+ * Supabase keys or ENABLE_AWS_DB + RDS connection env — so API
+ * routes detect live mode even when Vercel didn't inline NEXT_PUBLIC_
+ * vars.
  */
 export function isDemoMode(): boolean {
+  if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') return true;
   return !hasSupabaseConfig();
 }
 

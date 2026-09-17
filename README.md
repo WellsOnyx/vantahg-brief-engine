@@ -35,11 +35,14 @@ The core principle is simple: **AI analyzes, physicians decide.** VantaUM uses A
                    +---------+  +--+--+   +---------+
                    |            |     |             |
             +------v-----+ +---v---+ +------v------+--------+
-            | Anthropic   | | Supa- | | Fact-Check  | SLA    |
-            | Claude API  | | base  | | Engine      | Calc   |
-            | (Brief Gen) | | (DB)  | | (Determin.) | (Track)|
+            | Anthropic   | | RDS   | | Fact-Check  | SLA    |
+            | Claude API  | | (pg   | | Engine      | Calc   |
+            | (Brief Gen) | | shim) | | (Determin.) | (Track)|
             +-------------+ +-------+ +-------------+--------+
 ```
+
+Adapters (`lib/adapters/*`, `lib/db/supabase-shim.ts`) flip with `ENABLE_AWS_*`.
+Supabase remains a cutover leftover for Auth (V1 hybrid) and optional Vercel deploys.
 
 ### Tech Stack
 
@@ -47,14 +50,17 @@ The core principle is simple: **AI analyzes, physicians decide.** VantaUM uses A
 |---|---|
 | Framework | Next.js 16 (App Router, Turbopack) |
 | Language | TypeScript 5 |
-| Database | Supabase (PostgreSQL + RLS) |
+| Database | **RDS Postgres** via pg shim (`ENABLE_AWS_DB`). Supabase Postgres is leftover. |
+| Storage | **S3** (`ENABLE_AWS_STORAGE`) or Supabase Storage |
+| Auth | Supabase Auth (V1). Cognito implemented, not cut over (`ENABLE_AWS_AUTH`). |
+| Email | **SES SDK** (`ENABLE_AWS_EMAIL`) or SMTP |
 | AI | Anthropic Claude API (claude-sonnet-4-5-20250514) |
 | Styling | Tailwind CSS v4 |
 | Fonts | DM Serif Display (headings) + DM Sans (body) |
 | Testing | Vitest + Testing Library |
-| CI/CD | GitHub Actions |
 | Error Monitoring | Sentry (scaffolded) |
-| Deployment | Vercel |
+| App deploy | AWS Fargate (`app.vantaum.com`) |
+| Marketing | Vercel (`vantaum.com`) — stays |
 | Brand | Navy `#0c2340`, Gold `#c9a227` |
 
 ---
@@ -102,13 +108,32 @@ npm run dev
 # 5. Open http://localhost:3000
 ```
 
-No environment variables are required for demo mode. The app detects the absence of `NEXT_PUBLIC_SUPABASE_URL` and automatically switches to demo mode with realistic hardcoded data.
+No environment variables are required for demo mode. The app detects the absence of a database (no RDS `DATABASE_URL` / `DB_*` and no Supabase keys) — or `NEXT_PUBLIC_DEMO_MODE=true` — and serves deterministic fixtures.
+
+---
+
+## Demo vs AWS vs leftover Supabase
+
+| Mode | What to set | What happens |
+|------|-------------|--------------|
+| **Demo** | Nothing, or `NEXT_PUBLIC_DEMO_MODE=true` | Fixtures only. `npm run dev`. No secrets. |
+| **AWS local / staging** | `ENABLE_AWS_DB=true` + `DATABASE_URL` (see `.env.local.example`). Optional `ENABLE_AWS_STORAGE` / `ENABLE_AWS_EMAIL`. | pg shim + adapters. Apply schema with `npm run db:migrate:rds`. |
+| **Fargate** | Already wired in `infra-aws/lib/compute-stack.ts`: DB + S3 + SES on; Auth off. | `/api/health` → `backends.db=rds`. |
+| **Supabase leftover** | The three `NEXT_PUBLIC_SUPABASE_*` / `SUPABASE_SERVICE_ROLE_KEY` vars | Vercel cutover only. Do not treat as the destination. |
+
+Auth stays on Supabase until Cognito is deliberately cut over. See `STATE.md` and `infra-aws/README.md`.
+
+Public ingress that is already adapter-agnostic (no Supabase-only client):
+
+- `POST /api/external/submit` — `x-api-key` + optional HMAC (`EXTERNAL_API_KEYS` / `EXTERNAL_API_SECRET`)
+- `POST /api/intake/efax` and `/api/intake/efax/phaxio` — webhook HMAC
+- Gravity Rail — `lib/gravity-rails.ts` + `GRAVITY_RAIL_API_KEY` (HTTP, independent of the database vendor)
 
 ---
 
 ## Demo Mode
 
-When `NEXT_PUBLIC_SUPABASE_URL` is not set, the application runs in **demo mode**:
+When no database is configured (and `NEXT_PUBLIC_DEMO_MODE` is not forcing it off a live DB), the application runs in **demo mode**:
 
 - All API routes return realistic hardcoded data
 - 6 medical utilization review cases spanning all workflow stages (intake through determination)
@@ -125,17 +150,17 @@ Demo mode is controlled by `lib/demo-mode.ts` with data in `lib/demo-data.ts`.
 
 ## Going from Demo to Real — First Customer Onboarding
 
-This is the concrete checklist for switching off demo fixtures and connecting a real Supabase + Anthropic + (optionally) eFax pipeline. Follow it in order. Every step is verifiable from `/admin/usage`, which is the operator dashboard.
+Switch off fixtures and connect **RDS + Anthropic** (and optionally eFax). Supabase is only needed if you still run the V1 hybrid auth path. Every step is verifiable from `/admin/usage`.
 
 ### 1. Set the required env vars
 
-In `.env.local` (or your Vercel project settings):
+In `.env.local` (or Secrets Manager `vantaum-<env>-third-party-keys` / the RDS secret):
 
 ```bash
-# Supabase — required for any non-demo run
-NEXT_PUBLIC_SUPABASE_URL=https://<your-project>.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon key from Supabase → Settings → API>
-SUPABASE_SERVICE_ROLE_KEY=<service role key — server-only, never ship to client>
+# AWS destination
+ENABLE_AWS_DB=true
+DATABASE_URL=postgres://vantaum:localdev@127.0.0.1:5432/vantaum
+DATABASE_SSL=disable            # local docker only
 
 # Anthropic — required for live brief generation + eFax extraction
 ANTHROPIC_API_KEY=<key from console.anthropic.com>
@@ -164,8 +189,12 @@ Notes:
 ### 2. Apply the schema
 
 ```bash
-# Apply all migrations in supabase/migrations/ via your Supabase dashboard or CLI:
-supabase db push
+# Preferred — plain Postgres / RDS (skips storage.buckets, uses RDS RLS variants)
+npm run db:migrate:rds:dry
+npm run db:migrate:rds
+
+# Leftover Supabase project only:
+# supabase db push
 ```
 
 Required tables: `clients`, `reviewers`, `cases`, `audit_log`, `intake_log`, `efax_queue` (if you want fax intake), `email_queue` (if you want email intake), plus the pod/quality/missing-info tables from migration 003.
@@ -187,7 +216,7 @@ npx tsx scripts/bootstrap-real-client.ts \
 # Add --dry-run to preview the inserts before writing.
 ```
 
-The script requires `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` in the environment. It refuses to run with anonymous credentials.
+The bootstrap script still constructs a Supabase JS client (leftover). On AWS, prefer inserting through the app once RDS migrations are applied, or point the script at leftover Supabase keys. An RDS-native bootstrap is a follow-up.
 
 ### 4. Verify the system is live
 
