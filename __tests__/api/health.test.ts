@@ -14,5 +14,11 @@ describe('GET /api/health', () => {
     expect(data.timestamp).toBeTruthy();
     expect(typeof data.uptime).toBe('number');
     expect(data.database).toBe('demo_mode');
+    expect(data.backends).toMatchObject({
+      db: 'demo',
+      storage: 'supabase',
+      auth: 'supabase',
+      email: 'smtp',
+    });
   });
 });
