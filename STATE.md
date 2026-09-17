@@ -52,6 +52,8 @@ wording in `infra-aws/README.md` and `docs/aws-migration.md`.
 - Meow runtime bootstrap (blocked on Jonah's dedicated VantaUM account).
 - HelloSign / Phaxio / Gravity Rail keys — slots only.
 
+**CI on this branch:** `npm run test:ci` 334 passed (3 todo). `npx tsc --noEmit` clean. `npm run build` clean. `cd infra-aws && npx cdk synth` works without `VANTAUM_GITHUB_CONNECTION_ARN`. `npm run lint` is already red on main (pre-existing `any` / setState-in-effect / unescaped-entity errors). This PR does not add new lint errors in the files it owns.
+
 ---
 
 ## 📱 MOBILE HANDOFF — 2026-05-13 (4:09 PM ET)
