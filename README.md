@@ -19,6 +19,25 @@ The core principle is simple: **AI analyzes, physicians decide.** VantaUM uses A
 
 ---
 
+## Customer-ready progress (Sep 2026)
+
+We are executing the plan in [`docs/customer-ready/`](docs/customer-ready/00-README.md) in commit order. **Phases 0–3 are on `main`.** Phase 4+ is next.
+
+| Phase | Status | Highlights |
+|-------|--------|------------|
+| 0 AWS + Cognito | ✅ merged | RDS/SES/S3 path; `ENABLE_AWS_AUTH` (default off) |
+| 1 Case spine | ✅ merged | Prior-auth / appeal state machine, audit, R01–R16 |
+| 2 Intake | ✅ merged | Gravity Rail, external submit, Phaxio → spine; client config versions |
+| 3 Brief → MD sign | ✅ merged | `/med-review`, human sign, immutable determination package |
+| 4 Fan-out + bill | ⏸ paused | Webhook retries, ledger, statement |
+| 5–7 Views / reports / go-live | ○ open | See `10-implementation-commits.md` |
+
+Full board: [`docs/PROGRESS.md`](docs/PROGRESS.md) · live notes: [`STATE.md`](STATE.md)
+
+**Auth (updated):** Supabase Auth hybrid when `ENABLE_AWS_AUTH=false` (default, including Fargate). Cognito login / invite / session when `ENABLE_AWS_AUTH=true`. See Phase 0.2 notes in `STATE.md`.
+
+---
+
 ## Architecture Overview
 
 ```
@@ -52,7 +71,7 @@ Supabase remains a cutover leftover for Auth (V1 hybrid) and optional Vercel dep
 | Language | TypeScript 5 |
 | Database | **RDS Postgres** via pg shim (`ENABLE_AWS_DB`). Supabase Postgres is leftover. |
 | Storage | **S3** (`ENABLE_AWS_STORAGE`) or Supabase Storage |
-| Auth | Supabase Auth hybrid by default. Cognito when `ENABLE_AWS_AUTH=true`. |
+| Auth | Cognito when `ENABLE_AWS_AUTH=true`; Supabase Auth hybrid when `false` (default, including Fargate). |
 | Email | **SES SDK** (`ENABLE_AWS_EMAIL`) or SMTP |
 | AI | Anthropic Claude API (claude-sonnet-4-5-20250514) |
 | Styling | Tailwind CSS v4 |
@@ -94,10 +113,10 @@ Supabase remains a cutover leftover for Auth (V1 hybrid) and optional Vercel dep
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/WellsOnyx/vantaum-brief-engine.git
+git clone https://github.com/WellsOnyx/vantahg-brief-engine.git
 
 # 2. Navigate to the project directory
-cd vantaum-brief-engine
+cd vantahg-brief-engine
 
 # 3. Install dependencies
 npm install
@@ -121,7 +140,7 @@ No environment variables are required for demo mode. The app detects the absence
 | **Fargate** | Already wired in `infra-aws/lib/compute-stack.ts`: DB + S3 + SES on; Auth off. | `/api/health` → `backends.db=rds`. |
 | **Supabase leftover** | The three `NEXT_PUBLIC_SUPABASE_*` / `SUPABASE_SERVICE_ROLE_KEY` vars | Vercel cutover only. Do not treat as the destination. |
 
-Auth stays on Supabase until Cognito is deliberately cut over. See `STATE.md` and `infra-aws/README.md`.
+Cognito login / invite / session is merged behind `ENABLE_AWS_AUTH` and defaults **false** (including Fargate). Supabase Auth hybrid remains the default path until an operator flips the flag. See `STATE.md` and `infra-aws/README.md`.
 
 Public ingress that is already adapter-agnostic (no Supabase-only client):
 
