@@ -44,6 +44,7 @@ export const viewport: Viewport = {
 const tpaClientNav: NavGroup[] = [
   {
     items: [
+      { href: "/client", label: "Status" },
       { href: "/portal/tpa", label: "Overview" },
       { href: "/portal/tpa/submit", label: "Submit Auth" },
       { href: "/portal/tpa/determinations", label: "Determinations" },
@@ -58,6 +59,7 @@ const tpaClientNav: NavGroup[] = [
 const conciergeNav: NavGroup[] = [
   {
     items: [
+      { href: "/cx", label: "CX lens" },
       { href: "/concierge", label: "My Queue" },
       { href: "/intake", label: "Intake Triage" },
       { href: "/cases", label: "Cases" },
@@ -93,6 +95,8 @@ const adminInternalNav: NavGroup[] = [
     items: [
       { href: "/mission-control", label: "Mission Control" },
       { href: "/ops", label: "Operations" },
+      { href: "/client", label: "Client lens" },
+      { href: "/cx", label: "CX lens" },
       { href: "/med-review", label: "Med Review" },
       { href: "/clients", label: "Clients" },
       { href: "/admin/billing", label: "Billing" },

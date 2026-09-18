@@ -10,6 +10,7 @@ import {
 } from '@/lib/billing/statement';
 import { getClientConfigService } from '@/lib/client-config';
 import { SYNTHETIC_CLIENT_ID } from '@/lib/intake/constants';
+import { resolveSpineViewer } from '@/lib/case-spine';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,7 +21,9 @@ export async function GET(request: NextRequest) {
     const rateLimited = await applyRateLimit(request, { maxRequests: 200 });
     if (rateLimited) return rateLimited;
 
-    const clientId = new URL(request.url).searchParams.get('client_id') ?? undefined;
+    const viewer = resolveSpineViewer(authResult.user, request);
+    const requested = new URL(request.url).searchParams.get('client_id');
+    const clientId = viewer.role === 'client' ? viewer.client_id ?? '__no_tenant__' : requested ?? undefined;
     const statements = await getMemoryStatementStore().list(clientId);
     return NextResponse.json({ statements });
   } catch (err) {
@@ -45,7 +48,9 @@ export async function POST(request: NextRequest) {
       period_end?: string;
     };
 
-    const clientId = body.client_id || SYNTHETIC_CLIENT_ID;
+    const viewer = resolveSpineViewer(authResult.user, request);
+    const clientId =
+      viewer.role === 'client' ? viewer.client_id || SYNTHETIC_CLIENT_ID : body.client_id || SYNTHETIC_CLIENT_ID;
     const cfg = await getClientConfigService().getLatest(clientId);
     const statement = await generateMonthlyStatement(
       getMemoryBillableEventLedger(),

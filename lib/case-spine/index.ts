@@ -4,6 +4,7 @@ export * from './required-fields';
 export * from './rules-catalog';
 export * from './rules-engine';
 export * from './rbac';
+export * from './viewer';
 export * from './store';
 export * from './service';
 export { payloadHash, hashTransitionPayload, hashRulePayload } from './hash';

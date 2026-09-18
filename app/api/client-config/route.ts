@@ -7,6 +7,8 @@ import {
   getClientConfigService,
   safeParseClientConfigFields,
 } from '@/lib/client-config';
+import { resolveSpineViewer } from '@/lib/case-spine';
+import { redactConfigForClient } from '@/lib/views/client';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,21 +20,35 @@ export async function GET(request: NextRequest) {
     if (rateLimited) return rateLimited;
 
     const { searchParams } = new URL(request.url);
-    const clientId = searchParams.get('client_id');
+    const viewer = resolveSpineViewer(authResult.user, request);
+    const requested = searchParams.get('client_id');
+    const clientId = viewer.role === 'client' ? viewer.client_id : requested;
     const history = searchParams.get('history') === '1' || searchParams.get('history') === 'true';
     const svc = getClientConfigService();
 
     if (clientId) {
+      if (viewer.role === 'client' && viewer.client_id !== clientId) {
+        return NextResponse.json({ error: 'Not found' }, { status: 404 });
+      }
       if (history) {
+        if (viewer.role === 'client') {
+          return NextResponse.json({ error: 'Forbidden', surface: 'config_history' }, { status: 403 });
+        }
         return NextResponse.json({ client_id: clientId, versions: await svc.listHistory(clientId) });
       }
       const latest = await svc.getLatest(clientId);
       if (!latest) {
         return NextResponse.json({ error: 'Not found' }, { status: 404 });
       }
+      if (viewer.role === 'client') {
+        return NextResponse.json({ summary: redactConfigForClient(latest.config, latest.version) });
+      }
       return NextResponse.json({ latest });
     }
 
+    if (viewer.role === 'client') {
+      return NextResponse.json({ configs: [] });
+    }
     return NextResponse.json({ configs: await svc.listLatest() });
   } catch (err) {
     return apiError(err, {

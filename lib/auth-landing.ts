@@ -14,12 +14,14 @@ export function landingPathForRole(role: string | null | undefined): string {
     case 'builder':
       return '/builders';
     case 'client':
-      return '/client/cases';
+      return '/client';
     case 'reviewer':
+      return '/med-review';
     case 'practice-lead':
+      return '/cases';
     case 'delivery-lead':
     case 'concierge':
-      return '/cases';
+      return '/cx';
     default:
       return '/cases';
   }

@@ -214,7 +214,7 @@ function LoginForm() {
         <>
           <p>
             <Link
-              href="/client/cases"
+              href="/client"
               className="text-muted hover:text-navy underline decoration-dotted underline-offset-4"
             >
               View my cases

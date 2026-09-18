@@ -93,7 +93,7 @@ describe('POST /api/auth/sign-in', () => {
     const data = await res.json();
     expect(data.ok).toBe(true);
     expect(data.backend).toBe('cognito');
-    expect(data.next).toBe('/client/cases');
+    expect(data.next).toBe('/client');
     expect(authAdapter.signInWithPassword).toHaveBeenCalledWith({
       email: 'client@tpa.test',
       password: 'correct-horse',

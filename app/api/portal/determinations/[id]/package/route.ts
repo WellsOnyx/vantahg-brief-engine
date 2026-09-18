@@ -3,7 +3,7 @@ import { requireAuth } from '@/lib/auth-guard';
 import { applyRateLimit } from '@/lib/rate-limit-middleware';
 import { apiError } from '@/lib/api-error';
 import { getRequestContext } from '@/lib/security';
-import { CaseNotFoundError, getCaseSpineService, toSpineViewRole } from '@/lib/case-spine';
+import { CaseNotFoundError, getCaseSpineService, resolveSpineViewer } from '@/lib/case-spine';
 import { toPortalDetermination } from '@/lib/fanout/portal';
 
 export const dynamic = 'force-dynamic';
@@ -21,10 +21,7 @@ export async function GET(
     const { id } = await context.params;
     const { searchParams } = new URL(request.url);
     const format = searchParams.get('format') ?? 'html';
-    const viewer = {
-      id: authResult.user.id,
-      role: toSpineViewRole(authResult.user.role),
-    };
+    const viewer = resolveSpineViewer(authResult.user, request);
 
     const spine = getCaseSpineService();
     const c = await spine.getCase(id, viewer);
