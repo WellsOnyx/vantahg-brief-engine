@@ -55,6 +55,13 @@ describe('RDS migration catalog', () => {
     expect(cfg?.path).toContain('infra-aws/rds-migrations');
   });
 
+  it('includes Phase 3 determination packages 029 (RDS copy wins when both exist)', () => {
+    const packs = plan.apply.find((e) => e.prefix === '029');
+    expect(packs?.filename).toBe('029_determination_packages.sql');
+    expect(packs?.source).toBe('rds');
+    expect(packs?.path).toContain('infra-aws/rds-migrations');
+  });
+
   it('covers every numbered supabase migration except the skipped bucket one', () => {
     const prefixes = new Set(plan.apply.map((e) => e.prefix));
     expect(prefixes.has('000')).toBe(true);
@@ -63,6 +70,7 @@ describe('RDS migration catalog', () => {
     expect(prefixes.has('026')).toBe(true);
     expect(prefixes.has('027')).toBe(true);
     expect(prefixes.has('028')).toBe(true);
+    expect(prefixes.has('029')).toBe(true);
     expect(prefixes.has('013')).toBe(false);
   });
 

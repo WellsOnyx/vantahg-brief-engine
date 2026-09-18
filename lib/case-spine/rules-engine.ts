@@ -86,7 +86,11 @@ function applyEffects(
   const { effects } = rule;
 
   if (effects.set_state && (canTransition(next.state, effects.set_state) || next.state === effects.set_state)) {
-    if (canTransition(next.state, effects.set_state)) {
+    const blockedMdQueue =
+      effects.set_state === 'md_queue' &&
+      !next.brief_id &&
+      (rule.rule_id === 'R07' || rule.rule_id === 'R08' || rule.rule_id === 'R09');
+    if (canTransition(next.state, effects.set_state) && !blockedMdQueue) {
       next.state = effects.set_state;
     }
   }

@@ -68,6 +68,7 @@ const clinicianNav: NavGroup[] = [
   {
     items: [
       { href: "/queue", label: "My Queue" },
+      { href: "/med-review", label: "Med Review" },
       { href: "/cases", label: "Cases" },
       { href: "/cases?status=brief_ready", label: "Briefs" },
       { href: "/quality", label: "Quality" },
@@ -90,6 +91,7 @@ const adminInternalNav: NavGroup[] = [
     items: [
       { href: "/mission-control", label: "Mission Control" },
       { href: "/ops", label: "Operations" },
+      { href: "/med-review", label: "Med Review" },
       { href: "/clients", label: "Clients" },
       { href: "/admin/billing", label: "Billing" },
       { href: "/admin/setup", label: "Setup" },

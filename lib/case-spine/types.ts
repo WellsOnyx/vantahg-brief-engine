@@ -124,6 +124,122 @@ export interface IntakePayload {
   benefit_type?: 'medical' | 'pharmacy' | 'drug' | null;
 }
 
+export const CRITERIA_RESULTS = ['meet', 'fail', 'gray'] as const;
+export type CriteriaResult = (typeof CRITERIA_RESULTS)[number];
+
+export const BRIEF_SOURCES = ['synthetic', 'existing_api'] as const;
+export type BriefSource = (typeof BRIEF_SOURCES)[number];
+
+export const SIGN_ERROR_CODES = [
+  'brief_required',
+  'md_sign_required',
+  'not_in_md_queue',
+  'rationale_required',
+  'invalid_determination',
+  'already_signed',
+] as const;
+export type SignErrorCode = (typeof SIGN_ERROR_CODES)[number];
+
+/** Tokenized / synthetic brief — AIBrief-compatible, no live PHI. */
+export interface SpineBriefContent {
+  clinical_question: string;
+  patient_summary: string;
+  diagnosis_analysis: {
+    primary_diagnosis: string;
+    secondary_diagnoses: string[];
+    diagnosis_procedure_alignment: string;
+  };
+  procedure_analysis: {
+    codes: string[];
+    clinical_rationale: string;
+    complexity_level: 'routine' | 'moderate' | 'complex';
+    setting_appropriateness: string;
+  };
+  criteria_match: {
+    guideline_source: string;
+    applicable_guideline: string;
+    criteria_met: string[];
+    criteria_not_met: string[];
+    criteria_unable_to_assess: string[];
+    conservative_alternatives: string[];
+  };
+  documentation_review: {
+    documents_provided: string;
+    key_findings: string[];
+    missing_documentation: string[];
+  };
+  ai_recommendation: {
+    recommendation: 'approve' | 'deny' | 'pend' | 'peer_to_peer_recommended';
+    confidence: 'high' | 'medium' | 'low';
+    rationale: string;
+    key_considerations: string[];
+    if_modify_suggestion: string | null;
+  };
+  reviewer_action: {
+    decision_required: string;
+    time_sensitivity: string;
+    peer_to_peer_suggested: boolean;
+    additional_info_needed: string[];
+    state_specific_requirements: string[];
+  };
+}
+
+export interface SpineBrief {
+  brief_id: string;
+  case_id: string;
+  source: BriefSource;
+  /** Existing /api/generate-brief or demo case id, when source=existing_api. */
+  existing_brief_ref: string | null;
+  created_at: string;
+  draft_determination: SpineDetermination;
+  criteria_result: CriteriaResult;
+  content: SpineBriefContent;
+  content_hash: string;
+}
+
+export interface FanoutStub {
+  enqueued_at: string;
+  status: 'pending';
+  targets: string[];
+}
+
+export interface BillableEventStub {
+  billable_event_id: string;
+  event: 'determination.signed';
+  enqueued_at: string;
+}
+
+export interface EvidenceManifest {
+  packet_storage_keys: string[];
+  hashes: Record<string, string>;
+}
+
+export interface DeterminationPackage {
+  version: number;
+  case_id: string;
+  storage_key: string;
+  brief_id: string;
+  brief_hash: string;
+  determination: SpineDetermination;
+  rationale: string;
+  letter_html: string;
+  evidence_manifest: EvidenceManifest;
+  signer_id: string;
+  signed_at: string;
+  session_refs: {
+    actor: string;
+    ip: string | null;
+    request_id: string | null;
+  };
+  criteria_snapshot: SpineBriefContent['criteria_match'] | null;
+  cm_flags: CmFlag[];
+  fanout_enqueued: true;
+  billable_event_id: string;
+  immutable: true;
+  content_hash: string;
+  previous_version: number | null;
+}
+
 export interface CanonicalCase {
   case_id: string;
   case_number: string;
@@ -151,6 +267,11 @@ export interface CanonicalCase {
   open_tasks: string[];
   duplicate_of_case_id: string | null;
   intake: IntakePayload;
+  signed_rationale: string | null;
+  determination_package_version: number | null;
+  determination_package_key: string | null;
+  fanout_stub: FanoutStub | null;
+  billable_event_stub: BillableEventStub | null;
 }
 
 export interface AuditEvent {
@@ -197,7 +318,7 @@ export interface RuleEvalContext {
   is_duplicate?: boolean;
   duplicate_of_case_id?: string;
   urgent?: boolean;
-  criteria_result?: 'meet' | 'fail' | 'gray' | null;
+  criteria_result?: CriteriaResult | null;
   sla_elapsed_ratio?: number;
   md_signed?: boolean;
   signer_id?: string;
@@ -240,6 +361,24 @@ export interface TransitionInput {
   note?: string;
 }
 
+export interface AttachBriefInput {
+  brief_id?: string | null;
+  /** Existing generate-brief / demo case id — copies that brief, does not regenerate. */
+  source_case_id?: string | null;
+  criteria_result?: CriteriaResult;
+  enqueue_md?: boolean;
+}
+
+export interface SignDeterminationInput {
+  determination: SpineDetermination;
+  rationale: string;
+  cm_flags?: CmFlag[];
+  session_refs?: {
+    ip?: string | null;
+    request_id?: string | null;
+  };
+}
+
 export interface ListCasesFilters {
   client_id?: string;
   state?: CaseSpineState;
@@ -270,5 +409,38 @@ export class CaseNotFoundError extends Error {
   constructor(readonly case_id: string) {
     super(`Case not found: ${case_id}`);
     this.name = 'CaseNotFoundError';
+  }
+}
+
+export class BriefRequiredError extends Error {
+  readonly code = 'brief_required' as const;
+  constructor(
+    readonly case_id: string,
+    readonly attempted_state: CaseSpineState,
+  ) {
+    super(`Brief must be attached before ${attempted_state} (case ${case_id})`);
+    this.name = 'BriefRequiredError';
+  }
+}
+
+export class IllegalSignError extends Error {
+  constructor(
+    readonly code: SignErrorCode,
+    message: string,
+    readonly case_id?: string,
+  ) {
+    super(message);
+    this.name = 'IllegalSignError';
+  }
+}
+
+export class PackageImmutableError extends Error {
+  readonly code = 'package_immutable' as const;
+  constructor(
+    readonly case_id: string,
+    readonly version: number,
+  ) {
+    super(`Determination package already written: ${case_id} v${version}`);
+    this.name = 'PackageImmutableError';
   }
 }

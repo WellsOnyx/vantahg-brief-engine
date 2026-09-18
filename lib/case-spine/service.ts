@@ -1,20 +1,34 @@
 import { randomUUID } from 'crypto';
+import {
+  buildSyntheticBriefContent,
+  mintSpineBrief,
+  resolveExistingBriefContent,
+} from './briefs';
+import { buildDeterminationPackage } from './determination-package';
 import { hashTransitionPayload } from './hash';
+import { sortMdQueue } from './md-queue';
 import { applyListFilters } from './rbac';
 import { evaluateRules } from './rules-engine';
-import { assertTransition } from './state-machine';
+import { assertTransition, canTransition } from './state-machine';
 import type { CaseSpineStore } from './store';
 import {
+  BriefRequiredError,
   CaseNotFoundError,
   DEFAULT_CLIENT_CONFIG,
+  DETERMINATIONS,
+  IllegalSignError,
+  type AttachBriefInput,
   type AuditEvent,
   type AuthRule,
   type AuthRuleId,
   type CanonicalCase,
   type CreateCaseInput,
+  type DeterminationPackage,
   type ListCasesFilters,
   type RuleEvalContext,
   type RuleEvaluation,
+  type SignDeterminationInput,
+  type SpineBrief,
   type SpineViewer,
   type TransitionInput,
 } from './types';
@@ -28,6 +42,19 @@ export interface CreateCaseResult {
 export interface TransitionResult {
   case: CanonicalCase;
   audit: AuditEvent;
+}
+
+export interface AttachBriefResult {
+  case: CanonicalCase;
+  brief: SpineBrief;
+  audit: AuditEvent;
+}
+
+export interface SignDeterminationResult {
+  case: CanonicalCase;
+  package: DeterminationPackage;
+  brief: SpineBrief;
+  audit: AuditEvent[];
 }
 
 export class CaseSpineService {
@@ -73,6 +100,11 @@ export class CaseSpineService {
       audit_cursor: 0,
       open_tasks: [],
       duplicate_of_case_id: null,
+      signed_rationale: null,
+      determination_package_version: null,
+      determination_package_key: null,
+      fanout_stub: null,
+      billable_event_stub: null,
       intake: {
         ...input.intake,
         external_id: input.external_id ?? input.intake?.external_id ?? null,
@@ -139,6 +171,22 @@ export class CaseSpineService {
     if (input.billable_event_id !== undefined) next.billable_event_id = input.billable_event_id;
     if (input.fanout_status !== undefined) next.fanout_status = input.fanout_status;
 
+    if (input.to_state === 'md_queue' && !next.brief_id) {
+      throw new BriefRequiredError(caseId, 'md_queue');
+    }
+    if (input.to_state === 'determined') {
+      if (!next.brief_id) {
+        throw new BriefRequiredError(caseId, 'determined');
+      }
+      if (!next.determination || !next.signer_id) {
+        throw new IllegalSignError(
+          'md_sign_required',
+          'MD sign required: determination and signer_id must be set (no silent auto-approve)',
+          caseId,
+        );
+      }
+    }
+
     if (input.to_state === 'determined') {
       next.determined_at = now.toISOString();
       next.sla_clock = 'stopped';
@@ -191,15 +239,250 @@ export class CaseSpineService {
   async listCases(viewer: SpineViewer, filters: ListCasesFilters = {}): Promise<CanonicalCase[]> {
     const all = await this.store.listCases();
     const filtered = applyListFilters(all, viewer, filters);
-    if (viewer.role === 'med_review') {
-      return filtered.sort((a, b) => {
-        const sla = (a.sla_due_at ?? '').localeCompare(b.sla_due_at ?? '');
-        if (sla !== 0) return sla;
-        const prio = priorityRank(a.priority) - priorityRank(b.priority);
-        return prio;
-      });
+    if (viewer.role === 'med_review' || filters.state === 'md_queue') {
+      return sortMdQueue(filtered);
     }
     return filtered.sort((a, b) => b.received_at.localeCompare(a.received_at));
+  }
+
+  async listMdQueue(viewer: SpineViewer): Promise<CanonicalCase[]> {
+    return this.listCases(viewer, { state: 'md_queue' });
+  }
+
+  async getBrief(caseId: string): Promise<SpineBrief | null> {
+    const c = await this.requireCase(caseId);
+    if (c.brief_id) {
+      const byId = await this.store.getBrief(c.brief_id);
+      if (byId) return byId;
+    }
+    return this.store.getBriefForCase(caseId);
+  }
+
+  async getDeterminationPackage(caseId: string, version?: number): Promise<DeterminationPackage | null> {
+    await this.requireCase(caseId);
+    return this.store.getPackage(caseId, version);
+  }
+
+  async attachBrief(
+    caseId: string,
+    input: AttachBriefInput = {},
+    actor = 'system',
+  ): Promise<AttachBriefResult> {
+    const current = await this.requireCase(caseId);
+    const now = this.now();
+    const brief = await this.materializeBrief(current, input, now);
+
+    let next: CanonicalCase = {
+      ...current,
+      brief_id: brief.brief_id,
+      packet_storage_keys: [...current.packet_storage_keys],
+      cm_flags: [...current.cm_flags],
+      open_tasks: [...current.open_tasks],
+      intake: { ...current.intake },
+    };
+
+    if (next.state === 'routed' && canTransition(next.state, 'briefing')) {
+      next.state = 'briefing';
+    }
+
+    next.audit_cursor = current.audit_cursor + 1;
+    await this.store.updateCase(next);
+
+    const audit = await this.writeAudit({
+      event_id: randomUUID(),
+      case_id: next.case_id,
+      at: now.toISOString(),
+      actor,
+      rule_id: null,
+      from_state: current.state,
+      to_state: next.state,
+      note: `brief attached ${brief.brief_id} source=${brief.source}`,
+      payload_hash: hashTransitionPayload(current, next.state, { to_state: next.state, brief_id: brief.brief_id }),
+    });
+
+    if (input.enqueue_md && next.state !== 'md_queue') {
+      const queued = await this.transitionCase(
+        next.case_id,
+        { to_state: 'md_queue', brief_id: brief.brief_id, note: 'brief attached; enqueue md_queue' },
+        actor,
+      );
+      return { case: queued.case, brief, audit: queued.audit };
+    }
+
+    return { case: next, brief, audit };
+  }
+
+  async signDetermination(
+    caseId: string,
+    input: SignDeterminationInput,
+    actor: string,
+  ): Promise<SignDeterminationResult> {
+    const current = await this.requireCase(caseId);
+    if (current.state !== 'md_queue') {
+      throw new IllegalSignError(
+        'not_in_md_queue',
+        `Cannot sign from state ${current.state}; case must be in md_queue`,
+        caseId,
+      );
+    }
+    if (!current.brief_id) {
+      throw new IllegalSignError('brief_required', `Cannot sign case ${caseId} without an attached brief`, caseId);
+    }
+    if (!(DETERMINATIONS as readonly string[]).includes(input.determination)) {
+      throw new IllegalSignError('invalid_determination', 'determination must be approve|deny|pend|partial', caseId);
+    }
+    const rationale = (input.rationale ?? '').trim();
+    if (!rationale) {
+      throw new IllegalSignError('rationale_required', 'rationale is required to sign', caseId);
+    }
+    if (current.determination_package_version) {
+      throw new IllegalSignError('already_signed', `Case ${caseId} already has an immutable determination package`, caseId);
+    }
+
+    const brief = await this.store.getBrief(current.brief_id);
+    if (!brief) {
+      throw new IllegalSignError('brief_required', `Attached brief ${current.brief_id} was not found`, caseId);
+    }
+
+    const now = this.now();
+    const signedAt = now.toISOString();
+    const billableEventId = randomUUID();
+    const pkg = buildDeterminationPackage({
+      case: current,
+      brief,
+      sign: { ...input, rationale },
+      version: 1,
+      signer_id: actor,
+      signed_at: signedAt,
+      billable_event_id: billableEventId,
+      previous_version: null,
+    });
+    await this.store.insertPackage(pkg);
+
+    const stamped: CanonicalCase = {
+      ...current,
+      determination: input.determination,
+      signer_id: actor,
+      signed_rationale: rationale,
+      determination_package_version: pkg.version,
+      determination_package_key: pkg.storage_key,
+      billable_event_id: billableEventId,
+      cm_flags: input.cm_flags ? [...input.cm_flags] : [...current.cm_flags],
+      fanout_stub: {
+        enqueued_at: signedAt,
+        status: 'pending',
+        targets: ['F1_portal', 'F5_billing', 'F7_archive'],
+      },
+      billable_event_stub: {
+        billable_event_id: billableEventId,
+        event: 'determination.signed',
+        enqueued_at: signedAt,
+      },
+    };
+    await this.store.updateCase(stamped);
+
+    const evaluated = await this.evaluateAndPersist(
+      stamped,
+      {
+        md_signed: true,
+        signer_id: actor,
+        cm_flags: stamped.cm_flags,
+      },
+      actor,
+    );
+
+    let next = evaluated.case;
+    const audit = [...evaluated.audit];
+    if (next.state !== 'determined') {
+      const moved = await this.transitionCase(
+        caseId,
+        {
+          to_state: 'determined',
+          determination: input.determination,
+          signer_id: actor,
+          brief_id: brief.brief_id,
+          billable_event_id: billableEventId,
+          fanout_status: 'pending',
+          cm_flags: stamped.cm_flags,
+          note: 'MD signed determination (R13 disabled; sign path still required)',
+        },
+        actor,
+      );
+      next = moved.case;
+      audit.push(moved.audit);
+    }
+
+    const withStubs: CanonicalCase = {
+      ...next,
+      determination: input.determination,
+      signer_id: actor,
+      signed_rationale: rationale,
+      determination_package_version: pkg.version,
+      determination_package_key: pkg.storage_key,
+      billable_event_id: next.billable_event_id ?? billableEventId,
+      fanout_status: next.fanout_status === 'not_started' ? 'pending' : next.fanout_status,
+      fanout_stub: stamped.fanout_stub,
+      billable_event_stub: {
+        ...stamped.billable_event_stub!,
+        billable_event_id: next.billable_event_id ?? billableEventId,
+      },
+    };
+    await this.store.updateCase(withStubs);
+
+    return { case: withStubs, package: pkg, brief, audit };
+  }
+
+  /**
+   * Demo / test helper: three synthetic md_queue cases with distinct SLA + priority.
+   * Tokenized refs only.
+   */
+  async seedSyntheticMdQueue(actor = 'system'): Promise<CanonicalCase[]> {
+    const now = this.now();
+    const seeds: Array<{
+      suffix: string;
+      priority: CanonicalCase['priority'];
+      slaHours: number;
+      criteria: NonNullable<AttachBriefInput['criteria_result']>;
+    }> = [
+      { suffix: 'sla-tight', priority: 'standard', slaHours: 6, criteria: 'gray' },
+      { suffix: 'expedited', priority: 'expedited', slaHours: 24, criteria: 'meet' },
+      { suffix: 'urgent', priority: 'urgent', slaHours: 24, criteria: 'fail' },
+    ];
+
+    const created: CanonicalCase[] = [];
+    for (const seed of seeds) {
+      const receivedAt = new Date(now.getTime() - 60_000).toISOString();
+      const result = await this.createCase(
+        {
+          client_id: '11111111-1111-1111-1111-111111111111',
+          external_id: `ext-synth-mdq-${seed.suffix}`,
+          priority: seed.priority,
+          packet_storage_keys: [`s3://synth/packet/${seed.suffix}.pdf`],
+          client_config: { sla_hours_standard: seed.slaHours, sla_hours_urgent: seed.slaHours },
+          intake: {
+            external_id: `ext-synth-mdq-${seed.suffix}`,
+            member_ref: `memb_synth_${seed.suffix}`,
+            requesting_provider: `prov_synth_${seed.suffix}`,
+            service_or_rx: `CPT-SYNTH-${seed.suffix.toUpperCase()}`,
+            place_of_service: 'office',
+            urgency: seed.priority,
+            clinicals_pointer: `s3://synth/packet/${seed.suffix}.pdf`,
+            received_at: receivedAt,
+            benefit_type: 'medical',
+          },
+        },
+        actor,
+      );
+      await this.transitionCase(result.case.case_id, { to_state: 'intake_validated' }, actor);
+      await this.transitionCase(result.case.case_id, { to_state: 'routed' }, actor);
+      const attached = await this.attachBrief(
+        result.case.case_id,
+        { criteria_result: seed.criteria, enqueue_md: true },
+        actor,
+      );
+      created.push(attached.case);
+    }
+    return sortMdQueue(created);
   }
 
   async listAudit(caseId: string): Promise<AuditEvent[]> {
@@ -243,7 +526,15 @@ export class CaseSpineService {
     ctx: RuleEvalContext = {},
     actor = 'system',
   ): Promise<{ case: CanonicalCase; evaluations: RuleEvaluation[]; audit: AuditEvent[] }> {
-    const current = await this.requireCase(caseId);
+    let current = await this.requireCase(caseId);
+    if (ctx.criteria_result && !current.brief_id && canTransition(current.state, 'md_queue')) {
+      const attached = await this.attachBrief(
+        caseId,
+        { criteria_result: ctx.criteria_result },
+        actor,
+      );
+      current = attached.case;
+    }
     return this.evaluateAndPersist(current, ctx, actor);
   }
 
@@ -275,10 +566,54 @@ export class CaseSpineService {
     if (!found) throw new CaseNotFoundError(caseId);
     return found;
   }
-}
 
-function priorityRank(priority: CanonicalCase['priority']): number {
-  if (priority === 'expedited') return 0;
-  if (priority === 'urgent') return 1;
-  return 2;
+  private async materializeBrief(
+    current: CanonicalCase,
+    input: AttachBriefInput,
+    now: Date,
+  ): Promise<SpineBrief> {
+    if (
+      current.brief_id &&
+      !input.brief_id &&
+      !input.source_case_id &&
+      !input.criteria_result
+    ) {
+      const existing = await this.store.getBrief(current.brief_id);
+      if (existing) return existing;
+    }
+
+    const existingId = input.brief_id ?? input.source_case_id ?? null;
+    if (input.brief_id) {
+      const stored = await this.store.getBrief(input.brief_id);
+      if (stored) return stored;
+    }
+    if (existingId) {
+      const fromApi = await resolveExistingBriefContent(existingId);
+      if (fromApi) {
+        const brief = mintSpineBrief({
+          case: current,
+          content: fromApi.content,
+          criteria_result: input.criteria_result ?? fromApi.criteria_result,
+          source: 'existing_api',
+          existing_brief_ref: existingId,
+          brief_id: input.brief_id ?? undefined,
+          now,
+        });
+        await this.store.insertBrief(brief);
+        return brief;
+      }
+    }
+
+    const criteria = input.criteria_result ?? 'gray';
+    const brief = mintSpineBrief({
+      case: current,
+      content: buildSyntheticBriefContent(current, criteria),
+      criteria_result: criteria,
+      source: 'synthetic',
+      brief_id: input.brief_id ?? undefined,
+      now,
+    });
+    await this.store.insertBrief(brief);
+    return brief;
+  }
 }
