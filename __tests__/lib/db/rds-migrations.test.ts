@@ -62,6 +62,13 @@ describe('RDS migration catalog', () => {
     expect(packs?.path).toContain('infra-aws/rds-migrations');
   });
 
+  it('includes Phase 4 billable events + fan-out 030 (RDS copy wins when both exist)', () => {
+    const billing = plan.apply.find((e) => e.prefix === '030');
+    expect(billing?.filename).toBe('030_billable_events_and_fanout.sql');
+    expect(billing?.source).toBe('rds');
+    expect(billing?.path).toContain('infra-aws/rds-migrations');
+  });
+
   it('covers every numbered supabase migration except the skipped bucket one', () => {
     const prefixes = new Set(plan.apply.map((e) => e.prefix));
     expect(prefixes.has('000')).toBe(true);
@@ -71,6 +78,7 @@ describe('RDS migration catalog', () => {
     expect(prefixes.has('027')).toBe(true);
     expect(prefixes.has('028')).toBe(true);
     expect(prefixes.has('029')).toBe(true);
+    expect(prefixes.has('030')).toBe(true);
     expect(prefixes.has('013')).toBe(false);
   });
 

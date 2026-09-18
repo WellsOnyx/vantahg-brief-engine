@@ -37,6 +37,9 @@ export interface ClientConfigFields {
   determination_recipients: string[];
   cm_handoff_enabled: boolean;
   cm_webhook_url?: string | null;
+  /** Client webhook for determination.signed (F2). Optional. */
+  determination_webhook_url?: string | null;
+  determination_webhook_secret?: string | null;
   intake_modes: IntakeMode[];
   timezone: string;
   business_hours: BusinessHours;
@@ -64,6 +67,8 @@ export const DEFAULT_CLIENT_CONFIG_FIELDS: Omit<ClientConfigFields, 'client_id' 
   determination_recipients: [],
   cm_handoff_enabled: false,
   cm_webhook_url: null,
+  determination_webhook_url: null,
+  determination_webhook_secret: null,
   intake_modes: ['api'],
   timezone: 'America/New_York',
   business_hours: { start: '09:00', end: '17:00', days: ['mon', 'tue', 'wed', 'thu', 'fri'] },

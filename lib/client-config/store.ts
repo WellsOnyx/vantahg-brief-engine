@@ -17,6 +17,8 @@ function cloneVersion(row: ClientConfigVersion): ClientConfigVersion {
       lob: [...row.config.lob],
       notify_channels: [...row.config.notify_channels],
       determination_recipients: [...row.config.determination_recipients],
+      determination_webhook_url: row.config.determination_webhook_url ?? null,
+      determination_webhook_secret: row.config.determination_webhook_secret ?? null,
       intake_modes: [...row.config.intake_modes],
       business_hours: {
         ...row.config.business_hours,
@@ -39,6 +41,8 @@ function seedSyntheticV1(): ClientConfigVersion {
     determination_recipients: ['client_admin'],
     cm_handoff_enabled: false,
     cm_webhook_url: null,
+    determination_webhook_url: null,
+    determination_webhook_secret: null,
     intake_modes: ['gravity_rail', 'api', 'fax'],
     timezone: 'America/New_York',
     business_hours: { start: '09:00', end: '17:00', days: ['mon', 'tue', 'wed', 'thu', 'fri'] },

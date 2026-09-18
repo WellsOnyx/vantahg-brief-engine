@@ -35,6 +35,7 @@ Local docker: `DATABASE_SSL=disable`.
 | `019_practices.sql` | Same |
 | `020`–`026` | Applied on RDS already; kept next to the runner |
 | `027_case_spine.sql` | Portable Phase 1 spine (plain Postgres). Identical to `supabase/migrations/027_case_spine.sql`. Catalog prefers this RDS copy when both exist. |
+| `030_billable_events_and_fanout.sql` | Phase 4 ledger + fan-out artifacts. Identical to `supabase/migrations/030_billable_events_and_fanout.sql`. |
 
 `027` is **not** an AWS-only rewrite. It adds spine columns on `cases` plus
 `audit_events` / `auth_rules` (R01–R16). Apply only after `cases` exists (000+).

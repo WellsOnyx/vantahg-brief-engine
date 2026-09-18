@@ -1,5 +1,10 @@
 import { randomUUID } from 'crypto';
 import {
+  getMemoryBillableEventLedger,
+  recordBillableEventsForSign,
+  type BillableEventLedger,
+} from '@/lib/billing/events';
+import {
   buildSyntheticBriefContent,
   mintSpineBrief,
   resolveExistingBriefContent,
@@ -22,6 +27,7 @@ import {
   type AuthRule,
   type AuthRuleId,
   type CanonicalCase,
+  type CaseOpsPatch,
   type CreateCaseInput,
   type DeterminationPackage,
   type ListCasesFilters,
@@ -61,6 +67,7 @@ export class CaseSpineService {
   constructor(
     private readonly store: CaseSpineStore,
     private readonly now: () => Date = () => new Date(),
+    private readonly billing: BillableEventLedger = getMemoryBillableEventLedger(),
   ) {}
 
   async createCase(input: CreateCaseInput, actor = 'system'): Promise<CreateCaseResult> {
@@ -170,6 +177,7 @@ export class CaseSpineService {
     if (input.brief_id !== undefined) next.brief_id = input.brief_id;
     if (input.billable_event_id !== undefined) next.billable_event_id = input.billable_event_id;
     if (input.fanout_status !== undefined) next.fanout_status = input.fanout_status;
+    if (input.open_tasks !== undefined) next.open_tasks = [...input.open_tasks];
 
     if (input.to_state === 'md_queue' && !next.brief_id) {
       throw new BriefRequiredError(caseId, 'md_queue');
@@ -347,6 +355,14 @@ export class CaseSpineService {
     const now = this.now();
     const signedAt = now.toISOString();
     const billableEventId = randomUUID();
+    const ledgerRows = await recordBillableEventsForSign(this.billing, {
+      billable_event_id: billableEventId,
+      case_id: current.case_id,
+      client_id: current.client_id,
+      type: current.type,
+      priority: current.priority,
+      occurred_at: signedAt,
+    });
     const pkg = buildDeterminationPackage({
       case: current,
       brief,
@@ -374,7 +390,7 @@ export class CaseSpineService {
         targets: ['F1_portal', 'F5_billing', 'F7_archive'],
       },
       billable_event_stub: {
-        billable_event_id: billableEventId,
+        billable_event_id: ledgerRows[0]?.billable_event_id ?? billableEventId,
         event: 'determination.signed',
         enqueued_at: signedAt,
       },
@@ -430,6 +446,25 @@ export class CaseSpineService {
     await this.store.updateCase(withStubs);
 
     return { case: withStubs, package: pkg, brief, audit };
+  }
+
+  async applyOpsPatch(caseId: string, patch: CaseOpsPatch): Promise<CanonicalCase> {
+    const current = await this.requireCase(caseId);
+    const next: CanonicalCase = {
+      ...current,
+      packet_storage_keys: [...current.packet_storage_keys],
+      cm_flags: [...current.cm_flags],
+      open_tasks: patch.open_tasks ? [...patch.open_tasks] : [...current.open_tasks],
+      intake: { ...current.intake },
+      fanout_stub: patch.fanout_stub !== undefined ? patch.fanout_stub : current.fanout_stub,
+      billable_event_stub:
+        patch.billable_event_stub !== undefined ? patch.billable_event_stub : current.billable_event_stub,
+      fanout_status: patch.fanout_status ?? current.fanout_status,
+      billable_event_id:
+        patch.billable_event_id !== undefined ? patch.billable_event_id : current.billable_event_id,
+    };
+    await this.store.updateCase(next);
+    return next;
   }
 
   /**

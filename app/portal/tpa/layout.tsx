@@ -31,6 +31,8 @@ function TpaHeader() {
   const navItems = [
     { href: '/portal/tpa', label: 'Dashboard' },
     { href: '/portal/tpa/submit', label: 'Submit Case' },
+    { href: '/portal/tpa/determinations', label: 'Determinations' },
+    { href: '/portal/tpa/statements', label: 'Statements' },
     { href: '/portal/tpa/practices', label: 'Practices' },
   ];
 
