@@ -5,9 +5,24 @@ Future Claude/Cole/Jonah sessions: read this first.
 
 ---
 
-## 🧭 Customer-ready plan — 2026-09-18
+## 🧭 Customer-ready plan — 2026-09-18 (updated)
 
-The shared brain for first-live-customer work (Cole + team) is [`docs/customer-ready/`](docs/customer-ready/00-README.md). Start with `00-README.md` (north star / definition of done). Implement in the order in `10-implementation-commits.md`. Phases 0–2 are on `main` (AWS PR #50, Cognito PR #53, case spine PR #52, intake PR #54). This branch is Phase 3 (brief → MD sign). Update this file when a phase flips from open → done.
+Shared brain: [`docs/customer-ready/`](docs/customer-ready/00-README.md). Board: [`docs/PROGRESS.md`](docs/PROGRESS.md).
+
+| Phase | PR | Status |
+|-------|-----|--------|
+| Docs | #51 | ✅ on `main` |
+| 0.1 AWS | #50 | ✅ on `main` |
+| 0.2 Cognito | #53 | ✅ on `main` (`ENABLE_AWS_AUTH` default false) |
+| 1 Case spine | #52 | ✅ on `main` |
+| 2 Intake | #54 | ✅ on `main` |
+| 3 Brief → MD | #55 | ✅ on `main` |
+| 4 Fan-out + billing | — | ⏸ **Paused** pending Cole status email / README sync |
+| 5–7 | — | ○ open |
+
+**CI at Phase 3 tip:** `npm run test:ci` ~402 passed (3 todo); `tsc --noEmit` clean.
+
+Operator blockers unchanged: SES verify, Fargate image rebuild, BAA before live PHI, production vendor keys, RDS-native bootstrap.
 
 ---
 
@@ -76,7 +91,7 @@ Additive schema/API for `10-implementation-commits.md` Phase 1.1–1.3. Does **n
 - **API:** `/api/case-spine` (POST/GET), `/api/case-spine/[id]`, `/transition`, `/audit`, `/evaluate`, `/api/case-spine/rules` (GET + PATCH toggle).
 - **Acceptance:** illegal transitions → 409; every transition + every rule eval writes `audit_events`; R01 incomplete intake sets `state=intake_incomplete` and `sla_clock=paused`; PATCH can disable R01.
 
-### Phase 2 — intake connectivity (this branch)
+### Phase 2 — intake connectivity (merged, PR #54)
 
 Slices 2.1–2.4 from `10-implementation-commits.md`. Synthetic / demo only. No live PHI. No invented vendor credentials — HMAC secrets are empty slots in `.env.local.example`. Does **not** change brief / fact-check engines or `ENABLE_AWS_AUTH` / `ENABLE_AWS_DB` defaults.
 
@@ -86,9 +101,9 @@ Slices 2.1–2.4 from `10-implementation-commits.md`. Synthetic / demo only. No 
 - **2.4 Client config:** `lib/client-config/` + `028_client_config.sql` (identical RDS copy). Append-only versions. `GET/POST /api/client-config`, `GET/PUT /api/client-config/[clientId]`. PATCH/DELETE → 409. Fields match `02-onboarding.md` Phase B as far as practical. SLA hours from the latest version are applied at ingest.
 - **R01 still holds:** incomplete intake (missing clinicals / required fields) → `intake_incomplete` + `sla_clock=paused` on all three ingresses.
 
-**CI on this branch:** `npm run test:ci` 388 passed (3 todo). `npx tsc --noEmit` clean.
+**CI at merge:** `npm run test:ci` 388 passed (3 todo). `npx tsc --noEmit` clean.
 
-### Phase 3 — Brief → MD sign (this branch)
+### Phase 3 — Brief → MD sign (merged, PR #55)
 
 Slices 3.1–3.3 from `10-implementation-commits.md`. Synthetic / demo only. No live PHI. Does **not** rewrite `lib/generate-brief.ts` / fact-check. Does **not** change `ENABLE_AWS_*` defaults or Phase 1–2 spine / intake APIs.
 
@@ -99,7 +114,7 @@ Slices 3.1–3.3 from `10-implementation-commits.md`. Synthetic / demo only. No 
 
 **Acceptance:** illegal sign without brief → 409 `brief_required` / `not_in_md_queue`; successful sign → `determined` + R13 audit + package hash; queue ordering covered in tests.
 
-**CI on this branch:** `npm run test:ci` 402 passed (3 todo). `npx tsc --noEmit` clean.
+**CI at merge:** `npm run test:ci` 402 passed (3 todo). `npx tsc --noEmit` clean.
 
 ---
 
