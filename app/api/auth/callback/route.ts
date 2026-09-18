@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { CognitoAuthAdapter } from '@/lib/adapters/auth/cognito';
-import { SESSION_COOKIE_NAME } from '@/lib/adapters/auth/cognito';
+import {
+  CognitoAuthAdapter,
+  SESSION_COOKIE_NAME,
+  sessionCookieOptions,
+} from '@/lib/adapters/auth/cognito';
 import { applyRateLimit } from '@/lib/rate-limit-middleware';
 import { logSecurityEvent } from '@/lib/audit';
 import { getRequestContext } from '@/lib/security';
@@ -34,8 +37,6 @@ export const dynamic = 'force-dynamic';
  *   - Cookie is HttpOnly + Secure + SameSite=Lax so it survives the
  *     top-level navigation from the email client.
  */
-
-const COOKIE_MAX_AGE_SEC = 3600 * 8; // 8h — caller-side refresh on tab activity, then re-issue.
 
 function safeNext(next: string | null): string {
   if (!next) return '/dashboard';
@@ -83,13 +84,11 @@ export async function GET(request: NextRequest) {
   }
 
   const redirect = NextResponse.redirect(new URL(next, request.url));
-  redirect.cookies.set(SESSION_COOKIE_NAME, JSON.stringify(redeem.cookie), {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    path: '/',
-    maxAge: COOKIE_MAX_AGE_SEC,
-  });
+  redirect.cookies.set(
+    SESSION_COOKIE_NAME,
+    JSON.stringify(redeem.cookie),
+    sessionCookieOptions(),
+  );
 
   await logSecurityEvent('auth_callback_success', sub, { next }, ctx);
   return redirect;

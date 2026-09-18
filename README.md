@@ -52,7 +52,7 @@ Supabase remains a cutover leftover for Auth (V1 hybrid) and optional Vercel dep
 | Language | TypeScript 5 |
 | Database | **RDS Postgres** via pg shim (`ENABLE_AWS_DB`). Supabase Postgres is leftover. |
 | Storage | **S3** (`ENABLE_AWS_STORAGE`) or Supabase Storage |
-| Auth | Supabase Auth (V1). Cognito implemented, not cut over (`ENABLE_AWS_AUTH`). |
+| Auth | Supabase Auth hybrid by default. Cognito when `ENABLE_AWS_AUTH=true`. |
 | Email | **SES SDK** (`ENABLE_AWS_EMAIL`) or SMTP |
 | AI | Anthropic Claude API (claude-sonnet-4-5-20250514) |
 | Styling | Tailwind CSS v4 |

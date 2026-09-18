@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { createBrowserClient } from '@/lib/supabase-browser';
+import { useAuth } from '@/components/AuthProvider';
 import { getTimeRemaining, formatTimeRemaining, getSlaStatus } from '@/lib/sla-calculator';
 import { EmptyState } from '@/components/EmptyState';
 
@@ -70,6 +70,7 @@ const DETERMINATION_PILL: Record<string, string> = {
 
 export default function ClientCasesPage() {
   const router = useRouter();
+  const { user, backend, loading: authLoading } = useAuth();
   const [cases, setCases] = useState<MyCase[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
@@ -78,18 +79,16 @@ export default function ClientCasesPage() {
     let cancelled = false;
 
     async function load() {
+      if (authLoading) return;
       // Client-side guard: bounce to /login if not authenticated. The
       // server route also enforces this, but doing it here avoids a flash
-      // of the empty dashboard before the 401 lands.
-      const browser = createBrowserClient();
-      if (browser) {
-        const { data: { user } } = await browser.auth.getUser();
-        if (!user) {
-          router.replace('/login?redirect=/client/cases');
-          return;
-        }
-        if (!cancelled) setUserEmail(user.email ?? null);
+      // of the empty dashboard before the 401 lands. AuthProvider reads
+      // Cognito or Supabase via /api/auth/session.
+      if (!user && backend === 'cognito') {
+        router.replace('/login?redirect=/client/cases');
+        return;
       }
+      if (user && !cancelled) setUserEmail(user.email ?? null);
 
       // First-login redirect: if the TPA hasn't completed onboarding yet,
       // send them to /onboarding. We skip this when ?onboarded=1 is set
@@ -134,7 +133,7 @@ export default function ClientCasesPage() {
     }
     load();
     return () => { cancelled = true; };
-  }, [router]);
+  }, [router, user, backend, authLoading]);
 
   if (error) {
     return (

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { createBrowserClient } from '@/lib/supabase-browser';
+import { useAuth } from '@/components/AuthProvider';
 import { EmptyState } from '@/components/EmptyState';
 
 type Role = 'admin' | 'reviewer' | 'client' | 'builder' | 'ceo' | 'practice-lead' | 'slt';
@@ -30,6 +30,7 @@ function roleTone(role: Role): string {
 }
 
 export default function TeamPage() {
+  const { user, backend, loading: authLoading } = useAuth();
   const [members, setMembers] = useState<TeamMember[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
@@ -58,12 +59,16 @@ export default function TeamPage() {
   useEffect(() => {
     let cancelled = false;
     async function init() {
-      // Client-side role probe so we can render an access-denied panel
-      // instead of bouncing to login when the user is signed in but not
-      // a permitted role.
-      const browser = createBrowserClient();
-      if (!browser) {
-        // Demo mode — treat as admin.
+      if (authLoading) return;
+      // Demo / no-session hybrid: let the API decide (dev demo mints admin).
+      if (!user) {
+        if (backend === 'cognito') {
+          if (!cancelled) {
+            setHasAccess(false);
+            setAccessChecked(true);
+          }
+          return;
+        }
         if (!cancelled) {
           setHasAccess(true);
           setAccessChecked(true);
@@ -71,21 +76,8 @@ export default function TeamPage() {
         }
         return;
       }
-      const { data: { user } } = await browser.auth.getUser();
-      if (!user) {
-        if (!cancelled) {
-          setHasAccess(false);
-          setAccessChecked(true);
-        }
-        return;
-      }
-      const { data: profile } = await browser
-        .from('user_profiles')
-        .select('role')
-        .eq('id', user.id)
-        .maybeSingle();
-      const role = (profile?.role as Role) ?? 'reviewer';
-      const allowed = role === 'admin' || role === 'ceo' || role === 'slt';
+      const role = (user.role as Role | null) ?? null;
+      const allowed = !role || role === 'admin' || role === 'ceo' || role === 'slt';
       if (!cancelled) {
         setHasAccess(allowed);
         setAccessChecked(true);
@@ -94,7 +86,7 @@ export default function TeamPage() {
     }
     init();
     return () => { cancelled = true; };
-  }, [loadTeam]);
+  }, [loadTeam, user, backend, authLoading]);
 
   async function changeRole(memberId: string, newRole: Role) {
     setSavingId(memberId);

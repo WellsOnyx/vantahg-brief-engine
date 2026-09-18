@@ -170,7 +170,7 @@ export async function getRealModeStatus(): Promise<RealModeStatus> {
   const authStatus: ComponentStatus =
     authBackend === 'cognito'
       ? process.env.COGNITO_USER_POOL_ID && process.env.COGNITO_CLIENT_ID
-        ? { status: 'ready', missing: [], hint: 'CognitoAuthAdapter. Staged — confirm magic-link Lambdas before relying on this in prod.' }
+        ? { status: 'ready', missing: [], hint: 'CognitoAuthAdapter (ENABLE_AWS_AUTH). Password + magic-link + team invite use Cognito. Confirm Lambdas + SES before relying on this in prod.' }
         : {
             status: 'missing',
             missing: ['COGNITO_USER_POOL_ID', 'COGNITO_CLIENT_ID'],
@@ -179,7 +179,7 @@ export async function getRealModeStatus(): Promise<RealModeStatus> {
       : {
           status: demo ? 'demo' : 'ready',
           missing: [],
-          hint: 'Supabase Auth (V1 hybrid). Cognito pool + Lambdas are deployed but not cut over. Do not set ENABLE_AWS_AUTH until that wave.',
+          hint: 'Supabase Auth hybrid (default). Set ENABLE_AWS_AUTH=true to use Cognito for clinical + client login, team invite, and AuthProvider. Fargate leaves the flag false unless you export it at deploy.',
         };
 
   const emailBackend = getEmailBackend();

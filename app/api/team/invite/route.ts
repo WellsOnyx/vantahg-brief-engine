@@ -6,6 +6,8 @@ import { applyRateLimit } from '@/lib/rate-limit-middleware';
 import { logAuditEvent } from '@/lib/audit';
 import { apiError } from '@/lib/api-error';
 import { getRequestContext } from '@/lib/security';
+import { getAuthAdapter } from '@/lib/adapters/auth';
+import { isAwsAuthEnabled } from '@/lib/runtime-backend';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,13 +19,17 @@ const VALID_ROLES: ReadonlySet<UserRole> = new Set<UserRole>([
 /**
  * POST /api/team/invite
  *
- * Admin-only. Sends a Supabase Auth invitation email via the service-
- * role admin API (`auth.admin.inviteUserByEmail`). On success Supabase
- * creates a row in auth.users which fires the handle_new_user trigger
- * (migration 001), which inserts a user_profiles row with the default
- * role. We then PATCH that profile to the requested role.
+ * Admin-only. Provisions a teammate and sends a magic-link invite.
  *
- * Phase 1 behavior:
+ * ENABLE_AWS_AUTH=true:
+ *   CognitoAuthAdapter.createUserWithMagicLink (custom-auth Lambdas +
+ *   SES). Then upserts user_profiles (RDS has no handle_new_user trigger).
+ *   Does not call supabase.auth.admin — the pg shim throws on .auth.
+ *
+ * ENABLE_AWS_AUTH=false (default):
+ *   Existing hybrid: auth.admin.inviteUserByEmail + PATCH user_profiles.
+ *
+ * Phase 1 behavior on the hybrid path:
  *   - If auth.admin.inviteUserByEmail succeeds → role is applied + audit
  *   - If it fails (e.g. SMTP not configured) → returns a clear "Phase 2"
  *     message rather than 500ing. The admin can manually set the role
@@ -58,7 +64,18 @@ export async function POST(request: NextRequest) {
 
     const supabase = getServiceClient();
 
-    // Try Supabase Auth admin invite. Requires SUPABASE_SERVICE_ROLE_KEY
+    if (isAwsAuthEnabled()) {
+      return inviteViaCognito({
+        request,
+        supabase,
+        actorEmail: authResult.user.email,
+        email,
+        name,
+        role,
+      });
+    }
+
+    // Hybrid: Supabase Auth admin invite. Requires SUPABASE_SERVICE_ROLE_KEY
     // + outbound SMTP configured at the project level.
     try {
       const { data, error } = await supabase.auth.admin.inviteUserByEmail(email, {
@@ -132,4 +149,88 @@ export async function POST(request: NextRequest) {
       requestContext: getRequestContext(request),
     });
   }
+}
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+async function inviteViaCognito(params: {
+  request: NextRequest;
+  supabase: ReturnType<typeof getServiceClient>;
+  actorEmail: string;
+  email: string;
+  name: string;
+  role: UserRole;
+}): Promise<NextResponse> {
+  const { request, supabase, actorEmail, email, name, role } = params;
+  const appUrl = process.env.APP_URL || `https://${request.headers.get('host')}`;
+  const adapter = getAuthAdapter();
+  const result = await adapter.createUserWithMagicLink({
+    email,
+    fullName: name || undefined,
+    metadata: {
+      org_role: role,
+      provisioned_by: 'team_invite',
+    },
+    redirectUrl: `${appUrl.replace(/\/$/, '')}/login`,
+  });
+
+  if (!result.ok) {
+    await logAuditEvent(null, 'security:team_invite_failed', actorEmail, {
+      target_email_domain: email.split('@')[1] ?? null,
+      target_role: role,
+      reason: 'cognito_invite_failed',
+      code: result.code,
+    }, getRequestContext(request));
+    return NextResponse.json({
+      success: false,
+      message:
+        'Invitation could not be sent via Cognito. Confirm ENABLE_AWS_AUTH, pool ids, and magic-link Lambdas, or retry.',
+    }, { status: 200 });
+  }
+
+  if (!UUID_RE.test(result.userId)) {
+    await logAuditEvent(null, 'security:team_invite_role_not_applied', actorEmail, {
+      target_role: role,
+      reason: 'cognito_sub_not_uuid',
+    }, getRequestContext(request));
+    return NextResponse.json({
+      success: true,
+      partial: true,
+      message: `Invitation sent to ${email} but the profile could not be written — set the role manually from the roster once they sign in.`,
+    });
+  }
+
+  const { error: profileErr } = await supabase
+    .from('user_profiles')
+    .upsert(
+      { id: result.userId, name, role, email },
+      { onConflict: 'id' },
+    );
+
+  if (profileErr) {
+    await logAuditEvent(null, 'security:team_invite_role_not_applied', actorEmail, {
+      target_user_id: result.userId,
+      target_role: role,
+      error_code: profileErr.code ?? null,
+    }, getRequestContext(request));
+    return NextResponse.json({
+      success: true,
+      partial: true,
+      message: `Invitation sent to ${email} but role couldn't be applied — set it manually from the roster below once they sign up.`,
+    });
+  }
+
+  await logAuditEvent(null, 'security:team_invited', actorEmail, {
+    target_user_id: result.userId,
+    target_role: role,
+    target_email_domain: email.split('@')[1] ?? null,
+    backend: 'cognito',
+  }, getRequestContext(request));
+
+  return NextResponse.json({
+    success: true,
+    message: `Invitation sent to ${email} as ${role}.`,
+    backend: 'cognito',
+  });
 }

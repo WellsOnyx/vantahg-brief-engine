@@ -12,11 +12,12 @@ import {
   AuthError,
 } from '@/components/layouts/AuthShell';
 import { pickLoginTagline } from '@/lib/login-taglines';
+import { landingPathForRole } from '@/lib/auth-landing';
 
 /**
- * Routes a freshly-signed-in user to the right landing page based on their
- * role. Never returns '/' (chromeless marketing page) — every signed-in
- * user lands on an app surface with the nav visible.
+ * Routes a freshly-signed-in hybrid (Supabase) user to the right landing
+ * page based on their role. Cognito sign-in returns `next` from the
+ * server and does not use this helper.
  */
 async function resolveLandingPage(supabase: SupabaseClient): Promise<string> {
   try {
@@ -27,17 +28,7 @@ async function resolveLandingPage(supabase: SupabaseClient): Promise<string> {
       .select('role')
       .eq('id', user.id)
       .maybeSingle();
-    const role = profile?.role ?? 'reviewer';
-    switch (role) {
-      case 'admin':         return '/mission-control';
-      case 'ceo':           return '/office-ceo';
-      case 'slt':           return '/office-ceo';
-      case 'builder':       return '/builders';
-      case 'client':        return '/client/cases';
-      case 'reviewer':      return '/cases';
-      case 'practice-lead': return '/cases';
-      default:              return '/cases';
-    }
+    return landingPathForRole(profile?.role ?? 'reviewer');
   } catch {
     return '/cases';
   }
@@ -125,10 +116,14 @@ function LoginForm() {
         }
 
         if (res.status === 503) {
-          if (!supabase) {
+          const payload = (await res.json().catch(() => ({}))) as { backend?: string };
+          // ENABLE_AWS_AUTH=true: do not fall back to Supabase Auth.
+          if (payload.backend === 'cognito') {
+            setError('Authentication is not configured on this deployment.');
+          } else if (!supabase) {
             setError('Authentication is not configured on this deployment.');
           } else {
-            // Cognito not wired — fall back to Supabase path.
+            // Hybrid path (flag off): existing supabase.auth.signInWithPassword.
             const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
             if (signInError) {
               setError("That email and password don't match our records.");

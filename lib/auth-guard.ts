@@ -87,8 +87,8 @@ export async function requireAuth(
     }
 
     // Role precedence:
-    //   1. Adapter-provided role (Cognito custom:role attribute) — authoritative
-    //      once we cut over to Cognito.
+    //   1. Adapter-provided role (Cognito custom:org_role, or legacy custom:role)
+    //      — authoritative when ENABLE_AWS_AUTH=true.
     //   2. user_profiles.role lookup — current Supabase path; the role lives
     //      in a separate table, not in the auth user metadata.
     //   3. 'reviewer' default — last-resort, matches prior behavior.
