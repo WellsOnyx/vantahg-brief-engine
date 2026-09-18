@@ -5,6 +5,12 @@ Future Claude/Cole/Jonah sessions: read this first.
 
 ---
 
+## 🧭 Customer-ready plan — 2026-09-18
+
+The shared brain for first-live-customer work (Cole + team) is [`docs/customer-ready/`](docs/customer-ready/00-README.md). Start with `00-README.md` (north star / definition of done). Implement in the order in `10-implementation-commits.md`. Phase 0 is AWS PR #50 + Cognito. Update this file when a phase flips from open → done.
+
+---
+
 ## 📱 MOBILE HANDOFF — 2026-05-13 (4:09 PM ET)
 
 Jonah is heading out. Fresh thread on the phone Claude app should pick up here.
