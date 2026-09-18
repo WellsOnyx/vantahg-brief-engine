@@ -48,7 +48,7 @@ export interface HypercareProgress {
   required_remaining: number;
 }
 
-const DONE_DEFAULT = new Set([
+export const HYPERCARE_DONE_DEFAULT = new Set([
   'hc-01',
   'hc-02',
   'hc-03',
@@ -61,10 +61,10 @@ const DONE_DEFAULT = new Set([
 
 export function hypercareForClient(
   clientId: string,
-  doneIds: Iterable<string> = DONE_DEFAULT,
+  doneIds: Iterable<string> = HYPERCARE_DONE_DEFAULT,
   now = new Date(),
 ): HypercareProgress {
-  const done = new Set(doneIds);
+  const done = new Set([...HYPERCARE_DONE_DEFAULT, ...doneIds]);
   const items: HypercareItem[] = HYPERCARE_FIRST_25.map((row) => ({
     ...row,
     done: done.has(row.item_id),

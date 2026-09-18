@@ -13,6 +13,12 @@ export type NotifyChannel = (typeof NOTIFY_CHANNELS)[number];
 export const INTAKE_MODES = ['gravity_rail', 'api', 'sftp', 'fax'] as const;
 export type IntakeMode = (typeof INTAKE_MODES)[number];
 
+export const GO_LIVE_MODES = ['synthetic', 'shadow', 'live'] as const;
+export type GoLiveMode = (typeof GO_LIVE_MODES)[number];
+
+/** Default first-25 SLA miss rate that triggers rollback to shadow. */
+export const DEFAULT_SLA_MISS_ROLLBACK_THRESHOLD = 0.2;
+
 export interface EscalationContact {
   name: string;
   role: string;
@@ -48,6 +54,12 @@ export interface ClientConfigFields {
   escalation_contacts: EscalationContact[];
   cx_owner: string;
   reviewer_queue: string;
+  /** Phase E gate. `shadow` records outbound intent only — no member/provider final send. */
+  go_live_mode: GoLiveMode;
+  /** Explicit shadow flag. Also true when go_live_mode === 'shadow'. */
+  shadow_mode: boolean;
+  /** First-25 SLA miss rate (0–1) that pauses live intake. Config, not a HIPAA claim. */
+  sla_miss_rollback_threshold: number;
 }
 
 export interface ClientConfigVersion {
@@ -76,6 +88,9 @@ export const DEFAULT_CLIENT_CONFIG_FIELDS: Omit<ClientConfigFields, 'client_id' 
   timezone: 'America/New_York',
   business_hours: { start: '09:00', end: '17:00', days: ['mon', 'tue', 'wed', 'thu', 'fri'] },
   escalation_contacts: [],
+  go_live_mode: 'synthetic',
+  shadow_mode: false,
+  sla_miss_rollback_threshold: DEFAULT_SLA_MISS_ROLLBACK_THRESHOLD,
 };
 
 export class ClientConfigNotFoundError extends Error {

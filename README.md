@@ -21,7 +21,7 @@ The core principle is simple: **AI analyzes, physicians decide.** VantaUM uses A
 
 ## Customer-ready progress (Sep 2026)
 
-We are executing the plan in [`docs/customer-ready/`](docs/customer-ready/00-README.md) in commit order. **Phases 0–3 are on `main`.** Phase 4+ is next.
+We executed the plan in [`docs/customer-ready/`](docs/customer-ready/00-README.md) in commit order. **Phases 0–7 are the customer-ready code path.** Remaining work is human ops (SES, Fargate deploy, BAA, production keys).
 
 | Phase | Status | Highlights |
 |-------|--------|------------|
@@ -29,10 +29,12 @@ We are executing the plan in [`docs/customer-ready/`](docs/customer-ready/00-REA
 | 1 Case spine | ✅ merged | Prior-auth / appeal state machine, audit, R01–R16 |
 | 2 Intake | ✅ merged | Gravity Rail, external submit, Phaxio → spine; client config versions |
 | 3 Brief → MD sign | ✅ merged | `/med-review`, human sign, immutable determination package |
-| 4 Fan-out + bill | ⏸ paused | Webhook retries, ledger, statement |
-| 5–7 Views / reports / go-live | ○ open | See `10-implementation-commits.md` |
+| 4 Fan-out + bill | ✅ merged | Portal downloads, HMAC retries, ledger, statement stub |
+| 5 Three role views | ✅ merged | Client / CX / Med lenses; RBAC deny cross-tenant + CX notes |
+| 6 Reporting + CM | ✅ merged | Five client reports + CSV, CM HMAC handoff, ops scoreboard |
+| 7 Onboarding + go-live | ✅ merged | A→E runbook + `/admin/onboarding`, synthetic/shadow packs, SLA rollback gate |
 
-Full board: [`docs/PROGRESS.md`](docs/PROGRESS.md) · live notes: [`STATE.md`](STATE.md)
+Full board: [`docs/PROGRESS.md`](docs/PROGRESS.md) · live notes: [`STATE.md`](STATE.md) · Cole runbook: [`docs/onboarding/`](docs/onboarding/README.md)
 
 **Auth (updated):** Supabase Auth hybrid when `ENABLE_AWS_AUTH=false` (default, including Fargate). Cognito login / invite / session when `ENABLE_AWS_AUTH=true`. See Phase 0.2 notes in `STATE.md`.
 
@@ -243,6 +245,7 @@ The bootstrap script still constructs a Supabase JS client (leftover). On AWS, p
 
 ```bash
 npm run test:e2e-synthetic
+npm run test:go-live-synthetic   # Phase 7 E1 pack (case-spine + intake, no vendor keys)
 ```
 
 This drives a synthetic case through the full pipeline:

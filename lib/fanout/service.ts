@@ -15,7 +15,7 @@ import {
   type BillableEvent,
   type BillableEventLedger,
 } from '@/lib/billing/events';
-import { getClientConfigService, type ClientConfigService } from '@/lib/client-config';
+import { getClientConfigService, isShadowMode, type ClientConfigService } from '@/lib/client-config';
 import { CaseSpineService, getCaseSpineService, type CanonicalCase, type FanoutStub } from '@/lib/case-spine';
 import { getMemoryFanoutStore, type FanoutStore } from './store';
 import {
@@ -46,6 +46,8 @@ export interface FanoutServiceOptions {
   webhookUrl?: string | null;
   webhookSecret?: string | null;
   appUrl?: string;
+  /** Phase 7.3 — force shadow (skip member/provider final send) even if config is synthetic. */
+  shadowMode?: boolean;
 }
 
 const noopSleep = async () => undefined;
@@ -61,6 +63,7 @@ export class FanoutService {
   private readonly webhookUrlOverride: string | null | undefined;
   private readonly webhookSecretOverride: string | null | undefined;
   private readonly appUrl: string | undefined;
+  private readonly shadowModeOverride: boolean | undefined;
 
   constructor(opts: FanoutServiceOptions = {}) {
     this.spineOverride = opts.spine;
@@ -73,6 +76,7 @@ export class FanoutService {
     this.webhookUrlOverride = opts.webhookUrl;
     this.webhookSecretOverride = opts.webhookSecret;
     this.appUrl = opts.appUrl;
+    this.shadowModeOverride = opts.shadowMode;
   }
 
   private get spine(): CaseSpineService {
@@ -105,11 +109,15 @@ export class FanoutService {
     }
 
     const billed = await this.ensureBillable(working);
+    const cfg = await this.clientChannels(working.client_id);
+    const shadow = this.shadowModeOverride ?? isShadowMode(cfg);
     const f1 = await this.deliverPortal(working);
     const f7 = await this.recordArchive(working);
     const f3 = await this.recordFax(working);
-    const f4 = await this.recordEmail(working);
+    const f4 = await this.recordEmail(working, shadow);
     const f6 = await this.recordCm(working);
+    const f8 = await this.recordAudienceOutbound(working, 'member', 'F8_member', shadow);
+    const f9 = await this.recordAudienceOutbound(working, 'provider', 'F9_provider', shadow);
     const webhook = await this.deliverWebhook(working);
 
     const targets: TargetResult[] = [
@@ -119,6 +127,8 @@ export class FanoutService {
       f3,
       f4,
       f6,
+      f8,
+      f9,
       {
         target: 'F2_webhook',
         ok: webhook.ok === true || !webhook.configured,
@@ -196,6 +206,7 @@ export class FanoutService {
       billable_event_ids: billed.map((e) => e.billable_event_id),
       cx_task_id: cxTaskId,
       outbound_intents: intents,
+      shadow_mode: shadow,
     };
   }
 
@@ -266,7 +277,7 @@ export class FanoutService {
     return { target: 'F3_fax', ok: true, reason: 'intent_recorded' };
   }
 
-  private async recordEmail(c: CanonicalCase): Promise<TargetResult> {
+  private async recordEmail(c: CanonicalCase, shadow = false): Promise<TargetResult> {
     const cfg = await this.clientChannels(c.client_id);
     const contracted = cfg?.notify_channels.includes('email');
     if (!contracted) {
@@ -275,6 +286,21 @@ export class FanoutService {
     const to = cfg?.determination_recipients[0] ?? cfg?.escalation_contacts[0]?.email ?? null;
     const subject = 'VantaUM determination available';
     const awsEmail = process.env.ENABLE_AWS_EMAIL === 'true';
+
+    if (shadow) {
+      await this.store.insertIntent({
+        intent_id: randomUUID(),
+        case_id: c.case_id,
+        channel: 'email',
+        recorded_at: this.now().toISOString(),
+        status: 'skipped',
+        reason: 'shadow_mode_no_final_send',
+        to,
+        subject,
+        final_send: false,
+      });
+      return { target: 'F4_email', ok: true, skipped: true, reason: 'shadow_mode_no_final_send' };
+    }
 
     if (awsEmail && to && to.includes('@')) {
       const sent = await getEmailAdapter().send({
@@ -306,6 +332,36 @@ export class FanoutService {
       subject,
     });
     return { target: 'F4_email', ok: true, reason: 'demo_intent_recorded' };
+  }
+
+  /**
+   * Member / requesting-provider outbound. Never a final send in this code
+   * path (no live PHI). Shadow mode records skipped intent only.
+   */
+  private async recordAudienceOutbound(
+    c: CanonicalCase,
+    channel: 'member' | 'provider',
+    target: 'F8_member' | 'F9_provider',
+    shadow: boolean,
+  ): Promise<TargetResult> {
+    const ref = channel === 'member' ? c.intake.member_ref : c.intake.requesting_provider;
+    const to = ref ? `${channel}:${ref}` : null;
+    await this.store.insertIntent({
+      intent_id: randomUUID(),
+      case_id: c.case_id,
+      channel,
+      recorded_at: this.now().toISOString(),
+      status: shadow ? 'skipped' : 'recorded',
+      reason: shadow ? 'shadow_mode_no_final_send' : 'intent_only_no_member_provider_final',
+      to,
+      final_send: false,
+    });
+    return {
+      target,
+      ok: true,
+      skipped: shadow,
+      reason: shadow ? 'shadow_mode_no_final_send' : 'intent_only',
+    };
   }
 
   private async recordCm(c: CanonicalCase): Promise<TargetResult> {

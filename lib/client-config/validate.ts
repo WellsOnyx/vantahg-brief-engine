@@ -2,6 +2,7 @@ import { z } from 'zod';
 import {
   AUTO_VS_MD_POLICIES,
   DEFAULT_CLIENT_CONFIG_FIELDS,
+  GO_LIVE_MODES,
   INTAKE_MODES,
   NOTIFY_CHANNELS,
   type ClientConfigFields,
@@ -40,6 +41,13 @@ export const ClientConfigFieldsSchema = z.object({
   escalation_contacts: z.array(EscalationContactSchema).default([]),
   cx_owner: z.string().min(1),
   reviewer_queue: z.string().min(1),
+  go_live_mode: z.enum(GO_LIVE_MODES).default(DEFAULT_CLIENT_CONFIG_FIELDS.go_live_mode),
+  shadow_mode: z.boolean().default(DEFAULT_CLIENT_CONFIG_FIELDS.shadow_mode),
+  sla_miss_rollback_threshold: z
+    .number()
+    .min(0)
+    .max(1)
+    .default(DEFAULT_CLIENT_CONFIG_FIELDS.sla_miss_rollback_threshold),
 });
 
 export function parseClientConfigFields(input: unknown): ClientConfigFields {

@@ -1,4 +1,10 @@
 export * from './types';
+export {
+  isShadowMode,
+  resolveGoLiveMode,
+  resolveSlaMissRollbackThreshold,
+  hasMemberOrProviderFinalSend,
+} from './go-live';
 export { parseClientConfigFields, safeParseClientConfigFields, ClientConfigFieldsSchema } from './validate';
 export {
   MemoryClientConfigStore,

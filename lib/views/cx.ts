@@ -17,6 +17,7 @@ import { getMemoryCxNoteStore, hypercareForClient, type CxNote, type HypercarePr
 import { getMemoryFanoutStore } from '@/lib/fanout/store';
 import type { CxTask } from '@/lib/fanout/types';
 import { SYNTHETIC_CLIENT_ID } from '@/lib/intake/constants';
+import { buildGoLiveStatus, getMemoryGoLiveStore, type GoLiveStatus } from '@/lib/golive';
 
 export interface CxAccountHealth {
   open: number;
@@ -37,6 +38,7 @@ export interface CxLens {
   hypercare: HypercareProgress;
   notes: CxNote[];
   resolve_fanout: CxTask[];
+  golive: GoLiveStatus;
 }
 
 export function accountHealth(cases: CanonicalCase[]): CxAccountHealth {
@@ -62,6 +64,8 @@ export async function buildCxLens(
   const resolve_fanout = (await getMemoryFanoutStore().listCxTasks({ status: 'open' })).filter(
     (t) => t.kind === 'resolve_fanout' && (!filters.client_id || t.client_id === filters.client_id),
   );
+  const extraDone = getMemoryGoLiveStore().hypercareDoneIds(clientId);
+  const golive = await buildGoLiveStatus(clientId);
 
   return {
     view: 'cx',
@@ -70,8 +74,9 @@ export async function buildCxLens(
     stuck: cases.filter(isStuckCase),
     escalations: cases.filter(isEscalationCase),
     cases,
-    hypercare: hypercareForClient(clientId),
+    hypercare: hypercareForClient(clientId, extraDone.length ? extraDone : undefined),
     notes,
     resolve_fanout,
+    golive,
   };
 }
