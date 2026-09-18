@@ -5,11 +5,17 @@ Future Claude/Cole/Jonah sessions: read this first.
 
 ---
 
+## 🧭 Customer-ready plan — 2026-09-18
+
+The shared brain for first-live-customer work (Cole + team) is [`docs/customer-ready/`](docs/customer-ready/00-README.md). Start with `00-README.md` (north star / definition of done). Implement in the order in `10-implementation-commits.md`. Phase 0.1 (AWS PR #50) is on `main`. This branch is Phase 0.2 (Cognito). Update this file when a phase flips from open → done.
+
+---
+
 ## 2026-09-18 — Cognito auth cutover path (ENABLE_AWS_AUTH)
 
-Stacked on the AWS adapter branch. Code path only — **default remains
-false**. Do not flip in prod until a staging tenant is ready. Synthetic
-users only; no live PHI.
+Phase 0.2. Rides the AWS adapter lineage (PR #50, now on `main`). Code
+path only — **default remains false**. Do not flip in prod until a
+staging tenant is ready. Synthetic users only; no live PHI.
 
 ### What this pass shipped (code)
 
