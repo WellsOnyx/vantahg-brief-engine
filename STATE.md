@@ -7,7 +7,7 @@ Future Claude/Cole/Jonah sessions: read this first.
 
 ## 🧭 Customer-ready plan — 2026-09-18
 
-The shared brain for first-live-customer work (Cole + team) is [`docs/customer-ready/`](docs/customer-ready/00-README.md). Start with `00-README.md` (north star / definition of done). Implement in the order in `10-implementation-commits.md`. Phase 0 (AWS PR #50 + Cognito PR #53) and Phase 1 (case spine PR #52) are on `main`. This branch is Phase 2 (intake connectivity). Update this file when a phase flips from open → done.
+The shared brain for first-live-customer work (Cole + team) is [`docs/customer-ready/`](docs/customer-ready/00-README.md). Start with `00-README.md` (north star / definition of done). Implement in the order in `10-implementation-commits.md`. Phases 0–2 are on `main` (AWS PR #50, Cognito PR #53, case spine PR #52, intake PR #54). This branch is Phase 3 (brief → MD sign). Update this file when a phase flips from open → done.
 
 ---
 
@@ -87,6 +87,19 @@ Slices 2.1–2.4 from `10-implementation-commits.md`. Synthetic / demo only. No 
 - **R01 still holds:** incomplete intake (missing clinicals / required fields) → `intake_incomplete` + `sla_clock=paused` on all three ingresses.
 
 **CI on this branch:** `npm run test:ci` 388 passed (3 todo). `npx tsc --noEmit` clean.
+
+### Phase 3 — Brief → MD sign (this branch)
+
+Slices 3.1–3.3 from `10-implementation-commits.md`. Synthetic / demo only. No live PHI. Does **not** rewrite `lib/generate-brief.ts` / fact-check. Does **not** change `ENABLE_AWS_*` defaults or Phase 1–2 spine / intake APIs.
+
+- **3.1 Brief hooked to case states:** `POST /api/case-spine/[id]/brief` attaches a synthetic brief (or copies an existing `/api/generate-brief` / demo brief id). `brief_id` is required before `md_queue`. R07–R09 attach a draft brief then queue MD — they do **not** determine.
+- **3.2 Med review queue:** `GET /api/case-spine/md-queue` + `/med-review` UI. Sort is SLA due-at ascending, then priority (expedited → urgent → standard). Row opens packet + brief.
+- **3.3 Sign:** `POST /api/case-spine/[id]/sign` (approve/deny/pend/partial + rationale). Writes an immutable package at `determinations/{case_id}/{version}/` (05 write-once fields). State → `determined`. Fan-out + billable event are stubs on the case (`fanout_status=pending`, `billable_event_id`, `fanout_stub`, `billable_event_stub`) until Phase 4. No silent auto-approve — sign endpoint is the only live path.
+- **Schema:** `029_determination_packages.sql` (identical RDS copy). Memory store is still the demo/test SoR.
+
+**Acceptance:** illegal sign without brief → 409 `brief_required` / `not_in_md_queue`; successful sign → `determined` + R13 audit + package hash; queue ordering covered in tests.
+
+**CI on this branch:** `npm run test:ci` 402 passed (3 todo). `npx tsc --noEmit` clean.
 
 ---
 

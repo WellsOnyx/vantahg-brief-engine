@@ -4,8 +4,10 @@ import { applyRateLimit } from '@/lib/rate-limit-middleware';
 import { apiError } from '@/lib/api-error';
 import { getRequestContext } from '@/lib/security';
 import {
+  BriefRequiredError,
   CASE_SPINE_STATES,
   CaseNotFoundError,
+  IllegalSignError,
   IllegalTransitionError,
   getCaseSpineService,
   type TransitionInput,
@@ -39,6 +41,18 @@ export async function POST(
     if (err instanceof IllegalTransitionError) {
       return NextResponse.json(
         { error: err.message, code: err.code, from_state: err.from_state, to_state: err.to_state },
+        { status: 409 },
+      );
+    }
+    if (err instanceof BriefRequiredError) {
+      return NextResponse.json(
+        { error: err.message, code: err.code, case_id: err.case_id, attempted_state: err.attempted_state },
+        { status: 409 },
+      );
+    }
+    if (err instanceof IllegalSignError) {
+      return NextResponse.json(
+        { error: err.message, code: err.code, case_id: err.case_id },
         { status: 409 },
       );
     }

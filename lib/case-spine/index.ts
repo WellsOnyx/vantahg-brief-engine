@@ -7,6 +7,16 @@ export * from './rbac';
 export * from './store';
 export * from './service';
 export { payloadHash, hashTransitionPayload, hashRulePayload } from './hash';
+export { sortMdQueue, priorityRank } from './md-queue';
+export {
+  buildSyntheticBriefContent,
+  mintSpineBrief,
+  criteriaFromExistingRecommendation,
+} from './briefs';
+export {
+  buildDeterminationPackage,
+  determinationStorageKey,
+} from './determination-package';
 
 import { isDemoMode } from '@/lib/demo-mode';
 import { CaseSpineService } from './service';
