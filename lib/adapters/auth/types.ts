@@ -10,13 +10,14 @@
  *   - The session surface is small and rarely touched.
  *
  * Two implementations:
- *   - lib/adapters/auth/supabase.ts (current production)
- *   - lib/adapters/auth/cognito.ts  (implemented; not the default)
+ *   - lib/adapters/auth/supabase.ts (default — ENABLE_AWS_AUTH=false)
+ *   - lib/adapters/auth/cognito.ts  (ENABLE_AWS_AUTH=true)
  *
- * Cognito is staged, not cut over. ENABLE_AWS_AUTH=true selects it.
- * Magic-link Lambdas + user pool exist in AuthStack; middleware still
- * accepts a vantaum_session cookie. Default remains Supabase Auth
- * until the first paying customer is stable (locked V1 decision).
+ * ENABLE_AWS_AUTH=true selects Cognito for clinical + client login,
+ * team invite, and session cookies (`vantaum_session`). The flag
+ * defaults to false so existing Supabase Auth hybrid (SSR cookies,
+ * auth.admin.inviteUserByEmail) stays intact. Fargate also defaults
+ * the flag off unless you export ENABLE_AWS_AUTH=true at deploy.
  */
 
 export interface CreateUserParams {
@@ -68,14 +69,33 @@ export interface UserSummary {
  *   Cognito: sub).
  * - `email` is always lowercased and trimmed.
  * - `role` is the application-level role (e.g. 'admin', 'tpa', 'idr-attorney').
- *   Adapters read it from Supabase user_metadata.role OR Cognito custom:role,
- *   whichever is non-empty.
+ *   Adapters read it from Supabase user_metadata.role OR Cognito
+ *   custom:org_role (legacy custom:role accepted), whichever is non-empty.
  */
 export interface SessionUser {
   id: string;
   email: string;
   role?: string;
 }
+
+/**
+ * Cookie payload written as `vantaum_session` after Cognito password
+ * or magic-link sign-in. HttpOnly JSON. Not used on the Supabase path.
+ */
+export interface SessionCookiePayload {
+  id_token: string;
+  access_token: string;
+  refresh_token?: string;
+  expires_at: number; // epoch ms
+}
+
+export type SignInResult =
+  | { ok: true; cookie: SessionCookiePayload }
+  | {
+      ok: false;
+      code: 'invalid_credentials' | 'unavailable' | 'unknown';
+      message: string;
+    };
 
 export interface AuthAdminAdapter {
   /**
@@ -103,4 +123,16 @@ export interface AuthAdminAdapter {
   getSessionUser(
     requestOrHeaders: Request | Headers,
   ): Promise<SessionUser | null>;
+
+  /**
+   * Email + password sign-in. Cognito uses ADMIN_USER_PASSWORD_AUTH and
+   * returns tokens for the `vantaum_session` cookie. The Supabase adapter
+   * returns `unavailable` — hybrid password login stays on the browser
+   * client (`supabase.auth.signInWithPassword`) so SSR cookies are set
+   * the way they already are.
+   */
+  signInWithPassword(params: {
+    email: string;
+    password: string;
+  }): Promise<SignInResult>;
 }

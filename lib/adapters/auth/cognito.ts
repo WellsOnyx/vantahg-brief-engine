@@ -15,7 +15,51 @@ import type {
   CreateUserError,
   UserSummary,
   SessionUser,
+  SessionCookiePayload,
+  SignInResult,
 } from './types';
+
+/**
+ * Custom attributes declared on the live pool (AuthStack). Cognito
+ * rejects unknown `custom:` names — AdminCreateUser fails closed.
+ * `role` from callers is mapped to `org_role` (the attribute that
+ * actually exists on the pool).
+ */
+export const COGNITO_CUSTOM_ATTRIBUTE_KEYS = [
+  'signup_id',
+  'client_id',
+  'provisioned_by',
+  'org_role',
+  'product_line',
+  'practice_id',
+] as const;
+
+const CUSTOM_ATTR_SET = new Set<string>(COGNITO_CUSTOM_ATTRIBUTE_KEYS);
+
+export function mapMetadataToCognitoAttributes(
+  metadata?: Record<string, string | number | boolean | undefined>,
+): AttributeType[] {
+  if (!metadata) return [];
+  const out: AttributeType[] = [];
+  for (const [rawKey, v] of Object.entries(metadata)) {
+    if (v === undefined || v === null) continue;
+    const key = rawKey === 'role' ? 'org_role' : rawKey;
+    if (!CUSTOM_ATTR_SET.has(key)) continue;
+    out.push({ Name: `custom:${key}`, Value: String(v) });
+  }
+  return out;
+}
+
+export function roleFromCognitoClaims(payload: Record<string, unknown>): string | undefined {
+  const orgRole = payload['custom:org_role'];
+  const legacy = payload['custom:role'];
+  const role = typeof orgRole === 'string' && orgRole.length > 0
+    ? orgRole
+    : typeof legacy === 'string' && legacy.length > 0
+      ? legacy
+      : undefined;
+  return role;
+}
 
 /**
  * AWS Cognito implementation of the AuthAdminAdapter.
@@ -61,12 +105,16 @@ function jwks(): ReturnType<typeof createRemoteJWKSet> {
 }
 
 export const SESSION_COOKIE_NAME = 'vantaum_session';
+export const AUTH_SESSION_MAX_AGE_SEC = 3600 * 8;
 
-interface SessionCookiePayload {
-  id_token: string;
-  access_token: string;
-  refresh_token?: string;
-  expires_at: number; // epoch ms
+export function sessionCookieOptions(maxAgeSec: number = AUTH_SESSION_MAX_AGE_SEC) {
+  return {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax' as const,
+    path: '/',
+    maxAge: maxAgeSec,
+  };
 }
 
 function readSessionCookie(requestOrHeaders: Request | Headers): SessionCookiePayload | null {
@@ -116,10 +164,7 @@ export class CognitoAuthAdapter implements AuthAdminAdapter {
       { Name: 'email_verified', Value: 'true' },
     ];
     if (params.fullName) attributes.push({ Name: 'name', Value: params.fullName });
-    for (const [k, v] of Object.entries(params.metadata ?? {})) {
-      if (v === undefined || v === null) continue;
-      attributes.push({ Name: `custom:${k}`, Value: String(v) });
-    }
+    attributes.push(...mapMetadataToCognitoAttributes(params.metadata));
 
     let preExisting = false;
     try {
@@ -240,9 +285,65 @@ export class CognitoAuthAdapter implements AuthAdminAdapter {
     const email = typeof payload.email === 'string' ? payload.email.toLowerCase().trim() : '';
     if (!sub || !email) return null;
 
-    const customRole = payload['custom:role'];
-    const role = typeof customRole === 'string' && customRole.length > 0 ? customRole : undefined;
+    const role = roleFromCognitoClaims(payload as Record<string, unknown>);
     return { id: sub, email, role };
+  }
+
+  async signInWithPassword(params: {
+    email: string;
+    password: string;
+  }): Promise<SignInResult> {
+    if (!USER_POOL_ID || !CLIENT_ID) {
+      return {
+        ok: false,
+        code: 'unavailable',
+        message: 'COGNITO_USER_POOL_ID and COGNITO_CLIENT_ID must be set in the runtime environment.',
+      };
+    }
+    const email = params.email.toLowerCase().trim();
+    try {
+      const auth = await client().send(
+        new AdminInitiateAuthCommand({
+          UserPoolId: USER_POOL_ID,
+          ClientId: CLIENT_ID,
+          AuthFlow: 'ADMIN_USER_PASSWORD_AUTH',
+          AuthParameters: {
+            USERNAME: email,
+            PASSWORD: params.password,
+          },
+        }),
+      );
+      const tokens = auth.AuthenticationResult;
+      if (!tokens?.IdToken || !tokens?.AccessToken) {
+        return { ok: false, code: 'invalid_credentials', message: 'Cognito did not return tokens' };
+      }
+      return {
+        ok: true,
+        cookie: {
+          id_token: tokens.IdToken,
+          access_token: tokens.AccessToken,
+          refresh_token: tokens.RefreshToken,
+          expires_at: Date.now() + (tokens.ExpiresIn ?? 3600) * 1000,
+        },
+      };
+    } catch (err) {
+      const name =
+        err && typeof err === 'object' && 'name' in err
+          ? String((err as { name: unknown }).name)
+          : '';
+      if (
+        name === 'NotAuthorizedException' ||
+        name === 'UserNotFoundException' ||
+        name === 'UserNotConfirmedException'
+      ) {
+        return { ok: false, code: 'invalid_credentials', message: name };
+      }
+      return {
+        ok: false,
+        code: 'unknown',
+        message: err instanceof Error ? err.message : 'Unknown error',
+      };
+    }
   }
 
   /**

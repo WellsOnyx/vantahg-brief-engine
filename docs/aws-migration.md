@@ -1,7 +1,7 @@
 # VantaUM AWS Migration Handoff
 
 **Audience:** Cole / operators
-**Status:** Adapters + RDS catalog + CDK stacks are real. SES SDK implemented. Cognito is staged (not cut over). Demo mode still runs with no secrets.
+**Status:** Adapters + RDS catalog + CDK stacks are real. SES SDK implemented. Cognito login/invite is wired behind `ENABLE_AWS_AUTH` (default false). Demo mode still runs with no secrets.
 **Last updated:** 2026-09-17
 
 This is the doc you're looking for when you sit down to start migrating VantaUM off Vercel + Supabase onto AWS. Everything you need to know about where things live and what's already been built for you.
@@ -15,7 +15,7 @@ You do **not** need to rewrite the application. The codebase is set up so swappi
 1. `ENABLE_AWS_DB=true` + RDS connection + `npm run db:migrate:rds`
 2. `ENABLE_AWS_STORAGE=true` (S3 adapter is implemented)
 3. `ENABLE_AWS_EMAIL=true` after the SES identity is verified
-4. Leave `ENABLE_AWS_AUTH` false until the Cognito wave
+4. Leave `ENABLE_AWS_AUTH` false unless you are cutting staging tenants to Cognito (see `.env.local.example`)
 5. DNS / container rebuild are operator steps — see `STATE.md`
 
 Prefer adding a method to the shim or an adapter over new Supabase-only call sites.

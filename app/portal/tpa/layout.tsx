@@ -80,6 +80,7 @@ function TpaHeader() {
           <button
             onClick={async () => {
               try {
+                await fetch('/api/auth/sign-out', { method: 'POST' });
                 const browser = createBrowserClient();
                 if (browser) {
                   await browser.auth.signOut();

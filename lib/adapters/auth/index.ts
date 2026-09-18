@@ -25,4 +25,6 @@ export type {
   CreateUserError,
   UserSummary,
   SessionUser,
+  SessionCookiePayload,
+  SignInResult,
 } from './types';

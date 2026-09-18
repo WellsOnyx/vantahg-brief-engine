@@ -7,7 +7,65 @@ Future Claude/Cole/Jonah sessions: read this first.
 
 ## 🧭 Customer-ready plan — 2026-09-18
 
-The shared brain for first-live-customer work (Cole + team) is [`docs/customer-ready/`](docs/customer-ready/00-README.md). Start with `00-README.md` (north star / definition of done). Implement in the order in `10-implementation-commits.md`. Phase 0 is AWS PR #50 + Cognito. Update this file when a phase flips from open → done.
+The shared brain for first-live-customer work (Cole + team) is [`docs/customer-ready/`](docs/customer-ready/00-README.md). Start with `00-README.md` (north star / definition of done). Implement in the order in `10-implementation-commits.md`. Phase 0.1 (AWS PR #50) is on `main`. This branch is Phase 0.2 (Cognito). Update this file when a phase flips from open → done.
+
+---
+
+## 2026-09-18 — Cognito auth cutover path (ENABLE_AWS_AUTH)
+
+Phase 0.2. Rides the AWS adapter lineage (PR #50, now on `main`). Code
+path only — **default remains false**. Do not flip in prod until a
+staging tenant is ready. Synthetic users only; no live PHI.
+
+### What this pass shipped (code)
+
+- **`ENABLE_AWS_AUTH=true`** selects Cognito for clinical + client login:
+  `POST /api/auth/sign-in` → `CognitoAuthAdapter.signInWithPassword`
+  (ADMIN_USER_PASSWORD_AUTH) + `vantaum_session` cookie. Magic link
+  already went through the adapter. Middleware ignores leftover
+  Supabase SSR cookies when the flag is on.
+- **Flag off (default, including Fargate):** `/api/auth/sign-in` returns
+  `503 { backend: "supabase" }` even if `COGNITO_*` ids are on the task.
+  Login page uses existing `supabase.auth.signInWithPassword`. Team
+  invite still uses `auth.admin.inviteUserByEmail`.
+- **Team invite / roster:** AWS path uses `createUserWithMagicLink` +
+  `user_profiles` upsert (RDS has `email`, no `handle_new_user` trigger).
+  Does not call `supabase.auth.admin` (pg shim throws on `.auth`).
+- **AuthProvider** reads `GET /api/auth/session` (adapter) and signs out
+  via `POST /api/auth/sign-out` (clears `vantaum_session`).
+- Cognito custom attribute is `org_role` (AuthStack). Adapter maps
+  `role` → `org_role` and ignores undeclared custom keys.
+
+### How to enable (local / staging)
+
+```bash
+# .env.local — plus pool ids from AuthStack / STATE.md identifiers
+ENABLE_AWS_AUTH=true
+COGNITO_USER_POOL_ID=us-east-1_CjZbn5TD4
+COGNITO_CLIENT_ID=4v19mdtmaa8ubns3d6bsi4t2i7
+COGNITO_REGION=us-east-1
+APP_URL=http://localhost:3000
+# Usually also: ENABLE_AWS_DB=true + DATABASE_URL (role lives on user_profiles)
+
+# Fargate: ComputeStack already injects pool ids. Flip only the flag:
+ENABLE_AWS_AUTH=true npx cdk deploy vantaum-prod-compute
+```
+
+`GET /api/health` → `backends.auth: cognito` when the flag is on.
+
+### What is still Supabase
+
+| Surface | Why it remains |
+|---|---|
+| Default `ENABLE_AWS_AUTH=false` | Safety. Hybrid password + inviteUserByEmail. |
+| `scripts/bootstrap-*.ts`, `scripts/seed-demo.ts` | Still construct a Supabase JS client. |
+| Optional `NEXT_PUBLIC_SUPABASE_*` | Only needed if you keep the hybrid path. |
+| `user_profiles` | Role store (RDS or leftover Postgres). Not Auth. |
+
+Cognito is **not** "the only auth" until an operator flips the flag and
+migrates users. No password-hash import from Supabase.
+
+**CI on this branch:** `npm run test:ci` 349 passed (3 todo). `npx tsc --noEmit` clean. `npm run build` clean.
 
 ### Phase 1 scaffolding (in flight) — case spine + audit + R01–R16
 
@@ -45,17 +103,17 @@ wording in `infra-aws/README.md` and `docs/aws-migration.md`.
 | Schema | n/a | `npm run db:migrate:rds` |
 | Storage | unused | `ENABLE_AWS_STORAGE=true` |
 | Email | stub SMTP | `ENABLE_AWS_EMAIL=true` + verified `SES_FROM_ADDRESS` |
-| Auth | mock admin in non-prod | **Supabase Auth leftover** until Cognito wave |
+| Auth | mock admin in non-prod | Supabase Auth hybrid unless `ENABLE_AWS_AUTH=true` |
 | Check | `GET /api/health` → `database: demo_mode` | `database: connected`, `backends.db: rds` |
 
 ### What is still Supabase (explicit, shrinking)
 
 | Surface | Why it remains |
 |---|---|
-| `lib/adapters/auth/supabase.ts`, login page password path, `AuthProvider`, `lib/supabase-server.ts`, middleware refresh | V1 hybrid Auth. Locked: do not cut Cognito before first paying customer. |
-| `app/api/team/*` `supabase.auth.admin` | Team invite/list still go through Supabase Auth admin. |
+| `lib/adapters/auth/supabase.ts`, login password fallback, `lib/supabase-server.ts` | V1 hybrid when `ENABLE_AWS_AUTH=false`. Cognito path is wired; flag stays off by default. |
+| `app/api/team/*` `supabase.auth.admin` | Hybrid only. AWS auth uses the Cognito adapter. |
 | `scripts/bootstrap-*.ts`, `scripts/seed-demo.ts` | Operator scripts still construct a Supabase JS client. Need an RDS follow-up. |
-| `ENABLE_AWS_AUTH=false` on Fargate | Intentional. |
+| `ENABLE_AWS_AUTH=false` on Fargate | Intentional default. Export `true` at deploy to cut over. |
 | Empty `supabase_*` slots in `vantaum-prod-third-party-keys` | Fine when `ENABLE_AWS_DB=true`. |
 
 ### What is still not done (do not paper over)

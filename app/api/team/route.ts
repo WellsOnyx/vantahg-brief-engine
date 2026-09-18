@@ -5,6 +5,7 @@ import { requireRole } from '@/lib/auth-guard';
 import { applyRateLimit } from '@/lib/rate-limit-middleware';
 import { apiError } from '@/lib/api-error';
 import { getRequestContext } from '@/lib/security';
+import { isAwsAuthEnabled, isAwsDbEnabled } from '@/lib/runtime-backend';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,33 +34,61 @@ export async function GET(request: NextRequest) {
     }
 
     const supabase = getServiceClient();
+    const awsPath = isAwsAuthEnabled() || isAwsDbEnabled();
 
-    // user_profiles doesn't have email directly — it FKs to auth.users.
-    // Use the service-role admin API to enumerate users + join with
-    // profile rows. Falls back to profiles-only on auth admin errors.
-    const { data: profiles, error: profilesErr } = await supabase
-      .from('user_profiles')
-      .select('id, name, role, created_at')
-      .order('created_at', { ascending: false });
+    // RDS user_profiles has email. Supabase-original does not — hybrid
+    // still joins auth.users via auth.admin.listUsers. Never call
+    // supabase.auth on the AWS path: the pg shim throws on .auth.
+    // Two explicit select strings so supabase-js can type them (a
+    // ternary select string becomes ParserError).
+    type TeamRow = {
+      id: string;
+      name: string | null;
+      role: string;
+      created_at: string;
+      email: string | null;
+    };
+    let profiles: TeamRow[] | null = null;
 
-    if (profilesErr) {
-      return apiError(profilesErr, {
-        operation: 'list_team',
-        actor: authResult.user.email,
-        requestContext: getRequestContext(request),
-      });
+    if (awsPath) {
+      const { data, error: profilesErr } = await supabase
+        .from('user_profiles')
+        .select('id, name, role, created_at, email')
+        .order('created_at', { ascending: false });
+      if (profilesErr) {
+        return apiError(profilesErr, {
+          operation: 'list_team',
+          actor: authResult.user.email,
+          requestContext: getRequestContext(request),
+        });
+      }
+      profiles = (data ?? []) as TeamRow[];
+    } else {
+      const { data, error: profilesErr } = await supabase
+        .from('user_profiles')
+        .select('id, name, role, created_at')
+        .order('created_at', { ascending: false });
+      if (profilesErr) {
+        return apiError(profilesErr, {
+          operation: 'list_team',
+          actor: authResult.user.email,
+          requestContext: getRequestContext(request),
+        });
+      }
+      profiles = (data ?? []).map((p) => ({ ...p, email: null })) as TeamRow[];
     }
 
-    // Best-effort enrichment with email from auth.users via the admin API.
     let usersById = new Map<string, { email: string | null }>();
-    try {
-      const { data: adminData } = await supabase.auth.admin.listUsers();
-      if (adminData?.users) {
-        usersById = new Map(adminData.users.map((u) => [u.id, { email: u.email ?? null }]));
+    if (!awsPath) {
+      try {
+        const { data: adminData } = await supabase.auth.admin.listUsers();
+        if (adminData?.users) {
+          usersById = new Map(adminData.users.map((u) => [u.id, { email: u.email ?? null }]));
+        }
+      } catch {
+        // Auth admin can fail in some Supabase configs — fall through with
+        // empty emails rather than failing the whole list.
       }
-    } catch {
-      // Auth admin can fail in some Supabase configs — fall through with
-      // empty emails rather than failing the whole list.
     }
 
     const team = (profiles ?? []).map((p) => ({
@@ -67,7 +96,7 @@ export async function GET(request: NextRequest) {
       name: p.name,
       role: p.role,
       created_at: p.created_at,
-      email: usersById.get(p.id)?.email ?? null,
+      email: p.email ?? usersById.get(p.id)?.email ?? null,
     }));
 
     return NextResponse.json(team);

@@ -17,9 +17,8 @@ import { getPgShim } from './db/supabase-shim';
  * Supabase types and remains unchanged.
  *
  * Auth (auth.getUser, auth.admin) is NOT on the shim. Server code that
- * needs auth uses `createServerClient()` from lib/supabase-server.ts,
- * which always returns the real Supabase SSR client. The AWS-side
- * Fargate task talks to Supabase Auth in V1 (hybrid mode) - see README.
+ * needs a session uses getAuthAdapter() (Cognito when ENABLE_AWS_AUTH=true,
+ * Supabase SSR otherwise). createServerClient() is hybrid-only leftover.
  */
 
 export type SupabaseClient = RealSupabaseClient;

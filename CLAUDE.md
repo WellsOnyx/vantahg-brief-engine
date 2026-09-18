@@ -13,7 +13,7 @@ Scale target: 333k supported lives (~41,625 monthly auths, ~1,400/day).
 - **Marketing site:** Vercel at `https://vantaum.com` (stays on Vercel forever)
 - **Database:** **RDS first.** `ENABLE_AWS_DB=true` + `lib/db/supabase-shim.ts`. Supabase Postgres is a cutover leftover.
 - **Storage:** Adapter at `lib/adapters/storage` — S3 when `ENABLE_AWS_STORAGE=true`
-- **Auth:** Supabase Auth (V1 hybrid). Cognito adapter exists; `ENABLE_AWS_AUTH` stays false until cutover.
+- **Auth:** Supabase Auth hybrid by default. `ENABLE_AWS_AUTH=true` selects Cognito for clinical + client login, team invite, and AuthProvider. Fargate leaves the flag **false** unless exported at deploy.
 - **AI:** Anthropic Claude API
 - **OCR:** Google Cloud Vision (REST, no SDK)
 - **eFax:** Phaxio/Sinch (HMAC-SHA256 webhooks)

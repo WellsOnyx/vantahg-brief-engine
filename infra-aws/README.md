@@ -12,12 +12,14 @@ The application at the repo root is one codebase. Vendor glue lives in
 | Database | Real CDK | VPC + RDS Postgres 15 + Secrets Manager. Apply SQL with `npm run db:migrate:rds`. |
 | Storage | Real CDK | KMS + 3 buckets. Compute grants the task role read/write + encrypt. |
 | Email | Real CDK | SES config set + SNS + suppressions table. Domain verification is manual. App uses `SesEmailAdapter` when `ENABLE_AWS_EMAIL=true`. |
-| Auth | Deployed, **not cut over** | Cognito + magic-link Lambdas exist. App default is Supabase Auth (`ENABLE_AWS_AUTH=false`). |
+| Auth | Deployed; **app default off** | Cognito + magic-link Lambdas exist. App uses them only when `ENABLE_AWS_AUTH=true`. Default (including Fargate) is `false` — Supabase Auth hybrid. |
 | Compute | Real CDK | Fargate + ALB + bastion. Wires `ENABLE_AWS_DB/STORAGE/EMAIL=true`. Auth flag stays false unless you export `ENABLE_AWS_AUTH=true` at deploy. |
 | Cron | Real CDK | EventBridge → Lambda → ALB `/api/cron/*`. |
 | Build | Optional | Instantiated only when `VANTAUM_GITHUB_CONNECTION_ARN` is set. `cdk synth` works without it. |
 
-Do not treat Cognito as production auth. That is a later wave.
+Do not treat Cognito as the production default. The code path is wired;
+leave `ENABLE_AWS_AUTH=false` until a staging tenant is ready. Flip at
+deploy with `ENABLE_AWS_AUTH=true` (ComputeStack already injects pool ids).
 
 ## Operator bootstrap (no secrets in git)
 
@@ -36,7 +38,7 @@ Do not treat Cognito as production auth. That is a later wave.
 
 3. **Storage + email.** `cdk deploy vantaum-<env>-storage vantaum-<env>-email`
 4. **Compute.** Fill `vantaum-<env>-third-party-keys` via CLI (not Console plaintext — it has duplicated keys before). Then `cdk deploy vantaum-<env>-compute`.
-5. **Verify.** `GET /api/health` should show `"database":"connected"` and `"backends":{"db":"rds","storage":"s3","email":"ses","auth":"supabase"}`.
+5. **Verify.** `GET /api/health` should show `"database":"connected"` and `"backends":{"db":"rds","storage":"s3","email":"ses","auth":"supabase"}`. Auth stays `supabase` until you deploy with `ENABLE_AWS_AUTH=true` (`auth: cognito`).
 
 Minimum env on the task (already wired in ComputeStack):
 

@@ -23,7 +23,9 @@ const PUBLIC_EXACT = new Set([
   '/api/intake/email', // email intake webhook
   '/api/auth/callback', // Cognito magic-link landing — user is unauthenticated by definition
   '/api/auth/request-magic-link', // unauthenticated by definition; rate-limited internally
-  '/api/auth/sign-in', // Cognito password sign-in — unauthenticated by definition; rate-limited internally
+  '/api/auth/sign-in', // password sign-in — unauthenticated by definition; rate-limited internally
+  '/api/auth/sign-out',
+  '/api/auth/session',
   '/api/auth/request-access', // Concierge-mediated access request — unauthenticated by definition
   '/api/verify-demo-password', // password gate for demo preview
 ]);
@@ -144,19 +146,25 @@ export async function middleware(request: NextRequest) {
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '';
   const cognitoAuth = process.env.ENABLE_AWS_AUTH === 'true';
 
-  // Fail-closed when auth config is missing.
-  // Legitimate empty-config states: demo mode, or Cognito-only (ENABLE_AWS_AUTH)
-  // where session is the vantaum_session cookie checked above.
-  if (!supabaseUrl || !supabaseAnonKey) {
-    if (cognitoAuth) {
-      if (pathname.startsWith('/api/')) {
-        return response;
-      }
-      const loginUrl = request.nextUrl.clone();
-      loginUrl.pathname = '/login';
-      loginUrl.searchParams.set('redirect', pathname + request.nextUrl.search);
-      return NextResponse.redirect(loginUrl);
+  // ENABLE_AWS_AUTH=true: do not refresh or trust leftover Supabase SSR
+  // cookies even if NEXT_PUBLIC_SUPABASE_* are still in the environment.
+  // Pages without a vantaum_session go to /login. API routes do their
+  // own 401 via auth-guard (adapter reads the Cognito cookie).
+  if (cognitoAuth) {
+    if (pathname.startsWith('/api/')) {
+      return response;
     }
+    const loginUrl = request.nextUrl.clone();
+    loginUrl.pathname = '/login';
+    loginUrl.searchParams.set('redirect', pathname + request.nextUrl.search);
+    if (pathname.startsWith(TPA_PORTAL_PREFIX) || pathname.startsWith(PROVIDER_PORTAL_PREFIX)) {
+      loginUrl.searchParams.set('reason', 'portal_access_required');
+    }
+    return NextResponse.redirect(loginUrl);
+  }
+
+  // Fail-closed when auth config is missing (hybrid / demo).
+  if (!supabaseUrl || !supabaseAnonKey) {
     if (isDemoMode()) {
       return response;
     }

@@ -82,6 +82,24 @@ describe('auth adapter factory', () => {
       expect(result.message).toMatch(/COGNITO_USER_POOL_ID/);
     }
   });
+
+  it('Cognito signInWithPassword is unavailable without pool env', async () => {
+    vi.stubEnv('COGNITO_USER_POOL_ID', '');
+    vi.stubEnv('COGNITO_CLIENT_ID', '');
+    const { CognitoAuthAdapter } = await import('@/lib/adapters/auth/cognito');
+    const c = new CognitoAuthAdapter();
+    const result = await c.signInWithPassword({ email: 'a@b.test', password: 'x' });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.code).toBe('unavailable');
+  });
+
+  it('Supabase signInWithPassword stays on the browser client', async () => {
+    const { SupabaseAuthAdapter } = await import('@/lib/adapters/auth/supabase');
+    const s = new SupabaseAuthAdapter();
+    const result = await s.signInWithPassword({ email: 'a@b.test', password: 'x' });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.code).toBe('unavailable');
+  });
 });
 
 describe('email adapter factory', () => {

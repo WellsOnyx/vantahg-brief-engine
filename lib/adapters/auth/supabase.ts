@@ -8,6 +8,7 @@ import type {
   CreateUserError,
   UserSummary,
   SessionUser,
+  SignInResult,
 } from './types';
 
 /**
@@ -145,6 +146,19 @@ export class SupabaseAuthAdapter implements AuthAdminAdapter {
       fullName: (user.user_metadata?.full_name as string | undefined) ?? null,
       metadata: (user.user_metadata ?? {}) as Record<string, unknown>,
       createdAt: new Date(user.created_at),
+    };
+  }
+
+  async signInWithPassword(_params: {
+    email: string;
+    password: string;
+  }): Promise<SignInResult> {
+    // Hybrid password login sets Supabase SSR cookies from the browser
+    // client. Doing it here would skip @supabase/ssr cookie writers.
+    return {
+      ok: false,
+      code: 'unavailable',
+      message: 'Supabase password sign-in stays on the browser client.',
     };
   }
 }
