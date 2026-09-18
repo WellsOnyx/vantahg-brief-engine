@@ -86,6 +86,8 @@ Slices 2.1–2.4 from `10-implementation-commits.md`. Synthetic / demo only. No 
 - **2.4 Client config:** `lib/client-config/` + `028_client_config.sql` (identical RDS copy). Append-only versions. `GET/POST /api/client-config`, `GET/PUT /api/client-config/[clientId]`. PATCH/DELETE → 409. Fields match `02-onboarding.md` Phase B as far as practical. SLA hours from the latest version are applied at ingest.
 - **R01 still holds:** incomplete intake (missing clinicals / required fields) → `intake_incomplete` + `sla_clock=paused` on all three ingresses.
 
+**CI on this branch:** `npm run test:ci` 388 passed (3 todo). `npx tsc --noEmit` clean.
+
 ---
 
 ## 2026-09-17 — AWS as destination of truth (adapter + RDS catalog)
