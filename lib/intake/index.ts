@@ -4,3 +4,5 @@ export { parseEfaxPayload } from './efax-parser';
 export type { EfaxPayload, ParsedFaxData } from './efax-parser';
 export { parseEmailPayload, extractSenderInfo, classifyEmailType, detectUrgency } from './email-parser';
 export type { EmailPayload, EmailAttachment, ParsedEmailData } from './email-parser';
+export { verifyBodyHmacSha256, signBodyHmacSha256 } from './hmac';
+export { ingestToCaseSpine, mapUnknownToIntake, SYNTHETIC_CLIENT_ID, INTAKE_TO_SPINE_SLA_MS } from './spine-ingest';

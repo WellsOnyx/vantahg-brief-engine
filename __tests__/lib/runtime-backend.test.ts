@@ -55,5 +55,6 @@ describe('runtime-backend', () => {
     const { INTEGRATION_INGRESS } = await import('@/lib/runtime-backend');
     expect(INTEGRATION_INGRESS.externalSubmit.path).toBe('/api/external/submit');
     expect(INTEGRATION_INGRESS.gravityRail.client).toBe('lib/gravity-rails.ts');
+    expect(INTEGRATION_INGRESS.gravityRail.path).toBe('/api/intake/gravity-rail');
   });
 });

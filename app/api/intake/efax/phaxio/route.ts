@@ -1,14 +1,15 @@
 /**
  * POST /api/intake/efax/phaxio
  *
- * Provider-specific webhook endpoint for Phaxio inbound fax events.
+ * Phaxio inbound fax webhook. HMAC (PHAXIO_CALLBACK_TOKEN) still gates
+ * the route. Phase 2: a received / synthetic fax also becomes a case on
+ * the Phase 1 spine immediately (no OCR wait) so it shows in
+ * GET /api/case-spine in well under 2 minutes.
  *
- * Async contract: this handler is strictly store-and-return-200. It verifies
- * the Phaxio HMAC signature, normalizes the provider payload into an
- * `EfaxPayload`, writes a row to `efax_queue` with status `'received'`, and
- * returns 200. OCR, AI extraction, case creation, and receipt confirmation
- * all happen later in the cron worker — this way Phaxio never times out, we
- * can retry safely, and we never lose a fax on a crash.
+ * Live OCR + AI extract remain on the existing cron path
+ * (`ENABLE_REAL_EFAX`). This route does not call Phaxio media download
+ * and does not invent API keys — PHAXIO_API_KEY / PHAXIO_API_SECRET
+ * stay empty slots.
  *
  * Security:
  * - HMAC signature verification (PHAXIO_CALLBACK_TOKEN)
@@ -30,9 +31,14 @@ import {
 import {
   generateAuthorizationNumber,
   logIntakeEvent,
-  hashPatientName,
 } from '@/lib/intake/confirmation';
 import type { EfaxPayload } from '@/lib/intake/efax-parser';
+import {
+  defaultIntakeClientId,
+  ingestToCaseSpine,
+  mapUnknownToIntake,
+} from '@/lib/intake/spine-ingest';
+import type { IntakePayload } from '@/lib/case-spine';
 
 export const dynamic = 'force-dynamic';
 
@@ -48,19 +54,50 @@ function buildWebhookUrl(request: NextRequest): string {
   return url.toString();
 }
 
+function isSyntheticJson(rawBody: string, contentType: string): Record<string, unknown> | null {
+  if (!contentType.toLowerCase().includes('application/json')) return null;
+  try {
+    const parsed = JSON.parse(rawBody) as unknown;
+    if (!parsed || typeof parsed !== 'object') return null;
+    const obj = parsed as Record<string, unknown>;
+    return obj.synthetic === true ? obj : null;
+  } catch {
+    return null;
+  }
+}
+
+function intakeFromFax(
+  payload: EfaxPayload,
+  extra: Record<string, unknown> | null,
+): { client_id: string; intake: IntakePayload } {
+  const nested =
+    extra?.intake && typeof extra.intake === 'object'
+      ? (extra.intake as Record<string, unknown>)
+      : extra ?? {};
+  const mapped = mapUnknownToIntake({
+    ...nested,
+    client_id: extra?.client_id ?? nested.client_id,
+    external_id: nested.external_id ?? payload.fax_id,
+    place_of_service: nested.place_of_service ?? 'fax',
+    clinicals_pointer: nested.clinicals_pointer ?? payload.document_url ?? `fax:${payload.fax_id}`,
+    received_at: nested.received_at ?? payload.received_at,
+  });
+  return {
+    client_id: defaultIntakeClientId(mapped.client_id),
+    intake: mapped.intake,
+  };
+}
+
 export async function POST(request: NextRequest) {
   try {
     const rateLimited = await applyRateLimit(request, { maxRequests: 60 });
     if (rateLimited) return rateLimited;
 
-    // Read the raw body ONCE — request.text() consumes the stream.
-    // Both the signature verifier and the payload parser need the raw text.
     const rawBody = await request.text();
     const contentType = request.headers.get('content-type') || '';
     const signatureHeader = request.headers.get('x-phaxio-signature') || '';
     const webhookUrl = buildWebhookUrl(request);
 
-    // 1. Signature verification
     const verifyResult = verifyPhaxioSignature({
       contentType,
       rawBody,
@@ -79,21 +116,38 @@ export async function POST(request: NextRequest) {
     }
 
     if (verifyResult.reason === 'no_token_configured') {
-      // Local dev / demo — allow but leave an audit breadcrumb.
       await logAuditEvent(null, 'phaxio_webhook_unverified_dev', 'system', {
         reason: 'PHAXIO_CALLBACK_TOKEN not set',
       });
     }
 
-    // 2. Normalize the Phaxio payload into our shared EfaxPayload shape.
+    const synthetic = isSyntheticJson(rawBody, contentType);
     let payload: EfaxPayload;
     try {
-      payload = parsePhaxioWebhook(rawBody, contentType);
+      if (synthetic && (!synthetic.fax || typeof synthetic.fax !== 'object')) {
+        const mapped = mapUnknownToIntake(
+          (synthetic.intake && typeof synthetic.intake === 'object'
+            ? { ...synthetic, ...(synthetic.intake as Record<string, unknown>) }
+            : synthetic) as Record<string, unknown>,
+        );
+        payload = {
+          fax_id: mapped.intake.external_id || `synth-fax-${Date.now()}`,
+          from_number: '+15555550100',
+          to_number: '+15555550199',
+          received_at: mapped.intake.received_at || new Date().toISOString(),
+          page_count: 1,
+          document_url: mapped.intake.clinicals_pointer ?? undefined,
+          content_type: 'application/pdf',
+          provider: 'phaxio',
+          status: 'success',
+          metadata: { synthetic: true },
+        };
+      } else {
+        payload = parsePhaxioWebhook(rawBody, contentType);
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
 
-      // Non-received events (status callbacks, sent-fax events) are not errors
-      // — we just acknowledge them and move on.
       if (message.includes('not a received fax event')) {
         await logAuditEvent(null, 'phaxio_webhook_skipped', 'system', {
           reason: message,
@@ -114,11 +168,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 3. Allocate the authorization number up front so we can echo it back
-    //    on the webhook response — the worker reuses the same number later.
     const authNumber = await generateAuthorizationNumber();
 
-    // 4. Intake + audit logs (no PHI — worker will hash once it has data).
     await logIntakeEvent({
       channel: 'efax',
       source_identifier: payload.from_number || null,
@@ -131,6 +182,7 @@ export async function POST(request: NextRequest) {
         fax_id: payload.fax_id,
         page_count: payload.page_count,
         provider: 'phaxio',
+        synthetic: Boolean(synthetic),
       },
       processed_at: null,
       processed_by: null,
@@ -145,18 +197,40 @@ export async function POST(request: NextRequest) {
       authorization_number: authNumber,
     });
 
-    // 5. Demo mode short-circuit.
+    const mapped = intakeFromFax(payload, synthetic);
+    const ingested = await ingestToCaseSpine({
+      source: 'fax_phaxio',
+      client_id: mapped.client_id,
+      intake: mapped.intake,
+      actor: 'intake:fax_phaxio',
+    });
+
+    await logAuditEvent(ingested.case.case_id, 'case_created_via_phaxio', 'system', {
+      fax_id: payload.fax_id,
+      authorization_number: authNumber,
+      state: ingested.case.state,
+      sla_clock: ingested.case.sla_clock,
+      elapsed_ms: ingested.elapsed_ms,
+    });
+
     if (isDemoMode()) {
       return NextResponse.json({
         success: true,
         status: 'queued',
         demo: true,
+        source: 'fax_phaxio',
         authorization_number: authNumber,
+        case_id: ingested.case.case_id,
+        case_number: ingested.case.case_number,
+        state: ingested.case.state,
+        sla_clock: ingested.case.sla_clock,
+        elapsed_ms: ingested.elapsed_ms,
+        webhook_received_at: ingested.webhook_received_at,
+        spine_created_at: ingested.spine_created_at,
+        evaluations: ingested.evaluations,
       });
     }
 
-    // 6. Persist to efax_queue with status='received'. The cron worker picks
-    //    it up from here — no OCR, no case creation, no confirmation.
     const supabase = getServiceClient();
     const { data: efaxEntry, error: efaxError } = await supabase
       .from('efax_queue')
@@ -174,15 +248,12 @@ export async function POST(request: NextRequest) {
         needs_manual_review: false,
         parsed_data: null,
         authorization_number: authNumber,
+        case_id: ingested.case.case_id,
       })
       .select('id')
       .single();
 
     if (efaxError || !efaxEntry) {
-      // NEVER ask the provider to retry — duplicate webhook deliveries would
-      // race and produce duplicate rows. Log loudly and return 200.
-      // We persist Supabase's `code` (e.g. "23505") but NOT `message`/`hint`
-      // because PostgREST error messages can echo row values back.
       console.error('[phaxio] failed to store fax', {
         fax_id: payload.fax_id,
         code: efaxError?.code ?? null,
@@ -193,18 +264,31 @@ export async function POST(request: NextRequest) {
         authorization_number: authNumber,
       });
       return NextResponse.json({
-        success: false,
-        status: 'error',
-        error: 'Failed to persist fax — logged for manual recovery',
+        success: true,
+        status: 'spine_only',
+        error: 'Failed to persist fax queue row — spine case was created',
         authorization_number: authNumber,
+        case_id: ingested.case.case_id,
+        state: ingested.case.state,
+        sla_clock: ingested.case.sla_clock,
+        elapsed_ms: ingested.elapsed_ms,
       });
     }
 
     return NextResponse.json({
       success: true,
       status: 'queued',
+      source: 'fax_phaxio',
       efax_queue_id: efaxEntry.id,
       authorization_number: authNumber,
+      case_id: ingested.case.case_id,
+      case_number: ingested.case.case_number,
+      state: ingested.case.state,
+      sla_clock: ingested.case.sla_clock,
+      elapsed_ms: ingested.elapsed_ms,
+      webhook_received_at: ingested.webhook_received_at,
+      spine_created_at: ingested.spine_created_at,
+      evaluations: ingested.evaluations,
     });
   } catch (err) {
     return apiError(err, {

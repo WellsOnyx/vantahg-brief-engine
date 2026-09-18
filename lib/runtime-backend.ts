@@ -93,17 +93,17 @@ export const INTEGRATION_INGRESS = {
   externalSubmit: {
     method: 'POST',
     path: '/api/external/submit',
-    auth: 'x-api-key + optional x-signature HMAC (EXTERNAL_API_KEYS / EXTERNAL_API_SECRET)',
+    auth: 'x-api-key (when EXTERNAL_API_KEYS / VANTAHG_API_KEY set) + x-signature HMAC when EXTERNAL_API_SECRET is set',
   },
   efaxGeneric: {
     method: 'POST',
     path: '/api/intake/efax',
-    auth: 'HMAC webhook (PHAXIO_CALLBACK_TOKEN or WEBHOOK_SECRET)',
+    auth: 'HMAC webhook (EFAX_WEBHOOK_SECRET)',
   },
   efaxPhaxio: {
     method: 'POST',
     path: '/api/intake/efax/phaxio',
-    auth: 'Phaxio HMAC',
+    auth: 'Phaxio HMAC (PHAXIO_CALLBACK_TOKEN). Synthetic fax → case-spine immediately.',
   },
   emailIntake: {
     method: 'POST',
@@ -112,7 +112,10 @@ export const INTEGRATION_INGRESS = {
   },
   gravityRail: {
     client: 'lib/gravity-rails.ts',
-    env: ['GRAVITY_RAIL_API_KEY', 'GRAVITY_RAIL_WORKSPACE_ID'],
-    notes: 'HTTP API. Independent of Supabase/RDS. Slots exist in Secrets Manager.',
+    method: 'POST',
+    path: '/api/intake/gravity-rail',
+    env: ['GRAVITY_RAIL_API_KEY', 'GRAVITY_RAIL_WORKSPACE_ID', 'GRAVITY_RAIL_WEBHOOK_SECRET'],
+    notes:
+      'Inbound webhook creates a case-spine case (HMAC when GRAVITY_RAIL_WEBHOOK_SECRET is set). Outbound client at lib/gravity-rails.ts is unused until GRAVITY_RAIL_API_KEY is filled. No live vendor calls in Phase 2.',
   },
 } as const;
