@@ -13,13 +13,17 @@
     "seed": "npx tsx scripts/seed-demo.ts",
     "bootstrap-real-client": "npx tsx scripts/bootstrap-real-client.ts",
     "bootstrap-master-admin": "npx tsx scripts/bootstrap-master-admin.ts",
-    "setup-master": "npx tsx scripts/bootstrap-master-admin.ts"
+    "setup-master": "npx tsx scripts/bootstrap-master-admin.ts",
+    "db:migrate:rds": "node scripts/apply-rds-migrations.mjs",
+    "db:migrate:rds:dry": "node scripts/apply-rds-migrations.mjs --dry-run",
+    "db:migrate:rds:status": "node scripts/apply-rds-migrations.mjs --status"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.74.0",
     "@aws-sdk/client-cognito-identity-provider": "^3.1050.0",
     "@aws-sdk/client-dynamodb": "^3.1050.0",
     "@aws-sdk/client-s3": "^3.1045.0",
+    "@aws-sdk/client-sesv2": "^3.1135.0",
     "@aws-sdk/lib-dynamodb": "^3.1050.0",
     "@aws-sdk/s3-request-presigner": "^3.1045.0",
     "@dropbox/sign": "^1.10.0",

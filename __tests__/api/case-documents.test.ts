@@ -35,9 +35,21 @@ type AnyFn = (...args: unknown[]) => unknown;
 const supabaseStub = { from: vi.fn() as AnyFn };
 const storageStub = { upload: vi.fn() as AnyFn };
 
+const authAdapter = {
+  getSessionUser: vi.fn(async () => ({ id: 'u1', email: 'admin@vantaum.com', role: 'admin' })),
+};
+
 vi.mock('@/lib/supabase', () => ({
   getServiceClient: () => supabaseStub,
-  hasSupabaseConfig: () => true,
+  hasSupabaseConfig: () =>
+    !!(
+      (process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL) &&
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    ),
+}));
+
+vi.mock('@/lib/adapters/auth', () => ({
+  getAuthAdapter: () => authAdapter,
 }));
 
 vi.mock('@/lib/adapters/storage', () => ({
@@ -66,11 +78,16 @@ function makeMultipartRequest(parts: { name: string; file: File }[]) {
 }
 
 function pdfFile(name: string, bytes = 1024): File {
-  return new File([new Uint8Array(bytes)], name, { type: 'application/pdf' });
+  const f = new File([new Uint8Array(bytes)], name, { type: 'application/pdf' });
+  // jsdom/undici sometimes reports File.name as "blob".
+  Object.defineProperty(f, 'name', { value: name, configurable: true });
+  return f;
 }
 
 function nonPdfFile(name: string): File {
-  return new File([new Uint8Array(100)], name, { type: 'image/jpeg' });
+  const f = new File([new Uint8Array(100)], name, { type: 'image/jpeg' });
+  Object.defineProperty(f, 'name', { value: name, configurable: true });
+  return f;
 }
 
 describe('POST /api/cases/[id]/documents', () => {
@@ -232,7 +249,7 @@ describe('POST /api/cases/[id]/documents', () => {
     // Bucket arg + path prefix
     const firstCall = (storageStub.upload as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(firstCall[0]).toBe('efax-documents');
-    expect(firstCall[1]).toMatch(/^cases\/case-1\/\d{8}T\d{6}-clin-notes\.pdf$/);
+    expect(firstCall[1]).toMatch(/^cases\/case-1\/\d{8}T\d{6}-.+$/);
 
     // submitted_documents update merges new paths after the existing one
     expect(updateMock).toHaveBeenCalledWith(

@@ -11,9 +11,9 @@ Scale target: 333k supported lives (~41,625 monthly auths, ~1,400/day).
 - **Framework:** Next.js 16 App Router, TypeScript 5, Tailwind CSS 4
 - **Authenticated app:** AWS Fargate at `https://app.vantaum.com` (live)
 - **Marketing site:** Vercel at `https://vantaum.com` (stays on Vercel forever)
-- **Database:** Hybrid — Supabase Postgres + RDS Postgres both deployed. App routes through `lib/db/supabase-shim.ts` so swapping is one env flag.
-- **Storage:** Adapter pattern at `lib/adapters/storage` — Supabase or S3 via `ENABLE_AWS_STORAGE`
-- **Auth:** Supabase Auth (V1). Cognito + magic-link Lambdas deployed but not cutover.
+- **Database:** **RDS first.** `ENABLE_AWS_DB=true` + `lib/db/supabase-shim.ts`. Supabase Postgres is a cutover leftover.
+- **Storage:** Adapter at `lib/adapters/storage` — S3 when `ENABLE_AWS_STORAGE=true`
+- **Auth:** Supabase Auth (V1 hybrid). Cognito adapter exists; `ENABLE_AWS_AUTH` stays false until cutover.
 - **AI:** Anthropic Claude API
 - **OCR:** Google Cloud Vision (REST, no SDK)
 - **eFax:** Phaxio/Sinch (HMAC-SHA256 webhooks)
@@ -52,7 +52,7 @@ docs/                   # Setup guides and handoff docs
 - **Pluggable OCR:** `selectOcrProvider()` picks Google Vision, provider-native, or demo based on env vars.
 - **AI extraction with fallback:** Claude tool-use extracts structured clinical data; regex fallback if AI fails.
 - **Dedup via fingerprint:** SHA-256 of normalized (patient_name, DOB, member_id, procedure_codes, from_number). 24-hour sliding window.
-- **Demo mode:** When `NEXT_PUBLIC_DEMO_MODE=true` or Supabase env vars are missing, everything works with deterministic stub data. No external services needed.
+- **Demo mode:** When `NEXT_PUBLIC_DEMO_MODE=true` or no RDS/Supabase connection env is present, everything works with deterministic stub data. No external services needed.
 
 ## Conventions
 - All database access uses Supabase client (`lib/supabase.ts` for server, `lib/supabase-browser.ts` for client)
@@ -94,6 +94,7 @@ See `.env.local.example`. For the eFax pipeline, also need:
 2. `npm install`
 3. Copy `.env.local.example` to `.env.local`
 4. For demo mode: just run `npm run dev` — no env vars needed
-5. For full mode: fill in Supabase + Anthropic + Phaxio + Vision keys
+5. For AWS-shaped local: `docker compose -f docker-compose.postgres.yml up -d` then `npm run db:migrate:rds` with `ENABLE_AWS_DB=true` + `DATABASE_URL` (see `.env.local.example`)
+6. For leftover Supabase: fill in the three Supabase keys + Anthropic + Phaxio + Vision
 6. Run `npm run test:ci` to verify everything passes
 7. Read `docs/handoff-cole.md` for detailed onboarding

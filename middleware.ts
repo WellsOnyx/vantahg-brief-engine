@@ -142,12 +142,21 @@ export async function middleware(request: NextRequest) {
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '';
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || '';
+  const cognitoAuth = process.env.ENABLE_AWS_AUTH === 'true';
 
   // Fail-closed when auth config is missing.
-  // Demo mode (NEXT_PUBLIC_DEMO_MODE=true) is the only legitimate empty-config state and is
-  // explicitly opted into. Outside demo mode, missing config means the deploy is broken — block
-  // protected routes rather than silently allowing them through.
+  // Legitimate empty-config states: demo mode, or Cognito-only (ENABLE_AWS_AUTH)
+  // where session is the vantaum_session cookie checked above.
   if (!supabaseUrl || !supabaseAnonKey) {
+    if (cognitoAuth) {
+      if (pathname.startsWith('/api/')) {
+        return response;
+      }
+      const loginUrl = request.nextUrl.clone();
+      loginUrl.pathname = '/login';
+      loginUrl.searchParams.set('redirect', pathname + request.nextUrl.search);
+      return NextResponse.redirect(loginUrl);
+    }
     if (isDemoMode()) {
       return response;
     }

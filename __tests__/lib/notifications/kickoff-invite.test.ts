@@ -20,7 +20,11 @@ const adapterStub = { send: vi.fn() as AnyFn };
 
 vi.mock('@/lib/supabase', () => ({
   getServiceClient: () => supabaseStub,
-  hasSupabaseConfig: () => true,
+  hasSupabaseConfig: () =>
+    !!(
+      (process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL) &&
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    ),
 }));
 
 vi.mock('@/lib/adapters/email', () => ({

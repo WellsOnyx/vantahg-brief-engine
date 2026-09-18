@@ -11,17 +11,12 @@
  *
  * Two implementations:
  *   - lib/adapters/auth/supabase.ts (current production)
- *   - lib/adapters/auth/cognito.ts  (AWS migration target — stubbed)
+ *   - lib/adapters/auth/cognito.ts  (implemented; not the default)
  *
- * Cognito mapping notes for Cole:
- *   - createUserWithMagicLink → AdminCreateUser + custom challenge with
- *     SES-delivered link (Cognito has no native magic link; you either
- *     build it via Custom Auth Flow + Lambda triggers, or send a one-time
- *     temporary password and require user to set their own on first
- *     login).
- *   - getUserByEmail → ListUsers with Filter="email = \"x@y.com\"".
- *   - updateUserMetadata → AdminUpdateUserAttributes (custom: prefix
- *     required for non-standard fields like client_id).
+ * Cognito is staged, not cut over. ENABLE_AWS_AUTH=true selects it.
+ * Magic-link Lambdas + user pool exist in AuthStack; middleware still
+ * accepts a vantaum_session cookie. Default remains Supabase Auth
+ * until the first paying customer is stable (locked V1 decision).
  */
 
 export interface CreateUserParams {

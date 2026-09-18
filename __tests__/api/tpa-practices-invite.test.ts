@@ -35,13 +35,25 @@ const ssrStub = {
   auth: { getUser: vi.fn() as AnyFn },
 };
 
+const authAdapter = {
+  getSessionUser: vi.fn(async () => null),
+};
+
 vi.mock('@/lib/supabase', () => ({
   getServiceClient: () => supabaseStub,
-  hasSupabaseConfig: () => true,
+  hasSupabaseConfig: () =>
+    !!(
+      (process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL) &&
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    ),
 }));
 
 vi.mock('@/lib/supabase-server', () => ({
   createServerClient: async () => ssrStub,
+}));
+
+vi.mock('@/lib/adapters/auth', () => ({
+  getAuthAdapter: () => authAdapter,
 }));
 
 function clearSupabaseEnv() {
@@ -60,6 +72,10 @@ function mockTenantALoggedIn(opts: {
   practiceClientId: string | null;
   practiceFound?: boolean;
 }) {
+  authAdapter.getSessionUser = vi.fn(async () => ({
+    id: 'u-a',
+    email: 'admin@tenant-a.example',
+  }));
   ssrStub.auth.getUser = vi.fn(async () => ({
     data: { user: { id: 'u-a', email: 'admin@tenant-a.example' } },
     error: null,
@@ -145,6 +161,10 @@ describe('POST /api/tpa/practices/[id]/invite', () => {
 
   it('returns 401 in real mode when no TPA is matched for the user', async () => {
     setRealEnv();
+    authAdapter.getSessionUser = vi.fn(async () => ({
+      id: 'u-z',
+      email: 'nobody@example.com',
+    }));
     ssrStub.auth.getUser = vi.fn(async () => ({
       data: { user: { id: 'u-z', email: 'nobody@example.com' } },
       error: null,

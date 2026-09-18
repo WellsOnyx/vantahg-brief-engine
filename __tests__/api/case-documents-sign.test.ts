@@ -39,9 +39,21 @@ type AnyFn = (...args: unknown[]) => unknown;
 const supabaseStub = { from: vi.fn() as AnyFn };
 const storageStub = { signedUrl: vi.fn() as AnyFn };
 
+const authAdapter = {
+  getSessionUser: vi.fn(async () => ({ id: 'u1', email: 'admin@vantaum.com', role: 'admin' })),
+};
+
 vi.mock('@/lib/supabase', () => ({
   getServiceClient: () => supabaseStub,
-  hasSupabaseConfig: () => true,
+  hasSupabaseConfig: () =>
+    !!(
+      (process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL) &&
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    ),
+}));
+
+vi.mock('@/lib/adapters/auth', () => ({
+  getAuthAdapter: () => authAdapter,
 }));
 
 vi.mock('@/lib/adapters/storage', () => ({

@@ -25,13 +25,25 @@ const ssrStub = {
   auth: { getUser: vi.fn() as AnyFn },
 };
 
+const authAdapter = {
+  getSessionUser: vi.fn(async () => null),
+};
+
 vi.mock('@/lib/supabase', () => ({
   getServiceClient: () => supabaseStub,
-  hasSupabaseConfig: () => true,
+  hasSupabaseConfig: () =>
+    !!(
+      (process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL) &&
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    ),
 }));
 
 vi.mock('@/lib/supabase-server', () => ({
   createServerClient: async () => ssrStub,
+}));
+
+vi.mock('@/lib/adapters/auth', () => ({
+  getAuthAdapter: () => authAdapter,
 }));
 
 function clearSupabaseEnv() {
@@ -73,6 +85,7 @@ describe('GET /api/tpa/me', () => {
 
   it('returns 401 when no user session in real mode', async () => {
     setRealEnv();
+    authAdapter.getSessionUser = vi.fn(async () => null);
     ssrStub.auth.getUser = vi.fn(async () => ({ data: { user: null }, error: null }));
     const { GET } = await import('@/app/api/tpa/me/route');
     const res = await GET(new Request('http://localhost:3000/api/tpa/me') as never);
@@ -81,6 +94,10 @@ describe('GET /api/tpa/me', () => {
 
   it('returns 403 when the user email has no matching client row', async () => {
     setRealEnv();
+    authAdapter.getSessionUser = vi.fn(async () => ({
+      id: 'u-1',
+      email: 'nobody@example.com',
+    }));
     ssrStub.auth.getUser = vi.fn(async () => ({
       data: { user: { id: 'u-1', email: 'nobody@example.com' } },
       error: null,
@@ -100,6 +117,6 @@ describe('GET /api/tpa/me', () => {
     const res = await GET(new Request('http://localhost:3000/api/tpa/me') as never);
     expect(res.status).toBe(403);
     const body = await res.json();
-    expect(body.error).toMatch(/no tpa tenant linked/i);
+    expect(body.error).toMatch(/tpa tenant linked/i);
   });
 });

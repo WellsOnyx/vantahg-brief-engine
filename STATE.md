@@ -13,10 +13,61 @@ The shared brain for first-live-customer work (Cole + team) is [`docs/customer-r
 
 Additive schema/API for `10-implementation-commits.md` Phase 1.1–1.3. Does **not** rewrite legacy `cases.status` / `cases.case_type` / brief engines.
 
-- **Schema:** `supabase/migrations/027_case_spine.sql` (plain Postgres; identical copy at `infra-aws/rds-migrations/027_case_spine.sql`). Adds spine columns on `cases`, plus `audit_events` and versioned `auth_rules` (R01–R16 seeded). No `auth.uid()` — mergeable without PR #50. After #50 lands, the RDS catalog picks 027 up as portable SQL (RDS file wins if both exist; they match).
+- **Schema:** `supabase/migrations/027_case_spine.sql` (plain Postgres; identical copy at `infra-aws/rds-migrations/027_case_spine.sql`). Adds spine columns on `cases`, plus `audit_events` and versioned `auth_rules` (R01–R16 seeded). No `auth.uid()`. AWS PR #50 is merged — `lib/db/rds-migrations.ts` includes 027 (RDS copy wins when both exist; they match). Apply after `cases` exists (000+).
 - **Lib:** `lib/case-spine/` — state machine, audit writer, rules evaluation, create/transition/list with stub RBAC. Memory-backed so tests and demo mode need no Cole/AWS credentials and no live PHI.
 - **API:** `/api/case-spine` (POST/GET), `/api/case-spine/[id]`, `/transition`, `/audit`, `/evaluate`, `/api/case-spine/rules` (GET + PATCH toggle).
 - **Acceptance:** illegal transitions → 409; every transition + every rule eval writes `audit_events`; R01 incomplete intake sets `state=intake_incomplete` and `sla_clock=paused`; PATCH can disable R01.
+
+---
+
+## 2026-09-17 — AWS as destination of truth (adapter + RDS catalog)
+
+Jonah asked to polish the Claude draft, make hookup obvious, and move off
+Supabase onto AWS. This section supersedes older "everything is stubbed"
+wording in `infra-aws/README.md` and `docs/aws-migration.md`.
+
+### What this pass shipped (code)
+
+- **RDS / plain Postgres schema path.** `infra-aws/rds-migrations/000_rds_bootstrap.sql` plus `lib/db/rds-migrations.ts` + `scripts/apply-rds-migrations.mjs` (`npm run db:migrate:rds`). Prefers RDS-flavored SQL; applies portable supabase files; skips `013` (storage.buckets). Local: `docker-compose.postgres.yml`.
+- **SES adapter is real.** `lib/adapters/email/ses.ts` uses SESv2 `SendEmail` (Simple or Raw MIME for attachments). Structured errors — does not throw. Compute grants `ses:SendEmail`.
+- **S3 on the task role.** ComputeStack now takes StorageStack buckets + KMS and grants read/write/encrypt. Sets `AWS_S3_BUCKET_PREFIX`.
+- **Runtime map.** `lib/runtime-backend.ts` + `/api/health` `backends` field + `/admin/usage` Database/Storage/Auth/Email pills.
+- **Cognito staged honestly.** Fargate `ENABLE_AWS_AUTH` defaults to **false**. Adapter + Lambdas exist; do not pretend they are production auth.
+- **`cdk synth` without a GitHub connection.** BuildStack only instantiates when `VANTAUM_GITHUB_CONNECTION_ARN` is set.
+- **Demo mode unchanged.** No secrets → fixtures. `NEXT_PUBLIC_DEMO_MODE=true` still forces fixtures.
+
+### Operator: demo vs AWS
+
+| | Demo | AWS-shaped |
+|---|---|---|
+| Env | none, or `NEXT_PUBLIC_DEMO_MODE=true` | `.env.local.example` Path A |
+| DB | off | `ENABLE_AWS_DB=true` + `DATABASE_URL` / `DB_*` |
+| Schema | n/a | `npm run db:migrate:rds` |
+| Storage | unused | `ENABLE_AWS_STORAGE=true` |
+| Email | stub SMTP | `ENABLE_AWS_EMAIL=true` + verified `SES_FROM_ADDRESS` |
+| Auth | mock admin in non-prod | **Supabase Auth leftover** until Cognito wave |
+| Check | `GET /api/health` → `database: demo_mode` | `database: connected`, `backends.db: rds` |
+
+### What is still Supabase (explicit, shrinking)
+
+| Surface | Why it remains |
+|---|---|
+| `lib/adapters/auth/supabase.ts`, login page password path, `AuthProvider`, `lib/supabase-server.ts`, middleware refresh | V1 hybrid Auth. Locked: do not cut Cognito before first paying customer. |
+| `app/api/team/*` `supabase.auth.admin` | Team invite/list still go through Supabase Auth admin. |
+| `scripts/bootstrap-*.ts`, `scripts/seed-demo.ts` | Operator scripts still construct a Supabase JS client. Need an RDS follow-up. |
+| `ENABLE_AWS_AUTH=false` on Fargate | Intentional. |
+| Empty `supabase_*` slots in `vantaum-prod-third-party-keys` | Fine when `ENABLE_AWS_DB=true`. |
+
+### What is still not done (do not paper over)
+
+- Container rebuild / Fargate image freshness (see older handoff below).
+- SES domain verification + sandbox exit.
+- Cognito session as the only auth.
+- Data backfill from any leftover Supabase Postgres.
+- Meow runtime bootstrap (blocked on Jonah's dedicated VantaUM account).
+- HelloSign / Phaxio / Gravity Rail keys — slots only.
+
+**CI on this branch:** `npm run test:ci` 334 passed (3 todo). `npx tsc --noEmit` clean. `npm run build` clean. `cd infra-aws && npx cdk synth` works without `VANTAUM_GITHUB_CONNECTION_ARN`. `npm run lint` is already red on main (pre-existing `any` / setState-in-effect / unescaped-entity errors). This PR does not add new lint errors in the files it owns.
 
 ---
 

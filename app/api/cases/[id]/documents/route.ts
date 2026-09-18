@@ -88,7 +88,13 @@ export async function POST(
     return NextResponse.json({ error: 'Invalid multipart body' }, { status: 400 });
   }
 
-  const files = formData.getAll('files').filter((v): v is File => v instanceof File);
+  // Duck-type File: jsdom/undici/Node expose different File constructors,
+  // so `instanceof File` drops valid uploads in tests and some runtimes.
+  const files = formData.getAll('files').filter((v): v is File => {
+    if (!v || typeof v !== 'object') return false;
+    const f = v as File;
+    return typeof f.arrayBuffer === 'function' && typeof f.name === 'string';
+  });
   if (files.length === 0) {
     return NextResponse.json({ error: 'No files supplied under "files" field' }, { status: 400 });
   }

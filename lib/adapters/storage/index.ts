@@ -6,7 +6,7 @@ import { SupabaseStorageAdapter } from './supabase';
  *
  * Selection priority:
  *   1. ENABLE_AWS_STORAGE=true → S3StorageAdapter (lazy-loaded only when flag is on)
- *   2. Default → SupabaseStorageAdapter (current production)
+ *   2. Default → SupabaseStorageAdapter (cutover / Vercel path)
  *
  * The S3 adapter is dynamically imported so that Vercel (and any other
  * build that doesn't have the optional AWS SDK packages installed) never
@@ -35,12 +35,19 @@ export async function getStorageAdapter(): Promise<StorageAdapter> {
   return cached;
 }
 
-// Synchronous version that always returns the Supabase adapter.
-// Used by legacy call sites and tests that have not been updated yet.
-// When ENABLE_AWS_STORAGE is true in production, those paths should be migrated to the async version.
+/**
+ * Sync accessor for tests / legacy call sites.
+ * Refuses to silently return Supabase when ENABLE_AWS_STORAGE=true —
+ * those callers must use getStorageAdapter() so S3 is actually selected.
+ */
 export function getStorageAdapterSync(): StorageAdapter {
   if (override) return override;
   if (cached) return cached;
+  if (process.env.ENABLE_AWS_STORAGE === 'true') {
+    throw new Error(
+      'getStorageAdapterSync() cannot select S3. Use await getStorageAdapter() when ENABLE_AWS_STORAGE=true.',
+    );
+  }
   cached = new SupabaseStorageAdapter();
   return cached;
 }
