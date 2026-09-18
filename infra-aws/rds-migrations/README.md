@@ -23,6 +23,11 @@ The original `013_signup_contracts_bucket.sql` is skipped entirely on
 AWS - it inserts into Supabase's `storage.buckets` table, which doesn't
 exist on RDS. S3 handles bucket configuration via CDK in StorageStack.
 
+`027_case_spine.sql` is **plain Postgres** (no `auth.uid()`). It matches
+`../../supabase/migrations/027_case_spine.sql`. After AWS PR #50 merges,
+`lib/db/rds-migrations.ts` will apply it automatically (RDS-flavored file
+wins when both exist). Apply 027 only after `cases` exists (000+).
+
 ## How to apply via bastion
 
 ```bash

@@ -9,6 +9,15 @@ Future Claude/Cole/Jonah sessions: read this first.
 
 The shared brain for first-live-customer work (Cole + team) is [`docs/customer-ready/`](docs/customer-ready/00-README.md). Start with `00-README.md` (north star / definition of done). Implement in the order in `10-implementation-commits.md`. Phase 0 is AWS PR #50 + Cognito. Update this file when a phase flips from open → done.
 
+### Phase 1 scaffolding (in flight) — case spine + audit + R01–R16
+
+Additive schema/API for `10-implementation-commits.md` Phase 1.1–1.3. Does **not** rewrite legacy `cases.status` / `cases.case_type` / brief engines.
+
+- **Schema:** `supabase/migrations/027_case_spine.sql` (plain Postgres; identical copy at `infra-aws/rds-migrations/027_case_spine.sql`). Adds spine columns on `cases`, plus `audit_events` and versioned `auth_rules` (R01–R16 seeded). No `auth.uid()` — mergeable without PR #50. After #50 lands, the RDS catalog picks 027 up as portable SQL (RDS file wins if both exist; they match).
+- **Lib:** `lib/case-spine/` — state machine, audit writer, rules evaluation, create/transition/list with stub RBAC. Memory-backed so tests and demo mode need no Cole/AWS credentials and no live PHI.
+- **API:** `/api/case-spine` (POST/GET), `/api/case-spine/[id]`, `/transition`, `/audit`, `/evaluate`, `/api/case-spine/rules` (GET + PATCH toggle).
+- **Acceptance:** illegal transitions → 409; every transition + every rule eval writes `audit_events`; R01 incomplete intake sets `state=intake_incomplete` and `sla_clock=paused`; PATCH can disable R01.
+
 ---
 
 ## 📱 MOBILE HANDOFF — 2026-05-13 (4:09 PM ET)
