@@ -22,7 +22,7 @@ Shared brain: [`docs/customer-ready/`](docs/customer-ready/00-README.md). Board:
 | 6 Reporting + CM | — | ○ **next** |
 | 7 Onboarding gates | — | ○ open |
 
-**CI at Phase 5 tip:** see this PR. Phase 4 on `main` was 413 passed (3 todo); `tsc --noEmit` clean.
+**CI at Phase 5 tip:** `npm run test:ci` 421 passed (3 todo); `tsc --noEmit` clean.
 
 Operator blockers unchanged: SES verify, Fargate image rebuild, BAA before live PHI, production vendor keys, RDS-native bootstrap.
 

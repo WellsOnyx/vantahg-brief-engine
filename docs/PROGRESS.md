@@ -17,7 +17,7 @@
 | 4 Fan-out + billing | [#57](https://github.com/WellsOnyx/vantahg-brief-engine/pull/57) | Portal downloads, HMAC `determination.signed` + retries, real `billable_events` ledger, monthly statement stub |
 | 5 Three role views | this PR | Client / CX / Med lenses on one case object; RBAC deny cross-tenant + CX-note isolation |
 
-**CI (Phase 5 tip):** recorded on the PR after `npm run test:ci` + `tsc --noEmit`.
+**CI (Phase 5 tip):** `npm run test:ci` 421 passed (3 todo); `tsc --noEmit` clean.
 
 ## Not started / paused
 
