@@ -26,6 +26,7 @@ export default function MedReviewSignPage() {
   const [determination, setDetermination] = useState<SpineDetermination>('approve');
   const [rationale, setRationale] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [fanningOut, setFanningOut] = useState(false);
   const [banner, setBanner] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -207,12 +208,36 @@ export default function MedReviewSignPage() {
                     Package {caseData.determination_package_key || pkg?.storage_key}
                   </p>
                   <p className="text-xs text-muted">
-                    Fan-out stub: {caseData.fanout_status}
+                    Fan-out: {caseData.fanout_status}
                     {caseData.fanout_stub ? ` · ${caseData.fanout_stub.targets.join(', ')}` : ''}
                   </p>
                   <p className="text-xs text-muted">
-                    Billable stub: {caseData.billable_event_id || caseData.billable_event_stub?.billable_event_id}
+                    Billable event: {caseData.billable_event_id || caseData.billable_event_stub?.billable_event_id}
                   </p>
+                  {caseData.fanout_status === 'pending' && (
+                    <button
+                      type="button"
+                      className="btn-primary w-full text-sm mt-2"
+                      disabled={fanningOut}
+                      onClick={async () => {
+                        setFanningOut(true);
+                        setBanner(null);
+                        try {
+                          const res = await fetch(`/api/case-spine/${id}/fanout`, { method: 'POST' });
+                          const data = await res.json();
+                          if (!res.ok) throw new Error(data.error || 'Fan-out failed');
+                          setBanner(`Fan-out ${data.fanout.fanout_status}`);
+                          await load();
+                        } catch (err) {
+                          setBanner(err instanceof Error ? err.message : 'Fan-out failed');
+                        } finally {
+                          setFanningOut(false);
+                        }
+                      }}
+                    >
+                      {fanningOut ? 'Delivering…' : 'Deliver determination'}
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div className="space-y-4">

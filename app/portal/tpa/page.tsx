@@ -197,9 +197,14 @@ export default function TpaPortalPage() {
           <div className="card p-5 md:p-6">
             <PageSectionHeading
               hint={
-                <Link href="/cases" className="text-xs text-navy hover:text-gold-dark underline underline-offset-2">
-                  View all →
-                </Link>
+                <span className="flex gap-3">
+                  <Link href="/portal/tpa/determinations" className="text-xs text-navy hover:text-gold-dark underline underline-offset-2">
+                    Determinations →
+                  </Link>
+                  <Link href="/cases" className="text-xs text-navy hover:text-gold-dark underline underline-offset-2">
+                    View all →
+                  </Link>
+                </span>
               }
             >
               Recent cases

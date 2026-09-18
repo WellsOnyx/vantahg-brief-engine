@@ -169,7 +169,12 @@ function cloneCase(c: CanonicalCase): CanonicalCase {
     cm_flags: [...c.cm_flags],
     open_tasks: [...c.open_tasks],
     intake: { ...c.intake },
-    fanout_stub: c.fanout_stub ? { ...c.fanout_stub, targets: [...c.fanout_stub.targets] } : null,
+    fanout_stub: c.fanout_stub
+      ? {
+          ...c.fanout_stub,
+          targets: [...c.fanout_stub.targets],
+        }
+      : null,
     billable_event_stub: c.billable_event_stub ? { ...c.billable_event_stub } : null,
   };
 }

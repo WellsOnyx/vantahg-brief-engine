@@ -18,6 +18,7 @@ export {
   determinationStorageKey,
 } from './determination-package';
 
+import { resetMemoryBillableEventLedger } from '@/lib/billing/events';
 import { isDemoMode } from '@/lib/demo-mode';
 import { CaseSpineService } from './service';
 import { getMemoryCaseSpineStore, resetMemoryCaseSpineStore } from './store';
@@ -37,6 +38,7 @@ export function getCaseSpineService(): CaseSpineService {
 }
 
 export function resetCaseSpineService(): CaseSpineService {
+  resetMemoryBillableEventLedger();
   serviceSingleton = new CaseSpineService(resetMemoryCaseSpineStore());
   return serviceSingleton;
 }

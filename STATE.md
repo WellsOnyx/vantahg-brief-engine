@@ -17,10 +17,11 @@ Shared brain: [`docs/customer-ready/`](docs/customer-ready/00-README.md). Board:
 | 1 Case spine | #52 | ✅ on `main` |
 | 2 Intake | #54 | ✅ on `main` |
 | 3 Brief → MD | #55 | ✅ on `main` |
-| 4 Fan-out + billing | — | ⏸ **Paused** pending Cole status email / README sync |
-| 5–7 | — | ○ open |
+| 4 Fan-out + billing | #57 | ✅ Phase 4 — portal downloads, HMAC fan-out + retries, ledger, statement stub |
+| 5 Three role views | — | ○ **next** |
+| 6–7 | — | ○ open |
 
-**CI at Phase 3 tip:** `npm run test:ci` ~402 passed (3 todo); `tsc --noEmit` clean.
+**CI at Phase 4 tip:** `npm run test:ci` 413 passed (3 todo); `tsc --noEmit` clean. Jonah greenlit Phase 4 after the Cole status sync.
 
 Operator blockers unchanged: SES verify, Fargate image rebuild, BAA before live PHI, production vendor keys, RDS-native bootstrap.
 

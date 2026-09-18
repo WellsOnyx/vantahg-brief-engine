@@ -30,7 +30,7 @@ export function renderDeterminationLetterHtml(
 <p>Brief: ${escapeHtml(brief.brief_id)} (${escapeHtml(brief.source)})</p>
 <h2>Rationale</h2>
 <p>${escapeHtml(input.rationale)}</p>
-<p><em>Synthetic package. No live PHI. Phase 4 will fan this out.</em></p>
+<p><em>Synthetic package. No live PHI. Phase 4 fans this out to portal, webhook, and ledger.</em></p>
 </body></html>`;
 }
 

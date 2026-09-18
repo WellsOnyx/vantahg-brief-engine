@@ -14,15 +14,16 @@
 | 1 Case spine | [#52](https://github.com/WellsOnyx/vantahg-brief-engine/pull/52) | State machine, `audit_events`, R01–R16 rules, `/api/case-spine` |
 | 2 Intake | [#54](https://github.com/WellsOnyx/vantahg-brief-engine/pull/54) | Gravity Rail + external submit + Phaxio → spine; versioned `client_config` |
 | 3 Brief → MD | [#55](https://github.com/WellsOnyx/vantahg-brief-engine/pull/55) | Brief before `md_queue`, `/med-review` queue, human sign + immutable package |
+| 4 Fan-out + billing | [#57](https://github.com/WellsOnyx/vantahg-brief-engine/pull/57) | Portal downloads, HMAC `determination.signed` + retries, real `billable_events` ledger, monthly statement stub |
 
-**CI (Phase 3 tip):** `npm run test:ci` ≈ 402 passed (3 todo); `tsc --noEmit` clean.
+**CI (Phase 4 tip):** `npm run test:ci` 413 passed (3 todo); `tsc --noEmit` clean.
 
 ## Not started / paused
 
 | Phase | Status |
 |-------|--------|
-| 4 Fan-out + billing ledger | **Paused** (status to Cole first) — portal downloads, webhook retries, `billable_events`, statement stub |
-| 5 Three role views (Client / CX / Med polish) | Open |
+| 4 Fan-out + billing ledger | ✅ **Done** — portal downloads, HMAC webhook retries → `fanout_failed` + CX task, ledger on sign, statement stub |
+| 5 Three role views (Client / CX / Med polish) | **Next** |
 | 6 Reporting + CM handoff | Open |
 | 7 Onboarding runbook + synthetic/shadow/live gates | Open |
 
@@ -54,6 +55,8 @@ curl -s -X POST http://localhost:3000/api/case-spine/md-queue \
   -H 'content-type: application/json' \
   -d '{"seed":true}'
 # then open /med-review
+# After MD sign: POST /api/case-spine/:id/fanout
+# Portal: /portal/tpa/determinations  ·  statement: /portal/tpa/statements
 ```
 
 ## Lane note

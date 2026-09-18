@@ -199,8 +199,12 @@ export interface SpineBrief {
 
 export interface FanoutStub {
   enqueued_at: string;
-  status: 'pending';
+  status: 'pending' | 'complete' | 'failed';
   targets: string[];
+  completed_at?: string | null;
+  attempt_count?: number;
+  last_error?: string | null;
+  cx_task_id?: string | null;
 }
 
 export interface BillableEventStub {
@@ -358,7 +362,16 @@ export interface TransitionInput {
   billable_event_id?: string | null;
   fanout_status?: FanoutStatus;
   cm_flags?: CmFlag[];
+  open_tasks?: string[];
   note?: string;
+}
+
+export interface CaseOpsPatch {
+  open_tasks?: string[];
+  fanout_stub?: FanoutStub | null;
+  fanout_status?: FanoutStatus;
+  billable_event_id?: string | null;
+  billable_event_stub?: BillableEventStub | null;
 }
 
 export interface AttachBriefInput {
