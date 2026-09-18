@@ -7,7 +7,7 @@ Future Claude/Cole/Jonah sessions: read this first.
 
 ## 🧭 Customer-ready plan — 2026-09-18
 
-The shared brain for first-live-customer work (Cole + team) is [`docs/customer-ready/`](docs/customer-ready/00-README.md). Start with `00-README.md` (north star / definition of done). Implement in the order in `10-implementation-commits.md`. Phase 0.1 (AWS PR #50) is on `main`. This branch is Phase 0.2 (Cognito). Update this file when a phase flips from open → done.
+The shared brain for first-live-customer work (Cole + team) is [`docs/customer-ready/`](docs/customer-ready/00-README.md). Start with `00-README.md` (north star / definition of done). Implement in the order in `10-implementation-commits.md`. Phase 0 (AWS PR #50 + Cognito PR #53) and Phase 1 (case spine PR #52) are on `main`. This branch is Phase 2 (intake connectivity). Update this file when a phase flips from open → done.
 
 ---
 
@@ -67,7 +67,7 @@ migrates users. No password-hash import from Supabase.
 
 **CI on this branch:** `npm run test:ci` 349 passed (3 todo). `npx tsc --noEmit` clean. `npm run build` clean.
 
-### Phase 1 scaffolding (in flight) — case spine + audit + R01–R16
+### Phase 1 scaffolding — case spine + audit + R01–R16 (merged, PR #52)
 
 Additive schema/API for `10-implementation-commits.md` Phase 1.1–1.3. Does **not** rewrite legacy `cases.status` / `cases.case_type` / brief engines.
 
@@ -75,6 +75,18 @@ Additive schema/API for `10-implementation-commits.md` Phase 1.1–1.3. Does **n
 - **Lib:** `lib/case-spine/` — state machine, audit writer, rules evaluation, create/transition/list with stub RBAC. Memory-backed so tests and demo mode need no Cole/AWS credentials and no live PHI.
 - **API:** `/api/case-spine` (POST/GET), `/api/case-spine/[id]`, `/transition`, `/audit`, `/evaluate`, `/api/case-spine/rules` (GET + PATCH toggle).
 - **Acceptance:** illegal transitions → 409; every transition + every rule eval writes `audit_events`; R01 incomplete intake sets `state=intake_incomplete` and `sla_clock=paused`; PATCH can disable R01.
+
+### Phase 2 — intake connectivity (this branch)
+
+Slices 2.1–2.4 from `10-implementation-commits.md`. Synthetic / demo only. No live PHI. No invented vendor credentials — HMAC secrets are empty slots in `.env.local.example`. Does **not** change brief / fact-check engines or `ENABLE_AWS_AUTH` / `ENABLE_AWS_DB` defaults.
+
+- **2.1 Gravity Rail:** `POST /api/intake/gravity-rail` verifies `GRAVITY_RAIL_WEBHOOK_SECRET` when set, maps the payload, and calls `getCaseSpineService().createCase()`. Outbound `lib/gravity-rails.ts` is unused until `GRAVITY_RAIL_API_KEY` is filled. Case appears on `GET /api/case-spine` in the same request (≪ 2 min).
+- **2.2 External submit:** `POST /api/external/submit` now requires HMAC whenever `EXTERNAL_API_SECRET` is set (missing/wrong signature → 401). Creates a spine case (tokenized intake; no raw member name on the spine object).
+- **2.3 Phaxio fax:** existing HMAC (`PHAXIO_CALLBACK_TOKEN`) plus immediate spine create. Live OCR stays on the cron / `ENABLE_REAL_EFAX` path. Synthetic JSON `{ synthetic: true, fax, intake }` is the acceptance fixture.
+- **2.4 Client config:** `lib/client-config/` + `028_client_config.sql` (identical RDS copy). Append-only versions. `GET/POST /api/client-config`, `GET/PUT /api/client-config/[clientId]`. PATCH/DELETE → 409. Fields match `02-onboarding.md` Phase B as far as practical. SLA hours from the latest version are applied at ingest.
+- **R01 still holds:** incomplete intake (missing clinicals / required fields) → `intake_incomplete` + `sla_clock=paused` on all three ingresses.
+
+**CI on this branch:** `npm run test:ci` 388 passed (3 todo). `npx tsc --noEmit` clean.
 
 ---
 

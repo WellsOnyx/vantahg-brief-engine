@@ -74,6 +74,16 @@ const EnvSchema = z.object({
   // from real ones in the API surface, just marked test in Dropbox Sign.
   ENABLE_REAL_HELLOSIGN: z.coerce.boolean().default(false),
 
+  // Phase 2 intake HMAC slots — empty = synthetic/demo allow. Never ship live keys.
+  GRAVITY_RAIL_WEBHOOK_SECRET: z.string().min(1).optional(),
+  EXTERNAL_API_KEYS: z.string().optional(),
+  EXTERNAL_API_SECRET: z.string().min(1).optional(),
+  VANTAHG_API_KEY: z.string().min(1).optional(),
+  PHAXIO_CALLBACK_TOKEN: z.string().min(1).optional(),
+  PHAXIO_API_KEY: z.string().min(1).optional(),
+  PHAXIO_API_SECRET: z.string().min(1).optional(),
+  EFAX_WEBHOOK_SECRET: z.string().min(1).optional(),
+
   // Meow — B2B banking + invoicing.
   // API key from Meow dashboard. Auth via x-api-key header.
   // ENTITY_ID is optional (multi-entity accounts only); we pass it

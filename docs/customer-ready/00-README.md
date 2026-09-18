@@ -46,8 +46,10 @@ A TPA or self-insured employer can:
 
 ## Related in-flight
 
-- Phase 0.1 AWS path: [PR #50](https://github.com/WellsOnyx/vantahg-brief-engine/pull/50) — **merged** to `main`.
-- Phase 0.2 Cognito cutover: [PR #53](https://github.com/WellsOnyx/vantahg-brief-engine/pull/53) (`cursor/cognito-auth-cutover-beba`). Depends on #50. Default `ENABLE_AWS_AUTH=false`.
+- Phase 0.1 AWS path: [PR #50](https://github.com/WellsOnyx/vantahg-brief-engine/pull/50) — **merged**.
+- Phase 0.2 Cognito cutover: [PR #53](https://github.com/WellsOnyx/vantahg-brief-engine/pull/53) — **merged**. Default `ENABLE_AWS_AUTH=false`.
+- Phase 1 case spine + audit + R01–R16: [PR #52](https://github.com/WellsOnyx/vantahg-brief-engine/pull/52) — **merged**.
+- Phase 2 intake connectivity: this branch (`cursor/intake-connectivity-0af7`). Synthetic Gravity Rail / external submit / Phaxio → case-spine + versioned `client_config`.
 
 ## How to use this
 
