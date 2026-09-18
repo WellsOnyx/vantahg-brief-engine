@@ -14,9 +14,9 @@
 | 1 Case spine | [#52](https://github.com/WellsOnyx/vantahg-brief-engine/pull/52) | State machine, `audit_events`, R01–R16 rules, `/api/case-spine` |
 | 2 Intake | [#54](https://github.com/WellsOnyx/vantahg-brief-engine/pull/54) | Gravity Rail + external submit + Phaxio → spine; versioned `client_config` |
 | 3 Brief → MD | [#55](https://github.com/WellsOnyx/vantahg-brief-engine/pull/55) | Brief before `md_queue`, `/med-review` queue, human sign + immutable package |
-| 4 Fan-out + billing | this PR | Portal downloads, HMAC `determination.signed` + retries, real `billable_events` ledger, monthly statement stub |
+| 4 Fan-out + billing | [#57](https://github.com/WellsOnyx/vantahg-brief-engine/pull/57) | Portal downloads, HMAC `determination.signed` + retries, real `billable_events` ledger, monthly statement stub |
 
-**CI (Phase 4 tip):** `npm run test:ci`; `tsc --noEmit` clean.
+**CI (Phase 4 tip):** `npm run test:ci` 413 passed (3 todo); `tsc --noEmit` clean.
 
 ## Not started / paused
 
