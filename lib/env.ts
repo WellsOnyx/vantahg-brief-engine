@@ -39,8 +39,8 @@ const EnvSchema = z.object({
   ENABLE_REAL_EFAX: z.coerce.boolean().default(false),
 
   // AWS cutover flags — each vendor flips independently so Vercel+Supabase
-  // can keep running while RDS / S3 / SES come online. Auth stays off
-  // until Cognito is deliberately cut over.
+  // can keep running while RDS / S3 / SES / Cognito come online. Auth
+  // defaults false; ENABLE_AWS_AUTH=true selects Cognito for login/invite.
   ENABLE_AWS_DB: z.coerce.boolean().default(false),
   ENABLE_AWS_STORAGE: z.coerce.boolean().default(false),
   ENABLE_AWS_EMAIL: z.coerce.boolean().default(false),

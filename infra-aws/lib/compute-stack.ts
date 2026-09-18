@@ -189,8 +189,8 @@ export class ComputeStack extends cdk.Stack {
       environment: {
         NODE_ENV: 'production',
         PORT: String(containerPort),
-        // Destination-of-truth flags. Auth stays off until Cognito is
-        // deliberately cut over (locked V1: hybrid Supabase Auth).
+        // Destination-of-truth flags. Auth stays off unless the operator
+        // exports ENABLE_AWS_AUTH=true at deploy (Cognito login/invite).
         ENABLE_AWS_DB: 'true',
         ENABLE_AWS_STORAGE: 'true',
         ENABLE_AWS_EMAIL: 'true',

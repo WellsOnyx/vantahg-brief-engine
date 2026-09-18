@@ -46,9 +46,8 @@ A TPA or self-insured employer can:
 
 ## Related in-flight
 
-- AWS cutover draft PR: https://github.com/WellsOnyx/vantahg-brief-engine/pull/50  
-  Branch: `cursor/aws-adapter-cutover-aa74`  
-  Merge + Cognito auth cutover are Phase 0 of implementation (see `10-implementation-commits.md`).
+- Phase 0.1 AWS path: [PR #50](https://github.com/WellsOnyx/vantahg-brief-engine/pull/50) — **merged** to `main`.
+- Phase 0.2 Cognito cutover: [PR #53](https://github.com/WellsOnyx/vantahg-brief-engine/pull/53) (`cursor/cognito-auth-cutover-beba`). Depends on #50. Default `ENABLE_AWS_AUTH=false`.
 
 ## How to use this
 
