@@ -16,9 +16,9 @@
 | 3 Brief → MD | [#55](https://github.com/WellsOnyx/vantahg-brief-engine/pull/55) | Brief before `md_queue`, `/med-review` queue, human sign + immutable package |
 | 4 Fan-out + billing | [#57](https://github.com/WellsOnyx/vantahg-brief-engine/pull/57) | Portal downloads, HMAC `determination.signed` + retries, real `billable_events` ledger, monthly statement stub |
 | 5 Three role views | [#58](https://github.com/WellsOnyx/vantahg-brief-engine/pull/58) | Client / CX / Med lenses on one case object; RBAC deny cross-tenant + CX-note isolation |
-| 6 Reporting + CM | this PR | Five client reports + CSV, CM HMAC handoff (flagged only), ops scoreboard |
+| 6 Reporting + CM | [#59](https://github.com/WellsOnyx/vantahg-brief-engine/pull/59) | Five client reports + CSV, CM HMAC handoff (flagged only), ops scoreboard |
 
-**CI (Phase 6 tip):** `npm run test:ci` (this PR); `tsc --noEmit` clean.
+**CI (Phase 6 tip):** `npm run test:ci` 435 passed (3 todo); `tsc --noEmit` clean.
 
 ## Not started / paused
 

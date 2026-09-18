@@ -28,11 +28,9 @@ describe('ops scoreboard API', () => {
     const { resetCaseSpineService } = await import('@/lib/case-spine');
     const { resetMemoryFanoutStore } = await import('@/lib/fanout/store');
     const { resetMemoryCxNoteStore } = await import('@/lib/cx');
-    const { resetMemoryBillableEventLedger } = await import('@/lib/billing/events');
     resetCaseSpineService();
     resetMemoryFanoutStore();
     resetMemoryCxNoteStore();
-    resetMemoryBillableEventLedger();
   });
 
   it('shows fan-out fail rate and R10–R12 escalation counts to CX', async () => {

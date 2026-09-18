@@ -28,12 +28,10 @@ function req(url: string, opts: { role?: string; clientId?: string } = {}) {
 describe('reports API', () => {
   beforeEach(async () => {
     const { resetCaseSpineService } = await import('@/lib/case-spine');
-    const { resetMemoryBillableEventLedger } = await import('@/lib/billing/events');
     const { resetMemoryStatementStore } = await import('@/lib/billing/statement');
     const { resetMemoryFanoutStore } = await import('@/lib/fanout/store');
     const { resetMemoryCxNoteStore } = await import('@/lib/cx');
     resetCaseSpineService();
-    resetMemoryBillableEventLedger();
     resetMemoryStatementStore();
     resetMemoryFanoutStore();
     resetMemoryCxNoteStore();

@@ -24,12 +24,10 @@ function req(url: string) {
 describe('CM queue + CSV API', () => {
   beforeEach(async () => {
     const { resetCaseSpineService } = await import('@/lib/case-spine');
-    const { resetMemoryBillableEventLedger } = await import('@/lib/billing/events');
     const { resetMemoryFanoutStore } = await import('@/lib/fanout/store');
     const { resetMemoryCxNoteStore } = await import('@/lib/cx');
     const { resetCmHandoffService } = await import('@/lib/cm');
     resetCaseSpineService();
-    resetMemoryBillableEventLedger();
     resetMemoryFanoutStore();
     resetMemoryCxNoteStore();
     resetCmHandoffService();

@@ -19,10 +19,10 @@ Shared brain: [`docs/customer-ready/`](docs/customer-ready/00-README.md). Board:
 | 3 Brief → MD | #55 | ✅ on `main` |
 | 4 Fan-out + billing | #57 | ✅ Phase 4 — portal downloads, HMAC fan-out + retries, ledger, statement stub |
 | 5 Three role views | #58 | ✅ Phase 5 — Client / CX / Med lenses on one case object; RBAC deny cross-tenant + CX notes |
-| 6 Reporting + CM | — | ✅ Phase 6 — five client reports + CSV, CM HMAC handoff, ops scoreboard |
+| 6 Reporting + CM | #59 | ✅ Phase 6 — five client reports + CSV, CM HMAC handoff, ops scoreboard |
 | 7 Onboarding gates | — | ○ **next** |
 
-**CI at Phase 6 tip:** `npm run test:ci` (this PR); `tsc --noEmit` clean.
+**CI at Phase 6 tip:** `npm run test:ci` 435 passed (3 todo); `tsc --noEmit` clean.
 
 Operator blockers unchanged: SES verify, Fargate image rebuild, BAA before live PHI, production vendor keys, RDS-native bootstrap.
 
