@@ -86,7 +86,7 @@ export default function MedReviewSignPage() {
       setCaseData(data.case);
       setPkg(data.package);
       setBrief(data.brief);
-      setBanner('Signed. Package written; fan-out and billable event are stubs until Phase 4.');
+      setBanner('Signed. Immutable package written. Deliver to fan out portal + ledger.');
     } catch (err) {
       setBanner(err instanceof Error ? err.message : 'Network error');
     } finally {
@@ -117,9 +117,9 @@ export default function MedReviewSignPage() {
     <PageFocused
       hero={
         <PageHero
-          eyebrow="Med review"
+          eyebrow="Med review lens"
           title={caseData.case_number}
-          subtitle={`${caseData.type} · ${caseData.state} · tokenized member ${caseData.intake.member_ref || 'n/a'}`}
+          subtitle={`${caseData.type} · ${caseData.state} · SLA ${caseData.sla_status} · fan-out ${caseData.fanout_status} · tokenized member ${caseData.intake.member_ref || 'n/a'}`}
           actions={<BackLink href="/med-review" label="Back to queue" />}
         />
       }

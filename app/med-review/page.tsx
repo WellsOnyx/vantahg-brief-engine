@@ -69,18 +69,23 @@ export default function MedReviewQueuePage() {
     <PageList
       hero={
         <PageHero
-          eyebrow="Med review"
+          eyebrow="Med review lens"
           title="Sign queue, sorted by SLA."
-          subtitle="Synthetic packets only. Open a row to read the brief and sign approve / deny / pend / partial. No silent auto-approve."
+          subtitle="Same case object as Client and CX. Packet + brief live here only. MFA required in production; session timeout is aggressive. Synthetic refs — no live PHI."
           actions={
-            <button
-              type="button"
-              onClick={seedQueue}
-              disabled={seeding}
-              className="btn-primary text-sm"
-            >
-              {seeding ? 'Seeding…' : 'Load synthetic pack'}
-            </button>
+            <div className="flex items-center gap-3">
+              <Link href="/cx" className="text-sm text-white/70 underline">
+                CX lens
+              </Link>
+              <button
+                type="button"
+                onClick={seedQueue}
+                disabled={seeding}
+                className="btn-primary text-sm"
+              >
+                {seeding ? 'Seeding…' : 'Load synthetic pack'}
+              </button>
+            </div>
           }
         />
       }
@@ -95,8 +100,8 @@ export default function MedReviewQueuePage() {
           <div className="text-sm font-medium text-navy mt-2">SLA due, then priority</div>
         </div>
         <div className="card p-4">
-          <div className="text-xs uppercase tracking-wider text-muted">PHI</div>
-          <div className="text-sm font-medium text-navy mt-2">Tokenized refs only</div>
+          <div className="text-xs uppercase tracking-wider text-muted">Session</div>
+          <div className="text-sm font-medium text-navy mt-2">MFA · short timeout</div>
         </div>
       </PageList.Stats>
 

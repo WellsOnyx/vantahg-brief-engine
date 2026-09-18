@@ -3,7 +3,7 @@ import { requireAuth } from '@/lib/auth-guard';
 import { applyRateLimit } from '@/lib/rate-limit-middleware';
 import { apiError } from '@/lib/api-error';
 import { getRequestContext } from '@/lib/security';
-import { CaseNotFoundError, getCaseSpineService, toSpineViewRole } from '@/lib/case-spine';
+import { CaseNotFoundError, getCaseSpineService, resolveSpineViewer } from '@/lib/case-spine';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,15 +18,9 @@ export async function GET(
     if (rateLimited) return rateLimited;
 
     const { id } = await context.params;
-    const { searchParams } = new URL(request.url);
-    const viewer = {
-      id: authResult.user.id,
-      role: toSpineViewRole(authResult.user.role),
-      client_id: searchParams.get('client_id'),
-    };
-
+    const viewer = resolveSpineViewer(authResult.user, request);
     const c = await getCaseSpineService().getCase(id, viewer);
-    return NextResponse.json({ case: c });
+    return NextResponse.json({ case: c, view: viewer.role });
   } catch (err) {
     if (err instanceof CaseNotFoundError) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 });

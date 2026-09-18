@@ -198,6 +198,9 @@ export default function TpaPortalPage() {
             <PageSectionHeading
               hint={
                 <span className="flex gap-3">
+                  <Link href="/client" className="text-xs text-navy hover:text-gold-dark underline underline-offset-2">
+                    Client lens →
+                  </Link>
                   <Link href="/portal/tpa/determinations" className="text-xs text-navy hover:text-gold-dark underline underline-offset-2">
                     Determinations →
                   </Link>

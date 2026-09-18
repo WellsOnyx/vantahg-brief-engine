@@ -18,10 +18,11 @@ Shared brain: [`docs/customer-ready/`](docs/customer-ready/00-README.md). Board:
 | 2 Intake | #54 | ✅ on `main` |
 | 3 Brief → MD | #55 | ✅ on `main` |
 | 4 Fan-out + billing | #57 | ✅ Phase 4 — portal downloads, HMAC fan-out + retries, ledger, statement stub |
-| 5 Three role views | — | ○ **next** |
-| 6–7 | — | ○ open |
+| 5 Three role views | — | ✅ Phase 5 — Client / CX / Med lenses on one case object; RBAC deny cross-tenant + CX notes |
+| 6 Reporting + CM | — | ○ **next** |
+| 7 Onboarding gates | — | ○ open |
 
-**CI at Phase 4 tip:** `npm run test:ci` 413 passed (3 todo); `tsc --noEmit` clean. Jonah greenlit Phase 4 after the Cole status sync.
+**CI at Phase 5 tip:** see this PR. Phase 4 on `main` was 413 passed (3 todo); `tsc --noEmit` clean.
 
 Operator blockers unchanged: SES verify, Fargate image rebuild, BAA before live PHI, production vendor keys, RDS-native bootstrap.
 
@@ -116,6 +117,16 @@ Slices 3.1–3.3 from `10-implementation-commits.md`. Synthetic / demo only. No 
 **Acceptance:** illegal sign without brief → 409 `brief_required` / `not_in_md_queue`; successful sign → `determined` + R13 audit + package hash; queue ordering covered in tests.
 
 **CI at merge:** `npm run test:ci` 402 passed (3 todo). `npx tsc --noEmit` clean.
+
+### Phase 5 — Three role views (this PR)
+
+Slices 5.1–5.3 from `10-implementation-commits.md`. One case object, three lenses. Synthetic / demo only. No live PHI. Does **not** change `ENABLE_AWS_*` defaults or Phase 1–4 spine / fan-out / billing APIs.
+
+- **5.1 Client portal MVP:** `/client` + `GET /api/views/client` — open cases, SLA clocks, signed determinations (Phase 4 portal packages), statement summary, read-only config. Wired to `/portal/tpa/determinations` and `/portal/tpa/statements`.
+- **5.2 CX view MVP:** `/cx` + `GET /api/views/cx` — account health, stuck (clinicals / fan-out), R10–R12 escalations, first-25 hypercare, non-PHI notes, `resolve_fanout` tasks. Notes live in `lib/cx/` — never on the case object.
+- **5.3 RBAC:** `resolveSpineViewer` binds tenant from the session (demo/test: `x-vantaum-role` / `x-vantaum-client-id`). Query `client_id` is a filter, not identity. Client cannot see another tenant, CX notes, or clinical briefs. CX list filters `stuck` + `sla_status`. `/med-review` is the Med lens (SLA sort, packet + sign, fan-out after sign).
+
+**Acceptance:** client of tenant B gets 404 on tenant A case; client 403 on `/api/cx/notes` and `/api/views/cx`; CX `?stuck=1` / `?sla_status=missed` only return matching rows.
 
 ---
 

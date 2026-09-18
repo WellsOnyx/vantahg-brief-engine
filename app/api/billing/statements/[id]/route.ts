@@ -4,6 +4,7 @@ import { applyRateLimit } from '@/lib/rate-limit-middleware';
 import { apiError } from '@/lib/api-error';
 import { getRequestContext } from '@/lib/security';
 import { getMemoryStatementStore, renderStatementPdf } from '@/lib/billing/statement';
+import { resolveSpineViewer } from '@/lib/case-spine';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,6 +23,10 @@ export async function GET(
     const statement = await getMemoryStatementStore().get(id);
     if (!statement) {
       return NextResponse.json({ error: 'Statement not found' }, { status: 404 });
+    }
+    const viewer = resolveSpineViewer(authResult.user, request);
+    if (viewer.role === 'client' && viewer.client_id !== statement.client_id) {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 });
     }
 
     if (format === 'html') {

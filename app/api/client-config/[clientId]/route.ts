@@ -9,6 +9,8 @@ import {
   getClientConfigService,
   safeParseClientConfigFields,
 } from '@/lib/client-config';
+import { resolveSpineViewer } from '@/lib/case-spine';
+import { redactConfigForClient } from '@/lib/views/client';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,17 +25,27 @@ export async function GET(
     if (rateLimited) return rateLimited;
 
     const { clientId } = await context.params;
+    const viewer = resolveSpineViewer(authResult.user, request);
+    if (viewer.role === 'client' && viewer.client_id !== clientId) {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    }
     const { searchParams } = new URL(request.url);
     const history = searchParams.get('history') === '1' || searchParams.get('history') === 'true';
     const svc = getClientConfigService();
 
     if (history) {
+      if (viewer.role === 'client') {
+        return NextResponse.json({ error: 'Forbidden', surface: 'config_history' }, { status: 403 });
+      }
       return NextResponse.json({ client_id: clientId, versions: await svc.listHistory(clientId) });
     }
 
     const latest = await svc.getLatest(clientId);
     if (!latest) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    }
+    if (viewer.role === 'client') {
+      return NextResponse.json({ summary: redactConfigForClient(latest.config, latest.version) });
     }
     return NextResponse.json({ latest });
   } catch (err) {

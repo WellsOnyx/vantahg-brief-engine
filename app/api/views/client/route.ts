@@ -3,8 +3,8 @@ import { requireAuth } from '@/lib/auth-guard';
 import { applyRateLimit } from '@/lib/rate-limit-middleware';
 import { apiError } from '@/lib/api-error';
 import { getRequestContext } from '@/lib/security';
-import { getCaseSpineService, resolveSpineViewer } from '@/lib/case-spine';
-import { isSignedForPortal, toPortalDetermination } from '@/lib/fanout/portal';
+import { canAccessClientView, resolveSpineViewer } from '@/lib/case-spine';
+import { buildClientLens, seedSyntheticRoleViews } from '@/lib/views';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,27 +15,27 @@ export async function GET(request: NextRequest) {
     const rateLimited = await applyRateLimit(request, { maxRequests: 200 });
     if (rateLimited) return rateLimited;
 
-    const { searchParams } = new URL(request.url);
     const viewer = resolveSpineViewer(authResult.user, request);
-    const clientId = viewer.role === 'client' ? viewer.client_id : searchParams.get('client_id');
-
-    const spine = getCaseSpineService();
-    const cases = await spine.listCases(viewer, { client_id: clientId ?? undefined });
-    const signed = cases.filter(isSignedForPortal);
-    const items = [];
-    for (const c of signed) {
-      const pkg = await spine.getDeterminationPackage(c.case_id);
-      items.push(toPortalDetermination(c, pkg, viewer));
+    if (!canAccessClientView(viewer) && viewer.role !== 'cx') {
+      return NextResponse.json({ error: 'Forbidden', surface: 'client' }, { status: 403 });
     }
 
+    const { searchParams } = new URL(request.url);
+    if (searchParams.get('seed') === 'synthetic') {
+      await seedSyntheticRoleViews(authResult.user.id);
+    }
+
+    const requested =
+      viewer.role === 'client' ? viewer.client_id : searchParams.get('client_id');
+    const lens = await buildClientLens(viewer, requested);
     return NextResponse.json({
-      determinations: items,
-      view: viewer.role,
-      demo: true,
+      ...lens,
+      notes: undefined,
+      cx_notes: undefined,
     });
   } catch (err) {
     return apiError(err, {
-      operation: 'list_portal_determinations',
+      operation: 'client_lens',
       actor: 'system',
       requestContext: getRequestContext(request),
     });

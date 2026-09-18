@@ -398,6 +398,13 @@ export interface ListCasesFilters {
   lane?: CaseLane;
   sla_status?: SlaStatus;
   type?: AuthWorkflowType;
+  /** CX: intake_incomplete / awaiting_clinicals / fanout_failed / request_clinicals / resolve_fanout */
+  stuck?: boolean;
+  /** CX: R10–R12 escalation_* tasks */
+  escalation?: boolean;
+  /** Non-terminal states */
+  open?: boolean;
+  has_task?: string;
 }
 
 export interface SpineViewer {

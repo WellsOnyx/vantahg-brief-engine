@@ -7,10 +7,11 @@ import {
   AUTH_WORKFLOW_TYPES,
   CASE_SPINE_STATES,
   getCaseSpineService,
-  toSpineViewRole,
+  resolveSpineViewer,
   type AuthWorkflowType,
   type CaseSpineState,
   type CreateCaseInput,
+  type ListCasesFilters,
   type SlaStatus,
 } from '@/lib/case-spine';
 
@@ -24,24 +25,21 @@ export async function GET(request: NextRequest) {
     if (rateLimited) return rateLimited;
 
     const { searchParams } = new URL(request.url);
-    const state = searchParams.get('state');
-    const type = searchParams.get('type');
-    const slaStatus = searchParams.get('sla_status');
-    const clientId = searchParams.get('client_id');
-
-    const viewer = {
-      id: authResult.user.id,
-      role: toSpineViewRole(authResult.user.role),
-      client_id: clientId,
+    const viewer = resolveSpineViewer(authResult.user, request);
+    const filters: ListCasesFilters = {
+      client_id: searchParams.get('client_id') ?? undefined,
+      state: isState(searchParams.get('state')) ? (searchParams.get('state') as CaseSpineState) : undefined,
+      type: isType(searchParams.get('type')) ? (searchParams.get('type') as AuthWorkflowType) : undefined,
+      sla_status: isSlaStatus(searchParams.get('sla_status'))
+        ? (searchParams.get('sla_status') as SlaStatus)
+        : undefined,
+      stuck: searchParams.get('stuck') === '1' || searchParams.get('stuck') === 'true',
+      escalation: searchParams.get('escalation') === '1' || searchParams.get('escalation') === 'true',
+      open: searchParams.get('open') === '1' || searchParams.get('open') === 'true',
+      has_task: searchParams.get('has_task') ?? undefined,
     };
 
-    const cases = await getCaseSpineService().listCases(viewer, {
-      client_id: clientId ?? undefined,
-      state: isState(state) ? state : undefined,
-      type: isType(type) ? type : undefined,
-      sla_status: isSlaStatus(slaStatus) ? slaStatus : undefined,
-    });
-
+    const cases = await getCaseSpineService().listCases(viewer, filters);
     return NextResponse.json({ cases, view: viewer.role });
   } catch (err) {
     return apiError(err, {
