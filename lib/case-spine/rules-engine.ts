@@ -20,13 +20,14 @@ export interface RuleMatch {
 function ruleApplies(rule: AuthRule, c: CanonicalCase, ctx: RuleEvalContext): boolean {
   const intake = intakeFromCase(c);
   const benefit = ctx.benefit_type ?? intake.benefit_type ?? null;
-  const urgent = ctx.urgent ?? c.priority === 'urgent' || c.priority === 'expedited';
+    const urgent = ctx.urgent ?? (c.priority === 'urgent' || c.priority === 'expedited');
 
   switch (rule.rule_id) {
     case 'R01':
       return (
-        (c.state === 'received' || c.state === 'intake_incomplete') &&
-        !isIntakeComplete(intake)
+        c.state === 'received' &&
+        !isIntakeComplete(intake) &&
+        ctx.clinicals_received !== true
       );
     case 'R02':
       return (
@@ -97,7 +98,7 @@ function applyEffects(
   if (effects.set_sla_clock) {
     next.sla_clock = effects.set_sla_clock;
     if (effects.set_sla_clock === 'paused') {
-      next.sla_paused_at = now.toISOString();
+      next.sla_paused_at = next.sla_paused_at ?? now.toISOString();
     }
     if (effects.set_sla_clock === 'running' && c.sla_paused_at) {
       const pausedMs = now.getTime() - new Date(c.sla_paused_at).getTime();
@@ -136,13 +137,6 @@ function applyEffects(
     next.sla_clock = 'new_clock';
     next.sla_status = 'ok';
     next.sla_paused_at = null;
-  }
-
-  if (rule.rule_id === 'R01') {
-    const missing = missingRequiredFields(intakeFromCase(next));
-    if (missing.includes('clinicals_pointer') && ctx.clinicals_received) {
-      // clinicals just arrived — R02 will handle resume
-    }
   }
 
   if (rule.rule_id === 'R02' && next.open_tasks.includes('request_clinicals')) {

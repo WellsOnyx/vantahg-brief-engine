@@ -30,7 +30,7 @@ export function hashRulePayload(c: CanonicalCase, ctx: RuleEvalContext, ruleId: 
     state: c.state,
     rule_id: ruleId,
     benefit_type: ctx.benefit_type ?? c.intake.benefit_type ?? null,
-    urgent: ctx.urgent ?? c.priority === 'urgent' || c.priority === 'expedited',
+    urgent: ctx.urgent ?? (c.priority === 'urgent' || c.priority === 'expedited'),
     criteria_result: ctx.criteria_result ?? null,
     md_signed: ctx.md_signed ?? false,
     inbound_is_appeal: ctx.inbound_is_appeal ?? c.type === 'first_level_appeal',
