@@ -5,6 +5,12 @@ Future Claude/Cole/Jonah sessions: read this first.
 
 ---
 
+## 🧭 Customer-ready plan — 2026-09-18
+
+The shared brain for first-live-customer work (Cole + team) is [`docs/customer-ready/`](docs/customer-ready/00-README.md). Start with `00-README.md` (north star / definition of done). Implement in the order in `10-implementation-commits.md`. Phase 0 is AWS PR #50 + Cognito. Update this file when a phase flips from open → done.
+
+---
+
 ## 2026-09-17 — AWS as destination of truth (adapter + RDS catalog)
 
 Jonah asked to polish the Claude draft, make hookup obvious, and move off
