@@ -13,6 +13,8 @@ export const FANOUT_TARGETS = [
   'F5_billing',
   'F6_cm',
   'F7_archive',
+  'F8_member',
+  'F9_provider',
 ] as const;
 export type FanoutTarget = (typeof FANOUT_TARGETS)[number];
 
@@ -42,12 +44,14 @@ export interface CxTask {
 export interface OutboundIntent {
   intent_id: string;
   case_id: string;
-  channel: 'email' | 'fax' | 'cm_webhook' | 'cm_csv' | 'archive' | 'portal';
+  channel: 'email' | 'fax' | 'cm_webhook' | 'cm_csv' | 'archive' | 'portal' | 'member' | 'provider';
   recorded_at: string;
   status: 'recorded' | 'sent' | 'skipped';
   reason: string;
   to?: string | null;
   subject?: string | null;
+  /** True only when a real member/provider send fired. Shadow + demo never set this. */
+  final_send?: boolean;
 }
 
 export interface TargetResult {
@@ -75,6 +79,8 @@ export interface FanoutResult {
   billable_event_ids: string[];
   cx_task_id: string | null;
   outbound_intents: OutboundIntent[];
+  /** Phase 7.3 — client_config.go_live_mode=shadow or shadow_mode. */
+  shadow_mode: boolean;
 }
 
 export interface WebhookDelivery {

@@ -17,8 +17,9 @@
 | 4 Fan-out + billing | [#57](https://github.com/WellsOnyx/vantahg-brief-engine/pull/57) | Portal downloads, HMAC `determination.signed` + retries, real `billable_events` ledger, monthly statement stub |
 | 5 Three role views | [#58](https://github.com/WellsOnyx/vantahg-brief-engine/pull/58) | Client / CX / Med lenses on one case object; RBAC deny cross-tenant + CX-note isolation |
 | 6 Reporting + CM | [#59](https://github.com/WellsOnyx/vantahg-brief-engine/pull/59) | Five client reports + CSV, CM HMAC handoff (flagged only), ops scoreboard |
+| 7 Onboarding + go-live | — | A→E checklist UI + runbook, E1/E2 packs, first-25 SLA rollback log |
 
-**CI (Phase 6 tip):** `npm run test:ci` 435 passed (3 todo); `tsc --noEmit` clean.
+**CI (Phase 7 tip):** `npm run test:ci` (see STATE.md); `tsc --noEmit` clean.
 
 ## Not started / paused
 
@@ -27,7 +28,7 @@
 | 4 Fan-out + billing ledger | ✅ **Done** — portal downloads, HMAC webhook retries → `fanout_failed` + CX task, ledger on sign, statement stub |
 | 5 Three role views (Client / CX / Med polish) | ✅ **Done** — `/client`, `/cx`, `/med-review` share `/api/case-spine` + role filters |
 | 6 Reporting + CM handoff | ✅ **Done** — `/portal/tpa/reports`, `/portal/tpa/cm`, `/api/ops/scoreboard` |
-| 7 Onboarding runbook + synthetic/shadow/live gates | **Next** |
+| 7 Onboarding runbook + synthetic/shadow/live gates | ✅ **Done** — `/admin/onboarding`, `docs/onboarding/`, `npm run test:go-live-synthetic`. Remaining = human ops |
 
 ## Still needs a human (not code)
 
@@ -61,6 +62,7 @@ curl -s -X POST http://localhost:3000/api/case-spine/md-queue \
 # Portal: /portal/tpa/determinations  ·  statement: /portal/tpa/statements
 # Lenses: /client  ·  /cx  ·  /med-review
 # Reports: /portal/tpa/reports  ·  CM: /portal/tpa/cm  ·  scoreboard: /cx
+# Onboarding: /admin/onboarding  ·  npm run test:go-live-synthetic
 ```
 
 ## Lane note

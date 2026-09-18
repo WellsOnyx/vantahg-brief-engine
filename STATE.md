@@ -20,11 +20,28 @@ Shared brain: [`docs/customer-ready/`](docs/customer-ready/00-README.md). Board:
 | 4 Fan-out + billing | #57 | ✅ Phase 4 — portal downloads, HMAC fan-out + retries, ledger, statement stub |
 | 5 Three role views | #58 | ✅ Phase 5 — Client / CX / Med lenses on one case object; RBAC deny cross-tenant + CX notes |
 | 6 Reporting + CM | #59 | ✅ Phase 6 — five client reports + CSV, CM HMAC handoff, ops scoreboard |
-| 7 Onboarding gates | — | ○ **next** |
+| 7 Onboarding gates | — | ✅ Phase 7 — A→E runbook + `/admin/onboarding`, synthetic/shadow packs, SLA rollback. **Customer-ready code path complete.** |
 
-**CI at Phase 6 tip:** `npm run test:ci` 435 passed (3 todo); `tsc --noEmit` clean.
+**CI at Phase 7 tip:** `npm run test:ci` (update after run); `tsc --noEmit` clean.
+
+**Remaining = human ops (not code):** SES verify, Fargate image rebuild, BAA before live PHI, production vendor keys, RDS-native bootstrap. Do not claim HIPAA complete — these are code gates only.
 
 Operator blockers unchanged: SES verify, Fargate image rebuild, BAA before live PHI, production vendor keys, RDS-native bootstrap.
+
+---
+
+## 2026-09-18 — Phase 7 onboarding + go-live gates (FINAL)
+
+Slices 7.1–7.4 from `10-implementation-commits.md`. Synthetic / demo only. No live PHI. No invented vendor credentials. Does **not** change `ENABLE_AWS_*` defaults. Does **not** claim HIPAA complete.
+
+- **7.1 Runbook + UI:** `docs/onboarding/README.md` + `/admin/onboarding` checklist mirrors `02-onboarding.md` phases A–E (commercial/legal, `client_config`, access, connectivity, go-live). Cole can check items off via `GET/PATCH /api/admin/onboarding`.
+- **7.2 E1 synthetic pack (≥10):** happy path + missing clinicals (R01 → `intake_incomplete` + SLA paused) + gray zone (`md_queue`). `npm run test:go-live-synthetic` and `POST /api/golive/synthetic`. Asserts via case-spine and intake ingest.
+- **7.3 E2 shadow pack (≥10):** live-shaped synthetic; MD signs; fan-out records member/provider **intent only** (`shadow_mode` / `go_live_mode=shadow`). `POST /api/golive/shadow`. Never a final send to member or requesting provider.
+- **7.4 Live hypercare scaffolding:** first-25 scorecard already on `/cx`. Go-live log + rollback note when first-25 SLA miss rate exceeds `client_config.sla_miss_rollback_threshold` or `SLA_MISS_ROLLBACK_THRESHOLD` (default 0.2): pause live intake, stay on shadow.
+
+`client_config` gained optional-with-default `go_live_mode`, `shadow_mode`, `sla_miss_rollback_threshold` (append-only versions unchanged).
+
+**Acceptance:** checklist completeness tests; synthetic pack pass; shadow mode suppresses member/provider final send.
 
 ---
 

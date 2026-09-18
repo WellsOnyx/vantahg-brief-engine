@@ -49,7 +49,7 @@ A TPA or self-insured employer can:
 - Phase 0.1 AWS path: [PR #50](https://github.com/WellsOnyx/vantahg-brief-engine/pull/50) — **merged**.
 - Phase 0.2 Cognito cutover: [PR #53](https://github.com/WellsOnyx/vantahg-brief-engine/pull/53) — **merged**. Default `ENABLE_AWS_AUTH=false`.
 - Phase 1 case spine + audit + R01–R16: [PR #52](https://github.com/WellsOnyx/vantahg-brief-engine/pull/52) — **merged**.
-- Phase 2 intake connectivity: this branch (`cursor/intake-connectivity-0af7`). Synthetic Gravity Rail / external submit / Phaxio → case-spine + versioned `client_config`.
+- Phases 0–7 customer-ready code path: on `main` through Phase 6; Phase 7 is this onboarding / go-live PR. Remaining = human ops (SES, Fargate, BAA, keys). Not a HIPAA attestation.
 
 ## How to use this
 

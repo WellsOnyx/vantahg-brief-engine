@@ -27,6 +27,9 @@ function cloneVersion(row: ClientConfigVersion): ClientConfigVersion {
         days: [...row.config.business_hours.days],
       },
       escalation_contacts: row.config.escalation_contacts.map((c) => ({ ...c })),
+      go_live_mode: row.config.go_live_mode ?? 'synthetic',
+      shadow_mode: row.config.shadow_mode ?? false,
+      sla_miss_rollback_threshold: row.config.sla_miss_rollback_threshold ?? 0.2,
     },
   };
 }
@@ -52,6 +55,9 @@ function seedSyntheticV1(): ClientConfigVersion {
     escalation_contacts: [{ name: 'CX staging', role: 'cx_owner', email: 'cx-synth@example.com' }],
     cx_owner: 'cx_synth_001',
     reviewer_queue: 'med_review_synth',
+    go_live_mode: 'synthetic',
+    shadow_mode: false,
+    sla_miss_rollback_threshold: 0.2,
   };
   return {
     id: randomUUID(),

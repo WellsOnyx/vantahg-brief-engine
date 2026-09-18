@@ -59,6 +59,10 @@ interface CxLens {
   hypercare: { done: number; remaining: number; required_remaining: number; items: HypercareItem[] };
   notes: CxNote[];
   resolve_fanout: CxTask[];
+  golive?: {
+    hypercare: { breached: boolean; note: string; miss_rate: number; threshold: number } | null;
+    log: Array<{ entry_id: string; kind: string; message: string }>;
+  };
 }
 
 const SLA_PILL: Record<string, string> = {
@@ -110,9 +114,14 @@ export default function CxLensPage() {
           title="Keep accounts healthy."
           subtitle="Stuck cases, R10–R12 escalations, hypercare, and non-PHI notes. Clinical packets stay on Med review."
           actions={
-            <Link href="/med-review" className="text-sm text-white/80 underline">
-              Med review queue →
-            </Link>
+            <span className="flex gap-4">
+              <Link href="/med-review" className="text-sm text-white/80 underline">
+                Med review queue →
+              </Link>
+              <Link href="/admin/onboarding" className="text-sm text-white/80 underline">
+                Onboarding A→E →
+              </Link>
+            </span>
           }
         />
       }
@@ -126,6 +135,11 @@ export default function CxLensPage() {
 
       {lens && (
         <>
+          {lens.golive?.hypercare?.breached && (
+            <SectionCard title="Rollback — stay on shadow">
+              <p className="text-sm text-red-800">{lens.golive.hypercare.note}</p>
+            </SectionCard>
+          )}
           <PageDashboard.Stats>
             <StatCard label="Open" value={lens.health.open} />
             <StatCard label="At-risk SLA" value={lens.health.at_risk} accent={lens.health.at_risk > 0} />
