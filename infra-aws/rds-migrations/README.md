@@ -16,7 +16,7 @@ The runner (`scripts/apply-rds-migrations.mjs`) plus
 `lib/db/rds-migrations.ts`:
 
 1. Applies `000_rds_bootstrap.sql` first (auth-compat schema + `schema_migrations`).
-2. For each numeric prefix 000–026, prefers an RDS file when one exists,
+2. For each numeric prefix 000+, prefers an RDS file when one exists,
    otherwise the portable supabase file.
 3. Skips `013_signup_contracts_bucket.sql` (Supabase Storage). S3 is CDK.
 
@@ -34,6 +34,10 @@ Local docker: `DATABASE_SSL=disable`.
 | `016_delivery_org.sql` | Soft uuid pointers instead of `auth.users` FKs |
 | `019_practices.sql` | Same |
 | `020`–`026` | Applied on RDS already; kept next to the runner |
+| `027_case_spine.sql` | Portable Phase 1 spine (plain Postgres). Identical to `supabase/migrations/027_case_spine.sql`. Catalog prefers this RDS copy when both exist. |
+
+`027` is **not** an AWS-only rewrite. It adds spine columns on `cases` plus
+`audit_events` / `auth_rules` (R01–R16). Apply only after `cases` exists (000+).
 
 ## Bastion (production RDS)
 

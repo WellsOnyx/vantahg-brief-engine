@@ -41,12 +41,20 @@ describe('RDS migration catalog', () => {
     expect(concierge?.filename).toBe('017_case_concierge.sql');
   });
 
+  it('includes Phase 1 case-spine 027 (RDS copy wins when both exist)', () => {
+    const spine = plan.apply.find((e) => e.prefix === '027');
+    expect(spine?.filename).toBe('027_case_spine.sql');
+    expect(spine?.source).toBe('rds');
+    expect(spine?.path).toContain('infra-aws/rds-migrations');
+  });
+
   it('covers every numbered supabase migration except the skipped bucket one', () => {
     const prefixes = new Set(plan.apply.map((e) => e.prefix));
     expect(prefixes.has('000')).toBe(true);
     expect(prefixes.has('008')).toBe(true);
     expect(prefixes.has('020')).toBe(true);
     expect(prefixes.has('026')).toBe(true);
+    expect(prefixes.has('027')).toBe(true);
     expect(prefixes.has('013')).toBe(false);
   });
 

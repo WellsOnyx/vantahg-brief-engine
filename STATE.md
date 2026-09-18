@@ -67,6 +67,15 @@ migrates users. No password-hash import from Supabase.
 
 **CI on this branch:** `npm run test:ci` 349 passed (3 todo). `npx tsc --noEmit` clean. `npm run build` clean.
 
+### Phase 1 scaffolding (in flight) — case spine + audit + R01–R16
+
+Additive schema/API for `10-implementation-commits.md` Phase 1.1–1.3. Does **not** rewrite legacy `cases.status` / `cases.case_type` / brief engines.
+
+- **Schema:** `supabase/migrations/027_case_spine.sql` (plain Postgres; identical copy at `infra-aws/rds-migrations/027_case_spine.sql`). Adds spine columns on `cases`, plus `audit_events` and versioned `auth_rules` (R01–R16 seeded). No `auth.uid()`. AWS PR #50 is merged — `lib/db/rds-migrations.ts` includes 027 (RDS copy wins when both exist; they match). Apply after `cases` exists (000+).
+- **Lib:** `lib/case-spine/` — state machine, audit writer, rules evaluation, create/transition/list with stub RBAC. Memory-backed so tests and demo mode need no Cole/AWS credentials and no live PHI.
+- **API:** `/api/case-spine` (POST/GET), `/api/case-spine/[id]`, `/transition`, `/audit`, `/evaluate`, `/api/case-spine/rules` (GET + PATCH toggle).
+- **Acceptance:** illegal transitions → 409; every transition + every rule eval writes `audit_events`; R01 incomplete intake sets `state=intake_incomplete` and `sla_clock=paused`; PATCH can disable R01.
+
 ---
 
 ## 2026-09-17 — AWS as destination of truth (adapter + RDS catalog)
