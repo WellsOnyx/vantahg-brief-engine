@@ -59,6 +59,8 @@ ENABLE_AWS_AUTH=true npx cdk deploy vantaum-prod-compute
 Cognito is **not** "the only auth" until an operator flips the flag and
 migrates users. No password-hash import from Supabase.
 
+**CI on this branch:** `npm run test:ci` 349 passed (3 todo). `npx tsc --noEmit` clean. `npm run build` clean.
+
 ---
 
 ## 2026-09-17 — AWS as destination of truth (adapter + RDS catalog)

@@ -39,17 +39,43 @@ export async function GET(request: NextRequest) {
     // RDS user_profiles has email. Supabase-original does not — hybrid
     // still joins auth.users via auth.admin.listUsers. Never call
     // supabase.auth on the AWS path: the pg shim throws on .auth.
-    const { data: profiles, error: profilesErr } = await supabase
-      .from('user_profiles')
-      .select(awsPath ? 'id, name, role, created_at, email' : 'id, name, role, created_at')
-      .order('created_at', { ascending: false });
+    // Two explicit select strings so supabase-js can type them (a
+    // ternary select string becomes ParserError).
+    type TeamRow = {
+      id: string;
+      name: string | null;
+      role: string;
+      created_at: string;
+      email: string | null;
+    };
+    let profiles: TeamRow[] | null = null;
 
-    if (profilesErr) {
-      return apiError(profilesErr, {
-        operation: 'list_team',
-        actor: authResult.user.email,
-        requestContext: getRequestContext(request),
-      });
+    if (awsPath) {
+      const { data, error: profilesErr } = await supabase
+        .from('user_profiles')
+        .select('id, name, role, created_at, email')
+        .order('created_at', { ascending: false });
+      if (profilesErr) {
+        return apiError(profilesErr, {
+          operation: 'list_team',
+          actor: authResult.user.email,
+          requestContext: getRequestContext(request),
+        });
+      }
+      profiles = (data ?? []) as TeamRow[];
+    } else {
+      const { data, error: profilesErr } = await supabase
+        .from('user_profiles')
+        .select('id, name, role, created_at')
+        .order('created_at', { ascending: false });
+      if (profilesErr) {
+        return apiError(profilesErr, {
+          operation: 'list_team',
+          actor: authResult.user.email,
+          requestContext: getRequestContext(request),
+        });
+      }
+      profiles = (data ?? []).map((p) => ({ ...p, email: null })) as TeamRow[];
     }
 
     let usersById = new Map<string, { email: string | null }>();
@@ -70,10 +96,7 @@ export async function GET(request: NextRequest) {
       name: p.name,
       role: p.role,
       created_at: p.created_at,
-      email:
-        ('email' in p && typeof p.email === 'string' ? p.email : null) ??
-        usersById.get(p.id)?.email ??
-        null,
+      email: p.email ?? usersById.get(p.id)?.email ?? null,
     }));
 
     return NextResponse.json(team);
