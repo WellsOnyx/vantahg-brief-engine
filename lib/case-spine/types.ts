@@ -75,6 +75,18 @@ export const CM_FLAGS = [
 ] as const;
 export type CmFlag = (typeof CM_FLAGS)[number];
 
+/** Normalized deny reason codes for 08 reporting. */
+export const DENY_REASON_CODES = [
+  'medical_necessity',
+  'criteria_not_met',
+  'insufficient_documentation',
+  'experimental_investigational',
+  'benefit_exclusion',
+  'alternative_available',
+  'other',
+] as const;
+export type DenyReasonCode = (typeof DENY_REASON_CODES)[number];
+
 export const AUTH_RULE_IDS = [
   'R01',
   'R02',
@@ -272,6 +284,7 @@ export interface CanonicalCase {
   duplicate_of_case_id: string | null;
   intake: IntakePayload;
   signed_rationale: string | null;
+  deny_reason_code: DenyReasonCode | null;
   determination_package_version: number | null;
   determination_package_key: string | null;
   fanout_stub: FanoutStub | null;
@@ -386,6 +399,7 @@ export interface SignDeterminationInput {
   determination: SpineDetermination;
   rationale: string;
   cm_flags?: CmFlag[];
+  deny_reason_code?: DenyReasonCode | null;
   session_refs?: {
     ip?: string | null;
     request_id?: string | null;

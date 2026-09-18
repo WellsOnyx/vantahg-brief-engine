@@ -30,6 +30,7 @@ export async function POST(
       determination?: string;
       rationale?: string;
       cm_flags?: string[];
+      deny_reason_code?: string | null;
     };
 
     if (!body.determination || !(DETERMINATIONS as readonly string[]).includes(body.determination)) {
@@ -52,6 +53,7 @@ export async function POST(
         determination: body.determination as SpineDetermination,
         rationale: body.rationale,
         cm_flags: body.cm_flags as never,
+        deny_reason_code: body.deny_reason_code as never,
         session_refs: { ip: ctx.ip, request_id: ctx.requestId },
       },
       authResult.user.id,

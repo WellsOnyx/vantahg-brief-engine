@@ -28,6 +28,7 @@ import {
   type TargetResult,
   type WebhookTransport,
 } from './types';
+import { CmHandoffService } from '@/lib/cm/service';
 import {
   buildDeterminationSignedPayload,
   portalPackageUrl,
@@ -308,20 +309,30 @@ export class FanoutService {
   }
 
   private async recordCm(c: CanonicalCase): Promise<TargetResult> {
-    const cfg = await this.clientChannels(c.client_id);
-    if (!cfg?.cm_handoff_enabled || c.cm_flags.length === 0) {
+    if (c.cm_flags.length === 0) {
       return { target: 'F6_cm', ok: true, skipped: true, reason: 'not_flagged' };
     }
-    await this.store.insertIntent({
-      intent_id: randomUUID(),
-      case_id: c.case_id,
-      channel: 'cm_webhook',
-      recorded_at: this.now().toISOString(),
-      status: 'recorded',
-      reason: `cm_flags:${c.cm_flags.join(',')}`,
-      to: cfg.cm_webhook_url ?? null,
+    const cm = new CmHandoffService({
+      spine: this.spine,
+      config: this.config,
+      store: this.store,
+      transport: this.transport,
+      sleep: this.sleep,
+      now: this.now,
+      appUrl: this.appUrl,
     });
-    return { target: 'F6_cm', ok: true, reason: 'cm_intent_recorded' };
+    const delivered = await cm.deliver(c.case_id);
+    return {
+      target: 'F6_cm',
+      ok: delivered.webhook.ok !== false,
+      skipped: !delivered.webhook.configured,
+      reason: delivered.webhook.configured
+        ? delivered.webhook.ok
+          ? 'cm_webhook_delivered'
+          : delivered.webhook.last_error ?? 'cm_webhook_failed'
+        : 'cm_feed_only',
+      attempts: delivered.webhook.attempts,
+    };
   }
 
   private async resolveWebhook(c: CanonicalCase): Promise<{ url: string | null; secret: string | null }> {

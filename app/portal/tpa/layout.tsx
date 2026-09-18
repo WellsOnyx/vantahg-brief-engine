@@ -33,6 +33,8 @@ function TpaHeader() {
     { href: '/client', label: 'Status' },
     { href: '/portal/tpa/submit', label: 'Submit Case' },
     { href: '/portal/tpa/determinations', label: 'Determinations' },
+    { href: '/portal/tpa/reports', label: 'Reports' },
+    { href: '/portal/tpa/cm', label: 'CM' },
     { href: '/portal/tpa/statements', label: 'Statements' },
     { href: '/portal/tpa/practices', label: 'Practices' },
   ];

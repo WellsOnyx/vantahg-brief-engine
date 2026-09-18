@@ -48,6 +48,8 @@ const tpaClientNav: NavGroup[] = [
       { href: "/portal/tpa", label: "Overview" },
       { href: "/portal/tpa/submit", label: "Submit Auth" },
       { href: "/portal/tpa/determinations", label: "Determinations" },
+      { href: "/portal/tpa/reports", label: "Reports" },
+      { href: "/portal/tpa/cm", label: "CM queue" },
       { href: "/portal/tpa/statements", label: "Statements" },
       { href: "/cases", label: "Cases" },
       { href: "/portal/tpa/practices", label: "Network" },

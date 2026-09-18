@@ -42,7 +42,7 @@ export interface CxTask {
 export interface OutboundIntent {
   intent_id: string;
   case_id: string;
-  channel: 'email' | 'fax' | 'cm_webhook' | 'archive' | 'portal';
+  channel: 'email' | 'fax' | 'cm_webhook' | 'cm_csv' | 'archive' | 'portal';
   recorded_at: string;
   status: 'recorded' | 'sent' | 'skipped';
   reason: string;

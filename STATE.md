@@ -18,11 +18,11 @@ Shared brain: [`docs/customer-ready/`](docs/customer-ready/00-README.md). Board:
 | 2 Intake | #54 | ✅ on `main` |
 | 3 Brief → MD | #55 | ✅ on `main` |
 | 4 Fan-out + billing | #57 | ✅ Phase 4 — portal downloads, HMAC fan-out + retries, ledger, statement stub |
-| 5 Three role views | — | ✅ Phase 5 — Client / CX / Med lenses on one case object; RBAC deny cross-tenant + CX notes |
-| 6 Reporting + CM | — | ○ **next** |
-| 7 Onboarding gates | — | ○ open |
+| 5 Three role views | #58 | ✅ Phase 5 — Client / CX / Med lenses on one case object; RBAC deny cross-tenant + CX notes |
+| 6 Reporting + CM | — | ✅ Phase 6 — five client reports + CSV, CM HMAC handoff, ops scoreboard |
+| 7 Onboarding gates | — | ○ **next** |
 
-**CI at Phase 5 tip:** `npm run test:ci` 421 passed (3 todo); `tsc --noEmit` clean.
+**CI at Phase 6 tip:** `npm run test:ci` (this PR); `tsc --noEmit` clean.
 
 Operator blockers unchanged: SES verify, Fargate image rebuild, BAA before live PHI, production vendor keys, RDS-native bootstrap.
 
@@ -127,6 +127,16 @@ Slices 5.1–5.3 from `10-implementation-commits.md`. One case object, three len
 - **5.3 RBAC:** `resolveSpineViewer` binds tenant from the session (demo/test: `x-vantaum-role` / `x-vantaum-client-id`). Query `client_id` is a filter, not identity. Client cannot see another tenant, CX notes, or clinical briefs. CX list filters `stuck` + `sla_status`. `/med-review` is the Med lens (SLA sort, packet + sign, fan-out after sign).
 
 **Acceptance:** client of tenant B gets 404 on tenant A case; client 403 on `/api/cx/notes` and `/api/views/cx`; CX `?stuck=1` / `?sla_status=missed` only return matching rows.
+
+### Phase 6 — Reporting + CM handoff (this PR)
+
+Slices 6.1–6.3 from `10-implementation-commits.md`. Synthetic / demo only. No live PHI. Wires off Phase 3–5 determination / `cm_flags` / fan-out. Does **not** change `ENABLE_AWS_*` defaults.
+
+- **6.1 Five client reports + CSV:** `GET /api/reports` + `/api/reports/{volume|turnaround|outcomes|deny_reasons|sla}?format=csv`. Portal `/portal/tpa/reports` filters by date, LOB, type. Volume.signed matches distinct non-void ledger case ids. Normalized deny reason codes on sign (`deny_reason_code`).
+- **6.2 CM flags + webhook/CSV:** Flagged determinations only. `cm.handoff` HMAC-SHA256 (same 8× exponential budget as `determination.signed`, ≤ 5 min). Portal CM queue `/portal/tpa/cm` + `GET /api/cm/queue`. Daily CSV drop stub `GET /api/cm/csv` + cron `/api/cron/cm-csv-drop`. Unflagged never appear in the feed and never post.
+- **6.3 Internal ops scoreboard:** `GET /api/ops/scoreboard` — fan-out fail rate + R10–R12 escalation counts. Visible on `/cx` to CX/admin; clients 403.
+
+**Acceptance:** report CSV columns match 08; volume signed === ledger case count; CM webhook only when flags non-empty; unflagged never in CM feed; CX sees fan-out fail rate.
 
 ---
 

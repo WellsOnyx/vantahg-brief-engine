@@ -117,6 +117,9 @@ export default function ClientLensPage() {
               <Link href="/portal/tpa/determinations" className="btn btn-primary text-sm">
                 Determinations
               </Link>
+              <Link href="/portal/tpa/reports" className="text-sm text-white/80 underline">
+                Reports
+              </Link>
               <Link href="/portal/tpa/statements" className="text-sm text-white/80 underline">
                 Statements
               </Link>
