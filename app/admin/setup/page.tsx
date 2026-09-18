@@ -26,24 +26,22 @@ interface SetupStep {
 const STEPS: SetupStep[] = [
   {
     key: 'supabase',
-    title: 'Connect Supabase',
-    blurb: 'The database that holds every signup, contract, case, and audit log. Required.',
+    title: 'Connect the database (RDS first)',
+    blurb: 'Holds every signup, contract, case, and audit log. Required. AWS RDS is the destination; Supabase remains a cutover leftover.',
     howTo: [
-      'Supabase dashboard → Project Settings → API.',
-      'Copy the Project URL and add it to Vercel as NEXT_PUBLIC_SUPABASE_URL.',
-      'Copy the anon public key as NEXT_PUBLIC_SUPABASE_ANON_KEY.',
-      'Copy the service_role key as SUPABASE_SERVICE_ROLE_KEY (keep this secret).',
+      'Preferred: set ENABLE_AWS_DB=true and DATABASE_URL (or DB_HOST / DB_USER / DB_PASSWORD from Secrets Manager vantaum-<env>-db-admin-credentials).',
+      'Local: docker compose -f docker-compose.postgres.yml up -d, then the local DATABASE_URL in .env.local.example.',
+      'Cutover leftover only: Supabase dashboard → Project Settings → API → NEXT_PUBLIC_SUPABASE_URL + anon + service_role.',
     ],
   },
   {
     key: 'migrations',
-    title: 'Run database migrations',
+    title: 'Apply Postgres migrations',
     blurb: 'Creates the tables for signups, contracts, and the contract generator. Required.',
     howTo: [
-      'Supabase dashboard → SQL Editor.',
-      'Open each file under supabase/migrations/ from 010 through 014 in order.',
-      'Paste into SQL Editor and click Run. Each one is idempotent — safe to re-run.',
-      'Or, if you have the Supabase CLI linked: run "supabase db push" from the repo root.',
+      'AWS / local Postgres: node scripts/apply-rds-migrations.mjs (uses the RDS catalog; skips Supabase-only storage.buckets).',
+      'Dry-run first: node scripts/apply-rds-migrations.mjs --dry-run',
+      'Cutover leftover: supabase db push still works against a Supabase project.',
     ],
   },
   {

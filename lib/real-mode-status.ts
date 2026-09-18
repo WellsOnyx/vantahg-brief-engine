@@ -19,6 +19,13 @@
 import { getEnv } from './env';
 import { isDemoMode as canonicalIsDemoMode } from './demo-mode';
 import { hasSupabaseConfig, getServiceClient } from './supabase';
+import {
+  getAuthBackend,
+  getDbBackend,
+  getEmailBackend,
+  getStorageBackend,
+  hasRdsConnectionEnv,
+} from './runtime-backend';
 
 export type ComponentReady = 'ready' | 'missing' | 'demo';
 
@@ -35,6 +42,9 @@ export interface RealModeStatus {
   overall: 'demo' | 'partial' | 'ready';
   components: {
     supabase: ComponentStatus;
+    storage: ComponentStatus;
+    auth: ComponentStatus;
+    email: ComponentStatus;
     anthropic: ComponentStatus;
     cron: ComponentStatus;
     efax: ComponentStatus;
@@ -91,30 +101,106 @@ export async function getRealModeStatus(): Promise<RealModeStatus> {
   const env = getEnv();
   const demo = canonicalIsDemoMode();
 
-  // ── Supabase ─────────────────────────────────────────────────────────
-  const supabaseMissing: string[] = [];
-  if (!env.NEXT_PUBLIC_SUPABASE_URL) supabaseMissing.push('NEXT_PUBLIC_SUPABASE_URL');
-  if (!env.NEXT_PUBLIC_SUPABASE_ANON_KEY) supabaseMissing.push('NEXT_PUBLIC_SUPABASE_ANON_KEY');
-  if (!env.SUPABASE_SERVICE_ROLE_KEY) supabaseMissing.push('SUPABASE_SERVICE_ROLE_KEY');
-
+  // ── Database (RDS preferred; Supabase still valid during cutover) ──
+  const dbBackend = getDbBackend();
   let supabaseStatus: ComponentStatus;
-  if (supabaseMissing.length === 0 && hasSupabaseConfig()) {
-    const reachable = await pingSupabase();
-    supabaseStatus = reachable
-      ? { status: 'ready', missing: [], hint: 'Connected.' }
-      : {
-          status: 'missing',
-          missing: [],
-          hint:
-            'Env vars are set but a test query failed. Check the service role key matches the project URL and that RLS / network rules allow it.',
-        };
+  if (dbBackend === 'rds') {
+    const rdsMissing: string[] = [];
+    if (!hasRdsConnectionEnv()) {
+      rdsMissing.push('DATABASE_URL (or DB_HOST+DB_PASSWORD)');
+    }
+    if (rdsMissing.length === 0 && hasSupabaseConfig()) {
+      const reachable = await pingSupabase();
+      supabaseStatus = reachable
+        ? { status: 'ready', missing: [], hint: 'RDS via pg shim (ENABLE_AWS_DB).' }
+        : {
+            status: 'missing',
+            missing: [],
+            hint: 'ENABLE_AWS_DB is on but a test query failed. Check DATABASE_URL / DB_* and that the schema has been applied (node scripts/apply-rds-migrations.mjs).',
+          };
+    } else {
+      supabaseStatus = {
+        status: 'missing',
+        missing: rdsMissing,
+        hint: 'Set ENABLE_AWS_DB=true and DATABASE_URL (or DB_HOST+DB_PASSWORD from Secrets Manager).',
+      };
+    }
   } else {
-    supabaseStatus = {
-      status: 'missing',
-      missing: supabaseMissing,
-      hint: 'Set the Supabase project URL + anon key (build-time) and service role key (server-only).',
-    };
+    const supabaseMissing: string[] = [];
+    if (!env.NEXT_PUBLIC_SUPABASE_URL) supabaseMissing.push('NEXT_PUBLIC_SUPABASE_URL');
+    if (!env.NEXT_PUBLIC_SUPABASE_ANON_KEY) supabaseMissing.push('NEXT_PUBLIC_SUPABASE_ANON_KEY');
+    if (!env.SUPABASE_SERVICE_ROLE_KEY) supabaseMissing.push('SUPABASE_SERVICE_ROLE_KEY');
+
+    if (supabaseMissing.length === 0 && hasSupabaseConfig()) {
+      const reachable = await pingSupabase();
+      supabaseStatus = reachable
+        ? { status: 'ready', missing: [], hint: 'Connected to Supabase Postgres (cutover leftover).' }
+        : {
+            status: 'missing',
+            missing: [],
+            hint:
+              'Env vars are set but a test query failed. Check the service role key matches the project URL and that RLS / network rules allow it.',
+          };
+    } else {
+      supabaseStatus = {
+        status: demo ? 'demo' : 'missing',
+        missing: supabaseMissing,
+        hint: demo
+          ? 'Demo mode — no database. For AWS: ENABLE_AWS_DB=true + DATABASE_URL. For leftover Vercel: set the three Supabase keys.'
+          : 'Set ENABLE_AWS_DB=true + DATABASE_URL, or the three Supabase keys during cutover.',
+      };
+    }
   }
+
+  const storageBackend = getStorageBackend();
+  const storageStatus: ComponentStatus =
+    storageBackend === 's3'
+      ? {
+          status: 'ready',
+          missing: [],
+          hint: 'S3StorageAdapter (ENABLE_AWS_STORAGE). Buckets vantaum-<env>-{signup-contracts,efax-documents,public-assets}.',
+        }
+      : {
+          status: demo ? 'demo' : 'ready',
+          missing: [],
+          hint: 'Supabase Storage (cutover leftover). Flip ENABLE_AWS_STORAGE=true for S3.',
+        };
+
+  const authBackend = getAuthBackend();
+  const authStatus: ComponentStatus =
+    authBackend === 'cognito'
+      ? process.env.COGNITO_USER_POOL_ID && process.env.COGNITO_CLIENT_ID
+        ? { status: 'ready', missing: [], hint: 'CognitoAuthAdapter. Staged — confirm magic-link Lambdas before relying on this in prod.' }
+        : {
+            status: 'missing',
+            missing: ['COGNITO_USER_POOL_ID', 'COGNITO_CLIENT_ID'],
+            hint: 'ENABLE_AWS_AUTH is on but Cognito ids are missing.',
+          }
+      : {
+          status: demo ? 'demo' : 'ready',
+          missing: [],
+          hint: 'Supabase Auth (V1 hybrid). Cognito pool + Lambdas are deployed but not cut over. Do not set ENABLE_AWS_AUTH until that wave.',
+        };
+
+  const emailBackend = getEmailBackend();
+  const emailMissing: string[] = [];
+  if (emailBackend === 'ses' && !process.env.SES_FROM_ADDRESS && !process.env.SMTP_FROM) {
+    emailMissing.push('SES_FROM_ADDRESS');
+  }
+  const emailStatus: ComponentStatus =
+    emailBackend === 'ses'
+      ? emailMissing.length === 0
+        ? { status: 'ready', missing: [], hint: 'SesEmailAdapter. Domain must be SES-verified before real mail leaves.' }
+        : {
+            status: 'missing',
+            missing: emailMissing,
+            hint: 'ENABLE_AWS_EMAIL is on. Set SES_FROM_ADDRESS to a verified identity.',
+          }
+      : {
+          status: process.env.SMTP_HOST ? 'ready' : demo ? 'demo' : 'missing',
+          missing: process.env.SMTP_HOST ? [] : ['SMTP_HOST', 'SMTP_USER', 'SMTP_PASS'],
+          hint: 'SMTP adapter (works with SES SMTP). Or set ENABLE_AWS_EMAIL=true for the SES SDK.',
+        };
 
   // ── Anthropic ────────────────────────────────────────────────────────
   // Real Anthropic requires BOTH the key AND the explicit opt-in flag.
@@ -232,7 +318,7 @@ export async function getRealModeStatus(): Promise<RealModeStatus> {
     migrationsStatus = {
       status: 'missing',
       missing: [],
-      hint: 'Fix the Supabase connection first — migrations can\'t be probed without it.',
+      hint: 'Fix the database connection first (ENABLE_AWS_DB + DATABASE_URL, or leftover Supabase keys) — migrations can\'t be probed without it.',
     };
   } else {
     const probe = await probeRequiredTables();
@@ -246,7 +332,7 @@ export async function getRealModeStatus(): Promise<RealModeStatus> {
           status: 'missing',
           missing: probe.missing,
           hint:
-            'Run migrations 010–014 against Supabase (SQL editor, or `supabase db push`). The signup → contract → e-sign loop requires these tables.',
+            'Apply the RDS plan (`node scripts/apply-rds-migrations.mjs`) or `supabase db push` during cutover. Signup → contract → e-sign needs these tables.',
         };
   }
 
@@ -270,6 +356,9 @@ export async function getRealModeStatus(): Promise<RealModeStatus> {
     overall,
     components: {
       supabase: supabaseStatus,
+      storage: storageStatus,
+      auth: authStatus,
+      email: emailStatus,
       anthropic: anthropicStatus,
       cron: cronStatus,
       efax: efaxStatus,

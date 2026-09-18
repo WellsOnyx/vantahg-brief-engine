@@ -23,13 +23,25 @@ const ssrStub = {
   auth: { getUser: vi.fn() as AnyFn },
 };
 
+const authAdapter = {
+  getSessionUser: vi.fn(async () => null),
+};
+
 vi.mock('@/lib/supabase', () => ({
   getServiceClient: () => supabaseStub,
-  hasSupabaseConfig: () => true,
+  hasSupabaseConfig: () =>
+    !!(
+      (process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL) &&
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    ),
 }));
 
 vi.mock('@/lib/supabase-server', () => ({
   createServerClient: async () => ssrStub,
+}));
+
+vi.mock('@/lib/adapters/auth', () => ({
+  getAuthAdapter: () => authAdapter,
 }));
 
 function clearSupabaseEnv() {
@@ -65,6 +77,7 @@ describe('GET /api/provider/me', () => {
 
   it('returns 401 with no user session', async () => {
     setRealEnv();
+    authAdapter.getSessionUser = vi.fn(async () => null);
     ssrStub.auth.getUser = vi.fn(async () => ({ data: { user: null }, error: null }));
     const { GET } = await import('@/app/api/provider/me/route');
     const res = await GET(new Request('http://localhost:3000/api/provider/me') as never);
@@ -73,6 +86,10 @@ describe('GET /api/provider/me', () => {
 
   it('returns 403 when user has no practice_users link', async () => {
     setRealEnv();
+    authAdapter.getSessionUser = vi.fn(async () => ({
+      id: 'u-1',
+      email: 'doctor@example.com',
+    }));
     ssrStub.auth.getUser = vi.fn(async () => ({
       data: { user: { id: 'u-1', email: 'doctor@example.com' } },
       error: null,

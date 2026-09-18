@@ -1,0 +1,23 @@
+# Local plain Postgres 15 — same major as RDS.
+# No cloud credentials. Password is a local-dev default, not a secret.
+#
+#   docker compose -f docker-compose.postgres.yml up -d
+#   DATABASE_URL=postgres://vantaum:localdev@127.0.0.1:5432/vantaum \
+#     DATABASE_SSL=disable node scripts/apply-rds-migrations.mjs
+#   ENABLE_AWS_DB=true DATABASE_URL=... DATABASE_SSL=disable npm run dev
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: vantaum-postgres-local
+    environment:
+      POSTGRES_DB: vantaum
+      POSTGRES_USER: vantaum
+      POSTGRES_PASSWORD: localdev
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vantaum -d vantaum"]
+      interval: 5s
+      timeout: 3s
+      retries: 10

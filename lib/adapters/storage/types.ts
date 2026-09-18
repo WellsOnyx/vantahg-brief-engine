@@ -3,7 +3,7 @@
  *
  * Vendor-neutral surface for file storage. Two implementations:
  *   - lib/adapters/storage/supabase.ts (current production)
- *   - lib/adapters/storage/s3.ts       (AWS migration target — stubbed)
+ *   - lib/adapters/storage/s3.ts       (AWS destination — live when ENABLE_AWS_STORAGE=true)
  *
  * Why an adapter at all (instead of just calling supabase.storage):
  *   - Cole's migration target is S3. Same primitives, different SDK.

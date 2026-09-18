@@ -1,8 +1,8 @@
 # VantaUM AWS Migration Handoff
 
-**Audience:** Cole
-**Status:** Application code + adapter pattern + CDK skeleton ready. Stubs marked with `not implemented`. No AWS resources provisioned yet.
-**Last updated:** 2026-05-12
+**Audience:** Cole / operators
+**Status:** Adapters + RDS catalog + CDK stacks are real. SES SDK implemented. Cognito is staged (not cut over). Demo mode still runs with no secrets.
+**Last updated:** 2026-09-17
 
 This is the doc you're looking for when you sit down to start migrating VantaUM off Vercel + Supabase onto AWS. Everything you need to know about where things live and what's already been built for you.
 
@@ -12,13 +12,13 @@ This is the doc you're looking for when you sit down to start migrating VantaUM 
 
 You do **not** need to rewrite the application. The codebase is set up so swapping vendors is a small number of focused changes:
 
-1. Fill in five adapter stubs at `lib/adapters/*/{s3,cognito,ses}.ts`
-2. Fill in six CDK stack stubs at `infra-aws/lib/*.ts`
-3. Run the existing SQL migrations against RDS
-4. Backfill data (S3 sync, password reset emails)
-5. DNS cutover from Vercel to ALB
+1. `ENABLE_AWS_DB=true` + RDS connection + `npm run db:migrate:rds`
+2. `ENABLE_AWS_STORAGE=true` (S3 adapter is implemented)
+3. `ENABLE_AWS_EMAIL=true` after the SES identity is verified
+4. Leave `ENABLE_AWS_AUTH` false until the Cognito wave
+5. DNS / container rebuild are operator steps — see `STATE.md`
 
-No application route, page, or business-logic file should need to change. If you find yourself editing files outside of `lib/adapters/` and `infra-aws/`, stop and check whether you're going off-pattern.
+Prefer adding a method to the shim or an adapter over new Supabase-only call sites.
 
 ---
 
@@ -74,11 +74,12 @@ Each interface returns discriminated success/error union types (`{ ok: true, ...
 - `lib/adapters/auth/supabase.ts`
 - `lib/adapters/email/smtp.ts` (works for any SMTP — Supabase, SES SMTP, Sendgrid, etc.)
 
-### AWS stubs (your fill-in points)
+### AWS adapters (filled in)
 
-- `lib/adapters/storage/s3.ts` — every method throws `not implemented`. Migration checklist in the file header.
-- `lib/adapters/auth/cognito.ts` — full notes on the magic-link custom-auth flow design.
-- `lib/adapters/email/ses.ts` — SES SDK adapter for native bounce tracking. **Note:** you can use SES via the existing SMTP adapter without writing any code — just point `SMTP_HOST` at the SES SMTP endpoint. Only fill in this SDK adapter if you want native bounce tracking + suppression lists.
+- `lib/adapters/storage/s3.ts` — live `S3StorageAdapter` (`ENABLE_AWS_STORAGE=true`).
+- `lib/adapters/auth/cognito.ts` — implemented magic-link + session cookie. **Not the default.** `ENABLE_AWS_AUTH` stays false until cutover.
+- `lib/adapters/email/ses.ts` — SESv2 SendEmail (Simple + Raw attachments). `ENABLE_AWS_EMAIL=true`. Identity verification is still an operator step.
+- `lib/db/rds-migrations.ts` + `scripts/apply-rds-migrations.mjs` — plain-Postgres apply path.
 
 ### CDK stacks (the infra to back the AWS adapters)
 
@@ -92,7 +93,7 @@ In `infra-aws/`:
 - `lib/compute-stack.ts` — Fargate service + ALB + ECR.
 - `lib/cron-stack.ts` — EventBridge schedules replacing Vercel Cron.
 
-Each stack file is a class with the constructor + a `// TODO:` list inside. When you fill it in, the stack ID and props plumbing stay the same.
+Stacks are implemented (not constructor stubs). BuildStack is optional (`VANTAUM_GITHUB_CONNECTION_ARN`). Compute grants S3/KMS/SES and sets `ENABLE_AWS_DB/STORAGE/EMAIL=true`, `ENABLE_AWS_AUTH=false`.
 
 ### The existing application code that's vendor-aware (small list)
 

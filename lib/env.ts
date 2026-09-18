@@ -38,6 +38,21 @@ const EnvSchema = z.object({
   ENABLE_REAL_ANTHROPIC: z.coerce.boolean().default(false),
   ENABLE_REAL_EFAX: z.coerce.boolean().default(false),
 
+  // AWS cutover flags — each vendor flips independently so Vercel+Supabase
+  // can keep running while RDS / S3 / SES come online. Auth stays off
+  // until Cognito is deliberately cut over.
+  ENABLE_AWS_DB: z.coerce.boolean().default(false),
+  ENABLE_AWS_STORAGE: z.coerce.boolean().default(false),
+  ENABLE_AWS_EMAIL: z.coerce.boolean().default(false),
+  ENABLE_AWS_AUTH: z.coerce.boolean().default(false),
+  DATABASE_URL: z.string().optional(),
+  DB_HOST: z.string().optional(),
+  SES_FROM_ADDRESS: z.string().optional(),
+  SES_CONFIGURATION_SET: z.string().optional(),
+  AWS_S3_BUCKET_PREFIX: z.string().optional(),
+  COGNITO_USER_POOL_ID: z.string().optional(),
+  COGNITO_CLIENT_ID: z.string().optional(),
+
   // Service-specific tuning (also read by lib/llm/config.ts)
   LLM_PROVIDER: z.enum(['anthropic', 'bedrock']).optional(),
   LLM_MODEL: z.string().optional(),

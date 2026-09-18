@@ -16,15 +16,16 @@ import { BuildStack } from '../lib/build-stack';
  * gets its own AWS account or at minimum its own region prefix so blast
  * radius is contained.
  *
- * The stacks are independent (no cross-stack refs) so Cole can deploy
- * them piecewise during the migration:
+ * Deploy order (Cole's playbook). Compute now takes live refs from
+ * Database + Storage + Email so the task role can reach RDS / S3 / SES:
  *
- *   1. DatabaseStack       → RDS, run migrations, validate read parity
- *   2. StorageStack        → S3 buckets, backfill from Supabase
- *   3. EmailStack          → SES + DynamoDB, point SMTP_HOST at SES endpoint
- *   4. AuthStack           → Cognito + Lambdas (the big one)
- *   5. ComputeStack        → Fargate + ALB, DNS cutover from Vercel
- *   6. CronStack           → EventBridge, point at the new ALB
+ *   1. DatabaseStack       → VPC, RDS, Secrets Manager
+ *   2. StorageStack        → S3 + KMS
+ *   3. EmailStack          → SES config set + suppressions table
+ *   4. AuthStack           → Cognito + Lambdas (deployed, not app-cutover)
+ *   5. ComputeStack        → Fargate + ALB + bastion
+ *   6. CronStack           → EventBridge → ALB
+ *   7. BuildStack          → optional; requires VANTAUM_GITHUB_CONNECTION_ARN
  *
  * Adding `appName` to the stack id makes it easy to namespace per-env
  * and per-product in the same account during early staging.
@@ -48,7 +49,7 @@ cdk.Tags.of(app).add('Environment', envName);
 cdk.Tags.of(app).add('ManagedBy', 'cdk-vantaum-infra');
 
 const databaseStack = new DatabaseStack(app, `${appName}-database`, { env, envName });
-new StorageStack(app, `${appName}-storage`, { env, envName });
+const storageStack = new StorageStack(app, `${appName}-storage`, { env, envName });
 const emailStack = new EmailStack(app, `${appName}-email`, { env, envName });
 
 // AuthStack needs SES details for the magic-link Lambdas.
@@ -68,6 +69,11 @@ const computeStack = new ComputeStack(app, `${appName}-compute`, {
   vpc: databaseStack.vpc,
   dbSecret: databaseStack.database.secret!,
   dbSecurityGroup: databaseStack.dbSecurityGroup,
+  storageKmsKey: storageStack.storageKmsKey,
+  signupContractsBucket: storageStack.signupContractsBucket,
+  efaxDocumentsBucket: storageStack.efaxDocumentsBucket,
+  publicAssetsBucket: storageStack.publicAssetsBucket,
+  sesConfigurationSet: emailStack.configSet.configurationSetName,
 });
 
 // CronStack POSTs to the ALB on a schedule.
@@ -77,25 +83,16 @@ new CronStack(app, `${appName}-cron`, {
   albDnsName: computeStack.loadBalancer.loadBalancerDnsName,
 });
 
-// BuildStack provides the arm64 CodeBuild project so we are never dependent
-// on a local machine for producing verified arm64 container images.
-//
-// `githubConnectionArn` references a CodeConnections GitHub connection that
-// must be created once per account+region via the Developer Tools console
-// (Settings → Connections → Create connection → GitHub). Set the ARN via the
-// VANTAUM_GITHUB_CONNECTION_ARN env var so the value is not committed.
-new BuildStack(app, `${appName}-build`, {
-  env,
-  envName,
-  appRepositoryName: `${appName}-app`,
-  githubOwner: 'WellsOnyx',
-  githubRepo: 'vantahg-brief-engine',
-  defaultBranch: process.env.VANTAUM_BUILD_DEFAULT_BRANCH ?? 'claude/roadmap-20260518',
-  githubConnectionArn:
-    process.env.VANTAUM_GITHUB_CONNECTION_ARN ??
-    (() => {
-      throw new Error(
-        'VANTAUM_GITHUB_CONNECTION_ARN must be set. Create a CodeConnections GitHub connection in the Developer Tools console (Settings → Connections), copy its ARN, and export it before running cdk deploy.',
-      );
-    })(),
-});
+// BuildStack is optional. Synth / database-only deploys must not require
+// a CodeConnections ARN. Set VANTAUM_GITHUB_CONNECTION_ARN to include it.
+if (process.env.VANTAUM_GITHUB_CONNECTION_ARN) {
+  new BuildStack(app, `${appName}-build`, {
+    env,
+    envName,
+    appRepositoryName: `${appName}-app`,
+    githubOwner: 'WellsOnyx',
+    githubRepo: 'vantahg-brief-engine',
+    defaultBranch: process.env.VANTAUM_BUILD_DEFAULT_BRANCH ?? 'main',
+    githubConnectionArn: process.env.VANTAUM_GITHUB_CONNECTION_ARN,
+  });
+}
