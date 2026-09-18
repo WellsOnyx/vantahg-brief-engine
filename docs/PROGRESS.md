@@ -15,9 +15,10 @@
 | 2 Intake | [#54](https://github.com/WellsOnyx/vantahg-brief-engine/pull/54) | Gravity Rail + external submit + Phaxio → spine; versioned `client_config` |
 | 3 Brief → MD | [#55](https://github.com/WellsOnyx/vantahg-brief-engine/pull/55) | Brief before `md_queue`, `/med-review` queue, human sign + immutable package |
 | 4 Fan-out + billing | [#57](https://github.com/WellsOnyx/vantahg-brief-engine/pull/57) | Portal downloads, HMAC `determination.signed` + retries, real `billable_events` ledger, monthly statement stub |
-| 5 Three role views | this PR | Client / CX / Med lenses on one case object; RBAC deny cross-tenant + CX-note isolation |
+| 5 Three role views | [#58](https://github.com/WellsOnyx/vantahg-brief-engine/pull/58) | Client / CX / Med lenses on one case object; RBAC deny cross-tenant + CX-note isolation |
+| 6 Reporting + CM | [#59](https://github.com/WellsOnyx/vantahg-brief-engine/pull/59) | Five client reports + CSV, CM HMAC handoff (flagged only), ops scoreboard |
 
-**CI (Phase 5 tip):** `npm run test:ci` 421 passed (3 todo); `tsc --noEmit` clean.
+**CI (Phase 6 tip):** `npm run test:ci` 435 passed (3 todo); `tsc --noEmit` clean.
 
 ## Not started / paused
 
@@ -25,8 +26,8 @@
 |-------|--------|
 | 4 Fan-out + billing ledger | ✅ **Done** — portal downloads, HMAC webhook retries → `fanout_failed` + CX task, ledger on sign, statement stub |
 | 5 Three role views (Client / CX / Med polish) | ✅ **Done** — `/client`, `/cx`, `/med-review` share `/api/case-spine` + role filters |
-| 6 Reporting + CM handoff | **Next** |
-| 7 Onboarding runbook + synthetic/shadow/live gates | Open |
+| 6 Reporting + CM handoff | ✅ **Done** — `/portal/tpa/reports`, `/portal/tpa/cm`, `/api/ops/scoreboard` |
+| 7 Onboarding runbook + synthetic/shadow/live gates | **Next** |
 
 ## Still needs a human (not code)
 
@@ -59,6 +60,7 @@ curl -s -X POST http://localhost:3000/api/case-spine/md-queue \
 # After MD sign: POST /api/case-spine/:id/fanout
 # Portal: /portal/tpa/determinations  ·  statement: /portal/tpa/statements
 # Lenses: /client  ·  /cx  ·  /med-review
+# Reports: /portal/tpa/reports  ·  CM: /portal/tpa/cm  ·  scoreboard: /cx
 ```
 
 ## Lane note

@@ -18,6 +18,7 @@ export {
   buildDeterminationPackage,
   determinationStorageKey,
 } from './determination-package';
+export { isDenyReasonCode, normalizeDenyReason } from './deny-reasons';
 
 import { resetMemoryBillableEventLedger } from '@/lib/billing/events';
 import { isDemoMode } from '@/lib/demo-mode';

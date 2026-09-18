@@ -37,6 +37,8 @@ export interface ClientConfigFields {
   determination_recipients: string[];
   cm_handoff_enabled: boolean;
   cm_webhook_url?: string | null;
+  /** HMAC secret for cm.handoff. Falls back to determination_webhook_secret. */
+  cm_webhook_secret?: string | null;
   /** Client webhook for determination.signed (F2). Optional. */
   determination_webhook_url?: string | null;
   determination_webhook_secret?: string | null;
@@ -67,6 +69,7 @@ export const DEFAULT_CLIENT_CONFIG_FIELDS: Omit<ClientConfigFields, 'client_id' 
   determination_recipients: [],
   cm_handoff_enabled: false,
   cm_webhook_url: null,
+  cm_webhook_secret: null,
   determination_webhook_url: null,
   determination_webhook_secret: null,
   intake_modes: ['api'],

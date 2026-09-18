@@ -19,6 +19,10 @@
     {
       "path": "/api/cron/fanout-retry",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/cm-csv-drop",
+      "schedule": "0 6 * * *"
     }
   ]
 }

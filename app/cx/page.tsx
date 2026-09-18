@@ -69,6 +69,10 @@ const SLA_PILL: Record<string, string> = {
 
 export default function CxLensPage() {
   const [lens, setLens] = useState<CxLens | null>(null);
+  const [scoreboard, setScoreboard] = useState<{
+    fanout: { fail_rate: number; failed: number; complete: number; open_cx_tasks: number };
+    escalations: { l1: number; l2: number; l3: number; total: number };
+  } | null>(null);
   const [stuckOnly, setStuckOnly] = useState(false);
   const [sla, setSla] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -85,6 +89,8 @@ export default function CxLensPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
       setLens(data as CxLens);
+      const ops = await fetch('/api/ops/scoreboard?seed=synthetic', { cache: 'no-store' });
+      if (ops.ok) setScoreboard(await ops.json());
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load CX lens');
     } finally {
@@ -125,6 +131,17 @@ export default function CxLensPage() {
             <StatCard label="At-risk SLA" value={lens.health.at_risk} accent={lens.health.at_risk > 0} />
             <StatCard label="Breached" value={lens.health.missed} accent={lens.health.missed > 0} />
             <StatCard label="Stuck" value={lens.health.stuck} hint="Clinicals / fan-out" />
+            <StatCard
+              label="Fan-out fail"
+              value={scoreboard ? `${Math.round(scoreboard.fanout.fail_rate * 100)}%` : '—'}
+              hint={scoreboard ? `${scoreboard.fanout.failed}/${scoreboard.fanout.complete + scoreboard.fanout.failed}` : undefined}
+              accent={Boolean(scoreboard && scoreboard.fanout.failed > 0)}
+            />
+            <StatCard
+              label="Escalations"
+              value={scoreboard?.escalations.total ?? lens.health.escalations}
+              hint={scoreboard ? `R10 ${scoreboard.escalations.l1} · R11 ${scoreboard.escalations.l2} · R12 ${scoreboard.escalations.l3}` : 'R10–R12'}
+            />
           </PageDashboard.Stats>
 
           <PageList.Filters>

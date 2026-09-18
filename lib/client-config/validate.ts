@@ -31,6 +31,7 @@ export const ClientConfigFieldsSchema = z.object({
   determination_recipients: z.array(z.string().min(1)).default([]),
   cm_handoff_enabled: z.boolean().default(false),
   cm_webhook_url: z.string().url().nullable().optional(),
+  cm_webhook_secret: z.string().min(8).nullable().optional(),
   determination_webhook_url: z.string().url().nullable().optional(),
   determination_webhook_secret: z.string().min(8).nullable().optional(),
   intake_modes: z.array(z.enum(INTAKE_MODES)).min(1),

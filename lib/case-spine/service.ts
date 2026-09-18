@@ -9,6 +9,7 @@ import {
   mintSpineBrief,
   resolveExistingBriefContent,
 } from './briefs';
+import { normalizeDenyReason } from './deny-reasons';
 import { buildDeterminationPackage } from './determination-package';
 import { hashTransitionPayload } from './hash';
 import { sortMdQueue } from './md-queue';
@@ -108,6 +109,7 @@ export class CaseSpineService {
       open_tasks: [],
       duplicate_of_case_id: null,
       signed_rationale: null,
+      deny_reason_code: null,
       determination_package_version: null,
       determination_package_key: null,
       fanout_stub: null,
@@ -354,6 +356,12 @@ export class CaseSpineService {
 
     const now = this.now();
     const signedAt = now.toISOString();
+    const denyReason = normalizeDenyReason({
+      determination: input.determination,
+      deny_reason_code: input.deny_reason_code,
+      criteria_result: brief.criteria_result,
+      cm_flags: input.cm_flags ?? current.cm_flags,
+    });
     const billableEventId = randomUUID();
     const ledgerRows = await recordBillableEventsForSign(this.billing, {
       billable_event_id: billableEventId,
@@ -380,6 +388,7 @@ export class CaseSpineService {
       determination: input.determination,
       signer_id: actor,
       signed_rationale: rationale,
+      deny_reason_code: denyReason,
       determination_package_version: pkg.version,
       determination_package_key: pkg.storage_key,
       billable_event_id: billableEventId,
@@ -433,6 +442,7 @@ export class CaseSpineService {
       determination: input.determination,
       signer_id: actor,
       signed_rationale: rationale,
+      deny_reason_code: denyReason,
       determination_package_version: pkg.version,
       determination_package_key: pkg.storage_key,
       billable_event_id: next.billable_event_id ?? billableEventId,
