@@ -1,4 +1,4 @@
-# Customer-ready build progress (2026-09-18)
+# Customer-ready build progress (2026-09-18; roadmap 2026-09-19)
 
 **North star:** intake → rules → brief → MD sign → outbound decision → billable event → report  
 **Plan:** [`docs/customer-ready/`](docs/customer-ready/00-README.md) · implement via [`10-implementation-commits.md`](docs/customer-ready/10-implementation-commits.md)  
@@ -64,6 +64,21 @@ curl -s -X POST http://localhost:3000/api/case-spine/md-queue \
 # Reports: /portal/tpa/reports  ·  CM: /portal/tpa/cm  ·  scoreboard: /cx
 # Onboarding: /admin/onboarding  ·  npm run test:go-live-synthetic
 ```
+
+## Roadmap / next connectors
+
+Queued after customer-ready Phases 0–7. These do **not** reopen the completed code path and are **not** a Phase 8. Remaining go-live work is still human ops (SES, Fargate, BAA, vendor keys).
+
+### Muse Connector Platform (muse.ai) — queued / not started
+
+| Field | Detail |
+|---|---|
+| **Status** | Queued / not started |
+| **Intent** | Submit or build a VantaUM Muse connector so CX/relationship touchpoints can meet users in Muse. Clinical system of record stays on AWS Brief Engine. |
+| **Constraint** | Not a live PHI path. No live PHI in Muse without a separate BAA decision. |
+| **Source** | Public open-access for developers to build Muse connectors (API brought by us). Meta opened developer access 2026-09-19 — "Meet your users where they are with Muse Connector Platform" / Submit a connector. |
+| **Owner** | VantaUM |
+| **Depends on** | Customer-ready ops (Fargate / SES / BAA) are **not** required to research or submit a connector. Production use is gated by HIPAA review. |
 
 ## Lane note
 
