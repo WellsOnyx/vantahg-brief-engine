@@ -30,6 +30,12 @@ Operator blockers unchanged: SES verify, Fargate image rebuild, BAA before live 
 
 ---
 
+## 2026-09-19 — Muse Connector Platform (roadmap only)
+
+Queued future connector — **not** Phase 8 and **not** a live PHI path. See [`docs/PROGRESS.md`](docs/PROGRESS.md) § [Roadmap / next connectors](docs/PROGRESS.md#roadmap--next-connectors). Intent: meet users in Muse on CX/relationship surfaces; clinical SoR stays on AWS Brief Engine. Research/submit is unblocked; production use gated by HIPAA / BAA review.
+
+---
+
 ## 2026-09-18 — Phase 7 onboarding + go-live gates (FINAL)
 
 Slices 7.1–7.4 from `10-implementation-commits.md`. Synthetic / demo only. No live PHI. No invented vendor credentials. Does **not** change `ENABLE_AWS_*` defaults. Does **not** claim HIPAA complete.

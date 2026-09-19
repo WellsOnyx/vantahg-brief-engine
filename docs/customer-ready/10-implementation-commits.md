@@ -72,11 +72,12 @@ Work in this order. Each phase = PR (or stacked commits on one branch) with acce
 | 7.3 | Shadow (10) | Pass |
 | 7.4 | Live hypercare (25) | SLA threshold held or rollback |
 
-## Parallel (do not block Phase 0–3)
+## Parallel / non-blocking (do not block Phase 0–7)
 
 - Lint cleanup on main
 - CX bot 1×10 accounts (non-PHI) — after client portal status API exists
 - Med Review bundle decision — docs-only until Jonah locks
+- Muse Connector Platform (muse.ai) — queued CX/relationship surface; no live PHI; research/submit unblocked; production gated by HIPAA review. See `docs/PROGRESS.md` § Roadmap / next connectors.
 
 ## PR discipline
 
