@@ -17,6 +17,8 @@ What landed here instead:
 
 Does **not** add portal fill, bookmarklet, serve HTTP, live credentials, or Optum outreach. Human still signs / submits every determination. Existing payer-IDR attorney path on `main` is unchanged.
 
+**CI on this branch:** `npm run test:ci` 463 passed (3 todo); `npx tsc --noEmit` clean. New module: 16/16 in `__tests__/lib/idr-assist/guards.test.ts`.
+
 ---
 
 ## 2026-09-20 — Packaging lock (Jonah)
