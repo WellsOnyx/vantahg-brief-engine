@@ -14,7 +14,8 @@ import { FanoutService } from '@/lib/fanout/service';
 import { MemoryFanoutStore } from '@/lib/fanout/store';
 import { ingestToCaseSpine, type IntakeSource } from '@/lib/intake/spine-ingest';
 import { SYNTHETIC_CLIENT_ID } from '@/lib/intake/constants';
-import { MIN_SHADOW_PACK, MIN_SYNTHETIC_PACK, SHADOW_PACK, SYNTHETIC_PACK } from './packs';
+import { SHADOW_PACK, SYNTHETIC_PACK } from './packs';
+import { MIN_SHADOW_PACK, MIN_SYNTHETIC_PACK } from './types';
 import { getMemoryGoLiveStore, type MemoryGoLiveStore } from './store';
 import type { PackCaseResult, PackCaseSpec, PackRunResult } from './types';
 
@@ -35,14 +36,18 @@ async function createFromSpec(
   actor: string,
   spine: CaseSpineService,
   useIntakeIngest: boolean,
+  parentCaseId?: string,
 ): Promise<{ case: CanonicalCase; via: 'case-spine' | 'intake' }> {
   const receivedAt = new Date().toISOString();
   const payload = { ...spec.intake, received_at: receivedAt };
+  const type = spec.type ?? 'prior_auth';
 
   if (useIntakeIngest && spec.source && spec.source !== 'spine') {
     const ingested = await ingestToCaseSpine({
       source: spec.source as IntakeSource,
       client_id: clientId,
+      type,
+      parent_case_id: parentCaseId,
       intake: payload,
       actor,
       packet_storage_keys: payload.clinicals_pointer ? [payload.clinicals_pointer] : [],
@@ -53,6 +58,8 @@ async function createFromSpec(
   const created = await spine.createCase(
     {
       client_id: clientId,
+      type,
+      parent_case_id: parentCaseId,
       external_id: spec.intake.external_id,
       priority: spec.intake.urgency ?? 'standard',
       packet_storage_keys: payload.clinicals_pointer ? [payload.clinicals_pointer] : [],
@@ -117,18 +124,24 @@ function assertSpec(spec: PackCaseSpec, current: CanonicalCase | null, via: Pack
   }
   const stateOk = current.state === spec.expected.state;
   const clockOk = !spec.expected.sla_clock || current.sla_clock === spec.expected.sla_clock;
+  const typeOk = !spec.expected.type || current.type === spec.expected.type;
   const signed = Boolean(current.signer_id && current.determination);
   return {
     spec_id: spec.id,
     scenario: spec.scenario,
     case_id: current.case_id,
-    ok: stateOk && clockOk,
+    ok: stateOk && clockOk && typeOk,
     expected_state: spec.expected.state,
     actual_state: current.state,
     sla_clock: current.sla_clock,
     criteria_result: spec.expected.criteria_result ?? null,
     signed,
-    error: stateOk && clockOk ? null : `expected ${spec.expected.state} got ${current.state}`,
+    error:
+      stateOk && clockOk && typeOk
+        ? null
+        : !typeOk
+          ? `expected type ${spec.expected.type} got ${current.type}`
+          : `expected ${spec.expected.state} got ${current.state}`,
     via,
   };
 }
@@ -149,6 +162,7 @@ async function runPack(
   const min = pack === 'synthetic' ? MIN_SYNTHETIC_PACK : MIN_SHADOW_PACK;
 
   const results: PackCaseResult[] = [];
+  const parentByExternal = new Map<string, string>();
   const fanoutStore = new MemoryFanoutStore();
   const fanout = new FanoutService({
     spine,
@@ -160,8 +174,15 @@ async function runPack(
 
   for (const spec of specs) {
     try {
-      const created = await createFromSpec(spec, clientId, actor, spine, !opts.spine);
+      const parentCaseId = spec.parent_external_id
+        ? parentByExternal.get(spec.parent_external_id)
+        : undefined;
+      if (spec.parent_external_id && !parentCaseId) {
+        throw new Error(`parent ${spec.parent_external_id} has not been created yet`);
+      }
+      const created = await createFromSpec(spec, clientId, actor, spine, !opts.spine, parentCaseId);
       let current = created.case;
+      if (current.external_id) parentByExternal.set(current.external_id, current.case_id);
       if (spec.scenario !== 'missing_clinicals') {
         current = await advanceHappyOrGray(spine, current.case_id, spec, actor);
       }

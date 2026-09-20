@@ -58,11 +58,12 @@ Pick **one** primary. Empty HMAC slots = synthetic allow. Do not invent producti
 ## Day 3–4 — E1 synthetic pack
 
 ```bash
-npm run test:go-live-synthetic
+npm run test:synthetic-golive-pack   # load fixtures/golive/synthetic-e1.json + create cases
+npm run test:go-live-synthetic       # same catalog: brief → md_queue / one sign
 # or POST /api/golive/synthetic from /admin/onboarding
 ```
 
-≥10 cases: happy path + missing clinicals (R01 → `intake_incomplete`, SLA paused) + gray zone (`md_queue`, no auto-approve). Client can watch `/client` and `/med-review`.
+≥10 cases (prior auth + first-level appeal): happy path + missing clinicals (R01 → `intake_incomplete`, SLA paused) + gray zone (`md_queue`, no auto-approve). How-to-run: [`fixtures/golive/README.md`](../../fixtures/golive/README.md). Client can watch `/client` and `/med-review`.
 
 ## Day 5–7 — E2 shadow
 

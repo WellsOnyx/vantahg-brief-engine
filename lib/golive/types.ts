@@ -1,7 +1,10 @@
-import type { CaseSpineState, CriteriaResult, SlaClock } from '@/lib/case-spine';
+import type { AuthWorkflowType, CaseSpineState, CriteriaResult, SlaClock } from '@/lib/case-spine';
 
 export const PACK_SCENARIOS = ['happy_path', 'missing_clinicals', 'gray_zone'] as const;
 export type PackScenario = (typeof PACK_SCENARIOS)[number];
+
+export const MIN_SYNTHETIC_PACK = 10;
+export const MIN_SHADOW_PACK = 10;
 
 export const GO_LIVE_LOG_KINDS = [
   'gate',
@@ -18,6 +21,10 @@ export interface PackCaseSpec {
   id: string;
   scenario: PackScenario;
   label: string;
+  /** prior_auth | first_level_appeal — defaults to prior_auth. */
+  type?: AuthWorkflowType;
+  /** Resolve against an earlier fixture's intake.external_id (appeals). */
+  parent_external_id?: string;
   /** Tokenized refs only. */
   intake: {
     external_id: string;
@@ -37,6 +44,7 @@ export interface PackCaseSpec {
     state: CaseSpineState;
     sla_clock?: SlaClock;
     criteria_result?: CriteriaResult;
+    type?: AuthWorkflowType;
   };
 }
 

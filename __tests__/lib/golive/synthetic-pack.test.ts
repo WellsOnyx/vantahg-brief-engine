@@ -10,11 +10,13 @@ describe('Phase 7.2 E1 synthetic pack', () => {
     resetMemoryGoLiveStore();
   });
 
-  it('has ≥10 cases covering happy path, missing clinicals, and gray zone', () => {
+  it('has ≥10 cases covering happy path, missing clinicals, gray zone, and appeals', () => {
     expect(SYNTHETIC_PACK.length).toBeGreaterThanOrEqual(MIN_SYNTHETIC_PACK);
     expect(SYNTHETIC_PACK.some((s) => s.scenario === 'happy_path')).toBe(true);
     expect(SYNTHETIC_PACK.filter((s) => s.scenario === 'missing_clinicals').length).toBeGreaterThanOrEqual(2);
     expect(SYNTHETIC_PACK.filter((s) => s.scenario === 'gray_zone').length).toBeGreaterThanOrEqual(2);
+    expect(SYNTHETIC_PACK.filter((s) => s.type === 'first_level_appeal').length).toBeGreaterThanOrEqual(2);
+    expect(SYNTHETIC_PACK.some((s) => (s.type ?? 'prior_auth') === 'prior_auth')).toBe(true);
   });
 
   it('passes via case-spine / intake and trips R01 + gray md_queue', async () => {

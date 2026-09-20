@@ -375,9 +375,9 @@ export const ONBOARDING_CHECKLIST: readonly OnboardingChecklistItem[] = [
     phase: 'E',
     title: 'Synthetic pack ≥ 10 (happy + missing clinicals + gray zone)',
     owner: 'Ops',
-    artifact: 'npm run test:go-live-synthetic · POST /api/golive/synthetic',
+    artifact: 'npm run test:synthetic-golive-pack · npm run test:go-live-synthetic · POST /api/golive/synthetic',
     gate: 'required',
-    pointer: 'lib/golive/packs.ts SYNTHETIC_PACK · assert via case-spine / intake',
+    pointer: 'fixtures/golive/synthetic-e1.json · assert via case-spine / intake APIs',
     required: true,
   },
   {

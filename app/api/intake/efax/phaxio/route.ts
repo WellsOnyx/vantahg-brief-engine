@@ -38,7 +38,6 @@ import {
   ingestToCaseSpine,
   mapUnknownToIntake,
 } from '@/lib/intake/spine-ingest';
-import type { IntakePayload } from '@/lib/case-spine';
 
 export const dynamic = 'force-dynamic';
 
@@ -69,7 +68,7 @@ function isSyntheticJson(rawBody: string, contentType: string): Record<string, u
 function intakeFromFax(
   payload: EfaxPayload,
   extra: Record<string, unknown> | null,
-): { client_id: string; intake: IntakePayload } {
+): ReturnType<typeof mapUnknownToIntake> {
   const nested =
     extra?.intake && typeof extra.intake === 'object'
       ? (extra.intake as Record<string, unknown>)
@@ -77,14 +76,16 @@ function intakeFromFax(
   const mapped = mapUnknownToIntake({
     ...nested,
     client_id: extra?.client_id ?? nested.client_id,
+    type: extra?.type ?? nested.type,
+    parent_case_id: extra?.parent_case_id ?? nested.parent_case_id,
     external_id: nested.external_id ?? payload.fax_id,
     place_of_service: nested.place_of_service ?? 'fax',
     clinicals_pointer: nested.clinicals_pointer ?? payload.document_url ?? `fax:${payload.fax_id}`,
     received_at: nested.received_at ?? payload.received_at,
   });
   return {
+    ...mapped,
     client_id: defaultIntakeClientId(mapped.client_id),
-    intake: mapped.intake,
   };
 }
 
@@ -202,6 +203,8 @@ export async function POST(request: NextRequest) {
       source: 'fax_phaxio',
       client_id: mapped.client_id,
       intake: mapped.intake,
+      type: mapped.type,
+      parent_case_id: mapped.parent_case_id,
       actor: 'intake:fax_phaxio',
     });
 
