@@ -5,6 +5,20 @@ Future Claude/Cole/Jonah sessions: read this first.
 
 ---
 
+## 2026-09-20 — HG lane: IDR Ops assist guards (this PR)
+
+Small incremental hardening on current `main`. The full IDR engine (mirror form, bookmarklet, serve mode) lives only on stale PR [#44](https://github.com/WellsOnyx/vantahg-brief-engine/pull/44) (`claude/idr-mirror-assist`, based on `feature/merge-and-instrument`, not `main`). PR [#46](https://github.com/WellsOnyx/vantahg-brief-engine/pull/46) (training dataset) clashes with case-spine migration `027`. **Do not merge those blindly.**
+
+What landed here instead:
+
+- **`lib/idr-assist/guards.ts`** — never-submit plan filter (`submitted: false` pinned), DRAFT stamp apply/assert, `assertPrivateBind` (loopback/RFC1918 only), human-only DLI/attestation, iMPROve-facing tooling-fingerprint refuse, static `assertNeverSubmitSource`.
+- Tests: `__tests__/lib/idr-assist/guards.test.ts`.
+- Internal workflow: [`docs/idr-assist/internal-review-workflow.md`](docs/idr-assist/internal-review-workflow.md).
+
+Does **not** add portal fill, bookmarklet, serve HTTP, live credentials, or Optum outreach. Human still signs / submits every determination. Existing payer-IDR attorney path on `main` is unchanged.
+
+---
+
 ## 2026-09-20 — Packaging lock (Jonah)
 
 Paid door = Med Review (VantaHG). VantaUM Brief Engine / UM included free **only** with Vanta med review — not a standalone free UM SKU, not free with another shop’s med review. Phases 0–7 code path complete; this is packaging/GTM, not a new build phase. Canonical: [`docs/customer-ready/01-product-boundary.md`](docs/customer-ready/01-product-boundary.md).

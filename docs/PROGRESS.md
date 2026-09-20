@@ -87,3 +87,7 @@ Queued after customer-ready Phases 0–7. These do **not** reopen the completed 
 ## Lane note
 
 VantaUM owns Brief Engine SoR/tech + UM ops. VantaHG owns IDR/IRO and **sells** Med Review (paid door). UM Brief Engine is included under that Vanta med-review contract only — not a standalone free UM SKU, not free with another shop’s med review. See [`docs/customer-ready/01-product-boundary.md`](docs/customer-ready/01-product-boundary.md).
+
+## HG lane — IDR Ops assist (2026-09-20)
+
+Merge-safe guards on `main` (never-submit, DRAFT stamp, private-bind, human-only DLI/attestation). Module: `lib/idr-assist/`. Workflow: [`docs/idr-assist/internal-review-workflow.md`](idr-assist/internal-review-workflow.md). Stale PRs #44 / #46 were **not** merged. No portal submit automation. Human signs determinations.
