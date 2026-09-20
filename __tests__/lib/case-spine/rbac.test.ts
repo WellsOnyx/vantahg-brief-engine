@@ -3,6 +3,13 @@ import {
   CaseSpineService,
   MemoryCaseSpineStore,
   applyListFilters,
+  canAccessCaseAudit,
+  canAccessClientView,
+  canAccessClinicalPacket,
+  canAccessCxNotes,
+  canAccessCxView,
+  canAccessMedReviewView,
+  canMutateFanout,
   isEscalationCase,
   isStuckCase,
   redactCaseForViewer,
@@ -108,5 +115,36 @@ describe('Phase 5 RBAC', () => {
     const slaMissed = applyListFilters([stuck.case, open.case, missed], cx, { sla_status: 'missed' });
     expect(slaMissed).toHaveLength(1);
     expect(slaMissed[0].case_id).toBe(missed.case_id);
+  });
+
+  it('role gates keep Client / CX / MD off the wrong PHI surfaces', () => {
+    const client = { id: 'c', role: 'client' as const, client_id: SYNTHETIC_CLIENT_ID };
+    const cx = { id: 'cx', role: 'cx' as const };
+    const md = { id: 'md', role: 'med_review' as const };
+
+    expect(canAccessClientView(client)).toBe(true);
+    expect(canAccessClientView(cx)).toBe(false);
+    expect(canAccessClientView(md)).toBe(false);
+
+    expect(canAccessCxView(client)).toBe(false);
+    expect(canAccessCxNotes(client)).toBe(false);
+    expect(canAccessCxView(cx)).toBe(true);
+    expect(canAccessCxNotes(md)).toBe(false);
+    expect(canAccessCxView(md)).toBe(false);
+
+    expect(canAccessClinicalPacket(client)).toBe(false);
+    expect(canAccessClinicalPacket(cx)).toBe(false);
+    expect(canAccessClinicalPacket(md)).toBe(true);
+    expect(canAccessMedReviewView(client)).toBe(false);
+    expect(canAccessMedReviewView(cx)).toBe(false);
+    expect(canAccessMedReviewView(md)).toBe(true);
+
+    expect(canAccessCaseAudit(client)).toBe(false);
+    expect(canAccessCaseAudit(cx)).toBe(true);
+    expect(canAccessCaseAudit(md)).toBe(true);
+
+    expect(canMutateFanout(client)).toBe(false);
+    expect(canMutateFanout(cx)).toBe(true);
+    expect(canMutateFanout(md)).toBe(true);
   });
 });
