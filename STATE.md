@@ -5,6 +5,12 @@ Future Claude/Cole/Jonah sessions: read this first.
 
 ---
 
+## 2026-09-20 — Ops scoreboard stuck-count increment (Phase 6.3)
+
+`GET /api/ops/scoreboard` now returns `stuck.count` (plus `awaiting_clinicals` / `fanout_failed` split) alongside fan-out fail rate and R10–R12. Visible on `/admin/ops` and `/cx`. Aggregates only — no member refs or packets. Synthetic seed. Clients still 403.
+
+---
+
 ## 2026-09-20 — Packaging lock (Jonah)
 
 Paid door = Med Review (VantaHG). VantaUM Brief Engine / UM included free **only** with Vanta med review — not a standalone free UM SKU, not free with another shop’s med review. Phases 0–7 code path complete; this is packaging/GTM, not a new build phase. Canonical: [`docs/customer-ready/01-product-boundary.md`](docs/customer-ready/01-product-boundary.md).
@@ -163,7 +169,7 @@ Slices 6.1–6.3 from `10-implementation-commits.md`. Synthetic / demo only. No 
 
 - **6.1 Five client reports + CSV:** `GET /api/reports` + `/api/reports/{volume|turnaround|outcomes|deny_reasons|sla}?format=csv`. Portal `/portal/tpa/reports` filters by date, LOB, type. Volume.signed matches distinct non-void ledger case ids. Normalized deny reason codes on sign (`deny_reason_code`).
 - **6.2 CM flags + webhook/CSV:** Flagged determinations only. `cm.handoff` HMAC-SHA256 (same 8× exponential budget as `determination.signed`, ≤ 5 min). Portal CM queue `/portal/tpa/cm` + `GET /api/cm/queue`. Daily CSV drop stub `GET /api/cm/csv` + cron `/api/cron/cm-csv-drop`. Unflagged never appear in the feed and never post.
-- **6.3 Internal ops scoreboard:** `GET /api/ops/scoreboard` — fan-out fail rate + R10–R12 escalation counts. Visible on `/cx` to CX/admin; clients 403.
+- **6.3 Internal ops scoreboard:** `GET /api/ops/scoreboard` — fan-out fail rate + stuck-case count (clinicals / fan-out) + R10–R12. Visible on `/admin/ops` and `/cx` to CX/admin; clients 403.
 
 **Acceptance:** report CSV columns match 08; volume signed === ledger case count; CM webhook only when flags non-empty; unflagged never in CM feed; CX sees fan-out fail rate.
 

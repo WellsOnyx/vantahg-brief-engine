@@ -103,6 +103,7 @@ const adminInternalNav: NavGroup[] = [
       { href: "/clients", label: "Clients" },
       { href: "/admin/billing", label: "Billing" },
       { href: "/admin/setup", label: "Setup" },
+      { href: "/admin/ops", label: "Ops scoreboard" },
       { href: "/admin/onboarding", label: "Onboarding" },
     ],
   },
