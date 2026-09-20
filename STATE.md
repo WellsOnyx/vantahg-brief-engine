@@ -15,6 +15,8 @@ Phase 6.2 already shipped on `main` (PR #59). This pass is the smallest incremen
 - CSV columns stay `case_id,external_id,flags,determination,determined_at,secure_summary_url`. Unflagged never appear.
 - Synthetic fixtures only. No `ENABLE_AWS_*` flips. No Optum outreach. Med Review packaging lock unchanged.
 
+**CI on this branch:** `npm run test:ci` 451 passed (3 todo). `npx tsc --noEmit` clean.
+
 ---
 
 ## 2026-09-20 — Packaging lock (Jonah)

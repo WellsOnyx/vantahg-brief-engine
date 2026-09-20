@@ -131,6 +131,7 @@ describe('CM handoff (09)', () => {
       appUrl: APP_URL,
       webhookUrl: 'https://hooks.example.test/cm',
       webhookSecret: 'synth-cm-webhook-secret',
+      log: () => undefined,
     }).deliver(signed.case.case_id);
 
     expect(result.flagged).toBe(true);
@@ -165,6 +166,7 @@ describe('CM handoff (09)', () => {
       now: () => NOW,
       webhookUrl: 'https://hooks.example.test/cm',
       webhookSecret: 'synth-cm-webhook-secret',
+      log: () => undefined,
     });
     const skipped = await cm.deliver(clean.signed.case.case_id);
     expect(skipped.flagged).toBe(false);
@@ -198,6 +200,7 @@ describe('CM handoff (09)', () => {
       now: () => NOW,
       webhookUrl: 'https://hooks.example.test/cm',
       webhookSecret: 'synth-cm-webhook-secret',
+      log: () => undefined,
     }).deliver(signed.case.case_id);
 
     expect(result.webhook.ok).toBe(false);
@@ -224,6 +227,7 @@ describe('CM handoff (09)', () => {
       appUrl: APP_URL,
       webhookUrl: 'https://hooks.example.test/cm',
       webhookSecret: 'synth-cm-webhook-secret',
+      log: () => undefined,
     });
 
     const first = await cm.deliver(signed.case.case_id);
