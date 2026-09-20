@@ -1,8 +1,10 @@
 # 01 — Product boundary & ownership
 
-## What VantaUM sells (customer-facing)
+## What is included (under a Vanta med-review contract)
 
-| Offer | Included | Not included (yet) |
+These are **capabilities**, not standalone paid UM SKUs. The commercial door is VantaHG Med Review. Brief Engine / UM is included only when the buyer uses Vanta med review under that contract.
+
+| Capability | Included | Not included (yet) |
 |-------|----------|--------------------|
 | **Prior authorization** | Intake, clinical brief, MD determination, notices as contracted, portal status | Full care management platform |
 | **First-level appeal** | Packet + prior auth attach, appeal brief, MD determination, IRO-ready export | External IRO decisioning (HG lane) |
@@ -33,6 +35,10 @@ Do not soften. Packaging / GTM + product-boundary only. Customer-ready Phases 0�
 - **Not available free if they use another shop’s med review.**
 - UM still owns Brief Engine SoR and tech. Do not merge GTM into a single SKU or move SoR ownership to HG.
 - Compute COGS planning band **~$0.05–$0.15 per review** vs **~$1 internal budget** (estimate; not measured COGS).
+
+### Entitlement (code)
+
+Free UM Brief Engine access requires published `client_config.vanta_med_review_contract=true` (buyer uses Vanta med review). `med_review_provider=third_party` never grants free UM. Guard: [`lib/entitlements/um-brief-engine.ts`](../../lib/entitlements/um-brief-engine.ts). Default for a newly published config is **false** / `none`. Synthetic staging tenant is seeded `true` / `vanta` so demo packs stay on the Vanta shop.
 
 ## Explicit non-goals for first customer
 

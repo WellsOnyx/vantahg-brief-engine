@@ -10,6 +10,8 @@ import { applyRateLimit } from '@/lib/rate-limit-middleware';
 import { LlmError } from '@/lib/llm';
 import { apiError } from '@/lib/api-error';
 import { getRequestContext } from '@/lib/security';
+import { getClientConfigService } from '@/lib/client-config';
+import { UmBriefEngineEntitlementError } from '@/lib/entitlements/um-brief-engine';
 
 export const dynamic = 'force-dynamic';
 
@@ -62,6 +64,20 @@ export async function POST(request: NextRequest) {
         actor: authResult.user.email,
         requestContext: getRequestContext(request),
       });
+    }
+
+    if (caseData.client_id) {
+      try {
+        await getClientConfigService().requireUmBriefEngineAccess(caseData.client_id);
+      } catch (err) {
+        if (err instanceof UmBriefEngineEntitlementError) {
+          return NextResponse.json(
+            { error: err.message, code: err.code, denial: err.denial },
+            { status: 403 },
+          );
+        }
+        throw err;
+      }
     }
 
     // Generate the brief and run fact-check (pass client for criteria source context)

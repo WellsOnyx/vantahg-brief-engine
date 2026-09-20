@@ -60,9 +60,11 @@ A TPA or self-insured employer can:
 
 # 01 — Product boundary & ownership
 
-## What VantaUM sells (customer-facing)
+## What is included (under a Vanta med-review contract)
 
-| Offer | Included | Not included (yet) |
+These are **capabilities**, not standalone paid UM SKUs. The commercial door is VantaHG Med Review. Brief Engine / UM is included only when the buyer uses Vanta med review under that contract.
+
+| Capability | Included | Not included (yet) |
 |-------|----------|--------------------|
 | **Prior authorization** | Intake, clinical brief, MD determination, notices as contracted, portal status | Full care management platform |
 | **First-level appeal** | Packet + prior auth attach, appeal brief, MD determination, IRO-ready export | External IRO decisioning (HG lane) |
@@ -94,6 +96,10 @@ Do not soften. Packaging / GTM + product-boundary only. Customer-ready Phases 0�
 - UM still owns Brief Engine SoR and tech. Do not merge GTM into a single SKU or move SoR ownership to HG.
 - Compute COGS planning band **~$0.05–$0.15 per review** vs **~$1 internal budget** (estimate; not measured COGS).
 
+### Entitlement (code)
+
+Free UM Brief Engine access requires published `client_config.vanta_med_review_contract=true`. `med_review_provider=third_party` never grants free UM. Guard: `lib/entitlements/um-brief-engine.ts`.
+
 ## Explicit non-goals for first customer
 
 - Multi-bot CX swarm (prove 1 bot × ~10 accounts first).
@@ -124,11 +130,12 @@ Onboarding is a **sellable checklist** first, software second. Every step produc
 
 ### Fee schedule (minimum fields)
 
-- Per prior auth
-- Per first-level appeal
-- Rush / after-hours multiplier (optional)
-- Monthly minimum
-- Pass-through (IRO filing fees if ever bundled — N/A until locked)
+Paid door is **VantaHG Med Review**. Do not invent prices here. Do not sell UM as a standalone SKU.
+
+- Vanta med-review contract (commercial door)
+- UM Brief Engine included **only** when `vanta_med_review_contract` is true
+- Per-auth / first-level-appeal / rush lines are **usage tracking** under that contract, not a standalone UM offer
+- Pass-through (IRO filing fees if ever bundled — N/A until locked; HG lane)
 
 ## Phase B — Client configuration (SoR)
 
@@ -151,6 +158,8 @@ business_hours
 escalation_contacts[]    # name, role, phone/email (business contact; minimize PHI)
 cx_owner                 # internal MX Delivery Lead / CX bot id
 reviewer_queue           # med review team
+vanta_med_review_contract # required true for free UM Brief Engine
+med_review_provider      # vanta | third_party | none  (third_party never gets free UM)
 ```
 
 **Config change control:** every change creates a new version + audit event; CX confirms with client in writing for SLA or route changes.
