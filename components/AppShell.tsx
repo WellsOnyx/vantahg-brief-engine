@@ -161,11 +161,11 @@ function Sidebar({
   onCloseMicro?: () => void;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
-
-  // Close mobile drawer on route change
-  useEffect(() => {
+  const [drawerPath, setDrawerPath] = useState(pathname);
+  if (pathname !== drawerPath) {
+    setDrawerPath(pathname);
     setMobileOpen(false);
-  }, [pathname]);
+  }
 
   return (
     <>

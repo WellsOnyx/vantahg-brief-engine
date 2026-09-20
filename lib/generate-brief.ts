@@ -100,7 +100,7 @@ export async function generateBriefForCase(
 
     // Per-pass schema validation retry (distinct from content self-critique)
     let passBrief: AIBrief | null = null;
-    let passModelInfo: any = null;
+    let passModelInfo: { model?: string; inputTokens?: number; outputTokens?: number } | null = null;
 
     for (let attempt = 1; attempt <= MAX_ATTEMPTS_PER_PASS; attempt++) {
       const attemptPrompt = lastValidationReason && attempt > 1

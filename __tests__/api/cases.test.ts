@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { NextRequest } from 'next/server';
 
 // Mock supabase so we're in demo mode
 vi.mock('@/lib/supabase', () => ({
@@ -26,8 +27,8 @@ vi.mock('@/lib/claude', () => ({
 describe('GET /api/cases', () => {
   it('returns demo cases in demo mode', async () => {
     const { GET } = await import('@/app/api/cases/route');
-    const request = new Request('http://localhost:3000/api/cases');
-    const response = await GET(request as any);
+    const request = new NextRequest('http://localhost:3000/api/cases');
+    const response = await GET(request);
     const data = await response.json();
 
     expect(response.status).toBe(200);
@@ -37,8 +38,8 @@ describe('GET /api/cases', () => {
 
   it('filters demo cases by status', async () => {
     const { GET } = await import('@/app/api/cases/route');
-    const request = new Request('http://localhost:3000/api/cases?status=brief_ready');
-    const response = await GET(request as any);
+    const request = new NextRequest('http://localhost:3000/api/cases?status=brief_ready');
+    const response = await GET(request);
     const data = await response.json();
 
     for (const c of data) {

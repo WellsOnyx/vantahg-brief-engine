@@ -1,7 +1,8 @@
 // Lazy dynamic import for 'pg' so the bundler never sees the native package
 // during `npm run build` on Vercel or in the Docker image unless
 // ENABLE_AWS_DB is actually active at runtime.
-let _pg: any = null;
+type PgModule = typeof import('pg');
+let _pg: PgModule | null = null;
 async function getPgModule() {
   if (!_pg) {
     _pg = await import('pg');
@@ -9,9 +10,24 @@ async function getPgModule() {
   return _pg;
 }
 
-type Pool = any;
-type PoolConfig = any;
-type QueryResultRow = any;
+type Pool = {
+  query: (sql: string, params?: unknown[]) => Promise<{ rows: unknown[] }>;
+  on: (event: string, listener: (err: unknown) => void) => void;
+};
+type PoolConfig = {
+  connectionString?: string;
+  ssl?: { rejectUnauthorized: boolean };
+  host?: string;
+  port?: number;
+  database?: string;
+  user?: string;
+  password?: string;
+  max?: number;
+  idleTimeoutMillis?: number;
+  connectionTimeoutMillis?: number;
+  application_name?: string;
+};
+type QueryResultRow = Record<string, unknown>;
 
 /**
  * Singleton Postgres connection pool for the AWS / RDS path.
@@ -80,6 +96,6 @@ export async function rawQuery<T extends QueryResultRow = QueryResultRow>(
   params: unknown[] = [],
 ): Promise<T[]> {
   const pool = await getPool();
-  const result: { rows: T[] } = await (pool as any).query(sql, params as never[]);
-  return result.rows;
+  const result = await pool.query(sql, params);
+  return result.rows as T[];
 }

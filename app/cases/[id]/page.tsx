@@ -60,7 +60,7 @@ export default function CaseDetailPage() {
 
   // Appeal flow state
   const [showAppealModal, setShowAppealModal] = useState(false);
-  const [appealSuccessInfo, setAppealSuccessInfo] = useState<{ caseId: string; caseNumber: string } | null>(null);
+  const [_appealSuccessInfo, setAppealSuccessInfo] = useState<{ caseId: string; caseNumber: string } | null>(null);
 
   // AI Automation Layer: Streaming brief for white-glove live generation UX (Track A)
   const streamingBrief = useStreamingBrief();
@@ -491,7 +491,7 @@ export default function CaseDetailPage() {
           <AppealHandoffBanner
             appealCaseNumber={`${caseData.case_number}-APPEAL`}
             appealStatus={caseData.appeal_status}
-            appealCaseId={(caseData as any).resolved_appeal_case_id || undefined}
+            appealCaseId={(caseData as Case & { resolved_appeal_case_id?: string }).resolved_appeal_case_id || undefined}
           />
         </div>
       )}
@@ -990,7 +990,7 @@ export default function CaseDetailPage() {
           {caseData.status !== 'brief_ready' && (() => {
             const validationEvent = auditLog.find((e) => e.action === 'concierge_brief_validated');
             if (!validationEvent) return null;
-            const details = (validationEvent.details as any) || {};
+            const details = (validationEvent.details as { rationale?: string } | null) || {};
             return (
               <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-5">
                 <div className="flex items-center gap-2 mb-2">
@@ -1072,7 +1072,7 @@ export default function CaseDetailPage() {
                 denialRiskSignal={caseData.denial_strength_score != null ? {
                   score: caseData.denial_strength_score,
                   grade: caseData.denial_strength_grade || undefined,
-                  appeal_likelihood: (caseData as any).appeal_likelihood ?? (caseData.ai_brief ? Math.round(100 - (caseData.denial_strength_score || 50)) : undefined), // placeholder until full preview fetch wired
+                  appeal_likelihood: (caseData as Case & { appeal_likelihood?: number }).appeal_likelihood ?? (caseData.ai_brief ? Math.round(100 - (caseData.denial_strength_score || 50)) : undefined), // placeholder until full preview fetch wired
                   appeal_risk_assessment: 'AI signal: review factors in banner. Your rationale must address flagged risks.',
                 } : (caseData.ai_brief ? {
                   // Fallback signal derived from brief for cases without prior score (demo/real preview path ready)

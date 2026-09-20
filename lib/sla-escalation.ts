@@ -3,8 +3,6 @@ import { logAuditEvent } from '@/lib/audit';
 import { getTimeRemaining } from '@/lib/sla-calculator';
 import { notifySlaEscalation } from '@/lib/notifications';
 import { isDemoMode, getDemoCases } from '@/lib/demo-mode';
-import type { UrgencyLevel } from '@/lib/sla-calculator';
-
 export interface EscalationResult {
   checked: number;
   warnings: number;

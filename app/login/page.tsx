@@ -146,6 +146,11 @@ function LoginForm() {
     setLoading(false);
   }
 
+  // Rotating tagline — picked once per mount so it stays stable
+  // while the user types, but rotates on every fresh visit / refresh.
+  // Declared before any conditional return so hooks stay unconditional.
+  const tagline = useMemo(() => pickLoginTagline(), []);
+
   // ── State: magic-link confirmation ─────────────────────────────
   if (mode === 'magic-link-sent') {
     const emailDomain = email.split('@')[1] || 'your inbox';
@@ -192,10 +197,6 @@ function LoginForm() {
   }
 
   // ── State: password or magic-link request ──────────────────────
-  // Rotating tagline — picked once per mount so it stays stable
-  // while the user types, but rotates on every fresh visit / refresh.
-  const tagline = useMemo(() => pickLoginTagline(), []);
-
   const eyebrow = fromSquarespace ? 'Welcome' : 'Sign in';
   const title = fromSquarespace ? (
     <>Welcome from Wells Onyx.</>
@@ -296,7 +297,7 @@ function LoginForm() {
           <div className="text-[10px] font-semibold tracking-[0.1em] text-gold uppercase mb-1">Prospect / Optum Demo</div>
           <p className="text-xs text-navy/70 mb-2 leading-snug">Pre-canned synthetic data. No signup. Full InterQual-style criteria, AI briefs + deterministic fact-check, audits.</p>
           <a href="/demo-tour" className="inline-block rounded-md bg-gold px-4 py-1.5 text-xs font-semibold text-navy hover:bg-[#d8b25e] active:bg-gold">Launch Canned Demo (Southwest TPA) →</a>
-          <div className="mt-1.5 text-[10px] text-navy/50">Or <a href="/demo" className="underline">interactive brief</a> · <a href="/cases" className="underline">full app demo</a></div>
+          <div className="mt-1.5 text-[10px] text-navy/50">Or <a href="/demo" className="underline">interactive brief</a> · <Link href="/cases" className="underline">full app demo</Link></div>
         </div>
       </div>
     </AuthShell>

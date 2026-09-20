@@ -17,6 +17,7 @@ import { requireRole, INTERNAL_STAFF_ROLES } from '@/lib/auth-guard';
 import { generateBriefForCase, persistBriefResult } from '@/lib/generate-brief';
 import { assignToPod } from '@/lib/pod-assignment-engine';
 import { notifyLpnCaseAssigned } from '@/lib/notifications';
+import type { Case, Client } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -496,8 +497,8 @@ export async function PATCH(request: NextRequest) {
 
         // Enforce tenant scoping for eFax (and future channels): concierge must attribute
         // the intake to a known client. practice_id optional (V1 whole-client routing).
-        let effectiveClientId = client_id || null;
-        let effectivePracticeId = practice_id || null;
+        const effectiveClientId = client_id || null;
+        const effectivePracticeId = practice_id || null;
         let assignedConciergeId: string | null = null;
 
         if (effectiveClientId) {
@@ -610,7 +611,7 @@ export async function PATCH(request: NextRequest) {
               .eq('id', newCase.id)
               .single();
             if (fullCaseRow) {
-              const result = await generateBriefForCase(fullCaseRow as any, { client: (fullCaseRow as any).client ?? null });
+              const result = await generateBriefForCase(fullCaseRow as Case, { client: (fullCaseRow as { client?: Client | null }).client ?? null });
               if (result) {
                 // Centralized fact-check persistence (guarantees alongside every brief, including triage path)
                 await persistBriefResult(newCase.id, result, supabase, {

@@ -111,7 +111,7 @@ export default function DeterminationLetterPage() {
     );
   }
 
-  const reviewer = (caseData as any).reviewer;
+  const reviewer = caseData.reviewer;
   const determinationDate = caseData.determination_at
     ? new Date(caseData.determination_at).toLocaleDateString('en-US', {
         year: 'numeric', month: 'long', day: 'numeric',

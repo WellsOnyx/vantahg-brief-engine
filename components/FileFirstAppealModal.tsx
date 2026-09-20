@@ -80,8 +80,8 @@ export function FileFirstAppealModal({
 
       // Notify parent so it can update UI (banners etc)
       onSuccess?.(appealCaseId, appealCaseNumber);
-    } catch (err: any) {
-      setError(err.message || 'Could not file the appeal. Please try again or contact your Delivery Lead.');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Could not file the appeal. Please try again or contact your Delivery Lead.');
     } finally {
       setSubmitting(false);
     }
