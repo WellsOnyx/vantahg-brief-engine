@@ -5,6 +5,12 @@ Future Claude/Cole/Jonah sessions: read this first.
 
 ---
 
+## 2026-09-20 — Packaging lock (Jonah)
+
+Paid door = Med Review (VantaHG). VantaUM Brief Engine / UM included free **only** with Vanta med review — not a standalone free UM SKU, not free with another shop’s med review. Phases 0–7 code path complete; this is packaging/GTM, not a new build phase. Canonical: [`docs/customer-ready/01-product-boundary.md`](docs/customer-ready/01-product-boundary.md).
+
+---
+
 ## 🧭 Customer-ready plan — 2026-09-18 (updated)
 
 Shared brain: [`docs/customer-ready/`](docs/customer-ready/00-README.md). Board: [`docs/PROGRESS.md`](docs/PROGRESS.md).

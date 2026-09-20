@@ -1,4 +1,4 @@
-# Customer-ready build progress (2026-09-18; roadmap 2026-09-19)
+# Customer-ready build progress (2026-09-18; packaging lock 2026-09-20)
 
 **North star:** intake → rules → brief → MD sign → outbound decision → billable event → report  
 **Plan:** [`docs/customer-ready/`](docs/customer-ready/00-README.md) · implement via [`10-implementation-commits.md`](docs/customer-ready/10-implementation-commits.md)  
@@ -20,6 +20,10 @@
 | 7 Onboarding + go-live | [#60](https://github.com/WellsOnyx/vantahg-brief-engine/pull/60) | A→E checklist UI + runbook, E1/E2 packs, first-25 SLA rollback log |
 
 **CI (Phase 7 tip):** `npm run test:ci` 447 passed (3 todo); `tsc --noEmit` clean; `npm run test:go-live-synthetic` PASS.
+
+## 2026-09-20 — Packaging lock (Jonah)
+
+Paid door = Med Review (VantaHG). VantaUM Brief Engine / UM is **included free only when the buyer uses Vanta med review**. Not a standalone free UM SKU; not free with another shop’s med review. Compute COGS planning band ~$0.05–$0.15 per review vs ~$1 internal budget (estimate; not measured COGS). Phases 0–7 code path unchanged — packaging/GTM + product-boundary only. Canonical: [`docs/customer-ready/01-product-boundary.md`](docs/customer-ready/01-product-boundary.md).
 
 ## Not started / paused
 
@@ -82,4 +86,4 @@ Queued after customer-ready Phases 0–7. These do **not** reopen the completed 
 
 ## Lane note
 
-VantaUM owns this Brief Engine + UM ops path. VantaHG owns IDR/IRO. Med Review + Brief Engine packaging is **not locked** — see `docs/customer-ready/01-product-boundary.md`.
+VantaUM owns Brief Engine SoR/tech + UM ops. VantaHG owns IDR/IRO and **sells** Med Review (paid door). UM Brief Engine is included under that Vanta med-review contract only — not a standalone free UM SKU, not free with another shop’s med review. See [`docs/customer-ready/01-product-boundary.md`](docs/customer-ready/01-product-boundary.md).
