@@ -19,7 +19,7 @@
 | 6 Reporting + CM | [#59](https://github.com/WellsOnyx/vantahg-brief-engine/pull/59) | Five client reports + CSV, CM HMAC handoff (flagged only), ops scoreboard |
 | 7 Onboarding + go-live | [#60](https://github.com/WellsOnyx/vantahg-brief-engine/pull/60) | A→E checklist UI + runbook, E1/E2 packs, first-25 SLA rollback log |
 
-**CI (Phase 7 tip):** `npm run test:ci` 447 passed (3 todo); `tsc --noEmit` clean; `npm run test:go-live-synthetic` PASS.
+**CI (Phase 7 tip):** `npm run test:ci` 453 passed (3 todo); `tsc --noEmit` clean; `npm run test:go-live-synthetic` PASS.
 
 ## 2026-09-20 — Packaging lock (Jonah)
 

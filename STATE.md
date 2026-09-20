@@ -28,7 +28,7 @@ Shared brain: [`docs/customer-ready/`](docs/customer-ready/00-README.md). Board:
 | 6 Reporting + CM | #59 | ✅ Phase 6 — five client reports + CSV, CM HMAC handoff, ops scoreboard |
 | 7 Onboarding gates | #60 | ✅ Phase 7 — A→E runbook + `/admin/onboarding`, synthetic/shadow packs, SLA rollback. **Customer-ready code path complete.** |
 
-**CI at Phase 7 tip:** `npm run test:ci` 447 passed (3 todo); `tsc --noEmit` clean; `npm run test:go-live-synthetic` PASS.
+**CI at Phase 7 tip:** `npm run test:ci` 453 passed (3 todo); `tsc --noEmit` clean; `npm run test:go-live-synthetic` PASS.
 
 **Remaining = human ops (not code):** SES verify, Fargate image rebuild, BAA before live PHI, production vendor keys, RDS-native bootstrap. Do not claim HIPAA complete — these are code gates only.
 
