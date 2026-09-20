@@ -76,7 +76,7 @@ Work in this order. Each phase = PR (or stacked commits on one branch) with acce
 
 - Lint cleanup on main
 - CX bot 1×10 accounts (non-PHI) — after client portal status API exists
-- Med Review bundle decision — docs-only until Jonah locks
+- Med Review wedge **locked 2026-09-20** — packaging/GTM only; see `01-product-boundary.md`. Not a new build phase.
 - Muse Connector Platform (muse.ai) — queued CX/relationship surface; no live PHI; research/submit unblocked; production gated by HIPAA review. See `docs/PROGRESS.md` § Roadmap / next connectors.
 
 ## PR discipline

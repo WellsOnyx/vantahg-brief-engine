@@ -18,12 +18,21 @@
 
 | Lane | Owner | Notes |
 |------|-------|--------|
-| UM Brief Ops + CX | **VantaUM** | Auth, appeals, client/CX views |
-| IDR Ops + IRO / med review commercial | **VantaHG** | Separate door unless Jonah locks a bundle later |
+| UM Brief Engine SoR + tech + UM ops/CX | **VantaUM** | Auth, appeals, client/CX views. Product and engineering stay UM. |
+| IDR Ops + IRO / med review commercial | **VantaHG** | **Paid door.** HG sells Med Review (VantaHG commercial lane). |
 | Total Rewards / CHRO | **VantaTR** | Out of scope for this plan |
 | Cross-bot coordination | **Onyx Health** | Health group chat |
 
-**Considering (not locked):** “Include Brief Engine with Med Review.” Until Jonah locks it: Med Review stays HG; Brief Engine remains UM SoR. If locked later, rewrite this file and `10-implementation-commits.md` ownership rows — do not silently merge GTM.
+## LOCKED 2026-09-20 — Med Review wedge (Jonah)
+
+Do not soften. Packaging / GTM + product-boundary only. Customer-ready Phases 0–7 code path remains complete; this is **not** a new build phase.
+
+- **Paid door = Med Review** (VantaHG commercial lane). HG sells med review.
+- **VantaUM Brief Engine / utilization management is included free only when the buyer uses Vanta med review.** Included under that HG med-review contract.
+- **Not a standalone free UM SKU.**
+- **Not available free if they use another shop’s med review.**
+- UM still owns Brief Engine SoR and tech. Do not merge GTM into a single SKU or move SoR ownership to HG.
+- Compute COGS planning band **~$0.05–$0.15 per review** vs **~$1 internal budget** (estimate; not measured COGS).
 
 ## Explicit non-goals for first customer
 

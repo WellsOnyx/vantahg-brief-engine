@@ -24,7 +24,7 @@ A TPA or self-insured employer can:
 
 - Live PHI only on AWS Brief Engine + BAA-covered services (RDS, S3, SES, Cognito). No live PHI in Grok chats, agent boxes, or CX memory.
 - Every live determination is human MD-signed at go-live (no silent auto-approve).
-- VantaUM owns UM Brief Ops + CX commercially; VantaHG owns IDR / IRO unless Jonah later locks a bundle.
+- Paid door = Med Review (VantaHG). VantaUM Brief Engine / UM is included free only when the buyer uses Vanta med review — not a standalone free UM SKU, not free with another shop’s med review. UM still owns Brief Engine SoR/tech. See `01-product-boundary.md`.
 - Optum / Kari Cook: frozen until Jonah explicitly opens with context.
 - Same buyer across UM/IRO doors: flag Health before any external draft.
 
@@ -78,12 +78,21 @@ A TPA or self-insured employer can:
 
 | Lane | Owner | Notes |
 |------|-------|--------|
-| UM Brief Ops + CX | **VantaUM** | Auth, appeals, client/CX views |
-| IDR Ops + IRO / med review commercial | **VantaHG** | Separate door unless Jonah locks a bundle later |
+| UM Brief Engine SoR + tech + UM ops/CX | **VantaUM** | Auth, appeals, client/CX views. Product and engineering stay UM. |
+| IDR Ops + IRO / med review commercial | **VantaHG** | **Paid door.** HG sells Med Review (VantaHG commercial lane). |
 | Total Rewards / CHRO | **VantaTR** | Out of scope for this plan |
 | Cross-bot coordination | **Onyx Health** | Health group chat |
 
-**Considering (not locked):** “Include Brief Engine with Med Review.” Until Jonah locks it: Med Review stays HG; Brief Engine remains UM SoR. If locked later, rewrite this file and `10-implementation-commits.md` ownership rows — do not silently merge GTM.
+## LOCKED 2026-09-20 — Med Review wedge (Jonah)
+
+Do not soften. Packaging / GTM + product-boundary only. Customer-ready Phases 0–7 code path remains complete; this is **not** a new build phase.
+
+- **Paid door = Med Review** (VantaHG commercial lane). HG sells med review.
+- **VantaUM Brief Engine / utilization management is included free only when the buyer uses Vanta med review.** Included under that HG med-review contract.
+- **Not a standalone free UM SKU.**
+- **Not available free if they use another shop’s med review.**
+- UM still owns Brief Engine SoR and tech. Do not merge GTM into a single SKU or move SoR ownership to HG.
+- Compute COGS planning band **~$0.05–$0.15 per review** vs **~$1 internal budget** (estimate; not measured COGS).
 
 ## Explicit non-goals for first customer
 
@@ -673,7 +682,7 @@ Work in this order. Each phase = PR (or stacked commits on one branch) with acce
 
 - Lint cleanup on main
 - CX bot 1×10 accounts (non-PHI) — after client portal status API exists
-- Med Review bundle decision — docs-only until Jonah locks
+- Med Review wedge **locked 2026-09-20** — packaging/GTM only; see `01-product-boundary.md`. Not a new build phase.
 
 ## PR discipline
 
