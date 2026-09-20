@@ -30,7 +30,7 @@ Shared brain: [`docs/customer-ready/`](docs/customer-ready/00-README.md). Board:
 
 **CI at Phase 7 tip:** `npm run test:ci` 447 passed (3 todo); `tsc --noEmit` clean; `npm run test:go-live-synthetic` PASS.
 
-**2026-09-20 — Phase 7.2 fixture foundation:** portable E1 catalog at [`fixtures/golive/synthetic-e1.json`](fixtures/golive/synthetic-e1.json) (10 prior-auth + first-level appeal cases, tokenized refs only). `npm run test:synthetic-golive-pack` loads the JSON and creates cases on the demo path. How-to-run: [`fixtures/golive/README.md`](fixtures/golive/README.md). No `ENABLE_AWS_*` flips.
+**2026-09-20 — Phase 7.2 fixture foundation:** portable E1 catalog at [`fixtures/golive/synthetic-e1.json`](fixtures/golive/synthetic-e1.json) (10 prior-auth + first-level appeal cases, tokenized refs only). `npm run test:synthetic-golive-pack` loads the JSON and creates cases on the demo path. How-to-run: [`fixtures/golive/README.md`](fixtures/golive/README.md). No `ENABLE_AWS_*` flips. CI on this branch: `npm run test:ci` 449 passed (3 todo); `tsc --noEmit` clean; both go-live scripts PASS.
 
 **Remaining = human ops (not code):** SES verify, Fargate image rebuild, BAA before live PHI, production vendor keys, RDS-native bootstrap. Do not claim HIPAA complete — these are code gates only.
 
