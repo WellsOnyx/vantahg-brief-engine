@@ -1,0 +1,271 @@
+{
+  "pack": "e2-shadow",
+  "version": 1,
+  "phase": "7.3",
+  "shadow": true,
+  "client_id": "11111111-1111-1111-1111-111111111111",
+  "notes": "Tokenized refs only. No live PHI. Demo/memory path — do not flip ENABLE_AWS_* or send outbound. Every case is shadow=true so this pack can run alongside live without writing live PHI or a member/provider final send. Brief Engine is free only with Vanta med review (paid door = Med Review).",
+  "cases": [
+    {
+      "id": "e2-shadow-01",
+      "shadow": true,
+      "scenario": "happy_path",
+      "label": "Shadow MRI — approve",
+      "type": "prior_auth",
+      "source": "gravity_rail",
+      "criteria": "meet",
+      "sign": true,
+      "determination": "approve",
+      "intake": {
+        "external_id": "e2-shadow-01",
+        "member_ref": "memb_synth_e2_01",
+        "requesting_provider": "prov_synth_golive",
+        "service_or_rx": "CPT-73721",
+        "place_of_service": "office",
+        "urgency": "standard",
+        "clinicals_pointer": "s3://synth/packet/e2-shadow-01.pdf",
+        "benefit_type": "medical"
+      },
+      "expected": {
+        "state": "fanout_complete",
+        "criteria_result": "meet",
+        "type": "prior_auth"
+      }
+    },
+    {
+      "id": "e2-shadow-02",
+      "shadow": true,
+      "scenario": "happy_path",
+      "label": "Shadow PT — approve",
+      "type": "prior_auth",
+      "source": "external_api",
+      "criteria": "meet",
+      "sign": true,
+      "determination": "approve",
+      "intake": {
+        "external_id": "e2-shadow-02",
+        "member_ref": "memb_synth_e2_02",
+        "requesting_provider": "prov_synth_golive",
+        "service_or_rx": "CPT-97110",
+        "place_of_service": "office",
+        "urgency": "standard",
+        "clinicals_pointer": "s3://synth/packet/e2-shadow-02.pdf",
+        "benefit_type": "medical"
+      },
+      "expected": {
+        "state": "fanout_complete",
+        "criteria_result": "meet",
+        "type": "prior_auth"
+      }
+    },
+    {
+      "id": "e2-shadow-03",
+      "shadow": true,
+      "scenario": "gray_zone",
+      "label": "Shadow gray — pend",
+      "type": "prior_auth",
+      "source": "spine",
+      "criteria": "gray",
+      "sign": true,
+      "determination": "pend",
+      "intake": {
+        "external_id": "e2-shadow-03",
+        "member_ref": "memb_synth_e2_03",
+        "requesting_provider": "prov_synth_golive",
+        "service_or_rx": "CPT-73721",
+        "place_of_service": "office",
+        "urgency": "standard",
+        "clinicals_pointer": "s3://synth/packet/e2-shadow-03.pdf",
+        "benefit_type": "medical"
+      },
+      "expected": {
+        "state": "fanout_complete",
+        "criteria_result": "gray",
+        "type": "prior_auth"
+      }
+    },
+    {
+      "id": "e2-shadow-04",
+      "shadow": true,
+      "scenario": "happy_path",
+      "label": "Shadow urgent — approve",
+      "type": "prior_auth",
+      "source": "fax_phaxio",
+      "criteria": "meet",
+      "sign": true,
+      "determination": "approve",
+      "intake": {
+        "external_id": "e2-shadow-04",
+        "member_ref": "memb_synth_e2_04",
+        "requesting_provider": "prov_synth_golive",
+        "service_or_rx": "CPT-73721",
+        "place_of_service": "office",
+        "urgency": "urgent",
+        "clinicals_pointer": "s3://synth/packet/e2-shadow-04.pdf",
+        "benefit_type": "medical"
+      },
+      "expected": {
+        "state": "fanout_complete",
+        "criteria_result": "meet",
+        "type": "prior_auth"
+      }
+    },
+    {
+      "id": "e2-shadow-05",
+      "shadow": true,
+      "scenario": "happy_path",
+      "label": "Shadow deny — criteria fail",
+      "type": "prior_auth",
+      "source": "spine",
+      "criteria": "fail",
+      "sign": true,
+      "determination": "deny",
+      "intake": {
+        "external_id": "e2-shadow-05",
+        "member_ref": "memb_synth_e2_05",
+        "requesting_provider": "prov_synth_golive",
+        "service_or_rx": "CPT-70553",
+        "place_of_service": "office",
+        "urgency": "standard",
+        "clinicals_pointer": "s3://synth/packet/e2-shadow-05.pdf",
+        "benefit_type": "medical"
+      },
+      "expected": {
+        "state": "fanout_complete",
+        "criteria_result": "fail",
+        "type": "prior_auth"
+      }
+    },
+    {
+      "id": "e2-shadow-06",
+      "shadow": true,
+      "scenario": "happy_path",
+      "label": "Shadow partial",
+      "type": "prior_auth",
+      "source": "spine",
+      "criteria": "meet",
+      "sign": true,
+      "determination": "partial",
+      "intake": {
+        "external_id": "e2-shadow-06",
+        "member_ref": "memb_synth_e2_06",
+        "requesting_provider": "prov_synth_golive",
+        "service_or_rx": "CPT-73721",
+        "place_of_service": "office",
+        "urgency": "standard",
+        "clinicals_pointer": "s3://synth/packet/e2-shadow-06.pdf",
+        "benefit_type": "medical"
+      },
+      "expected": {
+        "state": "fanout_complete",
+        "criteria_result": "meet",
+        "type": "prior_auth"
+      }
+    },
+    {
+      "id": "e2-shadow-07",
+      "shadow": true,
+      "scenario": "happy_path",
+      "label": "Shadow pharmacy",
+      "type": "prior_auth",
+      "source": "gravity_rail",
+      "criteria": "meet",
+      "sign": true,
+      "determination": "approve",
+      "intake": {
+        "external_id": "e2-shadow-07",
+        "member_ref": "memb_synth_e2_07",
+        "requesting_provider": "prov_synth_golive",
+        "service_or_rx": "NDC-0002-1433",
+        "place_of_service": "office",
+        "urgency": "standard",
+        "clinicals_pointer": "s3://synth/packet/e2-shadow-07.pdf",
+        "benefit_type": "pharmacy"
+      },
+      "expected": {
+        "state": "fanout_complete",
+        "criteria_result": "meet",
+        "type": "prior_auth"
+      }
+    },
+    {
+      "id": "e2-shadow-08",
+      "shadow": true,
+      "scenario": "gray_zone",
+      "label": "Shadow gray urgent — pend",
+      "type": "prior_auth",
+      "source": "external_api",
+      "criteria": "gray",
+      "sign": true,
+      "determination": "pend",
+      "intake": {
+        "external_id": "e2-shadow-08",
+        "member_ref": "memb_synth_e2_08",
+        "requesting_provider": "prov_synth_golive",
+        "service_or_rx": "CPT-73721",
+        "place_of_service": "office",
+        "urgency": "urgent",
+        "clinicals_pointer": "s3://synth/packet/e2-shadow-08.pdf",
+        "benefit_type": "medical"
+      },
+      "expected": {
+        "state": "fanout_complete",
+        "criteria_result": "gray",
+        "type": "prior_auth"
+      }
+    },
+    {
+      "id": "e2-shadow-09",
+      "shadow": true,
+      "scenario": "happy_path",
+      "label": "Shadow expedited",
+      "type": "prior_auth",
+      "source": "spine",
+      "criteria": "meet",
+      "sign": true,
+      "determination": "approve",
+      "intake": {
+        "external_id": "e2-shadow-09",
+        "member_ref": "memb_synth_e2_09",
+        "requesting_provider": "prov_synth_golive",
+        "service_or_rx": "CPT-27447",
+        "place_of_service": "office",
+        "urgency": "expedited",
+        "clinicals_pointer": "s3://synth/packet/e2-shadow-09.pdf",
+        "benefit_type": "medical"
+      },
+      "expected": {
+        "state": "fanout_complete",
+        "criteria_result": "meet",
+        "type": "prior_auth"
+      }
+    },
+    {
+      "id": "e2-shadow-10",
+      "shadow": true,
+      "scenario": "happy_path",
+      "label": "Shadow first-level appeal of deny — approve (parent e2-shadow-05)",
+      "type": "first_level_appeal",
+      "source": "fax_phaxio",
+      "criteria": "meet",
+      "sign": true,
+      "determination": "approve",
+      "parent_external_id": "e2-shadow-05",
+      "intake": {
+        "external_id": "e2-shadow-10",
+        "member_ref": "memb_synth_e2_05",
+        "requesting_provider": "prov_synth_golive",
+        "service_or_rx": "CPT-70553",
+        "place_of_service": "office",
+        "urgency": "standard",
+        "clinicals_pointer": "s3://synth/packet/e2-shadow-10.pdf",
+        "benefit_type": "medical"
+      },
+      "expected": {
+        "state": "fanout_complete",
+        "criteria_result": "meet",
+        "type": "first_level_appeal"
+      }
+    }
+  ]
+}

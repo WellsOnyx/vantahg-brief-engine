@@ -385,9 +385,9 @@ export const ONBOARDING_CHECKLIST: readonly OnboardingChecklistItem[] = [
     phase: 'E',
     title: 'Shadow pack ≥ 10 (MD signs; no member/provider final send)',
     owner: 'Ops',
-    artifact: 'POST /api/golive/shadow · go-live log',
+    artifact: 'npm run test:shadow-golive-pack · POST /api/golive/shadow · go-live log',
     gate: 'required',
-    pointer: 'client_config.shadow_mode / go_live_mode=shadow. Fan-out records intent only.',
+    pointer: 'fixtures/golive/shadow-e2.json · client_config.shadow_mode / go_live_mode=shadow. Fan-out records intent only.',
     required: true,
   },
   {
