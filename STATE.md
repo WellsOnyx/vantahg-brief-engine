@@ -5,7 +5,7 @@ Future Claude/Cole/Jonah sessions: read this first.
 
 ---
 
-## 2026-09-20 — Phase 4.4 statement stub (this PR)
+## 2026-09-20 — Phase 4.4 statement stub (PR #73)
 
 PR #57 already shipped the monthly statement portal + HTML/PDF renderer. This pass is the smallest 4.4 close-out for **one synthetic test client**:
 
@@ -14,6 +14,8 @@ PR #57 already shipped the monthly statement portal + HTML/PDF renderer. This pa
 - Monthly job stub: `GET /api/cron/monthly-statement` — `SYNTHETIC_CLIENT_ID` only. Vercel schedule `0 8 1 * *`.
 
 Synthetic / demo only. No live PHI. No secrets. Med Review packaging lock unchanged. No Optum.
+
+**CI on this branch:** `npm run test:ci` 450 passed (3 todo). `npx tsc --noEmit` clean.
 
 ---
 
