@@ -5,6 +5,18 @@ Future Claude/Cole/Jonah sessions: read this first.
 
 ---
 
+## 2026-09-20 — Phase 4.4 statement stub (this PR)
+
+PR #57 already shipped the monthly statement portal + HTML/PDF renderer. This pass is the smallest 4.4 close-out for **one synthetic test client**:
+
+- `generateMonthlyStatement` stamps `statement_id` on grouped **open** ledger events. Status stays `open` (invoicing / Meow / QuickBooks export is later).
+- PDF + portal already live at `/portal/tpa/statements` and `GET /api/billing/statements/[id]?format=pdf`. Tests now assert `%PDF-` for that client.
+- Monthly job stub: `GET /api/cron/monthly-statement` — `SYNTHETIC_CLIENT_ID` only. Vercel schedule `0 8 1 * *`.
+
+Synthetic / demo only. No live PHI. No secrets. Med Review packaging lock unchanged. No Optum.
+
+---
+
 ## 2026-09-20 — Packaging lock (Jonah)
 
 Paid door = Med Review (VantaHG). VantaUM Brief Engine / UM included free **only** with Vanta med review — not a standalone free UM SKU, not free with another shop’s med review. Phases 0–7 code path complete; this is packaging/GTM, not a new build phase. Canonical: [`docs/customer-ready/01-product-boundary.md`](docs/customer-ready/01-product-boundary.md).
