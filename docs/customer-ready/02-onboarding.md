@@ -2,6 +2,8 @@
 
 Onboarding is a **sellable checklist** first, software second. Every step produces an artifact in SoR or Drive (contracts) with an owner and a date.
 
+**Cole operator path (Phase 7.1):** [`11-cole-onboarding-runbook.md`](11-cole-onboarding-runbook.md) + `/admin/onboarding`. Use that to run A→E. This file stays the framework lock.
+
 ## Phase A — Commercial & legal (before any PHI)
 
 | Step | Owner | Artifact | Gate |

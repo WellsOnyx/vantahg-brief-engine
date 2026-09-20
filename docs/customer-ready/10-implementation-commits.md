@@ -67,7 +67,7 @@ Work in this order. Each phase = PR (or stacked commits on one branch) with acce
 
 | Slice | Deliverable | Acceptance |
 |-------|-------------|------------|
-| 7.1 | Onboarding checklist UI or runbook in repo + Drive | Cole can run A→E without tribal knowledge |
+| 7.1 | Onboarding checklist UI or runbook in repo + Drive | Cole can run A→E without tribal knowledge. Operator path: `docs/customer-ready/11-cole-onboarding-runbook.md` + `/admin/onboarding` (how_to on every item). |
 | 7.2 | Synthetic pack (10) | Pass |
 | 7.3 | Shadow (10) | Pass |
 | 7.4 | Live hypercare (25) | SLA threshold held or rollback |
