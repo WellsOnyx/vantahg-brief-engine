@@ -19,6 +19,8 @@ Phase 7.1 from `10-implementation-commits.md`: Cole can run A→E **without trib
 
 **Acceptance:** Cole runs A→E from the UI + 11-runbook. Synthetic only.
 
+**CI on this branch:** `npm run test:ci` 450 passed (3 todo). `tsc --noEmit` clean. Demo `/admin/onboarding` + publish fixture + E1 pack verified locally.
+
 ---
 
 ## 2026-09-20 — Packaging lock (Jonah)

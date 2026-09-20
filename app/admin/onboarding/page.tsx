@@ -175,8 +175,10 @@ export default function AdminOnboardingPage() {
             Code gates — not a HIPAA attestation.
           </p>
           <p className="text-xs text-muted mt-1">
-            {requiredLeft} required items remaining · runbook{' '}
-            <code className="text-[11px]">{ONBOARDING_RUNBOOK_PATH}</code>
+            {items.length === 0
+              ? 'Loading checklist…'
+              : `${requiredLeft} required items remaining`}{' '}
+            · runbook <code className="text-[11px]">{ONBOARDING_RUNBOOK_PATH}</code>
           </p>
         </header>
 
