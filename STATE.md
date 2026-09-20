@@ -7,7 +7,7 @@ Future Claude/Cole/Jonah sessions: read this first.
 
 ## 2026-09-20 — Phase 7.3 shadow pack scaffolding (foundation)
 
-JSON catalog for the E2 shadow pack: [`fixtures/golive/shadow-e2.json`](fixtures/golive/shadow-e2.json) (10 live-shaped synthetic cases, every row `shadow=true`). Loader rejects PHI-shaped fields. `runShadowPack` still MD-signs and fans out **intent only** — no member/provider final send — even if `client_config.go_live_mode=live`. How-to: [`fixtures/golive/README.md`](fixtures/golive/README.md). `npm run test:shadow-golive-pack` / `npm run test:go-live-shadow`. No `ENABLE_AWS_*` flips, no secrets, no Optum. Packaging lock unchanged: Med Review paid door; Brief Engine free only with Vanta med review.
+JSON catalog for the E2 shadow pack: [`fixtures/golive/shadow-e2.json`](fixtures/golive/shadow-e2.json) (10 live-shaped synthetic cases, every row `shadow=true`). Loader rejects PHI-shaped fields. `runShadowPack` still MD-signs and fans out **intent only** — no member/provider final send — even if `client_config.go_live_mode=live`. How-to: [`fixtures/golive/README.md`](fixtures/golive/README.md). `npm run test:shadow-golive-pack` / `npm run test:go-live-shadow`. **CI:** `npm run test:ci` 450 passed (3 todo); `tsc --noEmit` clean. No `ENABLE_AWS_*` flips, no secrets, no Optum. Packaging lock unchanged: Med Review paid door; Brief Engine free only with Vanta med review.
 
 ## 2026-09-20 — Packaging lock (Jonah)
 
@@ -32,7 +32,7 @@ Shared brain: [`docs/customer-ready/`](docs/customer-ready/00-README.md). Board:
 | 6 Reporting + CM | #59 | ✅ Phase 6 — five client reports + CSV, CM HMAC handoff, ops scoreboard |
 | 7 Onboarding gates | #60 | ✅ Phase 7 — A→E runbook + `/admin/onboarding`, synthetic/shadow packs, SLA rollback. **Customer-ready code path complete.** |
 
-**CI at Phase 7 tip:** `npm run test:ci` 447 passed (3 todo); `tsc --noEmit` clean; `npm run test:go-live-synthetic` PASS.
+**CI at Phase 7 tip:** `npm run test:ci` 450 passed (3 todo); `tsc --noEmit` clean; `npm run test:go-live-synthetic` PASS; `npm run test:shadow-golive-pack` PASS.
 
 **Remaining = human ops (not code):** SES verify, Fargate image rebuild, BAA before live PHI, production vendor keys, RDS-native bootstrap. Do not claim HIPAA complete — these are code gates only.
 
