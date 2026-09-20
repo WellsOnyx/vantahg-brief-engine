@@ -88,6 +88,7 @@ export function AppShell({
       window.location.search.includes('demo') ||
       pathname.includes('/demo')
     );
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- WHY: demo-signal detect uses document/location, unavailable during SSR
     setDemo(hasDemoSignal);
   }, [pathname]);
 

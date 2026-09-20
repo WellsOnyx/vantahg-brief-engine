@@ -200,6 +200,7 @@ export default function OpsPage() {
       const saved = localStorage.getItem('vantaum-ops-state');
       if (saved) {
         const state = JSON.parse(saved);
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- WHY: localStorage hydrate after mount; SSR HTML must stay deterministic
         if (typeof state.lives === 'number') setLives(state.lives);
         if (Array.isArray(state.tpas)) setTpas(state.tpas);
       }
@@ -242,6 +243,7 @@ export default function OpsPage() {
 
   // Sync signed lives → main lives input
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- WHY: sync derived signed-lives into the lives input; doing this during render would loop
     if (signedLives > 0) setLives(signedLives);
   }, [signedLives]);
 

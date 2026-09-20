@@ -92,6 +92,7 @@ export default function AdminSignupsPage() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- WHY: fetch-on-mount hydrates the queue after client mount (session unavailable during SSR)
     void load(filter);
   }, [filter, load]);
 

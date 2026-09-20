@@ -5,6 +5,12 @@ Future Claude/Cole/Jonah sessions: read this first.
 
 ---
 
+## 2026-09-20 — Lint fail-closed (hydrate allowlist)
+
+`npm run lint` is green on this lineage (`eslint --max-warnings 0`). PR #67 cleared the historic backlog; five client-only `react-hooks/set-state-in-effect` hydrate sites stay as-is (no behavior change) with `eslint-disable-next-line` + WHY. Catalog: [`docs/customer-ready/lint-hydrate-allowlist.md`](docs/customer-ready/lint-hydrate-allowlist.md). New lint errors/warnings fail CI.
+
+---
+
 ## 2026-09-20 — Packaging lock (Jonah)
 
 Paid door = Med Review (VantaHG). VantaUM Brief Engine / UM included free **only** with Vanta med review — not a standalone free UM SKU, not free with another shop’s med review. Phases 0–7 code path complete; this is packaging/GTM, not a new build phase. Canonical: [`docs/customer-ready/01-product-boundary.md`](docs/customer-ready/01-product-boundary.md).
