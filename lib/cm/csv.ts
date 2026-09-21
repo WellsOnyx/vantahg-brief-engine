@@ -15,6 +15,13 @@ export const CM_CSV_COLUMNS = [
   'secure_summary_url',
 ] as const;
 
+function csvCell(value: string): string {
+  if (/[",\n\r]/.test(value)) {
+    return `"${value.replace(/"/g, '""')}"`;
+  }
+  return value;
+}
+
 export function cmFeedToCsv(items: CmFeedItem[]): string {
   const header = CM_CSV_COLUMNS.join(',');
   const lines = items.map((item) =>
@@ -25,7 +32,9 @@ export function cmFeedToCsv(items: CmFeedItem[]): string {
       item.determination,
       item.determined_at,
       item.secure_summary_url,
-    ].join(','),
+    ]
+      .map(csvCell)
+      .join(','),
   );
   return [header, ...lines].join('\n');
 }

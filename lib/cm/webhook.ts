@@ -5,6 +5,7 @@
  * HMAC-SHA256 of canonical unsigned JSON, X-VantaUM-Signature header.
  */
 
+import { createHash } from 'crypto';
 import { signBodyHmacSha256, verifyBodyHmacSha256 } from '@/lib/intake/hmac';
 import type { CmFlag, SpineDetermination } from '@/lib/case-spine/types';
 
@@ -28,7 +29,8 @@ export interface SignedCmHandoffWebhook {
   headers: Record<string, string>;
 }
 
-const UNSIGNED_KEYS: Array<keyof CmHandoffPayload> = [
+/** Exact 09 payload keys — tests lock this shape. */
+export const CM_HANDOFF_PAYLOAD_KEYS = [
   'event',
   'case_id',
   'external_id',
@@ -36,7 +38,14 @@ const UNSIGNED_KEYS: Array<keyof CmHandoffPayload> = [
   'determination',
   'determined_at',
   'secure_summary_url',
-];
+] as const satisfies ReadonlyArray<keyof CmHandoffPayload>;
+
+const UNSIGNED_KEYS: Array<keyof CmHandoffPayload> = [...CM_HANDOFF_PAYLOAD_KEYS];
+
+/** Stable receiver-side dedupe key. Same payload → same key across retries. */
+export function cmHandoffIdempotencyKey(payload: CmHandoffPayload): string {
+  return createHash('sha256').update(canonicalCmWebhookJson(payload), 'utf8').digest('hex');
+}
 
 export function canonicalCmWebhookJson(payload: CmHandoffPayload): string {
   const ordered: Record<string, unknown> = {};
@@ -78,6 +87,7 @@ export function signCmHandoffWebhook(payload: CmHandoffPayload, secret: string):
       'content-type': 'application/json',
       'X-VantaUM-Signature': `sha256=${signature}`,
       'X-VantaUM-Event': CM_HANDOFF_EVENT,
+      'X-VantaUM-Idempotency-Key': cmHandoffIdempotencyKey(payload),
     },
   };
 }

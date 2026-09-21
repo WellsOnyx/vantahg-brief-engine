@@ -56,3 +56,13 @@ export function canAccessCxView(viewer: SpineViewer): boolean {
 export function canAccessMedReviewView(viewer: SpineViewer): boolean {
   return viewer.role === 'med_review' || viewer.role === 'superadmin';
 }
+
+/** Audit / break-glass trail — not a client portal surface (04). */
+export function canAccessCaseAudit(viewer: SpineViewer): boolean {
+  return viewer.role === 'cx' || viewer.role === 'med_review' || viewer.role === 'superadmin';
+}
+
+/** Fan-out delivery after sign — CX resolve_fanout or Med deliver. */
+export function canMutateFanout(viewer: SpineViewer): boolean {
+  return canAccessCxView(viewer) || canAccessMedReviewView(viewer);
+}
