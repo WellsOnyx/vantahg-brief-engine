@@ -5,7 +5,23 @@ Future Claude/Cole/Jonah sessions: read this first.
 
 ---
 
-## 2026-09-20 — Phase 7.2 synthetic fixture pack (this PR)
+## 2026-09-20 — HG lane: IDR Ops assist guards (this PR)
+
+Small incremental hardening on current `main`. The full IDR engine (mirror form, bookmarklet, serve mode) lives only on stale PR [#44](https://github.com/WellsOnyx/vantahg-brief-engine/pull/44) (`claude/idr-mirror-assist`, based on `feature/merge-and-instrument`, not `main`). PR [#46](https://github.com/WellsOnyx/vantahg-brief-engine/pull/46) (training dataset) clashes with case-spine migration `027`. **Do not merge those blindly.**
+
+What landed here instead:
+
+- **`lib/idr-assist/guards.ts`** — never-submit plan filter (`submitted: false` pinned), DRAFT stamp apply/assert, `assertPrivateBind` (loopback/RFC1918 only), human-only DLI/attestation, iMPROve-facing tooling-fingerprint refuse, static `assertNeverSubmitSource`.
+- Tests: `__tests__/lib/idr-assist/guards.test.ts`.
+- Internal workflow: [`docs/idr-assist/internal-review-workflow.md`](docs/idr-assist/internal-review-workflow.md).
+
+Does **not** add portal fill, bookmarklet, serve HTTP, live credentials, or Optum outreach. Human still signs / submits every determination. Existing payer-IDR attorney path on `main` is unchanged.
+
+**CI on this branch (after #65/#66/#74):** `npm run test:ci` 519 passed (3 todo). `npx tsc --noEmit` clean. Guard module 16/16. Packaging lock, Phase 7.1/7.2 notes, and RDS bootstrap notes from #74 stay. No `ENABLE_AWS_*` flips.
+
+---
+
+## 2026-09-20 — Phase 7.2 synthetic fixture pack (PR #65)
 
 Portable E1 catalog at [`fixtures/golive/synthetic-e1.json`](fixtures/golive/synthetic-e1.json) (prior-auth + first-level appeal, tokenized refs only). `npm run test:synthetic-golive-pack` loads the JSON and creates cases on the demo path. `npm run test:go-live-synthetic` advances the same catalog. How-to: [`fixtures/golive/README.md`](fixtures/golive/README.md). E2 shadow catalog stays at `fixtures/golive/shadow-e2.json`. No `ENABLE_AWS_*` flips. No live PHI. Med Review packaging lock unchanged.
 

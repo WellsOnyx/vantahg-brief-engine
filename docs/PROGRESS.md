@@ -20,7 +20,7 @@
 | 6 Reporting + CM | [#59](https://github.com/WellsOnyx/vantahg-brief-engine/pull/59) | Five client reports + CSV, CM HMAC handoff (flagged only), ops scoreboard |
 | 7 Onboarding + go-live | [#60](https://github.com/WellsOnyx/vantahg-brief-engine/pull/60) | A→E checklist UI + runbook, E1/E2 packs, first-25 SLA rollback log |
 | 7.1 Cole runbook | [#64](https://github.com/WellsOnyx/vantahg-brief-engine/pull/64) | How-to on every A–E item, `11-cole-onboarding-runbook.md`, synthetic `client_config` fixture |
-| 7.2 E1 fixture pack | this PR | `fixtures/golive/synthetic-e1.json` — prior auth + first-level appeal, tokenized refs, `npm run test:synthetic-golive-pack` |
+| 7.2 E1 fixture pack | [#65](https://github.com/WellsOnyx/vantahg-brief-engine/pull/65) | `fixtures/golive/synthetic-e1.json` — prior auth + first-level appeal, tokenized refs, `npm run test:synthetic-golive-pack` |
 
 **CI (Phase 7.2 on current main):** `npm run test:ci` 503 passed (3 todo); `tsc --noEmit` clean; `npm run test:go-live-synthetic` PASS; `npm run test:synthetic-golive-pack` PASS; `npm run test:shadow-golive-pack` PASS.
 
@@ -110,3 +110,7 @@ Queued after customer-ready Phases 0–7. These do **not** reopen the completed 
 ## Lane note
 
 VantaUM owns Brief Engine SoR/tech + UM ops. VantaHG owns IDR/IRO and **sells** Med Review (paid door). UM Brief Engine is included under that Vanta med-review contract only — not a standalone free UM SKU, not free with another shop’s med review. See [`docs/customer-ready/01-product-boundary.md`](docs/customer-ready/01-product-boundary.md).
+
+## HG lane — IDR Ops assist (2026-09-20)
+
+Merge-safe guards on `main` (never-submit, DRAFT stamp, private-bind, human-only DLI/attestation). Module: `lib/idr-assist/`. Workflow: [`docs/idr-assist/internal-review-workflow.md`](idr-assist/internal-review-workflow.md). Stale PRs #44 / #46 were **not** merged. No portal submit automation. Human signs determinations. **CI:** `npm run test:ci` 519 passed (3 todo); `tsc --noEmit` clean.
