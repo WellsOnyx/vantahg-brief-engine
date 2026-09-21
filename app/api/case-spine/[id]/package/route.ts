@@ -23,6 +23,7 @@ export async function GET(
     }
 
     const { id } = await context.params;
+    await getCaseSpineService().getCase(id, viewer);
     const { searchParams } = new URL(request.url);
     const versionParam = searchParams.get('version');
     const version = versionParam ? Number(versionParam) : undefined;
