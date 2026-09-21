@@ -67,10 +67,12 @@ npm run test:go-live-synthetic
 ## Day 5–7 — E2 shadow
 
 ```bash
-# POST /api/golive/shadow
+npm run test:shadow-golive-pack
+# or npm run test:go-live-shadow
+# or POST /api/golive/shadow
 ```
 
-≥10 live-shaped synthetic packets. MD signs. Fan-out may record **intent only**. **No final outbound to member or requesting provider** (`shadow_mode` / `go_live_mode=shadow`).
+≥10 live-shaped synthetic packets from [`fixtures/golive/shadow-e2.json`](../../fixtures/golive/shadow-e2.json) (every case `shadow=true`). MD signs. Fan-out may record **intent only**. **No final outbound to member or requesting provider** (`shadow_mode` / `go_live_mode=shadow`). How-to: [`fixtures/golive/README.md`](../../fixtures/golive/README.md).
 
 ## Day 8+ — E3 live hypercare (first 25)
 

@@ -1,4 +1,4 @@
-import type { Case, Reviewer, Client, AuditLogEntry, AIBrief, FactCheckResult, Staff, Pod, QualityAudit, MissingInfoRequest, DeterminationTemplate, PeerToPeerRecord, QueueRole, QueueMeta } from './types';
+import type { Case, Reviewer, Client, AuditLogEntry, AIBrief, Staff, Pod, QualityAudit, MissingInfoRequest, DeterminationTemplate, PeerToPeerRecord, QueueRole, QueueMeta } from './types';
 import {
   demoCases,
   demoReviewers,
@@ -10,9 +10,6 @@ import {
   demoMissingInfoRequests,
   demoDeterminationTemplates,
   demoPeerToPeerRecords,
-  DEMO_CASE_IDS,
-  DEMO_STAFF_IDS,
-  DEMO_POD_IDS,
 } from './demo-data';
 import { factCheckBrief } from './fact-checker';
 import { getTimeRemaining } from './sla-calculator';

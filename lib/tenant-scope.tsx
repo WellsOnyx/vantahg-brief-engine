@@ -71,6 +71,7 @@ export function TenantScopeProvider({ children }: { children: React.ReactNode })
 
   // Hydrate from localStorage on mount.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- WHY: hydrate selected tenant from localStorage after mount to avoid SSR/client mismatch
     setSelectedClientIdState(readStoredScope());
   }, []);
 

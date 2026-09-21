@@ -285,7 +285,7 @@ export class CaseSpineService {
     const now = this.now();
     const brief = await this.materializeBrief(current, input, now);
 
-    let next: CanonicalCase = {
+    const next: CanonicalCase = {
       ...current,
       brief_id: brief.brief_id,
       packet_storage_keys: [...current.packet_storage_keys],

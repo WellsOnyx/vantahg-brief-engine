@@ -59,7 +59,13 @@ export async function POST(
     const rateLimited = await applyRateLimit(request, { maxRequests: 30 });
     if (rateLimited) return rateLimited;
 
+    const viewer = resolveSpineViewer(authResult.user, request);
+    if (!canAccessClinicalPacket(viewer)) {
+      return NextResponse.json({ error: 'Forbidden', surface: 'clinical_brief' }, { status: 403 });
+    }
+
     const { id } = await context.params;
+    await getCaseSpineService().getCase(id, viewer);
     const body = (await request.json().catch(() => ({}))) as AttachBriefInput;
     const result = await getCaseSpineService().attachBrief(id, body, authResult.user.id);
     return NextResponse.json(result, { status: 201 });

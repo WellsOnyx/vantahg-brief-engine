@@ -248,6 +248,7 @@ The bootstrap script still constructs a Supabase JS client (leftover). On AWS, p
 ```bash
 npm run test:e2e-synthetic
 npm run test:go-live-synthetic   # Phase 7 E1 pack (case-spine + intake, no vendor keys)
+npm run test:shadow-golive-pack  # Phase 7.3 E2 shadow pack (JSON catalog, intent-only fan-out)
 ```
 
 This drives a synthetic case through the full pipeline:

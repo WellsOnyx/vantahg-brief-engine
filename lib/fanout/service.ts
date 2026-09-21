@@ -24,7 +24,6 @@ import {
   nextBackoffMs,
   type CxTask,
   type FanoutResult,
-  type OutboundIntent,
   type TargetResult,
   type WebhookTransport,
 } from './types';

@@ -1585,7 +1585,7 @@ export const demoCases: Case[] = [
     sla_paused_at: null,
     sla_resumed_at: null,
     sla_pause_total_hours: 0,
-  } as any,
+  } as unknown as Case,
   {
     id: DEMO_CASE_IDS.idrFacilityFee,
     created_at: daysAgo(1, 8),
@@ -1658,7 +1658,7 @@ export const demoCases: Case[] = [
     sla_paused_at: null,
     sla_resumed_at: null,
     sla_pause_total_hours: 0,
-  } as any,
+  } as unknown as Case,
 ];
 
 // ============================================================================

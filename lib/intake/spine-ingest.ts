@@ -26,6 +26,7 @@ export interface SpineIngestInput {
   client_id?: string | null;
   intake: IntakePayload;
   type?: AuthWorkflowType;
+  parent_case_id?: string | null;
   priority?: CaseSpinePriority;
   packet_storage_keys?: string[];
   actor?: string;
@@ -170,6 +171,7 @@ export async function ingestToCaseSpine(input: SpineIngestInput): Promise<SpineI
     {
       client_id: clientId,
       type: input.type,
+      parent_case_id: input.parent_case_id,
       external_id: input.intake.external_id,
       priority: input.priority ?? input.intake.urgency ?? undefined,
       packet_storage_keys: input.packet_storage_keys,
