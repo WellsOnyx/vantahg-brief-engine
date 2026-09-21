@@ -5,7 +5,7 @@ import DemoWalkthrough from '@/components/demo/DemoWalkthrough';
 /* ─── CSS-in-JS style object for the marketing page ─── */
 /* Uses the Wells Onyx dark palette with Cormorant Garamond + DM Sans */
 
-const EA_EMAIL = 'mailto:hello@wellsonyx.com?subject=VantaUM%20Out-of-Network%20UM%20Clinical%20Layer';
+const EA_EMAIL = 'mailto:hello@wellsonyx.com?subject=VantaHG%20Med%20Review%20%2B%20included%20Brief%20Engine';
 
 export default function SitePage() {
   return (
@@ -256,7 +256,7 @@ export default function SitePage() {
         {/* Early Access Bar */}
         <div className="ea-bar">
           <span className="ea-bar-pill">Now Onboarding</span>
-          <span className="ea-bar-text">A next-generation clinical layer for utilization management — run externally or embedded inside your team.</span>
+          <span className="ea-bar-text">VantaHG Med Review is the commercial door. VantaUM Brief Engine is included only under that Vanta med-review contract.</span>
           <a href={EA_EMAIL} className="ea-bar-link">Talk to us →</a>
           <span className="ea-bar-text" aria-hidden="true">·</span>
           <a href="/demo-tour" className="ea-bar-link">Launch Demo</a>
@@ -273,7 +273,7 @@ export default function SitePage() {
           <ul className="nav-links">
             <li><a href="#workflow">The Workflow</a></li>
             <li><a href="#oon-iro">Specialized</a></li>
-            <li><a href="#ratecard">Rate Card</a></li>
+            <li><a href="#ratecard">Packaging</a></li>
             <li><a href="#demo">Live Demo</a></li>
             <li><a href="/demo-tour" className="font-medium text-gold">Guided Tour →</a></li>
             <li><a href="#contact">Contact</a></li>
@@ -289,20 +289,20 @@ export default function SitePage() {
         <section className="vum-hero">
           <span className="hero-vline" aria-hidden="true" />
           <div className="hero-left">
-            <div className="eyebrow">Clinical Layer for Utilization Management</div>
+            <div className="eyebrow">Included with VantaHG Med Review</div>
             <h1>Modern UM.<br />One clinician.<br /><em>Through appeal.</em></h1>
-            <p className="hero-body">VantaUM is a next-generation clinical layer for utilization management — concierge intake, the AI Brief Engine, authorization, and first-level appeal, owned end to end by the same clinician. Run it across your whole self-funded book, or aim it at the cases that need it most. Built for independent TPAs, self-insured employers, and the clinical operations inside larger benefit organizations.</p>
+            <p className="hero-body">Buy VantaHG Med Review. The VantaUM Brief Engine — concierge intake, clinical brief, authorization, and first-level appeal — is included under that contract only. Not a standalone UM product. Not included if you use another shop&apos;s med review. Built for independent TPAs, self-insured employers, and the clinical operations inside larger benefit organizations.</p>
             <div className="hero-actions">
-              <a href="/demo-tour" className="btn-primary">Launch Optum Demo →</a>
+              <a href="/demo-tour" className="btn-primary">Launch Demo →</a>
               <a href={EA_EMAIL} className="btn-ghost">Talk to Us</a>
             </div>
           </div>
           <div className="hero-right">
             {[
-              { step: '01', label: 'Concierge Intake', sub: 'A named coordinator opens the case and assembles the record — no portal queue, no handoffs. Part of the bundle.' },
-              { step: '02', label: 'AI Brief Engine', sub: 'The case is pre-briefed against clinical criteria before a clinician ever opens it. Speed and quality, built in. Part of the bundle.' },
-              { step: '03', label: 'Authorization + First-Level Appeal', sub: 'One reviewer owns the determination and the first-level appeal — continuity, not a relay race. This is the bundle.' },
-              { step: '04', label: 'IRO-Ready Documentation', sub: 'Every case is documented to independent-review standard. Full IRO is a separate service, billed only if a case escalates.' },
+              { step: '01', label: 'Concierge Intake', sub: 'A named coordinator opens the case and assembles the record — no portal queue, no handoffs. Included with Vanta med review.' },
+              { step: '02', label: 'AI Brief Engine', sub: 'The case is pre-briefed against clinical criteria before a clinician ever opens it. Included with Vanta med review — not sold standalone.' },
+              { step: '03', label: 'Authorization + First-Level Appeal', sub: 'One reviewer owns the determination and the first-level appeal — continuity, not a relay race. Included under the Vanta med-review contract.' },
+              { step: '04', label: 'IRO-Ready Documentation', sub: 'Every case is documented to independent-review standard. Full IRO stays on the VantaHG lane — not a standalone UM add-on.' },
             ].map((s) => (
               <div key={s.step} className="hero-stat">
                 <div className="stat-val" style={{ fontSize: '22px', color: 'var(--teal)', display: 'flex', alignItems: 'baseline', gap: '12px' }}>
@@ -323,8 +323,8 @@ export default function SitePage() {
             <div className="ea-left">
               <span className="kicker" style={{ color: 'var(--gold)' }}>How We Engage</span>
               <h2 className="sh">External service,<br />or an <em style={{ color: 'var(--gold)' }}>extension</em><br />of your team.</h2>
-              <p className="sb">VantaUM is built to drop into the way you already work. Run it across your whole self-funded book to take utilization management off your plate end to end — or stand us up inside your operation as a specialized arm of your own clinical team. Use it broadly, or aim it at the cases that carry the most clinical time and exposure.</p>
-              <p className="sb" style={{ marginTop: 16 }}>Either way, the bundle is the same: a single clinician carrying each case from concierge intake through authorization and first-level appeal, with documentation prepared to be IRO-ready. If a case escalates to full independent review, that&apos;s a separate service — billed only when it happens.</p>
+              <p className="sb">VantaHG sells Med Review. When you use Vanta med review under that contract, the VantaUM Brief Engine drops into the way you already work — across the book or on the cases that carry the most clinical time. It is not a standalone UM product, and it is not included if another shop does the review.</p>
+              <p className="sb" style={{ marginTop: 16 }}>Under that contract the workflow is the same: a single clinician carrying each case from concierge intake through authorization and first-level appeal, with documentation prepared to be IRO-ready. Full IRO stays on the VantaHG lane.</p>
               <div className="ea-spots">
                 <div className="ea-spots-dot" />
                 <div className="ea-spots-text"><strong>Built for the teams that run the plan.</strong> Independent TPAs, self-insured employers, and the clinical operations inside larger benefit organizations — without inheriting anyone&apos;s technical debt.</div>
@@ -332,7 +332,7 @@ export default function SitePage() {
             </div>
             <div className="ea-perks">
               {[
-                { num: '01', title: 'Bundled, per case', body: 'One per-case rate for authorization plus first-level appeal. No per-member commitments, no volume floors — use it across the book or on the cases that warrant it. Full IRO is separate, only if a case escalates.' },
+                { num: '01', title: 'Included with Vanta med review', body: 'Brief Engine, authorization, and first-level appeal are included only when you use Vanta med review. Not a standalone UM SKU. Not included with another shop’s review. Full IRO stays on the VantaHG lane.' },
                 { num: '02', title: 'Embedded in your operation', body: 'Prefer to keep it in house? We run as a specialized extension of your existing clinical team, using your criteria and your voice, under your brand.' },
                 { num: '03', title: 'Continuity by design', body: 'The same clinician owns the authorization and the first-level appeal. No relay between reviewers, no context lost between stages.' },
                 { num: '04', title: 'White-glove onboarding', body: 'You stand us up once, directly with the Wells Onyx operating team — not a third-party integrator who read the manual last week.' },
@@ -353,7 +353,7 @@ export default function SitePage() {
               <span className="kicker" style={{ color: 'var(--teal)' }}>The Workflow</span>
               <h2 className="sh">One case.<br /><em>One owner.</em><br />No handoffs.</h2>
               <p className="sb" style={{ marginBottom: '24px' }}>Utilization management is where authorization decisions get made, appeals get filed, and documentation has to hold up when it&apos;s tested. Most operations split that journey across a queue of reviewers and lose the thread between every stage.</p>
-              <p className="sb" style={{ marginBottom: '40px' }}>VantaUM runs the bundle as one continuous workflow: a concierge opens the case, the Brief Engine pre-briefs it, and a single clinician carries it through the authorization and the first-level appeal — leaving a file that&apos;s already IRO-ready. Full IRO itself is a separate service, only if the case escalates.</p>
+              <p className="sb" style={{ marginBottom: '40px' }}>Under a Vanta med-review contract, VantaUM runs one continuous workflow: a concierge opens the case, the Brief Engine pre-briefs it, and a single clinician carries it through the authorization and the first-level appeal — leaving a file that&apos;s already IRO-ready. Full IRO stays on the VantaHG lane.</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '40px' }}>
                 {[
                   'Concierge intake. A named coordinator owns the record — no portal queue, no triage relay.',
@@ -373,8 +373,8 @@ export default function SitePage() {
               {[
                 { label: 'Concierge Intake', val: 'Step 01', sub: 'A named coordinator opens the case and assembles the record.' },
                 { label: 'AI Brief Engine', val: 'Step 02', sub: 'Pre-briefed against clinical criteria before review — the secret sauce behind speed and quality.' },
-                { label: 'Authorization → Appeal', val: 'Step 03', sub: 'The same clinician owns the determination and the first-level appeal. This is the bundle.' },
-                { label: 'IRO-Ready File', val: 'Step 04', sub: 'Bundled work leaves a clean file. Full IRO is a separate service, only on escalation.' },
+                { label: 'Authorization → Appeal', val: 'Step 03', sub: 'The same clinician owns the determination and the first-level appeal — included with Vanta med review.' },
+                { label: 'IRO-Ready File', val: 'Step 04', sub: 'The included work leaves a clean file. Full IRO stays on the VantaHG lane.' },
               ].map((s, i) => (
                 <div key={i} className="hero-stat">
                   <div className="stat-val" style={{ fontSize: '20px', color: i === 1 ? 'var(--gold)' : 'var(--teal)', fontFamily: 'var(--sans)', letterSpacing: '0.08em' }}>{s.val}</div>
@@ -391,14 +391,14 @@ export default function SitePage() {
         <section className="vum-section" id="ratecard" style={{ background: 'var(--black)', borderTop: '1px solid var(--border)' }}>
           <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
             <div style={{ maxWidth: 600, marginBottom: 56 }}>
-              <span className="kicker" style={{ color: 'var(--gold)' }}>Rate Card</span>
-              <h2 className="sh">Priced by the case.<br /><em>Bundled by design.</em></h2>
-              <p className="sb">You pay for clinical work on the cases that warrant it — not a per-member fee on a population. Authorization and the first-level appeal come bundled as one per-case engagement, because they&apos;re one case — for everyday UM and for your highest-exposure out-of-network work alike. <strong style={{ color: 'var(--white)', fontWeight: 500 }}>Full IRO is not included in that rate</strong> — it&apos;s a separate escalation fee, billed only if and when a case actually goes to full independent review.</p>
+              <span className="kicker" style={{ color: 'var(--gold)' }}>Packaging</span>
+              <h2 className="sh">Paid door: Med Review.<br /><em>UM included with Vanta.</em></h2>
+              <p className="sb">The commercial SKU is VantaHG Med Review. VantaUM Brief Engine / utilization management is included only when you use Vanta med review under that contract — not sold as a standalone UM product, and not included if another shop performs the review. <strong style={{ color: 'var(--white)', fontWeight: 500 }}>Full IRO stays on the VantaHG lane</strong>. Terms are scoped on a conversation — we do not publish a standalone UM price.</p>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px' }}>
               {/* Bundled card */}
               <div style={{ padding: '40px', background: 'var(--surface)', border: '1px solid var(--border-strong)', borderRadius: '8px 0 0 8px', display: 'flex', flexDirection: 'column' }}>
-                <div style={{ fontSize: '11px', fontWeight: 500, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--teal)', marginBottom: '20px' }}>Bundled — Per Case</div>
+                <div style={{ fontSize: '11px', fontWeight: 500, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--teal)', marginBottom: '20px' }}>Included — Vanta Med Review</div>
                 <div style={{ fontFamily: 'var(--serif)', fontSize: '30px', fontWeight: 300, lineHeight: 1.15, color: 'var(--white)', marginBottom: '8px' }}>Authorization<br />+ First-Level Appeal</div>
                 <p style={{ fontSize: '14px', fontWeight: 300, lineHeight: 1.7, color: 'var(--white-muted)', marginTop: '16px', marginBottom: '28px', flex: 1 }}>One team, start to finish. Your dedicated clinical team owns your relationship from intake through outcome — one point of contact, full visibility, all the way downstream. And when a case moves to appeal or peer-to-peer, the decision transfers to a fully independent physician who had no part in the original determination. That separation isn’t just our policy — it’s the law, and it’s built into our platform so it can never be skipped. Your team stays with you. The decision changes hands.</p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '28px' }}>
@@ -408,20 +408,20 @@ export default function SitePage() {
                     { t: 'Authorization (in- or out-of-network)', excl: false },
                     { t: 'First-level appeal — same clinician', excl: false },
                     { t: 'IRO-ready documentation prepared', excl: false },
-                    { t: 'Full IRO review — separate fee, not included', excl: true },
+                    { t: 'Full IRO review — VantaHG lane, not a UM SKU', excl: true },
                   ].map((f, i) => (
                     <div key={i} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', fontSize: '13px', fontWeight: 300, color: f.excl ? 'var(--white-dim)' : 'var(--white-muted)', lineHeight: 1.5 }}>
                       <span style={{ color: f.excl ? 'var(--white-dim)' : 'var(--teal)', flexShrink: 0 }}>{f.excl ? '✕' : '—'}</span>{f.t}
                     </div>
                   ))}
                 </div>
-                <div style={{ fontFamily: 'var(--serif)', fontSize: '22px', fontWeight: 300, color: 'var(--white)' }}>One bundled per-case rate <span style={{ color: 'var(--white-dim)', fontSize: '15px', fontStyle: 'italic' }}>— scoped on a brief call</span></div>
+                <div style={{ fontFamily: 'var(--serif)', fontSize: '22px', fontWeight: 300, color: 'var(--white)' }}>Included with Vanta med review <span style={{ color: 'var(--white-dim)', fontSize: '15px', fontStyle: 'italic' }}>— not a standalone UM SKU</span></div>
               </div>
               {/* IRO escalation card */}
               <div style={{ padding: '40px', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '0 8px 8px 0', display: 'flex', flexDirection: 'column' }}>
                 <div style={{ fontSize: '11px', fontWeight: 500, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--gold)', marginBottom: '20px' }}>Separate — On Escalation</div>
                 <div style={{ fontFamily: 'var(--serif)', fontSize: '30px', fontWeight: 300, lineHeight: 1.15, color: 'var(--white)', marginBottom: '8px' }}>Full IRO<br />Review</div>
-                <p style={{ fontSize: '14px', fontWeight: 300, lineHeight: 1.7, color: 'var(--white-muted)', marginTop: '16px', marginBottom: '28px', flex: 1 }}>When a case escalates beyond first-level appeal to full independent review, it&apos;s billed at a separate per-case rate. You only pay it when a case actually goes there — and the file arrives already clean and IRO-ready from the bundled work.</p>
+                <p style={{ fontSize: '14px', fontWeight: 300, lineHeight: 1.7, color: 'var(--white-muted)', marginTop: '16px', marginBottom: '28px', flex: 1 }}>When a case escalates beyond first-level appeal to full independent review, that work stays on the VantaHG lane. The file arrives already clean and IRO-ready from the included Brief Engine work. Terms are scoped separately — we do not publish a UM or IRO price here.</p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '28px' }}>
                   {['Independent, conflict-free review', 'Built on the IRO-ready file already assembled', 'Billed only on escalation', 'Same documentation standard throughout'].map((f, i) => (
                     <div key={i} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', fontSize: '13px', fontWeight: 300, color: 'var(--white-muted)', lineHeight: 1.5 }}>
@@ -429,12 +429,12 @@ export default function SitePage() {
                     </div>
                   ))}
                 </div>
-                <div style={{ fontFamily: 'var(--serif)', fontSize: '22px', fontWeight: 300, color: 'var(--white)' }}>Separate per-case rate <span style={{ color: 'var(--white-dim)', fontSize: '15px', fontStyle: 'italic' }}>— only when it escalates</span></div>
+                <div style={{ fontFamily: 'var(--serif)', fontSize: '22px', fontWeight: 300, color: 'var(--white)' }}>VantaHG lane <span style={{ color: 'var(--white-dim)', fontSize: '15px', fontStyle: 'italic' }}>— not bundled as free UM</span></div>
               </div>
             </div>
             <p className="sb" style={{ marginTop: '32px', fontSize: '14px', color: 'var(--white-dim)' }}>Prefer to run it in house? The same workflow can be embedded inside your own clinical operation as a specialized extension of your team. We&apos;ll scope the engagement on a brief call.</p>
             <div style={{ marginTop: '36px' }}>
-              <a href={EA_EMAIL} className="btn-primary" style={{ background: 'transparent', border: '1px solid var(--gold)', color: 'var(--gold)' }}>Request the full rate card →</a>
+              <a href={EA_EMAIL} className="btn-primary" style={{ background: 'transparent', border: '1px solid var(--gold)', color: 'var(--gold)' }}>Talk packaging →</a>
             </div>
           </div>
         </section>
@@ -449,7 +449,7 @@ export default function SitePage() {
               <div>
                 <h2 className="sh">The same engine,<br />tuned for your<br /><em>hardest cases.</em></h2>
                 <p className="sb" style={{ marginBottom: '24px' }}>The whole platform runs your everyday utilization management. But out-of-network is its own discipline — high-stakes, appeal-prone, and unforgiving on documentation — and it&apos;s where VantaUM is genuinely differentiated.</p>
-                <p className="sb" style={{ marginBottom: '24px' }}>For out-of-network work, the same concierge intake, Brief Engine, and single-clinician continuity become a precision instrument: defensible authorizations, first-level appeals owned by the same reviewer, and files documented to independent-review standard. If a case escalates, <strong style={{ color: 'var(--white)', fontWeight: 500 }}>full IRO is available as a separate service</strong> — not bundled into the base rate, billed only when it happens.</p>
+                <p className="sb" style={{ marginBottom: '24px' }}>For out-of-network work, the same concierge intake, Brief Engine, and single-clinician continuity become a precision instrument: defensible authorizations, first-level appeals owned by the same reviewer, and files documented to independent-review standard. If a case escalates, <strong style={{ color: 'var(--white)', fontWeight: 500 }}>full IRO stays on the VantaHG lane</strong> — not sold as standalone UM, and not included with another shop&apos;s review.</p>
                 <p className="sb" style={{ marginBottom: '40px' }}>It&apos;s the capability ASOs and larger benefit organizations come for — and it sits on top of the general UM layer everyone else uses every day.</p>
                 <a href={EA_EMAIL} className="btn-primary" style={{ background: 'transparent', border: '1px solid var(--gold)', color: 'var(--gold)' }}>Talk to us about OON + IRO →</a>
               </div>
@@ -584,7 +584,7 @@ export default function SitePage() {
               <p className="sb" style={{ maxWidth: 420 }}>A determination is only as strong as the record behind it. VantaUM is built to the standard that matters when a case is tested — URAC-aligned, criteria-cited, and ready for an independent reviewer the moment it&apos;s written.</p>
             </div>
             <div className="urac-list">
-              <div className="urac-item"><div className="udot" style={{ background: 'var(--teal)' }} /><div><div className="utitle">IRO-ready by default</div><div className="ubody">Every case is documented to independent-review standard during the bundled work — not reconstructed under deadline once a case escalates.</div></div></div>
+              <div className="urac-item"><div className="udot" style={{ background: 'var(--teal)' }} /><div><div className="utitle">IRO-ready by default</div><div className="ubody">Every case is documented to independent-review standard during the included Brief Engine work — not reconstructed under deadline once a case escalates.</div></div></div>
               <div className="urac-item"><div className="udot" style={{ background: 'var(--gold)' }} /><div><div className="utitle">Criteria-cited determinations</div><div className="ubody">Each decision is tied to the evidence-based criteria behind it, so the rationale is clear to a provider, an auditor, or an independent reviewer.</div></div></div>
               <div className="urac-item"><div className="udot" style={{ background: 'rgba(255,255,255,0.35)' }} /><div><div className="utitle">Credentialed clinical rigor</div><div className="ubody">A credentialed operation that the most regulated programs and the most demanding self-funded plans can stand behind — signaled before a single conversation begins.</div></div></div>
             </div>
@@ -602,11 +602,11 @@ export default function SitePage() {
         <section className="cta-section" id="contact">
           <span className="kicker" style={{ display: 'block' }}>Let&apos;s Talk</span>
           <h2 className="sh" style={{ maxWidth: 700, margin: '0 auto 20px' }}>Bring us the cases<br /><em>that matter most.</em></h2>
-          <p className="sb" style={{ maxWidth: 520, margin: '0 auto 16px' }}>Whether you want a clinical layer for your everyday utilization management, a specialized engine for your out-of-network exposure, or both — embedded in your team or run externally — the conversation starts the same way: tell us about your caseload.</p>
+          <p className="sb" style={{ maxWidth: 520, margin: '0 auto 16px' }}>If you want Vanta med review — with the Brief Engine included under that contract — the conversation starts the same way: tell us about your caseload. We do not sell UM as a standalone product, and we do not include it with another shop&apos;s review.</p>
           <p className="sb" style={{ maxWidth: 500, margin: '0 auto 48px' }}>Email us directly. No form. No sales queue. You&apos;ll hear back from someone who can actually make a decision.</p>
           <div className="cta-actions">
             <a href={EA_EMAIL} className="btn-primary">Talk to Us</a>
-            <a href="#ratecard" className="btn-ghost">See the rate card →</a>
+            <a href="#ratecard" className="btn-ghost">See packaging →</a>
           </div>
         </section>
 

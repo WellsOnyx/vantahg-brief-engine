@@ -10,6 +10,7 @@ import {
   resolveSpineViewer,
   type AttachBriefInput,
 } from '@/lib/case-spine';
+import { UmBriefEngineEntitlementError } from '@/lib/entitlements/um-brief-engine';
 
 export const dynamic = 'force-dynamic';
 
@@ -71,6 +72,12 @@ export async function POST(
   } catch (err) {
     if (err instanceof CaseNotFoundError) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    }
+    if (err instanceof UmBriefEngineEntitlementError) {
+      return NextResponse.json(
+        { error: err.message, code: err.code, denial: err.denial },
+        { status: 403 },
+      );
     }
     return apiError(err, {
       operation: 'attach_case_spine_brief',

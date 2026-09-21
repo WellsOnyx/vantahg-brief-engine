@@ -8,6 +8,7 @@ import {
   type ClientConfigFields,
   type ClientConfigVersion,
 } from './types';
+import { requireUmBriefEngineAccess, resolveUmBriefEngineAccessForClient } from './um-access';
 
 export class ClientConfigService {
   constructor(
@@ -64,5 +65,14 @@ export class ClientConfigService {
 
   rejectMutation(): never {
     throw new ClientConfigImmutableError();
+  }
+
+  /** Packaging lock: free UM Brief Engine only with a Vanta med-review contract. */
+  async requireUmBriefEngineAccess(clientId: string): Promise<ClientConfigFields> {
+    return requireUmBriefEngineAccess(this.store, clientId);
+  }
+
+  async resolveUmBriefEngineAccess(clientId: string) {
+    return resolveUmBriefEngineAccessForClient(this.store, clientId);
   }
 }

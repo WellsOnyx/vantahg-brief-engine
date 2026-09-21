@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'VantaUM — Utilization Management, Elevated',
+  title: 'VantaUM — Included with VantaHG Med Review',
   description:
-    'AI that makes UM more human, not less. VantaUM pairs a concierge team and elite same-specialty physicians with AI engineered to eliminate friction.',
+    'VantaUM Brief Engine is included only when you use Vanta med review. Not a standalone UM product. Not included with another shop’s review.',
 };
 
 export default function SiteLayout({ children }: { children: React.ReactNode }) {

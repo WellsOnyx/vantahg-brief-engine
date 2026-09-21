@@ -251,7 +251,7 @@ export default function SitePage() {
         {/* Early Access Bar */}
         <div className="ea-bar">
           <span className="ea-bar-pill">Early Access</span>
-          <span className="ea-bar-text">VantaUM is now accepting founding TPA partners — limited spots available.</span>
+          <span className="ea-bar-text">VantaHG Med Review is the commercial door. Brief Engine included only under that Vanta contract.</span>
           <a href={EA_EMAIL} className="ea-bar-link">Apply now →</a>
         </div>
 
@@ -281,7 +281,7 @@ export default function SitePage() {
             <a href="#tpa" className="role-card tpa">
               <div className="role-card-eyebrow">TPA</div>
               <div className="role-card-title">You Run<br />the Plan</div>
-              <p className="role-card-body">Let us handle first-level authorizations with AI that actually works. Clean files, faster decisions, zero added lift on your side.</p>
+              <p className="role-card-body">Buy Vanta med review. First-level authorizations and the Brief Engine are included under that contract — not as a standalone UM product.</p>
               <div className="role-card-cta">See how VantaUM works for TPAs →</div>
             </a>
 
@@ -315,12 +315,12 @@ export default function SitePage() {
               <p className="sb" style={{ marginTop: 16 }}>The TPAs that partner with us now don&apos;t inherit someone else&apos;s technical debt. They help shape a platform designed around how UM should actually work.</p>
               <div className="ea-spots">
                 <div className="ea-spots-dot" />
-                <div className="ea-spots-text"><strong>Founding partner slots are limited.</strong> Early access includes preferred pricing, direct access to the founding team, and input on product roadmap.</div>
+                <div className="ea-spots-text"><strong>Packaging is locked.</strong> Paid door is VantaHG Med Review. Brief Engine / UM is included only when you use Vanta med review — not standalone, not with another shop.</div>
               </div>
             </div>
             <div className="ea-perks">
               {[
-                { num: '01', title: 'Preferred Founding Pricing', body: 'Early partners lock in rates that reflect the relationship, not a vendor transaction. Pricing is bundled per case — and founding partners negotiate directly with leadership.' },
+                { num: '01', title: 'Vanta med-review contract', body: 'The commercial door is VantaHG Med Review. Brief Engine / UM is included under that contract only. Not a standalone UM SKU. Not included with another shop’s review. Terms are scoped on a conversation — we do not publish a UM price here.' },
                 { num: '02', title: 'Roadmap Input', body: 'Your operational reality shapes what we build next. Founding partners have a direct line to the product team — not a support ticket and a quarterly roadmap review.' },
                 { num: '03', title: 'Reference Account Status', body: 'Be among the first TPAs in the market to operate a concierge UM model. Reference status positions your organization as a clinical quality leader to your plan sponsors.' },
                 { num: '04', title: 'White-Glove Onboarding', body: 'Founding partners get hands-on implementation directly with the Wells Onyx operating team — not a third-party integrator who read the manual last week.' },
@@ -341,12 +341,12 @@ export default function SitePage() {
               <span className="kicker" style={{ color: 'var(--teal)' }}>For TPAs</span>
               <h2 className="sh">You Run<br /><em>the Plan.</em><br />Let us run the auths.</h2>
               <p className="sb" style={{ marginBottom: '24px' }}>First-level utilization management is the part of your operation that consumes the most time, produces the most friction, and carries the most compliance risk — without adding clinical value to your book.</p>
-              <p className="sb" style={{ marginBottom: '40px' }}>VantaUM handles it entirely. We intake every prior auth request, run it through clinical criteria, route it through our nursing tier, and get a determination back — typically in hours, not days. You receive a clean file and a decision. Nothing else changes on your side.</p>
+              <p className="sb" style={{ marginBottom: '40px' }}>Under a Vanta med-review contract, VantaUM handles the Brief Engine work. We intake every prior auth request, run it through clinical criteria, route it through our nursing tier, and get a determination back — typically in hours, not days. You receive a clean file and a decision. This is not sold as standalone UM, and it is not included if another shop does the review.</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '40px' }}>
                 {[
                   'Clean files. Every case documented, criteria-cited, audit-ready on delivery.',
                   'URAC-accredited operation. No compliance gaps to inherit.',
-                  'Bundled per case. No volume floors, no minimums, no surprises.',
+                  'Included with Vanta med review. Not a standalone UM SKU.',
                   'White-glove onboarding. Your team connects once. We handle the rest.',
                 ].map((item, i) => (
                   <div key={i} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
@@ -362,7 +362,7 @@ export default function SitePage() {
                 { label: 'Turnaround', val: '< 4 hours', sub: 'Median case-to-determination time' },
                 { label: 'SLA Compliance', val: '99.4%', sub: 'Across all review types and priorities' },
                 { label: 'Lift on your team', val: 'Zero', sub: 'We own intake, review, and delivery entirely' },
-                { label: 'Pricing', val: 'Per case', sub: 'Authorization + first-level appeal, bundled' },
+                { label: 'Packaging', val: 'Included', sub: 'Brief Engine only with Vanta med review' },
               ].map((s, i) => (
                 <div key={i} className="hero-stat">
                   <div className="stat-val" style={{ fontSize: '28px', color: i === 0 ? 'var(--teal)' : 'var(--white)' }}>{s.val}</div>
@@ -562,7 +562,7 @@ export default function SitePage() {
         <section className="cta-section" id="contact">
           <span className="kicker" style={{ display: 'block' }}>Founding Partner Program</span>
           <h2 className="sh" style={{ maxWidth: 700, margin: '0 auto 20px' }}>A few spots remain.<br /><em>Will you be one<br />of the first?</em></h2>
-          <p className="sb" style={{ maxWidth: 500, margin: '0 auto 16px' }}>We are selectively onboarding founding TPA partners who want to shape what great UM looks like — and be positioned as a clinical quality leader before anyone else gets there.</p>
+          <p className="sb" style={{ maxWidth: 500, margin: '0 auto 16px' }}>Talk to us about a Vanta med-review contract. The Brief Engine is included under that contract only — not as a standalone UM product, and not with another shop&apos;s review.</p>
           <p className="sb" style={{ maxWidth: 500, margin: '0 auto 48px' }}>Email us directly. No form. No sales queue. You&apos;ll hear back from someone who can actually make a decision.</p>
           <div className="cta-actions">
             <a href={EA_EMAIL} className="btn-primary">Apply for Early Access</a>

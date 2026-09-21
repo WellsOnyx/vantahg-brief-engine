@@ -4,6 +4,8 @@
 
 **Case events create money events.** Do not bill from memory or spreadsheets as system of record.
 
+**Packaging (2026-09-20):** the paid commercial door is VantaHG Med Review. Ledger SKUs (`prior_auth`, `first_level_appeal`, `rush_addon`) are **usage tracking** under a Vanta med-review contract — not a standalone UM storefront, and not free UM with another shop’s med review. Do not invent prices here. Free Brief Engine access is gated by `client_config.vanta_med_review_contract`.
+
 ## Billable event
 
 Created on R13 (MD signed), unless fee schedule says otherwise (e.g. cancel rules).

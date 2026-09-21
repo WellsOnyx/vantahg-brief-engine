@@ -244,6 +244,17 @@ export const ONBOARDING_CHECKLIST: readonly OnboardingChecklistItem[] = [
     pointer: 'PATCH/DELETE /api/client-config → 409. Confirm SLA/route changes in writing.',
     required: true,
   },
+  {
+    id: 'B18',
+    phase: 'B',
+    title: 'vanta_med_review_contract (free UM Brief Engine gate)',
+    owner: 'CX / commercial',
+    artifact: 'client_config.vanta_med_review_contract + med_review_provider',
+    gate: 'required',
+    pointer:
+      'lib/entitlements/um-brief-engine.ts · Paid door is VantaHG Med Review. Flip true only when the buyer uses Vanta med review. Never standalone UM; never third_party.',
+    required: true,
+  },
 
   // ── Phase C — Access ─────────────────────────────────────────────────────
   {
@@ -428,7 +439,7 @@ export const ONBOARDING_PHASE_META: Record<
 > = {
   A: {
     title: 'Commercial & legal',
-    blurb: 'Before any PHI. MSA, BAA (hard gate), subprocessors, billing entity.',
+    blurb: 'Before any PHI. MSA, BAA (hard gate), subprocessors, billing entity. Paid door is VantaHG Med Review.',
     days: 'Before Day 0',
   },
   B: {
