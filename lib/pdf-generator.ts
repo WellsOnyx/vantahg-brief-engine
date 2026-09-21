@@ -1,5 +1,5 @@
 import { jsPDF } from 'jspdf';
-import type { Case, Reviewer, AIBrief } from './types';
+import type { Case, AIBrief } from './types';
 
 const NAVY = '#0c2340';
 const GOLD = '#c9a227';
@@ -28,7 +28,7 @@ export async function generateDeterminationPdf(caseData: Case): Promise<Buffer> 
   const contentWidth = pageWidth - margin * 2;
   let y = margin;
 
-  const reviewer = (caseData as any).reviewer as Reviewer | undefined;
+  const reviewer = caseData.reviewer;
   const determinationDate = caseData.determination_at
     ? new Date(caseData.determination_at).toLocaleDateString('en-US', {
         year: 'numeric', month: 'long', day: 'numeric',

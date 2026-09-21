@@ -13,7 +13,6 @@ import type {
   ClaimVerification,
   SectionVerification,
   ConsistencyCheck,
-  VerificationStatus,
 } from './types';
 import { medicalCriteria } from './medical-criteria';
 import { findKnownGuideline, isRecognizedRegulatoryFormat } from './known-guidelines';
@@ -419,7 +418,7 @@ function verifyDataFidelity(brief: AIBrief, caseData: Case): SectionVerification
   }
 
   // Missing documentation fidelity (does brief over- or under- flag vs what we know is absent)
-  const caseMissing = (caseData as any).missing_clinical_info || [];
+  const caseMissing = (caseData as { missing_clinical_info?: unknown[] }).missing_clinical_info || [];
   const briefMissing = brief.documentation_review.missing_documentation || [];
   if (briefMissing.length > 0 && caseMissing.length === 0) {
     // brief flagged gaps but case record shows none — still ok, but note

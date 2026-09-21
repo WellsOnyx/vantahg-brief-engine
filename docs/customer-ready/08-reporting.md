@@ -21,6 +21,7 @@
 - Account health rollup
 - Hypercare first-25 scorecard
 - Fan-out failure rate
+- Stuck-case count (clinicals + fan-out)
 - Escalation counts (R10–R12)
 
 ## v1.1 (after ledger clean)

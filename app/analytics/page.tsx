@@ -210,7 +210,13 @@ function computeMetrics(cases: Case[], reviewers: Reviewer[]) {
     const totalDays = determinedIdr.reduce((sum, c) => {
       const created = new Date(c.created_at).getTime();
       // Use determination.determined_at if present, else updated_at
-      const det = (c.determination as any)?.determined_at || c.updated_at;
+      const determinationValue = c.determination;
+      const det =
+        typeof determinationValue === 'object' &&
+        determinationValue !== null &&
+        'determined_at' in determinationValue
+          ? String((determinationValue as { determined_at?: string }).determined_at ?? c.updated_at)
+          : c.updated_at;
       const determined = new Date(det).getTime();
       return sum + (determined - created) / (1000 * 60 * 60 * 24);
     }, 0);

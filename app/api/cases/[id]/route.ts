@@ -7,6 +7,7 @@ import { requireAuth } from '@/lib/auth-guard';
 import { applyRateLimit } from '@/lib/rate-limit-middleware';
 import { apiError } from '@/lib/api-error';
 import { getRequestContext } from '@/lib/security';
+import type { Case } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -61,11 +62,11 @@ export async function GET(
             .eq('original_case_id', id)
             .maybeSingle();
           if (appealLink?.appeal_case_id) {
-            (data as any).resolved_appeal_case_id = appealLink.appeal_case_id;
+            (data as { resolved_appeal_case_id?: string }).resolved_appeal_case_id = appealLink.appeal_case_id;
           }
         } else if (data.review_type === 'appeal' && data.appeal_of_case_id) {
           // Appeal case: surface the original for context (already on row as appeal_of_case_id)
-          (data as any).resolved_original_case_id = data.appeal_of_case_id;
+          (data as { resolved_original_case_id?: string }).resolved_original_case_id = data.appeal_of_case_id;
         }
       } catch {
         // Non-blocking enrichment for handoff UX
@@ -129,7 +130,7 @@ export async function PATCH(
         delete demoUpdates.validation_flags;
       }
 
-      updateDemoCase(id, demoUpdates as any);
+      updateDemoCase(id, demoUpdates as Partial<Case>);
 
       // Standard status / determination / assignment audits (demo path)
       if (body.status) {

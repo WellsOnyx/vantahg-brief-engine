@@ -33,12 +33,14 @@ export const STUCK_STATES = ['intake_incomplete', 'awaiting_clinicals', 'fanout_
 export const ESCALATION_TASKS = ['escalation_l1', 'escalation_l2', 'escalation_l3'] as const;
 export const STUCK_TASKS = ['request_clinicals', 'resolve_fanout'] as const;
 
-export function isStuckCase(c: CanonicalCase): boolean {
+export type StuckCheckCase = Pick<CanonicalCase, 'state' | 'open_tasks'>;
+
+export function isStuckCase(c: StuckCheckCase): boolean {
   if ((STUCK_STATES as readonly string[]).includes(c.state)) return true;
   return c.open_tasks.some((t) => (STUCK_TASKS as readonly string[]).includes(t));
 }
 
-export function isEscalationCase(c: CanonicalCase): boolean {
+export function isEscalationCase(c: StuckCheckCase): boolean {
   return c.open_tasks.some((t) => (ESCALATION_TASKS as readonly string[]).includes(t));
 }
 

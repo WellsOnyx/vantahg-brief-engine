@@ -3,7 +3,7 @@ import { logAuditEvent } from '@/lib/audit';
 import { isDemoMode, getDemoCases, getDemoStaff, getDemoPods } from '@/lib/demo-mode';
 import { autoAssignReviewer } from '@/lib/assignment-engine';
 import { pickLpnByScore, scoreLpnForCase } from '@/lib/delivery/lpn-scoring';
-import type { Case, Staff, Pod, LpnDetermination, RnDetermination } from '@/lib/types';
+import type { Staff, Pod, LpnDetermination, RnDetermination } from '@/lib/types';
 import { redactName } from '@/lib/security';
 
 // ============================================================================
@@ -70,7 +70,7 @@ export async function assignToPod(caseId: string): Promise<PodAssignmentResult> 
   }
 
   // Prefer pod that also has the client
-  let selectedPod = pods.find((p: Pod) =>
+  const selectedPod = pods.find((p: Pod) =>
     caseData.client_id && p.client_ids?.includes(caseData.client_id)
   ) || pods[0];
 
@@ -311,7 +311,7 @@ function assignToPodDemo(caseId: string): PodAssignmentResult {
 
   // Find matching pod
   const pod = pods.find((p) =>
-    p.is_active && p.service_categories.includes(serviceCategory as any)
+    p.is_active && p.service_categories.includes(serviceCategory)
   );
 
   if (!pod) {

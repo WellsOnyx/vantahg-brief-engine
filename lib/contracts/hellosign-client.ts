@@ -2,7 +2,7 @@ import { getHelloSignConfig, isRealHelloSignEnabled } from '@/lib/env';
 
 // Lazy loader for the heavy Dropbox Sign SDK so the production bundler
 // (Vercel and Docker) never tries to resolve it unless real e-sign is enabled.
-let _DropboxSign: any = null;
+let _DropboxSign: typeof import('@dropbox/sign') | null = null;
 async function getDropboxSign() {
   if (!_DropboxSign) {
     _DropboxSign = await import('@dropbox/sign');
@@ -90,7 +90,7 @@ export async function buildHelloSignClient(apiKey: string): Promise<HelloSignCli
  */
 export interface HelloSignClient {
   username: string;
-  signatureRequestSend: (args: any) => Promise<{ body: { signatureRequest?: { signatureRequestId?: string } } }>;
+  signatureRequestSend: (args: Record<string, unknown>) => Promise<{ body: { signatureRequest?: { signatureRequestId?: string } } }>;
 }
 
 export async function sendForSignature(

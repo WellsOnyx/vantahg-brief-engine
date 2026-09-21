@@ -12,11 +12,11 @@ export function MobileNav({ links }: MobileNavProps) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const menuRef = useRef<HTMLDivElement>(null);
-
-  // Close on route change
-  useEffect(() => {
+  const [menuPath, setMenuPath] = useState(pathname);
+  if (pathname !== menuPath) {
+    setMenuPath(pathname);
     setOpen(false);
-  }, [pathname]);
+  }
 
   // Scroll lock when menu is open
   useEffect(() => {

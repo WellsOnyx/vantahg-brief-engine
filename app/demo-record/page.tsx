@@ -108,9 +108,15 @@ function ProgressRing({ pct, size = 96, stroke = 5, color = '#c9a227' }: {
 function TypewriterText({ text, active, speed = 4 }: { text: string; active: boolean; speed?: number }) {
   const [displayed, setDisplayed] = useState('');
   const [done, setDone] = useState(false);
+  const streamKey = `${active}:${text}`;
+  const [prevStreamKey, setPrevStreamKey] = useState(streamKey);
+  if (streamKey !== prevStreamKey) {
+    setPrevStreamKey(streamKey);
+    setDisplayed('');
+    setDone(false);
+  }
   useEffect(() => {
-    if (!active) { setDisplayed(''); setDone(false); return; }
-    setDisplayed(''); setDone(false);
+    if (!active) return;
     let i = 0;
     const iv = setInterval(() => {
       i += speed;
@@ -131,8 +137,11 @@ function TypewriterText({ text, active, speed = 4 }: { text: string; active: boo
 
 function CriteriaItem({ text, index, active }: { text: string; index: number; active: boolean }) {
   const [visible, setVisible] = useState(false);
+  if (!active && visible) {
+    setVisible(false);
+  }
   useEffect(() => {
-    if (!active) { setVisible(false); return; }
+    if (!active) return;
     const t = setTimeout(() => setVisible(true), 200 + index * 180);
     return () => clearTimeout(t);
   }, [active, index]);
@@ -420,7 +429,7 @@ function BriefScene({ onNext }: { onNext: () => void }) {
           <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
           <span className="text-xs text-green-300 font-medium">Clinical Brief Ready · 1m 53s</span>
         </div>
-        <h2 className="text-2xl font-bold text-white">Here's what the physician will see</h2>
+        <h2 className="text-2xl font-bold text-white">Here&apos;s what the physician will see</h2>
         <p className="text-white/35 text-sm mt-0.5">Structured assessment. No document hunting. Just the answer.</p>
       </div>
 

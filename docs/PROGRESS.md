@@ -20,7 +20,7 @@
 | 6 Reporting + CM | [#59](https://github.com/WellsOnyx/vantahg-brief-engine/pull/59) | Five client reports + CSV, CM HMAC handoff (flagged only), ops scoreboard |
 | 7 Onboarding + go-live | [#60](https://github.com/WellsOnyx/vantahg-brief-engine/pull/60) | A→E checklist UI + runbook, E1/E2 packs, first-25 SLA rollback log |
 
-**CI (Phase 7 tip):** `npm run test:ci` 453 passed (3 todo); `tsc --noEmit` clean; `npm run test:go-live-synthetic` PASS.
+**CI (Phase 7 tip):** `npm run test:ci` 453 passed (3 todo); `tsc --noEmit` clean; `npm run test:go-live-synthetic` PASS; `npm run test:shadow-golive-pack` PASS.
 
 ## 2026-09-20 — Packaging lock (Jonah)
 
@@ -32,7 +32,7 @@ Paid door = Med Review (VantaHG). VantaUM Brief Engine / UM is **included free o
 |-------|--------|
 | 4 Fan-out + billing ledger | ✅ **Done** — portal downloads, HMAC webhook retries → `fanout_failed` + CX task, ledger on sign, statement stub |
 | 5 Three role views (Client / CX / Med polish) | ✅ **Done** — `/client`, `/cx`, `/med-review` share `/api/case-spine` + role filters |
-| 6 Reporting + CM handoff | ✅ **Done** — `/portal/tpa/reports`, `/portal/tpa/cm`, `/api/ops/scoreboard` |
+| 6 Reporting + CM handoff | ✅ **Done** — `/portal/tpa/reports`, `/portal/tpa/cm`, `/api/ops/scoreboard` + `/admin/ops` (fail rate + stuck count) |
 | 7 Onboarding runbook + synthetic/shadow/live gates | ✅ **Done** — `/admin/onboarding`, `docs/onboarding/`, `npm run test:go-live-synthetic`. Remaining = human ops |
 
 ## Still needs a human (not code)
@@ -66,8 +66,8 @@ curl -s -X POST http://localhost:3000/api/case-spine/md-queue \
 # After MD sign: POST /api/case-spine/:id/fanout
 # Portal: /portal/tpa/determinations  ·  statement: /portal/tpa/statements
 # Lenses: /client  ·  /cx  ·  /med-review
-# Reports: /portal/tpa/reports  ·  CM: /portal/tpa/cm  ·  scoreboard: /cx
-# Onboarding: /admin/onboarding  ·  npm run test:go-live-synthetic
+# Reports: /portal/tpa/reports  ·  CM: /portal/tpa/cm  ·  scoreboard: /admin/ops + /cx
+# Onboarding: /admin/onboarding  ·  npm run test:go-live-synthetic  ·  npm run test:shadow-golive-pack
 ```
 
 ## Roadmap / next connectors

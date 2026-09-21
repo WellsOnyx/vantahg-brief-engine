@@ -544,7 +544,7 @@ export async function GET(request: NextRequest) {
  * Extracts the display name from a "Name <email@domain.com>" format.
  * Returns null if only an email address is provided.
  */
-function extractSenderName(from: string): string | null {
+function _extractSenderName(from: string): string | null {
   // Handle "Dr. Maria Sanchez <drsanchez@suncoastortho.com>" format
   const match = from.match(/^(.+?)\s*<[^>]+>$/);
   if (match) {

@@ -24,7 +24,7 @@ describe('Phase 7.3 E2 shadow pack', () => {
 
   it('has ≥10 live-shaped specs that require MD sign', () => {
     expect(SHADOW_PACK.length).toBeGreaterThanOrEqual(MIN_SHADOW_PACK);
-    expect(SHADOW_PACK.every((s) => s.sign)).toBe(true);
+    expect(SHADOW_PACK.every((s) => s.sign && s.shadow === true)).toBe(true);
   });
 
   it('MD signs every case and suppresses member/provider final send', async () => {
