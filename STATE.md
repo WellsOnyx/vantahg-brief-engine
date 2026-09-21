@@ -5,6 +5,35 @@ Future Claude/Cole/Jonah sessions: read this first.
 
 ---
 
+## 2026-09-21 — Phase 8 Muse CX stub + go-live ops punch list
+
+Two customer-ready increments. Packaging lock unchanged. Gravity Rail intake unchanged. No `ENABLE_AWS_*` default flips. No live Muse HTTP. No PHI in Muse.
+
+### Muse (Phase 8 stub)
+
+CX / relationship surface only. Clinical SoR stays on AWS Brief Engine.
+
+- **Docs:** [`docs/customer-ready/12-muse-connector.md`](docs/customer-ready/12-muse-connector.md). Slots in `.env.local.example` only (`MUSE_API_KEY`, `MUSE_WEBHOOK_SECRET`, `MUSE_WEBHOOK_SECRET_SECONDARY`, `MUSE_CX_ENABLED`). No secrets in the repo.
+- **Code:** `lib/muse/` (types, PHI allowlist, HMAC, in-memory store). `POST /api/muse/webhook` fail-closed like Gravity Rail (production, no secret → 500 `webhook_secret_not_configured`). `GET /api/muse/status` → 503 `not_configured` without `MUSE_API_KEY`. A set key still returns `live_call: false` / `stub_only`.
+- **Stored fields:** opaque `account_id`, contact role label, scheduling intent flags. PHI and unknown keys are refused and not stored.
+- **CX panel:** `/cx` “Muse touchpoints” lists rows only when `MUSE_CX_ENABLED=true` and `MUSE_API_KEY` is set. Empty state otherwise. Clients 403 on the API.
+- **Not production-ready.** Do not call live Muse APIs from this stub. Do not put live patient data in Muse.
+
+### Go-live ops (Cole)
+
+[`docs/customer-ready/13-go-live-ops.md`](docs/customer-ready/13-go-live-ops.md) is the ordered script:
+
+1. Live env slots (Cognito, RDS, SES, S3, Gravity Rail webhook secret + API key, packaging flags).
+2. `npm run db:migrate:rds` including case spine `027` (`infra-aws/rds-migrations/`).
+3. `scripts/bootstrap-real-client.ts` (`npm run bootstrap-real-client`) on RDS.
+4. Synthetic → shadow → hypercare via [`11-cole-onboarding-runbook.md`](docs/customer-ready/11-cole-onboarding-runbook.md) A–E.
+5. BAA / HIPAA pointers: [`06-hipaa-baa-path.md`](docs/customer-ready/06-hipaa-baa-path.md).
+6. **No live PHI until that BAA path is confirmed.**
+
+**CI on this branch:** `npm run test:ci` 569 passed (3 todo). `npx tsc --noEmit` clean. Focused Muse gate + webhook + route tests included. `npx eslint` clean on the files this change owns.
+
+---
+
 ## 2026-09-21 — Packaging ownership correction (Jonah)
 
 Hard correction. Do not soften. Copy and ownership only — entitlement behavior stays.
@@ -180,7 +209,9 @@ Operator blockers unchanged: SES verify, Fargate image rebuild, BAA before live 
 
 ## 2026-09-19 — Muse Connector Platform (roadmap only)
 
-Queued future connector — **not** Phase 8 and **not** a live PHI path. See [`docs/PROGRESS.md`](docs/PROGRESS.md) § [Roadmap / next connectors](docs/PROGRESS.md#roadmap--next-connectors). Intent: meet users in Muse on CX/relationship surfaces; clinical SoR stays on AWS Brief Engine. Research/submit is unblocked; production use gated by HIPAA / BAA review.
+Superseded by the Phase 8 stub at the top of this file ([`docs/customer-ready/12-muse-connector.md`](docs/customer-ready/12-muse-connector.md)). Still not a live PHI path. Original note kept below.
+
+Queued future connector — **not** a live PHI path. See [`docs/PROGRESS.md`](docs/PROGRESS.md) § [Muse Connector Platform](docs/PROGRESS.md#muse-connector-platform-museai--phase-8-stub). Intent: meet users in Muse on CX/relationship surfaces; clinical SoR stays on AWS Brief Engine. Research/submit is unblocked; production use gated by HIPAA / BAA review.
 
 ---
 

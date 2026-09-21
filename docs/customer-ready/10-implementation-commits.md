@@ -72,12 +72,24 @@ Work in this order. Each phase = PR (or stacked commits on one branch) with acce
 | 7.3 | Shadow (10) | Pass |
 | 7.4 | Live hypercare (25) | SLA threshold held or rollback |
 
+## Phase 8 — Muse CX connector (stub, not live)
+
+CX / relationship surface only. Clinical SoR stays on AWS. No PHI in Muse. No live muse.ai HTTP. Spec: `12-muse-connector.md`. Cole’s production order: `13-go-live-ops.md`.
+
+| Slice | Deliverable | Acceptance |
+|-------|-------------|------------|
+| 8.1 | `lib/muse` + `/api/muse/webhook` + `/api/muse/status` | Production with no webhook secret fails closed. No API key → 503 `not_configured`. HMAC when a secret is set. `live_call` stays false |
+| 8.2 | PHI allowlist + CX panel | `screenMusePayload` rejects PHI fields and does not store them. `/cx` “Muse touchpoints” lists rows only when `MUSE_CX_ENABLED=true` and `MUSE_API_KEY` is set; empty state otherwise |
+| 8.3 | Go-live ops punch list | `13-go-live-ops.md` — Cole runs env slots → RDS migrations including `027` → `scripts/bootstrap-real-client.ts` → synthetic/shadow/hypercare (runbook A–E) → BAA pointers. No live PHI until `06-hipaa-baa-path.md` is confirmed |
+
+Packaging lock is unchanged: VantaUM sells Med Review; Brief Engine free only under the Vanta med-review contract; VantaHG = IRO + IDR only; Optum frozen. Gravity Rail intake stays fail-closed and idempotent.
+
 ## Parallel / non-blocking (do not block Phase 0–7)
 
 - Lint cleanup on main
 - CX bot 1×10 accounts (non-PHI) — after client portal status API exists
 - Med Review wedge **corrected 2026-09-21** — **VantaUM sells Med Review**; Brief Engine / UM free only under UM’s Vanta med-review contract; **VantaHG = IRO + IDR only**. Packaging/GTM only; see `01-product-boundary.md`. Entitlement gate unchanged. Not a new build phase.
-- Muse Connector Platform (muse.ai) — queued CX/relationship surface; no live PHI; research/submit unblocked; production gated by HIPAA review. See `docs/PROGRESS.md` § Roadmap / next connectors.
+- Muse Connector Platform (muse.ai) — **Phase 8 stub is in repo** (`12-muse-connector.md`). Still not live-keyed. No PHI. Production use gated by HIPAA review. Go-live order is `13-go-live-ops.md`, not this connector.
 
 ## PR discipline
 

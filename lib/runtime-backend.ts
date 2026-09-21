@@ -118,4 +118,12 @@ export const INTEGRATION_INGRESS = {
     notes:
       'Inbound POST /api/intake/gravity-rail creates a case-spine case. HMAC when a webhook secret is set; production with no secret fails closed. Outbound lib/gravity-rails.ts returns 503 when GRAVITY_RAIL_API_KEY is empty (no fake workspace). Not live-keyed.',
   },
+  muse: {
+    client: 'lib/muse',
+    method: 'POST',
+    path: '/api/muse/webhook',
+    env: ['MUSE_API_KEY', 'MUSE_WEBHOOK_SECRET', 'MUSE_CX_ENABLED'],
+    notes:
+      'CX relationship stub only. Production webhook with no secret fails closed. GET /api/muse/status is 503 when MUSE_API_KEY is empty. No live muse.ai call. No PHI.',
+  },
 } as const;

@@ -188,7 +188,9 @@ No PHI in filenames, notes, or the go-live log.
 
 ## Still human ops (not Phase 7.1)
 
-SES domain verify + sandbox exit · Fargate image rebuild · BAA before live PHI · production vendor keys · flip `ENABLE_AWS_AUTH` only after a staging tenant is ready · RDS-native bootstrap.
+Ordered production script (env slots, RDS migrations including case spine `027`, RDS-native bootstrap, then this A–E path, then the BAA stop): [`13-go-live-ops.md`](13-go-live-ops.md).
+
+SES domain verify + sandbox exit · Fargate image rebuild · BAA before live PHI · production vendor keys · flip `ENABLE_AWS_AUTH` only after a staging tenant is ready · RDS-native bootstrap. No live PHI until [`06-hipaa-baa-path.md`](06-hipaa-baa-path.md) is confirmed.
 
 ## Acceptance (7.1)
 

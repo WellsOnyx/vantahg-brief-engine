@@ -21,6 +21,8 @@
 | 7 Onboarding + go-live | [#60](https://github.com/WellsOnyx/vantahg-brief-engine/pull/60) | A→E checklist UI + runbook, E1/E2 packs, first-25 SLA rollback log |
 | 7.1 Cole runbook | [#64](https://github.com/WellsOnyx/vantahg-brief-engine/pull/64) | How-to on every A–E item, `11-cole-onboarding-runbook.md`, synthetic `client_config` fixture |
 | 7.2 E1 fixture pack | [#65](https://github.com/WellsOnyx/vantahg-brief-engine/pull/65) | `fixtures/golive/synthetic-e1.json` — prior auth + first-level appeal, tokenized refs, `npm run test:synthetic-golive-pack` |
+| 8 Muse CX stub | this PR | `lib/muse` + `/api/muse/*` + `/cx` panel. CX relationship metadata only. Not live-keyed. No PHI. Spec: [`12-muse-connector.md`](customer-ready/12-muse-connector.md) |
+| Go-live ops | this PR | Cole punch list: [`13-go-live-ops.md`](customer-ready/13-go-live-ops.md) |
 
 **CI (Phase 7.2 on current main):** `npm run test:ci` 503 passed (3 todo); `tsc --noEmit` clean; `npm run test:go-live-synthetic` PASS; `npm run test:synthetic-golive-pack` PASS; `npm run test:shadow-golive-pack` PASS.
 
@@ -42,12 +44,17 @@
 
 ## Still needs a human (not code)
 
+Ordered steps, no guessing: [`docs/customer-ready/13-go-live-ops.md`](customer-ready/13-go-live-ops.md).
+
 - SES domain verify + sandbox exit for `vantaum.com`
 - Fargate image rebuild / deploy from current `main`
 - Flip `ENABLE_AWS_AUTH=true` only after a staging tenant is ready
-- Client BAA + subprocessor BAAs before live PHI
+- Client BAA + subprocessor BAAs before live PHI ([`06-hipaa-baa-path.md`](customer-ready/06-hipaa-baa-path.md))
 - Gravity Rail / Phaxio / HelloSign / Meow **production keys** (slots only today). Gravity Rail loop on `main` is code-complete and not live-keyed: production webhook with no secret fails closed; outbound without `GRAVITY_RAIL_API_KEY` is 503.
-- Run the first real client roster against production RDS when that client exists (`npm run bootstrap-real-client`). The script is RDS-native. Do not put live PHI in the command or in shared logs.
+- Run the first real client roster against production RDS when that client exists (`npm run bootstrap-real-client` after `npm run db:migrate:rds`, including case spine `027`). The script is RDS-native. Do not put live PHI in the command or in shared logs.
+- **No live PHI until the BAA path in step 6 of the punch list is confirmed.**
+
+Muse (`MUSE_API_KEY`, `MUSE_WEBHOOK_SECRET`, `MUSE_CX_ENABLED`) stays empty for go-live. It is a CX stub, not a clinical connector.
 
 ## RDS bootstrap (available)
 
@@ -94,18 +101,20 @@ curl -s -X POST http://localhost:3000/api/case-spine/md-queue \
 
 ## Roadmap / next connectors
 
-Queued after customer-ready Phases 0–7. These do **not** reopen the completed code path and are **not** a Phase 8. Remaining go-live work is still human ops (SES, Fargate, BAA, vendor keys).
+Phases 0–7 are the customer-ready code path. Phase 8 below is a CX stub and does not reopen that path. Remaining go-live work is human ops — follow [`13-go-live-ops.md`](customer-ready/13-go-live-ops.md).
 
-### Muse Connector Platform (muse.ai) — queued / not started
+### Muse Connector Platform (muse.ai) — Phase 8 stub
 
 | Field | Detail |
 |---|---|
-| **Status** | Queued / not started |
-| **Intent** | Submit or build a VantaUM Muse connector so CX/relationship touchpoints can meet users in Muse. Clinical system of record stays on AWS Brief Engine. |
-| **Constraint** | Not a live PHI path. No live PHI in Muse without a separate BAA decision. |
+| **Status** | Code-complete stub. Not live-keyed. No outbound HTTP. |
+| **Intent** | CX / relationship touchpoints (account id, contact role labels, scheduling flags) so a later Muse connector has a fail-closed seam. Clinical system of record stays on AWS Brief Engine. |
+| **Constraint** | No PHI in Muse. No live patient data. Production use still gated by [`06-hipaa-baa-path.md`](customer-ready/06-hipaa-baa-path.md). |
+| **Code** | `lib/muse/`, `POST /api/muse/webhook`, `GET /api/muse/status`, `GET /api/muse/touchpoints`, `/cx` panel behind `MUSE_CX_ENABLED` + `MUSE_API_KEY`. |
+| **Spec** | [`docs/customer-ready/12-muse-connector.md`](customer-ready/12-muse-connector.md) |
 | **Source** | Public open-access for developers to build Muse connectors (API brought by us). Meta opened developer access 2026-09-19 — "Meet your users where they are with Muse Connector Platform" / Submit a connector. |
 | **Owner** | VantaUM |
-| **Depends on** | Customer-ready ops (Fargate / SES / BAA) are **not** required to research or submit a connector. Production use is gated by HIPAA review. |
+| **Depends on** | Nothing in Phases 0–7. Not required for the Cole go-live punch list. |
 
 ## Lane note
 
