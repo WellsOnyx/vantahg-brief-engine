@@ -1,7 +1,8 @@
 // Lazy dynamic import for 'pg' so the bundler never sees the native package
 // during `npm run build` on Vercel or in the Docker image unless
 // ENABLE_AWS_DB is actually active at runtime.
-let _pg: any = null;
+type PgModule = typeof import('pg');
+let _pg: PgModule | null = null;
 async function getPgModule() {
   if (!_pg) {
     _pg = await import('pg');
@@ -9,9 +10,11 @@ async function getPgModule() {
   return _pg;
 }
 
-type Pool = any;
-type PoolConfig = any;
-type QueryResultRow = any;
+// Structural stand-in was too narrow for `pg.Pool` (and broke the shim's
+// `rows[0].count` read). Use the real pg types; the value import stays dynamic.
+type Pool = InstanceType<PgModule['Pool']>;
+type PoolConfig = ConstructorParameters<PgModule['Pool']>[0];
+type QueryResultRow = Record<string, unknown>;
 
 /**
  * Singleton Postgres connection pool for the AWS / RDS path.
@@ -33,6 +36,20 @@ type QueryResultRow = any;
 
 let _pool: Pool | null = null;
 
+/**
+ * SSL selection shared with scripts/apply-rds-migrations.mjs.
+ * RDS stays on SSL. Local docker Postgres does not speak TLS — set
+ * DATABASE_SSL=disable or point DATABASE_URL / DB_HOST at localhost.
+ */
+export function resolvePgSsl(
+  env: NodeJS.ProcessEnv = process.env,
+): false | { rejectUnauthorized: false } {
+  if (env.DATABASE_SSL === 'disable') return false;
+  if (env.DB_HOST === 'localhost' || env.DB_HOST === '127.0.0.1') return false;
+  if (env.DATABASE_URL && /localhost|127\.0\.0\.1/.test(env.DATABASE_URL)) return false;
+  return { rejectUnauthorized: false };
+}
+
 export async function getPool(): Promise<Pool> {
   if (_pool) return _pool;
 
@@ -40,15 +57,16 @@ export async function getPool(): Promise<Pool> {
   const { Pool } = mod;
 
   const url = process.env.DATABASE_URL;
+  const ssl = resolvePgSsl();
   const cfg: PoolConfig = url
-    ? { connectionString: url, ssl: { rejectUnauthorized: false } }
+    ? { connectionString: url, ssl }
     : {
         host: process.env.DB_HOST,
         port: process.env.DB_PORT ? Number(process.env.DB_PORT) : 5432,
         database: process.env.DB_NAME,
         user: process.env.DB_USER,
         password: process.env.DB_PASSWORD,
-        ssl: { rejectUnauthorized: false },
+        ssl,
       };
 
   cfg.max = 10;
@@ -80,6 +98,6 @@ export async function rawQuery<T extends QueryResultRow = QueryResultRow>(
   params: unknown[] = [],
 ): Promise<T[]> {
   const pool = await getPool();
-  const result: { rows: T[] } = await (pool as any).query(sql, params as never[]);
-  return result.rows;
+  const result = await pool.query(sql, params);
+  return result.rows as T[];
 }

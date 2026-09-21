@@ -74,9 +74,9 @@ export function SlaTracker({ deadline, compact = false, createdAt }: SlaTrackerP
     return deadline instanceof Date ? deadline : new Date(deadline);
   }, [deadline]);
 
-  const timeRemaining = useMemo(() => getTimeRemaining(effectiveDeadline), [effectiveDeadline, now]);
+  const timeRemaining = useMemo(() => getTimeRemaining(effectiveDeadline, now), [effectiveDeadline, now]);
   const formatted = useMemo(() => formatTimeRemaining(timeRemaining), [timeRemaining]);
-  const status = useMemo(() => getSlaStatus(effectiveDeadline), [effectiveDeadline, now]);
+  const status = useMemo(() => getSlaStatus(effectiveDeadline, now), [effectiveDeadline, now]);
   const style = urgencyStyles[timeRemaining.urgencyLevel];
 
   // Calculate progress for full mode (also defensive)

@@ -31,8 +31,11 @@ import type {
  *   .insert(row | rows)         — returns inserted rows when chained with
  *                                  .select()
  *   .update(patch)
- *   .upsert(row, { onConflict }) — limited; treats onConflict as a column
- *                                  list and does ON CONFLICT DO UPDATE
+ *   .upsert(row, { onConflict, ignoreDuplicates })
+ *                                — onConflict is a column list.
+ *                                  ignoreDuplicates → ON CONFLICT DO NOTHING
+ *                                  (seed/bootstrap re-runs). Otherwise
+ *                                  ON CONFLICT DO UPDATE.
  *   .delete()
  *   .eq(col, val)
  *   .neq(col, val)
@@ -140,6 +143,7 @@ class QueryBuilder<T = Record<string, unknown>> implements QueryChain<T> {
   private writePayload: Record<string, unknown> | Array<Record<string, unknown>> | null = null;
   private updatePatch: Record<string, unknown> | null = null;
   private upsertOnConflict: string | null = null;
+  private upsertIgnoreDuplicates = false;
   private returnInserted = false;
   private countMode: CountOptions['count'] | null = null;
   private headOnly = false;
@@ -171,10 +175,14 @@ class QueryBuilder<T = Record<string, unknown>> implements QueryChain<T> {
     return this;
   }
 
-  upsert(payload: Record<string, unknown> | Array<Record<string, unknown>>, opts?: { onConflict?: string }): this {
+  upsert(
+    payload: Record<string, unknown> | Array<Record<string, unknown>>,
+    opts?: { onConflict?: string; ignoreDuplicates?: boolean },
+  ): this {
     this.op = 'upsert';
     this.writePayload = payload;
     this.upsertOnConflict = opts?.onConflict ?? null;
+    this.upsertIgnoreDuplicates = opts?.ignoreDuplicates === true;
     return this;
   }
 
@@ -361,11 +369,17 @@ class QueryBuilder<T = Record<string, unknown>> implements QueryChain<T> {
         sql = `INSERT INTO ${quoteIdent(this.table)} (${cols.map(quoteIdent).join(', ')}) VALUES ${valuesSql.join(', ')}`;
         if (this.upsertOnConflict) {
           const conflictCols = this.upsertOnConflict.split(',').map((s) => quoteIdent(s.trim())).join(', ');
-          const updates = cols
-            .filter((c) => !this.upsertOnConflict!.split(',').map((s) => s.trim()).includes(c))
-            .map((c) => `${quoteIdent(c)} = EXCLUDED.${quoteIdent(c)}`)
-            .join(', ');
-          sql += ` ON CONFLICT (${conflictCols}) DO ${updates ? `UPDATE SET ${updates}` : 'NOTHING'}`;
+          if (this.upsertIgnoreDuplicates) {
+            sql += ` ON CONFLICT (${conflictCols}) DO NOTHING`;
+          } else {
+            const updates = cols
+              .filter((c) => !this.upsertOnConflict!.split(',').map((s) => s.trim()).includes(c))
+              .map((c) => `${quoteIdent(c)} = EXCLUDED.${quoteIdent(c)}`)
+              .join(', ');
+            sql += ` ON CONFLICT (${conflictCols}) DO ${updates ? `UPDATE SET ${updates}` : 'NOTHING'}`;
+          }
+        } else if (this.upsertIgnoreDuplicates) {
+          sql += ` ON CONFLICT DO NOTHING`;
         }
         if (this.returnInserted) sql += ` RETURNING *`;
       } else if (this.op === 'delete') {

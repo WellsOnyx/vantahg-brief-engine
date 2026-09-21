@@ -26,6 +26,7 @@ export interface SpineIngestInput {
   client_id?: string | null;
   intake: IntakePayload;
   type?: AuthWorkflowType;
+  parent_case_id?: string | null;
   priority?: CaseSpinePriority;
   packet_storage_keys?: string[];
   actor?: string;
@@ -124,6 +125,7 @@ export function mapUnknownToIntake(body: Record<string, unknown>): {
   client_id: string;
   intake: IntakePayload;
   type?: AuthWorkflowType;
+  parent_case_id?: string | null;
   priority?: CaseSpinePriority;
 } {
   const memberRef =
@@ -157,6 +159,7 @@ export function mapUnknownToIntake(body: Record<string, unknown>): {
     client_id: defaultIntakeClientId(asString(body.client_id)),
     intake,
     type: asWorkflowType(body.type) ?? asWorkflowType(body.review_type),
+    parent_case_id: asString(body.parent_case_id),
     priority: urgency ?? undefined,
   };
 }
@@ -170,6 +173,7 @@ export async function ingestToCaseSpine(input: SpineIngestInput): Promise<SpineI
     {
       client_id: clientId,
       type: input.type,
+      parent_case_id: input.parent_case_id,
       external_id: input.intake.external_id,
       priority: input.priority ?? input.intake.urgency ?? undefined,
       packet_storage_keys: input.packet_storage_keys,

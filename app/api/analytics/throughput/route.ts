@@ -70,10 +70,10 @@ export async function GET(request: NextRequest) {
     }
 
     // Calculate averages
-    let briefTimes: number[] = [];
-    let assignTimes: number[] = [];
-    let determinationTimes: number[] = [];
-    let totalTimes: number[] = [];
+    const briefTimes: number[] = [];
+    const assignTimes: number[] = [];
+    const determinationTimes: number[] = [];
+    const totalTimes: number[] = [];
 
     for (const caseId in caseEvents) {
       const e = caseEvents[caseId];

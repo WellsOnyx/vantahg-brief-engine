@@ -33,7 +33,7 @@ import type {
 function formatValue(
   raw: unknown,
   format: VariableFormat,
-  snapshot: SignupSnapshot,
+  _snapshot: SignupSnapshot,
 ): string | null {
   if (raw === null || raw === undefined || raw === '') return null;
 

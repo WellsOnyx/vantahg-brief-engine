@@ -132,7 +132,7 @@ const determinationOptions = [
 
 const MAX_CHARS = 2000;
 
-export function DeterminationForm({ onSubmit, isSubmitting, isAppeal = false, originalDetermination, denialRiskSignal }: DeterminationFormProps) {
+export function DeterminationForm({ onSubmit, isSubmitting, isAppeal = false, originalDetermination: _originalDetermination, denialRiskSignal }: DeterminationFormProps) {
   const [determination, setDetermination] = useState('');
   const [rationale, setRationale] = useState('');
   const [denialReason, setDenialReason] = useState('');

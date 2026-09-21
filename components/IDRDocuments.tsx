@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 interface Document {
   storage_path: string;
@@ -30,7 +30,7 @@ export function IDRDocuments({ caseId }: IDRDocumentsProps) {
   const [selectedCategory, setSelectedCategory] = useState(IDR_CATEGORIES[0]);
   const [error, setError] = useState<string | null>(null);
 
-  async function loadDocuments() {
+  const loadDocuments = useCallback(async () => {
     try {
       const res = await fetch(`/api/cases/${caseId}`);
       if (res.ok) {
@@ -45,11 +45,11 @@ export function IDRDocuments({ caseId }: IDRDocumentsProps) {
     } finally {
       setLoading(false);
     }
-  }
+  }, [caseId]);
 
   useEffect(() => {
     loadDocuments();
-  }, [caseId]);
+  }, [loadDocuments]);
 
   async function handleUpload(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -78,8 +78,8 @@ export function IDRDocuments({ caseId }: IDRDocumentsProps) {
       // Refresh list
       await loadDocuments();
       fileInput.value = '';
-    } catch (err: any) {
-      setError(err.message || 'Upload failed');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Upload failed');
     } finally {
       setUploading(false);
     }

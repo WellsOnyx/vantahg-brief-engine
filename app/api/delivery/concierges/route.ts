@@ -184,7 +184,7 @@ export async function POST(request: NextRequest) {
 
       const supabase = getServiceClient();
       // Who is performing? Use email from auth context if available, fallback.
-      const actor = (authResult as any)?.user?.email || 'delivery-lead';
+      const actor = authResult.user.email || 'delivery-lead';
 
       const result = await reassignClientToConcierge(supabase, {
         client_id,
@@ -213,7 +213,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'case_id is required' }, { status: 400 });
       }
 
-      const actor = (authResult as any)?.user?.email || 'delivery-lead';
+      const actor = authResult.user.email || 'delivery-lead';
       const requestContext = getRequestContext(request);
 
       await logAuditEvent(

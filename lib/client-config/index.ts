@@ -13,6 +13,10 @@ export {
 } from './store';
 export type { ClientConfigStore } from './store';
 export { ClientConfigService } from './service';
+export {
+  requireUmBriefEngineAccess,
+  resolveUmBriefEngineAccessForClient,
+} from './um-access';
 
 import { ClientConfigService } from './service';
 import { getMemoryClientConfigStore, resetMemoryClientConfigStore } from './store';

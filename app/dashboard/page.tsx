@@ -155,7 +155,7 @@ function SlaAlerts({ cases, loading }: { cases: Case[]; loading: boolean }) {
         {/* Top 5 most urgent cases */}
         {topUrgent.length > 0 && (
           <div className="divide-y divide-border">
-            {topUrgent.map(({ case_, timeRemaining }) => (
+            {topUrgent.map(({ case_, timeRemaining: _timeRemaining }) => (
               <Link
                 key={case_.id}
                 href={`/cases/${case_.id}`}
@@ -229,7 +229,7 @@ export default function DashboardPage() {
           created_at: new Date(now - 1000 * 60 * 60 * 2).toISOString(),
           turnaround_deadline: new Date(now + 1000 * 60 * 60 * 46).toISOString(),
           service_category: 'imaging',
-        } as any,
+        } as Case,
         {
           id: 'demo-tka',
           case_number: 'VUM-2026-004822',
@@ -239,7 +239,7 @@ export default function DashboardPage() {
           created_at: new Date(now - 1000 * 60 * 60 * 5).toISOString(),
           turnaround_deadline: new Date(now + 1000 * 60 * 60 * 20).toISOString(),
           service_category: 'surgery',
-        } as any,
+        } as Case,
         {
           id: 'demo-cpap',
           case_number: 'VUM-2026-004823',
@@ -249,7 +249,7 @@ export default function DashboardPage() {
           created_at: new Date(now - 1000 * 60 * 30).toISOString(),
           turnaround_deadline: new Date(now + 1000 * 60 * 60 * 23).toISOString(),
           service_category: 'dme',
-        } as any,
+        } as Case,
       ];
       setCases(staticDemo);
       setLoading(false);
@@ -274,17 +274,17 @@ export default function DashboardPage() {
           id: 'demo-mri', case_number: 'VUM-2026-004821', patient_name: 'Maria Santos',
           status: 'brief_ready', priority: 'standard', created_at: new Date(now - 1000 * 60 * 60 * 2).toISOString(),
           turnaround_deadline: new Date(now + 1000 * 60 * 60 * 46).toISOString(), service_category: 'imaging',
-        } as any,
+        } as Case,
         {
           id: 'demo-tka', case_number: 'VUM-2026-004822', patient_name: 'John Rivera',
           status: 'lpn_review', priority: 'urgent', created_at: new Date(now - 1000 * 60 * 60 * 5).toISOString(),
           turnaround_deadline: new Date(now + 1000 * 60 * 60 * 20).toISOString(), service_category: 'surgery',
-        } as any,
+        } as Case,
         {
           id: 'demo-cpap', case_number: 'VUM-2026-004823', patient_name: 'Robert Garcia',
           status: 'intake', priority: 'standard', created_at: new Date(now - 1000 * 60 * 30).toISOString(),
           turnaround_deadline: new Date(now + 1000 * 60 * 60 * 23).toISOString(), service_category: 'dme',
-        } as any,
+        } as Case,
       ];
       setCases(staticDemo);
       setError(null);

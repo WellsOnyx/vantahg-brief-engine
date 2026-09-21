@@ -83,8 +83,8 @@ export default function AttorneyDeterminePage() {
       setTimeout(() => {
         router.push('/attorney/review');
       }, 1500);
-    } catch (err: any) {
-      setError(err.message || 'Submission failed.');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Submission failed.');
     } finally {
       setSubmitting(false);
     }

@@ -5,7 +5,10 @@
  * Happy path + missing clinicals (R01) + gray zone. Asserts via case-spine
  * and intake ingest. Tokenized refs only — no live PHI, no vendor keys.
  *
+ * Catalog: fixtures/golive/synthetic-e1.json
+ *
  *   npm run test:go-live-synthetic
+ *   npm run test:synthetic-golive-pack   # load + PHI check + same pack
  */
 
 import { resetCaseSpineService } from '../lib/case-spine';

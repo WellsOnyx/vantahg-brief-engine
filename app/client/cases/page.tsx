@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/AuthProvider';
 import { getTimeRemaining, formatTimeRemaining, getSlaStatus } from '@/lib/sla-calculator';

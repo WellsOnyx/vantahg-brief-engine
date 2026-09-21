@@ -33,6 +33,8 @@ describe('client_config versioning', () => {
     expect(latest?.version).toBe(1);
     expect(latest?.config.auto_vs_md_policy).toBe('always_md');
     expect(latest?.config.intake_modes).toContain('gravity_rail');
+    expect(latest?.config.vanta_med_review_contract).toBe(true);
+    expect(latest?.config.med_review_provider).toBe('vanta');
   });
 
   it('publishes v1 then v2 without mutating v1', async () => {

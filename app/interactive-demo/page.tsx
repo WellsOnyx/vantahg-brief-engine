@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import type { Case, Determination } from '@/lib/types';
 import {
-  demoReviewers, demoCases, demoClients, demoStaff,
-  DEMO_REVIEWER_IDS, DEMO_CASE_IDS, DEMO_CLIENT_IDS, DEMO_STAFF_IDS,
+  demoCases, demoClients, demoStaff,
+  DEMO_REVIEWER_IDS, DEMO_CLIENT_IDS, DEMO_STAFF_IDS,
 } from '@/lib/demo-data';
 
 // ── Formatters ────────────────────────────────────────────────────────────────
@@ -84,7 +84,7 @@ function Badge({ label, color = 'bg-white/10 text-white/50' }: { label: string; 
 }
 
 function SlaChip({ deadline }: { deadline: string | null }) {
-  const [tick, setTick] = useState(0);
+  const [_tick, setTick] = useState(0);
   useEffect(() => {
     const t = setInterval(() => setTick(x => x + 1), 30000);
     return () => clearInterval(t);
@@ -96,9 +96,13 @@ function SlaChip({ deadline }: { deadline: string | null }) {
 function StreamingText({ text, speed = 12 }: { text: string; speed?: number }) {
   const [displayed, setDisplayed] = useState('');
   const [done, setDone] = useState(false);
-  useEffect(() => {
+  const [prevText, setPrevText] = useState(text);
+  if (text !== prevText) {
+    setPrevText(text);
     setDisplayed('');
     setDone(false);
+  }
+  useEffect(() => {
     let i = 0;
     const interval = setInterval(() => {
       i += speed;
@@ -119,7 +123,6 @@ function StreamingText({ text, speed = 12 }: { text: string; speed?: number }) {
 
 function StatBar({ state }: { state: DemoState }) {
   const decided = Object.keys(state.decisions).length;
-  const aiRec = demoCases.filter(c => c.ai_brief?.ai_recommendation?.recommendation).length;
   const agreements = Object.entries(state.decisions).filter(([id, d]) => {
     const c = demoCases.find(x => x.id === id);
     const aiDet = c?.ai_brief?.ai_recommendation?.recommendation === 'approve' ? 'approve' : 'deny';
@@ -158,9 +161,8 @@ function MdView({ state, onDecide }: { state: DemoState; onDecide: (caseId: stri
   const [decision, setDecision] = useState<Determination | ''>('');
   const [rationale, setRationale] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+  const [_submitted, setSubmitted] = useState(false);
   const [briefAnimated, setBriefAnimated] = useState(false);
-  const reviewer = demoReviewers.find(r => r.id === DEMO_REVIEWER_IDS.richardson)!;
 
   const mdCases = demoCases.filter(c =>
     ['md_review', 'brief_ready'].includes(c.status) &&
@@ -214,7 +216,6 @@ function MdView({ state, onDecide }: { state: DemoState; onDecide: (caseId: stri
         </div>
         <div className="p-2 space-y-1">
           {mdCases.map(c => {
-            const sla = timeLeft(c.turnaround_deadline);
             const decided = !!state.decisions[c.id];
             const isSelected = selectedCase?.id === c.id;
             return (
@@ -581,8 +582,6 @@ function LpnView({ state, onLpnDecide }: { state: DemoState; onLpnDecide: (caseI
   const [selectedCase, setSelectedCase] = useState<Case | null>(null);
   const [checklist, setChecklist] = useState<Record<string, boolean>>({});
   const [notes, setNotes] = useState('');
-  const [escalated, setEscalated] = useState<string | null>(null);
-
   const lpn = demoStaff.find(s => s.id === DEMO_STAFF_IDS.martinezLpn)!;
   const lpnCases = demoCases.filter(c => c.status === 'lpn_review' && c.assigned_lpn_id === lpn.id);
 

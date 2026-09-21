@@ -17,6 +17,8 @@ VantaUM is an AI-powered utilization review platform built for health plans, TPA
 
 The core principle is simple: **AI analyzes, physicians decide.** VantaUM uses Anthropic Claude to generate clinical briefs that summarize patient documentation, match procedure codes against evidence-based criteria, and surface relevant guidelines. A deterministic fact-checking engine then verifies every AI-generated claim against known medical databases. All clinical determinations are made by licensed, board-certified physicians -- the AI never makes coverage decisions.
 
+**Packaging (locked 2026-09-20):** the paid commercial door is **VantaHG Med Review**. VantaUM Brief Engine / utilization management is included free only when the buyer uses Vanta med review under that contract — not a standalone UM SKU, not free with another shop's med review. UM still owns Brief Engine SoR and tech. Code gate: `client_config.vanta_med_review_contract`.
+
 ---
 
 ## Customer-ready progress (Sep 2026)
@@ -33,8 +35,9 @@ We executed the plan in [`docs/customer-ready/`](docs/customer-ready/00-README.m
 | 5 Three role views | ✅ merged | Client / CX / Med lenses; RBAC deny cross-tenant + CX notes |
 | 6 Reporting + CM | ✅ merged | Five client reports + CSV, CM HMAC handoff, ops scoreboard |
 | 7 Onboarding + go-live | ✅ merged | A→E runbook + `/admin/onboarding`, synthetic/shadow packs, SLA rollback gate |
+| 7.1 Cole runbook | this PR | How-to on every A–E item + `docs/customer-ready/11-cole-onboarding-runbook.md` so Cole needs no tribal knowledge |
 
-Full board: [`docs/PROGRESS.md`](docs/PROGRESS.md) · live notes: [`STATE.md`](STATE.md) · Cole runbook: [`docs/onboarding/`](docs/onboarding/README.md)
+Full board: [`docs/PROGRESS.md`](docs/PROGRESS.md) · live notes: [`STATE.md`](STATE.md) · Cole runbook: [`docs/customer-ready/11-cole-onboarding-runbook.md`](docs/customer-ready/11-cole-onboarding-runbook.md)
 
 **Auth (updated):** Supabase Auth hybrid when `ENABLE_AWS_AUTH=false` (default, including Fargate). Cognito login / invite / session when `ENABLE_AWS_AUTH=true`. See Phase 0.2 notes in `STATE.md`.
 
@@ -237,7 +240,11 @@ npx tsx scripts/bootstrap-real-client.ts \
 # Add --dry-run to preview the inserts before writing.
 ```
 
-The bootstrap script still constructs a Supabase JS client (leftover). On AWS, prefer inserting through the app once RDS migrations are applied, or point the script at leftover Supabase keys. An RDS-native bootstrap is a follow-up.
+RDS / plain Postgres: `ENABLE_AWS_DB=true` and `DATABASE_URL` (or `DB_HOST` + `DB_PASSWORD`). The script uses the pg shim and does not need Supabase URL keys. Apply schema with `npm run db:migrate:rds` first. Local docker needs `DATABASE_SSL=disable`.
+
+Leftover Supabase: leave `ENABLE_AWS_DB` false and set `NEXT_PUBLIC_SUPABASE_URL` (or `SUPABASE_URL`) plus `SUPABASE_SERVICE_ROLE_KEY`.
+
+`scripts/seed-demo.ts` follows the same split (`npm run seed`, or `--dry-run` to print the plan without connecting). `scripts/bootstrap-master-admin.ts` is still the Supabase Auth hybrid leftover and refuses to run when `ENABLE_AWS_DB=true`.
 
 ### 4. Verify the system is live
 
@@ -245,7 +252,9 @@ The bootstrap script still constructs a Supabase JS client (leftover). On AWS, p
 
 ```bash
 npm run test:e2e-synthetic
-npm run test:go-live-synthetic   # Phase 7 E1 pack (case-spine + intake, no vendor keys)
+npm run test:synthetic-golive-pack  # load fixtures/golive/synthetic-e1.json + create cases
+npm run test:go-live-synthetic      # Phase 7 E1 pack (case-spine + intake, no vendor keys)
+npm run test:shadow-golive-pack     # Phase 7.3 E2 shadow pack (JSON catalog, intent-only fan-out)
 ```
 
 This drives a synthetic case through the full pipeline:

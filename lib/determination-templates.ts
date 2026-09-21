@@ -108,11 +108,11 @@ export function renderDeterminationLetter(
 export async function buildDeterminationLetter(
   caseData: Case,
   reviewer: Reviewer | null,
-  client: Client | null,
+  _client: Client | null,
 ): Promise<string> {
   const isIdr = caseData.case_type === 'payer_idr';
 
-  let templateType: any = 'pend';
+  let templateType: 'approval' | 'denial' | 'partial_approval' | 'pend' | 'modification' | 'idr_offer_upheld' | 'idr_offer_modified' = 'pend';
   if (isIdr) {
     // IDR uses different template types
     templateType = caseData.determination === 'approve' || caseData.determination === 'partial_approve'

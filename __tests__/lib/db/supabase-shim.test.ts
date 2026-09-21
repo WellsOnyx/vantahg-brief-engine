@@ -166,6 +166,17 @@ describe('PgShimClient query generation', () => {
     expect(captured[0].sql).toContain('ON CONFLICT ("id") DO UPDATE SET "name" = EXCLUDED."name"');
   });
 
+  it('upsert ignoreDuplicates is ON CONFLICT DO NOTHING', async () => {
+    clearCaptures();
+    const c = new PgShimClient();
+    await c.from('reviewers').upsert(
+      { id: 'r1', name: 'Pat LPN', email: 'pat@vantaum.example' },
+      { onConflict: 'id', ignoreDuplicates: true },
+    );
+    expect(captured[0].sql).toContain('ON CONFLICT ("id") DO NOTHING');
+    expect(captured[0].sql).not.toContain('DO UPDATE');
+  });
+
   it('throws helpful error on .auth access', () => {
     const c = new PgShimClient();
     expect(() => c.auth).toThrow(/AuthAdminAdapter/);

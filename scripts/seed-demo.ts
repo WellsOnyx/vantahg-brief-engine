@@ -1,34 +1,26 @@
 /**
  * VantaUM Demo Seed Script
  *
- * Populates Supabase with realistic UM demo data.
- * Idempotent — safe to run multiple times (uses upsert / ON CONFLICT).
+ * Synthetic fixture rows only — not live PHI.
+ * Idempotent for clients, reviewers, cases, and efax_queue
+ * (ON CONFLICT DO NOTHING). audit_log appends; re-runs add another copy.
  *
- * Usage:
- *   npx tsx scripts/seed-demo.ts
+ * RDS / plain Postgres (no Supabase JS keys):
+ *   ENABLE_AWS_DB=true DATABASE_URL=postgres://... npx tsx scripts/seed-demo.ts
+ *   Local docker: DATABASE_SSL=disable. Schema first: npm run db:migrate:rds
  *
- * Requires env vars:
- *   SUPABASE_URL
- *   SUPABASE_SERVICE_ROLE_KEY
+ * Leftover Supabase (ENABLE_AWS_DB is not true):
+ *   SUPABASE_URL (or NEXT_PUBLIC_SUPABASE_URL) + SUPABASE_SERVICE_ROLE_KEY
+ *
+ * --dry-run prints the table plan and does not open a connection.
+ * Unset keys are filled from .env.local when that file exists.
  */
 
-import { createClient } from "@supabase/supabase-js";
-
-// ---------------------------------------------------------------------------
-// ENV
-// ---------------------------------------------------------------------------
-
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-  console.error(
-    "Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY. Set them in .env.local or export them."
-  );
-  process.exit(1);
-}
-
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+import { existsSync, readFileSync } from "fs";
+import { join } from "path";
+import { applyEnvFile } from "@/lib/bootstrap/env-file";
+import { describeDbTarget, openBootstrapDb, resolveBootstrapDb } from "@/lib/bootstrap/target";
+import type { DbClient } from "@/lib/db/types";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -41,7 +33,7 @@ function daysAgo(days: number, hours = 0): string {
   return d.toISOString();
 }
 
-function hoursFromNow(hours: number): string {
+function _hoursFromNow(hours: number): string {
   const d = new Date();
   d.setTime(d.getTime() + hours * 3600000);
   return d.toISOString();
@@ -828,12 +820,32 @@ const efaxEntries = [
 // Seed functions
 // ---------------------------------------------------------------------------
 
+export const DEMO_SEED_PLAN = [
+  { table: "reviewers", rows: 3, onConflict: "id", mode: "upsert" },
+  { table: "clients", rows: 2, onConflict: "id", mode: "upsert" },
+  { table: "cases", rows: 10, onConflict: "case_number", mode: "upsert" },
+  { table: "efax_queue", rows: 4, onConflict: "id", mode: "upsert" },
+  { table: "audit_log", rows: 5, onConflict: null, mode: "insert" },
+] as const;
+
+export function formatDemoSeedDryRun(): string[] {
+  return [
+    ...DEMO_SEED_PLAN.map((step) =>
+      step.mode === "upsert"
+        ? `[dry-run] ${step.table}: ${step.rows} rows (ON CONFLICT ${step.onConflict} DO NOTHING)`
+        : `[dry-run] ${step.table}: ${step.rows} rows (append insert; re-runs duplicate these log lines)`,
+    ),
+    "[dry-run] No connection opened. Nothing written.",
+  ];
+}
+
 async function upsertRows(
+  db: DbClient,
   table: string,
   rows: Record<string, unknown>[],
-  conflictColumn = "id"
+  conflictColumn = "id",
 ) {
-  const { error } = await supabase.from(table).upsert(rows, {
+  const { error } = await db.from(table).upsert(rows, {
     onConflict: conflictColumn,
     ignoreDuplicates: true,
   });
@@ -843,30 +855,30 @@ async function upsertRows(
   }
 }
 
-async function main() {
-  log("Starting VantaUM demo seed...\n");
+export async function applyDemoSeed(db: DbClient): Promise<void> {
+  const ping = await db.from("clients").select("id", { count: "exact", head: true });
+  if (ping.error) {
+    throw new Error(
+      `Database query failed: ${ping.error.message}. Apply schema with npm run db:migrate:rds before seeding.`,
+    );
+  }
 
-  // 1. Reviewers
   log("Inserting 3 reviewers...");
-  await upsertRows("reviewers", reviewers);
+  await upsertRows(db, "reviewers", reviewers as unknown as Record<string, unknown>[]);
   log("  Done: Dr. Okafor (Ortho), Dr. Nakamura (Cards), Dr. Brennan (Onc)\n");
 
-  // 2. Clients
   log("Inserting 2 clients...");
-  await upsertRows("clients", clients);
+  await upsertRows(db, "clients", clients as unknown as Record<string, unknown>[]);
   log("  Done: Southwest Administrators (TPA), Gulf Health Partners (Health Plan)\n");
 
-  // 3. Cases
   log("Inserting 10 cases...");
-  await upsertRows("cases", cases, "case_number");
+  await upsertRows(db, "cases", cases as unknown as Record<string, unknown>[], "case_number");
   log("  Done: statuses span intake -> delivered across surgical, cardiology, oncology, imaging, rehab\n");
 
-  // 4. eFax queue
   log("Inserting 4 efax_queue entries...");
-  await upsertRows("efax_queue", efaxEntries);
+  await upsertRows(db, "efax_queue", efaxEntries as unknown as Record<string, unknown>[]);
   log("  Done: 1 case_created, 1 manual_review, 2 received (pending)\n");
 
-  // 5. Audit log entries for determined cases
   log("Inserting audit log entries...");
   const auditEntries = [
     {
@@ -900,18 +912,53 @@ async function main() {
       details: { fax_id: "phx-fax-20260412-001", pages: 4 },
     },
   ];
-  // Audit log has no natural key, so just insert (duplicates are harmless log entries)
-  const { error: auditErr } = await supabase.from("audit_log").insert(auditEntries);
+  const { error: auditErr } = await db.from("audit_log").insert(auditEntries);
   if (auditErr) {
     console.error("  WARNING: audit_log insert:", auditErr.message);
   } else {
     log("  Done: 5 audit log entries\n");
   }
-
-  log("Seed complete. Database is ready for demo.");
 }
 
-main().catch((err) => {
-  console.error("Seed failed:", err);
-  process.exit(1);
-});
+function isDirectRun(entry = process.argv[1] ?? ""): boolean {
+  return /seed-demo\.(ts|js|mjs|cjs)$/.test(entry.replace(/\\/g, "/"));
+}
+
+function loadLocalEnv(): void {
+  const path = join(process.cwd(), ".env.local");
+  if (!existsSync(path)) return;
+  const applied = applyEnvFile(readFileSync(path, "utf8"));
+  if (applied.length > 0) {
+    console.log(`Loaded ${applied.length} unset keys from .env.local (existing environment wins).`);
+  }
+}
+
+async function main() {
+  loadLocalEnv();
+
+  if (process.argv.includes("--dry-run")) {
+    for (const line of formatDemoSeedDryRun()) console.log(line);
+    return;
+  }
+
+  const resolved = resolveBootstrapDb();
+  if (!resolved.ok) {
+    console.error(resolved.message);
+    process.exit(resolved.exitCode);
+  }
+
+  log("Starting VantaUM demo seed...\n");
+  log(resolved.summary);
+  log(`Target: ${describeDbTarget()}\n`);
+
+  const opened = await openBootstrapDb();
+  await applyDemoSeed(opened.client);
+  log("Seed complete. Synthetic demo rows are loaded.");
+}
+
+if (isDirectRun()) {
+  main().catch((err) => {
+    console.error("Seed failed:", err);
+    process.exit(1);
+  });
+}
