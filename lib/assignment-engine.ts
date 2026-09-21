@@ -1,7 +1,7 @@
 import { getServiceClient } from '@/lib/supabase';
 import { logAuditEvent } from '@/lib/audit';
 import { isDemoMode, getDemoReviewers, getDemoCase } from '@/lib/demo-mode';
-import type { Case, Reviewer } from '@/lib/types';
+import type { Reviewer } from '@/lib/types';
 import { redactName } from '@/lib/security';
 
 export interface AssignmentResult {

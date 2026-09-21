@@ -11,6 +11,12 @@ Future Claude/Cole/Jonah sessions: read this first.
 
 ---
 
+## 2026-09-21 — Lint fail-closed (hydrate allowlist)
+
+`npm run lint` is green on this lineage (`eslint --max-warnings 0`). PR #67 cleared the historic backlog; five client-only `react-hooks/set-state-in-effect` hydrate sites stay as-is (no behavior change) with `eslint-disable-next-line` + WHY. Catalog: [`docs/customer-ready/lint-hydrate-allowlist.md`](docs/customer-ready/lint-hydrate-allowlist.md). New lint errors/warnings fail CI.
+
+---
+
 ## 2026-09-20 — CM connect MVP hardening (6.2)
 
 Phase 6.2 already shipped on `main` (PR #59). This pass is the smallest increment on top: retry-safe `cm.handoff` emitter + PHI-free logs + tests that lock flag → webhook payload shape and flagged-only CSV.

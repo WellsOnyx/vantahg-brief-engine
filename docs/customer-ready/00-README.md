@@ -43,6 +43,7 @@ A TPA or self-insured employer can:
 | 08 | Reporting | MVP reports + exports |
 | 09 | Care management connect | Flags, webhook, CSV — not Epic day one |
 | 10 | Implementation commits | Exact build sequence + owners + acceptance |
+| — | [lint-hydrate-allowlist.md](lint-hydrate-allowlist.md) | Five intentional `set-state-in-effect` hydrate sites; lint is otherwise fail-closed |
 
 ## Related in-flight
 

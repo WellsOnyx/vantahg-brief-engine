@@ -172,7 +172,7 @@ export async function POST(
     const next = [...existing, ...accepted.map((a) => a.storage_path)];
 
     // Also populate the new rich documents structure (for IDR and future)
-    const existingDocs = (caseData as { documents?: any[] | null }).documents ?? [];
+    const existingDocs = (caseData as { documents?: unknown[] | null }).documents ?? [];
     const newDocs = accepted.map((a) => ({
       storage_path: a.storage_path,
       filename: a.filename,

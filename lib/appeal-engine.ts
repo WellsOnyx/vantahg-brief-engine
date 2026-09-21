@@ -1,7 +1,7 @@
 import { getServiceClient } from '@/lib/supabase';
 import { logAuditEvent } from '@/lib/audit';
-import { isDemoMode, getDemoCase } from '@/lib/demo-mode';
-import type { Appeal, AppealStatus } from '@/lib/types';
+import { isDemoMode } from '@/lib/demo-mode';
+import type { Appeal } from '@/lib/types';
 
 export interface AppealResult {
   success: boolean;

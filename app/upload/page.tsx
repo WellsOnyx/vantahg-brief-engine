@@ -334,7 +334,7 @@ function FileUploadZone({
   onCategoryChange: (id: string, category: string) => void;
 }) {
   const [dragActive, setDragActive] = useState(false);
-  const [dragCounter, setDragCounter] = useState(0);
+  const [_dragCounter, setDragCounter] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleDrag = (e: React.DragEvent) => {
@@ -596,6 +596,24 @@ function FileUploadZone({
 
 // ─── Review Summary ──────────────────────────────────────────────────────────
 
+function SummarySection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="p-5 bg-white rounded-xl border border-border">
+      <h4 className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">{title}</h4>
+      {children}
+    </div>
+  );
+}
+
+function SummaryRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex justify-between py-1.5 text-sm">
+      <span className="text-muted">{label}</span>
+      <span className="font-medium text-foreground text-right">{value || '--'}</span>
+    </div>
+  );
+}
+
 function ReviewSummary({
   patient,
   procedure,
@@ -605,24 +623,6 @@ function ReviewSummary({
   procedure: ProcedureInfo;
   files: UploadedFile[];
 }) {
-  function SummarySection({ title, children }: { title: string; children: React.ReactNode }) {
-    return (
-      <div className="p-5 bg-white rounded-xl border border-border">
-        <h4 className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">{title}</h4>
-        {children}
-      </div>
-    );
-  }
-
-  function SummaryRow({ label, value }: { label: string; value: string }) {
-    return (
-      <div className="flex justify-between py-1.5 text-sm">
-        <span className="text-muted">{label}</span>
-        <span className="font-medium text-foreground text-right">{value || '--'}</span>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-4">
       <SummarySection title="Patient Information">
