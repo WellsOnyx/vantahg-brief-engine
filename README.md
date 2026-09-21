@@ -23,7 +23,7 @@ The core principle is simple: **AI analyzes, physicians decide.** VantaUM uses A
 
 ## Customer-ready progress (Sep 2026)
 
-We executed the plan in [`docs/customer-ready/`](docs/customer-ready/00-README.md) in commit order. **Phases 0–7 are the customer-ready code path.** Remaining work is human ops (SES, Fargate deploy, BAA, production keys).
+We executed the plan in [`docs/customer-ready/`](docs/customer-ready/00-README.md) in commit order. **Phases 0–7 are the customer-ready code path.** Phase 8 Muse is a CX-only stub (not live). Remaining go-live work is the Cole punch list in [`docs/customer-ready/13-go-live-ops.md`](docs/customer-ready/13-go-live-ops.md) (SES, Fargate deploy, BAA, production keys). No live PHI until that BAA path is confirmed.
 
 | Phase | Status | Highlights |
 |-------|--------|------------|
@@ -35,9 +35,11 @@ We executed the plan in [`docs/customer-ready/`](docs/customer-ready/00-README.m
 | 5 Three role views | ✅ merged | Client / CX / Med lenses; RBAC deny cross-tenant + CX notes |
 | 6 Reporting + CM | ✅ merged | Five client reports + CSV, CM HMAC handoff, ops scoreboard |
 | 7 Onboarding + go-live | ✅ merged | A→E runbook + `/admin/onboarding`, synthetic/shadow packs, SLA rollback gate |
-| 7.1 Cole runbook | this PR | How-to on every A–E item + `docs/customer-ready/11-cole-onboarding-runbook.md` so Cole needs no tribal knowledge |
+| 7.1 Cole runbook | ✅ merged | How-to on every A–E item + `docs/customer-ready/11-cole-onboarding-runbook.md` |
+| 8 Muse CX stub | code-complete, not live | `docs/customer-ready/12-muse-connector.md` — no PHI, no live Muse HTTP |
+| Go-live ops | operator script | `docs/customer-ready/13-go-live-ops.md` — env, RDS `027`, bootstrap, A–E, BAA stop |
 
-Full board: [`docs/PROGRESS.md`](docs/PROGRESS.md) · live notes: [`STATE.md`](STATE.md) · Cole runbook: [`docs/customer-ready/11-cole-onboarding-runbook.md`](docs/customer-ready/11-cole-onboarding-runbook.md)
+Full board: [`docs/PROGRESS.md`](docs/PROGRESS.md) · live notes: [`STATE.md`](STATE.md) · Cole A→E: [`docs/customer-ready/11-cole-onboarding-runbook.md`](docs/customer-ready/11-cole-onboarding-runbook.md) · go-live punch list: [`docs/customer-ready/13-go-live-ops.md`](docs/customer-ready/13-go-live-ops.md)
 
 **Auth (updated):** Supabase Auth hybrid when `ENABLE_AWS_AUTH=false` (default, including Fargate). Cognito login / invite / session when `ENABLE_AWS_AUTH=true`. See Phase 0.2 notes in `STATE.md`.
 

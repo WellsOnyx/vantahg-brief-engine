@@ -56,5 +56,7 @@ describe('runtime-backend', () => {
     expect(INTEGRATION_INGRESS.externalSubmit.path).toBe('/api/external/submit');
     expect(INTEGRATION_INGRESS.gravityRail.client).toBe('lib/gravity-rails.ts');
     expect(INTEGRATION_INGRESS.gravityRail.path).toBe('/api/intake/gravity-rail');
+    expect(INTEGRATION_INGRESS.muse.path).toBe('/api/muse/webhook');
+    expect(INTEGRATION_INGRESS.muse.client).toBe('lib/muse');
   });
 });

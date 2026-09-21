@@ -10,6 +10,7 @@ import {
 } from '@/components/layouts/PageLayouts';
 import { SectionCard } from '@/components/SectionCard';
 import { EmptyState } from '@/components/EmptyState';
+import { MuseTouchpointsPanel } from '@/components/cx/MuseTouchpointsPanel';
 
 interface CxCase {
   case_id: string;
@@ -237,6 +238,8 @@ export default function CxLensPage() {
                     ))}
                   </ul>
                 </SectionCard>
+
+                <MuseTouchpointsPanel />
 
                 <SectionCard eyebrow="Non-PHI" title="Relationship notes">
                   {lens.notes.length === 0 ? (

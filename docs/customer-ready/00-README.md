@@ -44,6 +44,8 @@ A TPA or self-insured employer can:
 | 09 | Care management connect | Flags, webhook, CSV — not Epic day one |
 | 10 | Implementation commits | Exact build sequence + owners + acceptance |
 | 11 | Cole A→E runbook | Operator steps so Cole can run onboarding without tribal knowledge |
+| 12 | Muse connector (Phase 8 stub) | CX-only relationship surface. No PHI. Not live-keyed |
+| 13 | Go-live ops punch list | Ordered env, RDS `027`, bootstrap, A–E, BAA. No live PHI until the BAA path is confirmed |
 | — | [lint-hydrate-allowlist.md](lint-hydrate-allowlist.md) | Five intentional `set-state-in-effect` hydrate sites; lint is otherwise fail-closed |
 
 ## Related in-flight
@@ -51,7 +53,8 @@ A TPA or self-insured employer can:
 - Phase 0.1 AWS path: [PR #50](https://github.com/WellsOnyx/vantahg-brief-engine/pull/50) — **merged**.
 - Phase 0.2 Cognito cutover: [PR #53](https://github.com/WellsOnyx/vantahg-brief-engine/pull/53) — **merged**. Default `ENABLE_AWS_AUTH=false`.
 - Phase 1 case spine + audit + R01–R16: [PR #52](https://github.com/WellsOnyx/vantahg-brief-engine/pull/52) — **merged**.
-- Phases 0–7 customer-ready code path: on `main` through Phase 6; Phase 7 is this onboarding / go-live PR. Remaining = human ops (SES, Fargate, BAA, keys). Not a HIPAA attestation.
+- Phases 0–7 customer-ready code path: on `main`. Remaining human ops (SES, Fargate, BAA, keys) are the ordered script in [`13-go-live-ops.md`](13-go-live-ops.md). Not a HIPAA attestation.
+- Phase 8 Muse connector: [`12-muse-connector.md`](12-muse-connector.md) — CX relationship stub only. No live PHI. No live Muse HTTP.
 
 ## How to use this
 
