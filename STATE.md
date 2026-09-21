@@ -19,7 +19,7 @@ Phase 7.1 from `10-implementation-commits.md`: Cole can run A→E **without trib
 
 **Acceptance:** Cole runs A→E from the UI + 11-runbook. Synthetic only.
 
-**CI on this branch:** `npm run test:ci` 450 passed (3 todo). `tsc --noEmit` clean. Demo `/admin/onboarding` + publish fixture + E1 pack verified locally.
+**CI on this branch (after main):** `npm run test:ci` 483 passed (3 todo). `tsc --noEmit` clean. Packaging lock and Phase 4.4 / 5.3 / 6.3 / 7.3 notes kept. RDS-native bootstrap stays on `cursor/rds-native-bootstrap-d1cf`.
 
 ---
 
