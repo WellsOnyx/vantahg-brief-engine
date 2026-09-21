@@ -10,7 +10,7 @@ import type { AuthWorkflowType, CaseSpinePriority } from '@/lib/case-spine/types
 
 /**
  * Usage-tracking SKUs on the case ledger — not a standalone UM storefront.
- * Commercial door is VantaHG Med Review; these lines record work under that
+ * VantaUM sells Med Review; these lines record work under UM’s med-review
  * contract. Do not treat them as a free-standing UM offer. Do not invent prices.
  */
 export const BILLABLE_SKUS = ['prior_auth', 'first_level_appeal', 'rush_addon'] as const;

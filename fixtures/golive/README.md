@@ -2,7 +2,7 @@
 
 Tokenized synthetic catalogs. **No live PHI. No `ENABLE_AWS_*` flag flips. No vendor keys. No Optum.**
 
-Packaging lock: paid door = Med Review (VantaHG). Brief Engine / UM is included free **only** with Vanta med review — not a standalone free UM SKU.
+Packaging lock (corrected 2026-09-21): **VantaUM sells Med Review.** Brief Engine / UM is included free **only** under UM’s Vanta med-review contract — no standalone free UM SKU, no free UM with a third-party review shop. **VantaHG = IRO + IDR only.** Optum frozen.
 
 ## Phase 7.2 — Synthetic pack (E1)
 

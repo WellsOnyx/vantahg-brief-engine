@@ -1,10 +1,10 @@
 /**
- * Packaging lock (Jonah, 2026-09-20):
+ * Packaging lock (Jonah, corrected 2026-09-21):
  *
- * Paid door = Med Review (VantaHG). VantaUM Brief Engine / UM is included
- * free only when the buyer uses Vanta med review under that contract.
- * Never a standalone free UM SKU. Never free UM with another shop’s
- * med review. UM still owns Brief Engine SoR/tech; HG sells the wedge.
+ * VantaUM sells Med Review as the paid wedge. VantaUM Brief Engine / UM is
+ * included free only when the buyer uses Vanta med review under UM’s contract.
+ * No standalone free UM SKU. No free UM with a third-party review shop.
+ * VantaHG = IRO + IDR only. UM still owns Brief Engine SoR/tech.
  *
  * Canonical: docs/customer-ready/01-product-boundary.md
  */
@@ -84,7 +84,7 @@ export function evaluateUmBriefEngineAccess(
       allowed: false,
       code: 'third_party_med_review',
       reason:
-        'VantaUM Brief Engine / UM is not included free when med review is performed by another shop. Paid door is VantaHG Med Review.',
+        'VantaUM Brief Engine / UM is not included free when med review is performed by another shop. VantaUM sells Med Review under UM’s contract.',
     };
   }
 
@@ -94,7 +94,7 @@ export function evaluateUmBriefEngineAccess(
         allowed: false,
         code: 'standalone_um_not_offered',
         reason:
-          'VantaUM Brief Engine / UM is not offered as a standalone free SKU. It is included only under a Vanta med-review contract.',
+          'VantaUM Brief Engine / UM is not offered as a standalone free SKU. It is included free only when the buyer uses Vanta med review under UM’s contract.',
       };
     }
     return {
@@ -108,7 +108,7 @@ export function evaluateUmBriefEngineAccess(
   return {
     allowed: true,
     code: 'granted',
-    reason: 'Vanta med-review contract: Brief Engine / UM included under that contract.',
+    reason: 'Vanta med-review contract under UM: Brief Engine / UM included free under that contract.',
   };
 }
 

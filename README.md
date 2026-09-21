@@ -17,7 +17,7 @@ VantaUM is an AI-powered utilization review platform built for health plans, TPA
 
 The core principle is simple: **AI analyzes, physicians decide.** VantaUM uses Anthropic Claude to generate clinical briefs that summarize patient documentation, match procedure codes against evidence-based criteria, and surface relevant guidelines. A deterministic fact-checking engine then verifies every AI-generated claim against known medical databases. All clinical determinations are made by licensed, board-certified physicians -- the AI never makes coverage decisions.
 
-**Packaging (locked 2026-09-20):** the paid commercial door is **VantaHG Med Review**. VantaUM Brief Engine / utilization management is included free only when the buyer uses Vanta med review under that contract — not a standalone UM SKU, not free with another shop's med review. UM still owns Brief Engine SoR and tech. Code gate: `client_config.vanta_med_review_contract`.
+**Packaging (corrected 2026-09-21):** **VantaUM sells Med Review** as the paid wedge. VantaUM Brief Engine / utilization management is included free only when the buyer uses Vanta med review under UM's contract — no standalone free UM SKU, no free UM with a third-party review shop. **VantaHG = IRO + IDR only.** UM still owns Brief Engine SoR and tech. Code gate unchanged: `client_config.vanta_med_review_contract` and `med_review_provider=vanta`.
 
 ---
 

@@ -15,10 +15,11 @@ import type { ContractTemplate } from '../types';
  *   - All other [[PLACEHOLDER]] areas and standard sections remain
  *     immutable in this template version.
  *
- * PACKAGING (2026-09-20, Jonah): Paid commercial door is VantaHG Med Review.
- * VantaUM Brief Engine / UM is included only when Client uses Vanta med
- * review under that contract. Not a standalone UM SKU. Not included if
- * Client uses another shop's med review. Do not invent prices in this file.
+ * PACKAGING (corrected 2026-09-21, Jonah): VantaUM sells Med Review.
+ * VantaUM Brief Engine / UM is included free only when Client uses Vanta med
+ * review under UM's contract. No standalone UM SKU. Not included if Client
+ * uses another shop's med review. VantaHG = IRO + IDR only. Do not invent
+ * prices in this file.
  * Fee schedule / PEPM placeholders stay contract variables — they are not
  * a license to sell UM alone.
  */
@@ -37,7 +38,7 @@ This Master Services Agreement ("Agreement") is entered into as of {{effective_d
 
 VantaUM will provide utilization review and prior authorization management services (the "Services") to Client in accordance with the service levels and scope set forth in this Agreement and any executed Statements of Work.
 
-Commercial packaging: the paid door is VantaHG Med Review. VantaUM Brief Engine / utilization management is included only when Client uses Vanta med review under that contract. Services are not offered as a standalone UM SKU and are not included if Client uses another shop's med review.
+Commercial packaging: VantaUM sells Med Review. VantaUM Brief Engine / utilization management is included free only when Client uses Vanta med review under UM's contract. Services are not offered as a standalone UM SKU and are not included if Client uses another shop's med review. VantaHG is IRO and IDR only.
 
 [[PLACEHOLDER: Detailed scope of services — concierge intake, clinician determination, brief generation, dashboard access, integrations. Replace with attorney-drafted language.]]
 

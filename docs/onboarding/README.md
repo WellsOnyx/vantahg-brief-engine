@@ -6,7 +6,7 @@ This file is the short index. Use **11** plus `/admin/onboarding` — no tribal 
 
 **Synthetic only.** No live PHI. Empty vendor slots stay empty. `ENABLE_AWS_*` stay **false** until an operator exports them at deploy. Completing this runbook is a **code / ops gate**, not a HIPAA attestation.
 
-**Packaging lock:** paid door = Med Review (VantaHG). Brief Engine / UM is free only with Vanta med review.
+**Packaging lock (corrected 2026-09-21):** **VantaUM sells Med Review.** Brief Engine / UM is free only under UM’s Vanta med-review contract. No standalone free UM SKU. No free UM with a third-party review shop. **VantaHG = IRO + IDR only.** Optum frozen (no outreach).
 
 UI: [`/admin/onboarding`](../../app/admin/onboarding/page.tsx)  
 Catalog: [`lib/onboarding/checklist.ts`](../../lib/onboarding/checklist.ts)  
@@ -30,7 +30,7 @@ Confirm LOBs, SLAs, primary intake mode, determination channels, CX owner, revie
 | A4 | Client-dependent | Security / SOC pack |
 | A5 | Required | Invoice entity + billing contact (Meow, not Stripe) |
 
-Fee schedule: paid door is VantaHG Med Review. UM Brief Engine is included only when `client_config.vanta_med_review_contract` is true. Do not sell standalone UM. Do not invent prices.
+Fee schedule: **VantaUM sells Med Review.** UM Brief Engine is included free only when `client_config.vanta_med_review_contract` is true and `med_review_provider=vanta`. Do not sell standalone UM. Do not include free UM with a third-party review shop. VantaHG is IRO + IDR only. Do not invent prices.
 
 Pointers: [`06-hipaa-baa-path.md`](../customer-ready/06-hipaa-baa-path.md), [`07-billing-and-tracking.md`](../customer-ready/07-billing-and-tracking.md).
 

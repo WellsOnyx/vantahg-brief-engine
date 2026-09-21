@@ -251,7 +251,7 @@ export default function SitePage() {
         {/* Early Access Bar */}
         <div className="ea-bar">
           <span className="ea-bar-pill">Early Access</span>
-          <span className="ea-bar-text">VantaHG Med Review is the commercial door. Brief Engine included only under that Vanta contract.</span>
+          <span className="ea-bar-text">VantaUM sells Med Review. Brief Engine included free only under UM’s contract.</span>
           <a href={EA_EMAIL} className="ea-bar-link">Apply now →</a>
         </div>
 
@@ -315,12 +315,12 @@ export default function SitePage() {
               <p className="sb" style={{ marginTop: 16 }}>The TPAs that partner with us now don&apos;t inherit someone else&apos;s technical debt. They help shape a platform designed around how UM should actually work.</p>
               <div className="ea-spots">
                 <div className="ea-spots-dot" />
-                <div className="ea-spots-text"><strong>Packaging is locked.</strong> Paid door is VantaHG Med Review. Brief Engine / UM is included only when you use Vanta med review — not standalone, not with another shop.</div>
+                <div className="ea-spots-text"><strong>Packaging is locked.</strong> VantaUM sells Med Review. Brief Engine / UM is included free only under UM’s contract — not standalone, not with another shop. VantaHG is IRO and IDR only.</div>
               </div>
             </div>
             <div className="ea-perks">
               {[
-                { num: '01', title: 'Vanta med-review contract', body: 'The commercial door is VantaHG Med Review. Brief Engine / UM is included under that contract only. Not a standalone UM SKU. Not included with another shop’s review. Terms are scoped on a conversation — we do not publish a UM price here.' },
+                { num: '01', title: 'Vanta med-review contract', body: 'VantaUM sells Med Review. Brief Engine / UM is included free only under UM’s contract. Not a standalone UM SKU. Not included with another shop’s review. VantaHG is IRO and IDR only. Terms are scoped on a conversation — we do not publish a UM price here.' },
                 { num: '02', title: 'Roadmap Input', body: 'Your operational reality shapes what we build next. Founding partners have a direct line to the product team — not a support ticket and a quarterly roadmap review.' },
                 { num: '03', title: 'Reference Account Status', body: 'Be among the first TPAs in the market to operate a concierge UM model. Reference status positions your organization as a clinical quality leader to your plan sponsors.' },
                 { num: '04', title: 'White-Glove Onboarding', body: 'Founding partners get hands-on implementation directly with the Wells Onyx operating team — not a third-party integrator who read the manual last week.' },

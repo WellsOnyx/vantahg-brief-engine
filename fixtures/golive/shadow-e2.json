@@ -4,7 +4,7 @@
   "phase": "7.3",
   "shadow": true,
   "client_id": "11111111-1111-1111-1111-111111111111",
-  "notes": "Tokenized refs only. No live PHI. Demo/memory path — do not flip ENABLE_AWS_* or send outbound. Every case is shadow=true so this pack can run alongside live without writing live PHI or a member/provider final send. Brief Engine is free only with Vanta med review (paid door = Med Review).",
+  "notes": "Tokenized refs only. No live PHI. Demo/memory path — do not flip ENABLE_AWS_* or send outbound. Every case is shadow=true so this pack can run alongside live without writing live PHI or a member/provider final send. VantaUM sells Med Review; Brief Engine is free only under UM’s contract.",
   "cases": [
     {
       "id": "e2-shadow-01",
