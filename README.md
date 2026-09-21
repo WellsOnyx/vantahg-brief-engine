@@ -239,7 +239,11 @@ npx tsx scripts/bootstrap-real-client.ts \
 # Add --dry-run to preview the inserts before writing.
 ```
 
-The bootstrap script still constructs a Supabase JS client (leftover). On AWS, prefer inserting through the app once RDS migrations are applied, or point the script at leftover Supabase keys. An RDS-native bootstrap is a follow-up.
+RDS / plain Postgres: `ENABLE_AWS_DB=true` and `DATABASE_URL` (or `DB_HOST` + `DB_PASSWORD`). The script uses the pg shim and does not need Supabase URL keys. Apply schema with `npm run db:migrate:rds` first. Local docker needs `DATABASE_SSL=disable`.
+
+Leftover Supabase: leave `ENABLE_AWS_DB` false and set `NEXT_PUBLIC_SUPABASE_URL` (or `SUPABASE_URL`) plus `SUPABASE_SERVICE_ROLE_KEY`.
+
+`scripts/seed-demo.ts` follows the same split (`npm run seed`, or `--dry-run` to print the plan without connecting). `scripts/bootstrap-master-admin.ts` is still the Supabase Auth hybrid leftover and refuses to run when `ENABLE_AWS_DB=true`.
 
 ### 4. Verify the system is live
 
