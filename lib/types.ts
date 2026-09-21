@@ -372,6 +372,10 @@ export interface Staff {
   status: 'active' | 'inactive' | 'on_leave';
   cases_completed: number;
   quality_score: number | null; // 0-100, from QA audits
+  /** Real Gravity Rail workspace id. Never a placeholder `ws-<timestamp>`. */
+  gr_workspace_id?: string | null;
+  gr_workflow_id?: number | null;
+  gr_provisioned_at?: string | null;
 }
 
 export interface Pod {

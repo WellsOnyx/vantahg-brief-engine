@@ -46,7 +46,7 @@ Paid door = Med Review (VantaHG). VantaUM Brief Engine / UM is **included free o
 - Fargate image rebuild / deploy from current `main`
 - Flip `ENABLE_AWS_AUTH=true` only after a staging tenant is ready
 - Client BAA + subprocessor BAAs before live PHI
-- Gravity Rail / Phaxio / HelloSign / Meow **production keys** (slots only today)
+- Gravity Rail / Phaxio / HelloSign / Meow **production keys** (slots only today). Gravity Rail loop on `main` is code-complete and not live-keyed: production webhook with no secret fails closed; outbound without `GRAVITY_RAIL_API_KEY` is 503.
 - Run the first real client roster against production RDS when that client exists (`npm run bootstrap-real-client`). The script is RDS-native. Do not put live PHI in the command or in shared logs.
 
 ## RDS bootstrap (available)

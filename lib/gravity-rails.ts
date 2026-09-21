@@ -238,6 +238,17 @@ export class GravityRailClient {
     return this.request('GET', `/w/${wid}`);
   }
 
+  /**
+   * Create a workspace on the live Gravity Rail API.
+   * Callers must not invent an id when this throws.
+   */
+  createWorkspace(name: string, slug?: string): Promise<GRWorkspace> {
+    return this.request('POST', '/w', {
+      name,
+      slug: slug || name.toLowerCase().replace(/\s+/g, '-'),
+    });
+  }
+
   // ── Chats ───────────────────────────────────────────────────────────────────
 
   listChats(wid: string, page = 1, pageSize = 50): Promise<GRPaginatedResponse<GRChat>> {
@@ -410,23 +421,48 @@ export class GravityRailError extends Error {
   }
 }
 
+/** Missing GRAVITY_RAIL_API_KEY. Outbound routes map this to HTTP 503. */
+export class GravityRailNotConfiguredError extends GravityRailError {
+  constructor() {
+    super('GRAVITY_RAIL_API_KEY is not configured', 'not_configured', 503);
+    this.name = 'GravityRailNotConfiguredError';
+  }
+}
+
 // ── Singleton factory ─────────────────────────────────────────────────────────
 
 let _client: GravityRailClient | null = null;
+let _clientKey: string | null = null;
+
+export function isGravityRailApiConfigured(): boolean {
+  return Boolean(process.env.GRAVITY_RAIL_API_KEY?.trim());
+}
+
+/**
+ * Test-only: drop the cached client so a later getGravityRailClient()
+ * re-reads GRAVITY_RAIL_API_KEY. Never call from request handlers.
+ */
+export function resetGravityRailClientForTests(): void {
+  _client = null;
+  _clientKey = null;
+}
 
 /**
  * Returns a singleton GravityRailClient using the GRAVITY_RAIL_API_KEY env var.
  * Safe to call server-side only — the API key is never exposed to the browser.
+ * Missing key → GravityRailNotConfiguredError (503). Never a fake workspace.
+ * Not live-keyed: an empty slot is the expected demo state.
  */
 export function getGravityRailClient(): GravityRailClient {
-  if (!_client) {
-    const apiKey = process.env.GRAVITY_RAIL_API_KEY;
-    if (!apiKey) {
-      throw new Error(
-        'GRAVITY_RAIL_API_KEY is not set. Add it to .env.local — see .env.local.example.',
-      );
-    }
+  const apiKey = process.env.GRAVITY_RAIL_API_KEY?.trim();
+  if (!apiKey) {
+    _client = null;
+    _clientKey = null;
+    throw new GravityRailNotConfiguredError();
+  }
+  if (!_client || _clientKey !== apiKey) {
     _client = new GravityRailClient(apiKey);
+    _clientKey = apiKey;
   }
   return _client;
 }

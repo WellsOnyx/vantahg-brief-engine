@@ -248,6 +248,22 @@ export class CaseSpineService {
     return visible;
   }
 
+  /**
+   * Earliest case for this client with the same external id.
+   * Gravity Rail inbound replay uses this so Idempotency-Key / chat_id /
+   * external_id redelivery returns the original spine case.
+   */
+  async findCaseByExternalId(clientId: string, externalId: string): Promise<CanonicalCase | null> {
+    const key = externalId.trim();
+    if (!key) return null;
+    const matches = (await this.store.listCases()).filter(
+      (c) => c.client_id === clientId && (c.external_id === key || c.intake.external_id === key),
+    );
+    if (matches.length === 0) return null;
+    matches.sort((a, b) => a.received_at.localeCompare(b.received_at) || a.case_id.localeCompare(b.case_id));
+    return matches[0];
+  }
+
   async listCases(viewer: SpineViewer, filters: ListCasesFilters = {}): Promise<CanonicalCase[]> {
     const all = await this.store.listCases();
     const filtered = applyListFilters(all, viewer, filters);

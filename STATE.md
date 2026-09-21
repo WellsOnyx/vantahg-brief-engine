@@ -5,6 +5,23 @@ Future Claude/Cole/Jonah sessions: read this first.
 
 ---
 
+## 2026-09-21 — Gravity Rail loop on main (code-complete, not live-keyed)
+
+Port of the safe seams from PR #49 onto current `main`. Does **not** merge `feature/merge-and-instrument` and does **not** add a parallel `/api/gr/webhook` case writer. Inbound stays `POST /api/intake/gravity-rail` → case spine.
+
+- **Fail closed:** production with `GRAVITY_RAIL_WEBHOOK_SECRET`, `GR_WEBHOOK_SECRET`, and `GR_WEBHOOK_SECRET_SECONDARY` all unset returns `500 webhook_secret_not_configured`. Dev/test with an empty secret still accepts synthetic payloads. A set secret still requires raw-body HMAC-SHA256.
+- **Idempotent create:** `Idempotency-Key`, else `chat_id`, else `external_id` replays return the same spine case (`200`, `idempotent: true`).
+- **Honest outbound:** missing `GRAVITY_RAIL_API_KEY` throws `GravityRailNotConfiguredError` → **503** `not_configured`. No fake workspace.
+- **Widget:** `VantaMemberChat` / `GravityRailChat` inject the script only when both public workspace and site ids are set.
+- **Provisioner:** `lib/gravity-rails/provisioner.ts` throws if create fails and refuses `ws-<timestamp>` ids. `POST /api/staff` calls it only when the API key is set; staff create still succeeds if GR is down.
+- **Env:** `.env.local.example` documents the slots. No keys in the repo.
+
+Not production-ready. No live GR workspace, phone numbers, or API key. No `ENABLE_AWS_*` default flips. Med Review packaging lock unchanged. No Optum.
+
+**CI on this branch:** `npm run test:ci` 538 passed (3 todo). `npx tsc --noEmit` clean.
+
+---
+
 ## 2026-09-20 — HG lane: IDR Ops assist guards (this PR)
 
 Small incremental hardening on current `main`. The full IDR engine (mirror form, bookmarklet, serve mode) lives only on stale PR [#44](https://github.com/WellsOnyx/vantahg-brief-engine/pull/44) (`claude/idr-mirror-assist`, based on `feature/merge-and-instrument`, not `main`). PR [#46](https://github.com/WellsOnyx/vantahg-brief-engine/pull/46) (training dataset) clashes with case-spine migration `027`. **Do not merge those blindly.**
