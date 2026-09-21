@@ -1,7 +1,8 @@
 // Lazy dynamic import for 'pg' so the bundler never sees the native package
 // during `npm run build` on Vercel or in the Docker image unless
 // ENABLE_AWS_DB is actually active at runtime.
-let _pg: any = null;
+type PgModule = typeof import('pg');
+let _pg: PgModule | null = null;
 async function getPgModule() {
   if (!_pg) {
     _pg = await import('pg');
@@ -9,9 +10,11 @@ async function getPgModule() {
   return _pg;
 }
 
-type Pool = any;
-type PoolConfig = any;
-type QueryResultRow = any;
+// Structural stand-in was too narrow for `pg.Pool` (and broke the shim's
+// `rows[0].count` read). Use the real pg types; the value import stays dynamic.
+type Pool = InstanceType<PgModule['Pool']>;
+type PoolConfig = ConstructorParameters<PgModule['Pool']>[0];
+type QueryResultRow = Record<string, unknown>;
 
 /**
  * Singleton Postgres connection pool for the AWS / RDS path.
@@ -80,6 +83,6 @@ export async function rawQuery<T extends QueryResultRow = QueryResultRow>(
   params: unknown[] = [],
 ): Promise<T[]> {
   const pool = await getPool();
-  const result: { rows: T[] } = await (pool as any).query(sql, params as never[]);
-  return result.rows;
+  const result = await pool.query(sql, params);
+  return result.rows as T[];
 }

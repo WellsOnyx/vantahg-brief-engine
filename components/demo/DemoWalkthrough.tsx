@@ -182,19 +182,16 @@ function CaseIntakeStep({ onNext }: { onNext: () => void }) {
 
 function BriefGenerationStep({ onNext }: { onNext: () => void }) {
   const [visibleSections, setVisibleSections] = useState(0);
-  const [typing, setTyping] = useState(true);
+  const typing = visibleSections < BRIEF_SECTIONS.length;
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (visibleSections < BRIEF_SECTIONS.length) {
-      const timer = setTimeout(() => {
-        setVisibleSections((v) => v + 1);
-        if (containerRef.current) containerRef.current.scrollTop = containerRef.current.scrollHeight;
-      }, visibleSections === 0 ? 1200 : 1800);
-      return () => clearTimeout(timer);
-    } else {
-      setTyping(false);
-    }
+    if (visibleSections >= BRIEF_SECTIONS.length) return;
+    const timer = setTimeout(() => {
+      setVisibleSections((v) => v + 1);
+      if (containerRef.current) containerRef.current.scrollTop = containerRef.current.scrollHeight;
+    }, visibleSections === 0 ? 1200 : 1800);
+    return () => clearTimeout(timer);
   }, [visibleSections]);
 
   return (

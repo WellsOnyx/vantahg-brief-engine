@@ -289,7 +289,7 @@ export default function SitePage() {
             <a href="#broker" className="role-card broker" style={{ borderLeft: 'none', borderRight: 'none' }}>
               <div className="role-card-eyebrow">Broker</div>
               <div className="role-card-title">You Win<br />the Business</div>
-              <p className="role-card-body">Give your producers a real weapon. Partner with us to help your clients win self-funded accounts your competitors can't match — and keep them longer.</p>
+              <p className="role-card-body">Give your producers a real weapon. Partner with us to help your clients win self-funded accounts your competitors can&apos;t match — and keep them longer.</p>
               <div className="role-card-cta">See how brokers win with VantaUM →</div>
             </a>
 
@@ -382,7 +382,7 @@ export default function SitePage() {
               <div>
                 <span className="kicker" style={{ color: 'var(--gold)' }}>For Brokers</span>
                 <h2 className="sh">You Win<br /><em>the Business.</em><br />We help you keep it.</h2>
-                <p className="sb" style={{ marginBottom: '24px' }}>Your producers are selling self-funded accounts against carriers who've been in the market for decades. The question on every plan sponsor's mind: what do I get from you that I can't get elsewhere?</p>
+                <p className="sb" style={{ marginBottom: '24px' }}>Your producers are selling self-funded accounts against carriers who&apos;ve been in the market for decades. The question on every plan sponsor&apos;s mind: what do I get from you that I can&apos;t get elsewhere?</p>
                 <p className="sb" style={{ marginBottom: '40px' }}>VantaUM is the answer. Partner with us and bring your clients a modern, URAC-accredited utilization management layer that holds up under scrutiny — faster decisions, better member experience, and clinical compliance that actually protects the plan.</p>
                 <a href={EA_EMAIL} className="btn-primary" style={{ background: 'transparent', border: '1px solid var(--gold)', color: 'var(--gold)' }}>Become a broker partner →</a>
               </div>
@@ -411,15 +411,15 @@ export default function SitePage() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '80px', alignItems: 'start', marginTop: '0' }}>
               <div>
                 <h2 className="sh">You Own<br /><em>the Outcome.</em><br />Make it exceptional.</h2>
-                <p className="sb" style={{ marginBottom: '24px' }}>Your employees don't distinguish between their health plan and their employer. When a prior authorization takes five days and nobody calls back, that's a benefits failure — and it lands on you.</p>
-                <p className="sb" style={{ marginBottom: '24px' }}>VantaUM changes what's possible. Same-day authorization decisions. A named coordinator who actually picks up the phone. A clinical process that treats every case like it belongs to someone who matters — because it does.</p>
+                <p className="sb" style={{ marginBottom: '24px' }}>Your employees don&apos;t distinguish between their health plan and their employer. When a prior authorization takes five days and nobody calls back, that&apos;s a benefits failure — and it lands on you.</p>
+                <p className="sb" style={{ marginBottom: '24px' }}>VantaUM changes what&apos;s possible. Same-day authorization decisions. A named coordinator who actually picks up the phone. A clinical process that treats every case like it belongs to someone who matters — because it does.</p>
                 <p className="sb" style={{ marginBottom: '40px' }}>This is what genuinely different looks like in self-funded healthcare. Not a better portal. A completely different experience.</p>
                 <a href={EA_EMAIL} className="btn-primary">Talk to us about your population →</a>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                 <div style={{ padding: '28px 32px', background: 'rgba(91,138,245,0.06)', border: '1px solid rgba(91,138,245,0.15)', borderRadius: '6px', marginBottom: '2px' }}>
-                  <p style={{ fontFamily: 'var(--serif)', fontSize: '18px', fontWeight: 300, lineHeight: 1.4, color: 'var(--white)', marginBottom: '16px', fontStyle: 'italic' }}>"The daily friction employees hate"</p>
-                  <p style={{ fontSize: '13px', fontWeight: 300, color: 'var(--white-muted)', lineHeight: 1.6 }}>Waiting 5 days for a prior auth answer. Getting a denial letter with no explanation. Being told to call back. We built VantaUM specifically to eliminate this — because it's fixable, and nobody else bothered to fix it.</p>
+                  <p style={{ fontFamily: 'var(--serif)', fontSize: '18px', fontWeight: 300, lineHeight: 1.4, color: 'var(--white)', marginBottom: '16px', fontStyle: 'italic' }}>&quot;The daily friction employees hate&quot;</p>
+                  <p style={{ fontSize: '13px', fontWeight: 300, color: 'var(--white-muted)', lineHeight: 1.6 }}>Waiting 5 days for a prior auth answer. Getting a denial letter with no explanation. Being told to call back. We built VantaUM specifically to eliminate this — because it&apos;s fixable, and nobody else bothered to fix it.</p>
                 </div>
                 {[
                   { icon: '→', title: 'Same-day decisions on standard cases', body: 'Median turnaround under 4 hours. Members get answers before they lose faith in the process.' },

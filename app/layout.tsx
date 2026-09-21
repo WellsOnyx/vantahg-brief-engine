@@ -41,7 +41,7 @@ export const viewport: Viewport = {
 // Role-aware navigation per design spec (mesh id=115)
 // Using the 5 role nav arrays verbatim.
 
-const tpaClientNav: NavGroup[] = [
+const _tpaClientNav: NavGroup[] = [
   {
     items: [
       { href: "/client", label: "Status" },
@@ -58,7 +58,7 @@ const tpaClientNav: NavGroup[] = [
   },
 ];
 
-const conciergeNav: NavGroup[] = [
+const _conciergeNav: NavGroup[] = [
   {
     items: [
       { href: "/cx", label: "CX lens" },
@@ -70,7 +70,7 @@ const conciergeNav: NavGroup[] = [
   },
 ];
 
-const clinicianNav: NavGroup[] = [
+const _clinicianNav: NavGroup[] = [
   {
     items: [
       { href: "/queue", label: "My Queue" },
@@ -82,7 +82,7 @@ const clinicianNav: NavGroup[] = [
   },
 ];
 
-const idrAttorneyNav: NavGroup[] = [
+const _idrAttorneyNav: NavGroup[] = [
   {
     items: [
       { href: "/attorney/cases", label: "My Cases" },

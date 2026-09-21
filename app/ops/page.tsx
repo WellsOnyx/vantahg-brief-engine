@@ -164,14 +164,22 @@ function buildHiringData() {
 
 // ── Custom Tooltip ────────────────────────────────────────────────────────────
 
-function ChartTooltip({ active, payload, label }: any) {
+function ChartTooltip({
+  active,
+  payload,
+  label,
+}: {
+  active?: boolean;
+  payload?: { dataKey: string; color?: string; name?: string; value?: number }[];
+  label?: string;
+}) {
   if (!active || !payload?.length) return null;
   return (
     <div className="bg-navy-dark border border-white/10 rounded-lg p-3 text-xs">
       <p className="text-white/60 mb-1">{label} lives</p>
-      {payload.map((p: any) => (
+      {payload.map((p) => (
         <p key={p.dataKey} style={{ color: p.color }}>
-          {p.name}: {p.dataKey.startsWith('lives') ? fmtN(p.value) : fmt$(p.value)}
+          {p.name}: {p.dataKey.startsWith('lives') ? fmtN(p.value ?? 0) : fmt$(p.value ?? 0)}
         </p>
       ))}
     </div>
@@ -192,6 +200,7 @@ export default function OpsPage() {
       const saved = localStorage.getItem('vantaum-ops-state');
       if (saved) {
         const state = JSON.parse(saved);
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- WHY: localStorage hydrate after mount; SSR HTML must stay deterministic
         if (typeof state.lives === 'number') setLives(state.lives);
         if (Array.isArray(state.tpas)) setTpas(state.tpas);
       }
@@ -234,6 +243,7 @@ export default function OpsPage() {
 
   // Sync signed lives → main lives input
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- WHY: sync derived signed-lives into the lives input; doing this during render would loop
     if (signedLives > 0) setLives(signedLives);
   }, [signedLives]);
 
@@ -672,8 +682,8 @@ export default function OpsPage() {
                         active && payload?.length ? (
                           <div className="bg-navy-dark border border-white/10 rounded-lg p-3 text-xs space-y-1">
                             <p className="text-white/50 mb-1">{label} lives</p>
-                            {payload.map((p: any) => (
-                              <p key={p.dataKey} style={{ color: p.fill }}>{p.name}: {p.value}</p>
+                            {payload.map((p) => (
+                              <p key={String(p.dataKey)} style={{ color: typeof p.fill === 'string' ? p.fill : undefined }}>{p.name}: {p.value}</p>
                             ))}
                           </div>
                         ) : null
@@ -894,7 +904,7 @@ export default function OpsPage() {
                     { label: 'P2P Contract Costs', value: delivery.p2pAnnual, positive: false },
                     { label: 'Estimated Tax', value: Math.max(0, rev.netBeforeTax - delivery.totalDeliveryAnnual) * BIZ.EFFECTIVE_TAX_RATE, positive: false },
                     { label: 'Ops Buffer (5% gross)', value: pl.opsBuffer, positive: false },
-                  ].map((row, i) => {
+                  ].map((row) => {
                     const barWidth = rev.grossAnnual > 0 ? Math.min(100, (row.value / rev.grossAnnual) * 100) : 0;
                     return (
                       <div key={row.label} className="flex items-center gap-4">

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth-guard';
 import { applyRateLimit } from '@/lib/rate-limit-middleware';
-import { isDemoMode } from '@/lib/demo-mode';
 import { submitLpnReview } from '@/lib/pod-assignment-engine';
 import type { LpnDetermination } from '@/lib/types';
 

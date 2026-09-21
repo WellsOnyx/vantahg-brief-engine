@@ -15,6 +15,7 @@ export default function CommandCenterPage() {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [reviewCaseId, setReviewCaseId] = useState<string | null>(null);
+  const [nowMs] = useState(() => Date.now());
   const [throughput, setThroughput] = useState<{
     avg_brief_generation_minutes: number;
     avg_determination_minutes: number;
@@ -77,7 +78,7 @@ export default function CommandCenterPage() {
   const slaAlerts = cases.filter((c) => {
     if (!c.turnaround_deadline) return false;
     const deadline = new Date(c.turnaround_deadline);
-    const hoursLeft = (deadline.getTime() - Date.now()) / (1000 * 60 * 60);
+    const hoursLeft = (deadline.getTime() - nowMs) / (1000 * 60 * 60);
     return hoursLeft < 12 && hoursLeft > -24 && !['determination_made', 'delivered'].includes(c.status);
   });
 

@@ -224,8 +224,8 @@ export function scoreDenialStrength(caseData: Case): DenialStrengthScore {
   // Reuses the denial factors + pulls from AI brief + fact-check for predictive risk (pre- or post-determination).
   // Deterministic primary logic (no LLM dependency for core signal; future enhancement can layer nuance).
   const appealContext = {
-    aiBrief: (caseData as any).ai_brief as AIBrief | undefined,
-    factCheck: (caseData as any).fact_check as FactCheckResult | undefined,
+    aiBrief: caseData.ai_brief ?? undefined,
+    factCheck: caseData.fact_check ?? undefined,
   };
   const appealSignal = computeAppealLikelihood(appealContext.aiBrief, appealContext.factCheck, {
     denial_strength: score,
@@ -234,7 +234,7 @@ export function scoreDenialStrength(caseData: Case): DenialStrengthScore {
     not_met_count: (appealContext.aiBrief?.criteria_match?.criteria_not_met?.length ?? 0),
     complexity: appealContext.aiBrief?.procedure_analysis?.complexity_level,
     confidence: appealContext.aiBrief?.ai_recommendation?.confidence,
-    p2p_offered: (caseData as any).peer_to_peer_status != null,
+    p2p_offered: caseData.peer_to_peer_status != null,
   });
 
   return {

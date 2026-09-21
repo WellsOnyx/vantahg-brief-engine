@@ -53,7 +53,7 @@ export async function POST(
         return NextResponse.json({ error: 'Case not found' }, { status: 404 });
       }
 
-      const eligibility = validateAppealEligibility(demoCase as any);
+      const eligibility = validateAppealEligibility(demoCase);
       if (!eligibility.eligible) {
         return NextResponse.json({ error: eligibility.reason || 'Not eligible for appeal' }, { status: 400 });
       }
@@ -65,7 +65,7 @@ export async function POST(
       // Update original in demo memory
       updateDemoCase(originalCaseId, {
         appeal_status: 'pending',
-      } as any);
+      });
 
       // Log rich audits (demo path uses console inside logAuditEvent)
       await logAuditEvent(originalCaseId, 'appeal_filed', filedBy, {
@@ -103,7 +103,7 @@ export async function POST(
     // (createAppeal will also validate internally, but explicit guard here for early rejection + audit)
     // We import assertCaseAccess for consistency with other protected routes
     const { assertCaseAccess } = await import('@/lib/case-access');
-    const accessDenied = await assertCaseAccess(originalCase as any, authResult.user, request);
+    const accessDenied = await assertCaseAccess(originalCase, authResult.user, request);
     if (accessDenied) {
       return accessDenied;
     }
