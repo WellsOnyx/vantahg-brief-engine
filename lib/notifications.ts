@@ -156,7 +156,7 @@ function formatEmailHtml(subject: string, body: string): string {
 /**
  * Send an SMS via Twilio. Falls back to console logging if Twilio not configured.
  */
-async function sendSms(phone: string, message: string): Promise<void> {
+async function sendSms(phone: string, _message: string): Promise<void> {
   const accountSid = process.env.TWILIO_ACCOUNT_SID;
   const authToken = process.env.TWILIO_AUTH_TOKEN;
   const fromNumber = process.env.TWILIO_PHONE_NUMBER;

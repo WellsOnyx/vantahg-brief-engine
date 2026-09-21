@@ -22,11 +22,12 @@ describe('Phase 7.1 onboarding checklist A–E', () => {
     const { ok, phases, ids } = assertChecklistComplete();
     expect(ok).toBe(true);
     expect(phases).toEqual([...ONBOARDING_PHASES]);
-    expect(ids).toEqual(expect.arrayContaining(['A1', 'A2', 'A3', 'A5', 'B1', 'B16', 'C1', 'D5', 'E1', 'E2', 'E3', 'E4']));
+    expect(ids).toEqual(expect.arrayContaining(['A1', 'A2', 'A3', 'A5', 'B1', 'B16', 'B18', 'C1', 'D5', 'E1', 'E2', 'E3', 'E4']));
     expect(ids.filter((id) => id.startsWith('A')).length).toBeGreaterThanOrEqual(5);
     expect(ids.filter((id) => id.startsWith('B')).length).toBeGreaterThanOrEqual(15);
     expect(ONBOARDING_CHECKLIST.find((i) => i.id === 'A2')?.gate).toBe('hard');
     expect(ONBOARDING_CHECKLIST.find((i) => i.id === 'B6')?.title).toMatch(/always_md/);
+    expect(ONBOARDING_CHECKLIST.find((i) => i.id === 'B18')?.artifact).toMatch(/vanta_med_review_contract/);
     expect(ONBOARDING_CHECKLIST.some((i) => i.pointer.includes('client-config'))).toBe(true);
     expect(ONBOARDING_CHECKLIST.some((i) => i.id === 'D1' && i.pointer.includes('gravity-rail'))).toBe(true);
     expect(requiredChecklistIds()).toContain('E1');
@@ -66,6 +67,8 @@ describe('Phase 7.1 onboarding checklist A–E', () => {
       expect(parsed.data.client_id).toBe(SYNTHETIC_CLIENT_ID);
       expect(parsed.data.auto_vs_md_policy).toBe('always_md');
       expect(parsed.data.go_live_mode).toBe('synthetic');
+      expect(parsed.data.vanta_med_review_contract).toBe(true);
+      expect(parsed.data.med_review_provider).toBe('vanta');
       expect(parsed.data.legal_name).not.toMatch(/patient|member|dob/i);
     }
     const disk = JSON.parse(

@@ -30,7 +30,7 @@ Confirm LOBs, SLAs, primary intake mode, determination channels, CX owner, revie
 | A4 | Client-dependent | Security / SOC pack |
 | A5 | Required | Invoice entity + billing contact (Meow, not Stripe) |
 
-Fee schedule minimums: per prior auth, per first-level appeal, optional rush multiplier, monthly minimum.
+Fee schedule: paid door is VantaHG Med Review. UM Brief Engine is included only when `client_config.vanta_med_review_contract` is true. Do not sell standalone UM. Do not invent prices.
 
 Pointers: [`06-hipaa-baa-path.md`](../customer-ready/06-hipaa-baa-path.md), [`07-billing-and-tracking.md`](../customer-ready/07-billing-and-tracking.md).
 
@@ -38,7 +38,7 @@ Pointers: [`06-hipaa-baa-path.md`](../customer-ready/06-hipaa-baa-path.md), [`07
 
 Publish via `POST /api/client-config` (append-only; PATCH/DELETE → 409). Required fields:
 
-`client_id`, `legal_name`, `lob[]`, `sla_hours_standard`, `sla_hours_urgent`, `auto_vs_md_policy` (**`always_md` at go-live**), `notify_channels[]`, `determination_recipients`, `cm_handoff_enabled`, `intake_modes[]`, `timezone`, `business_hours`, `escalation_contacts[]`, `cx_owner`, `reviewer_queue`, `go_live_mode`, `shadow_mode`, `sla_miss_rollback_threshold`.
+`client_id`, `legal_name`, `lob[]`, `sla_hours_standard`, `sla_hours_urgent`, `auto_vs_md_policy` (**`always_md` at go-live**), `notify_channels[]`, `determination_recipients`, `cm_handoff_enabled`, `intake_modes[]`, `timezone`, `business_hours`, `escalation_contacts[]`, `cx_owner`, `reviewer_queue`, `go_live_mode`, `shadow_mode`, `sla_miss_rollback_threshold`, `vanta_med_review_contract` (**required true for free UM Brief Engine**), `med_review_provider` (`vanta` | `third_party` | `none`).
 
 Every SLA or route change = new version + CX written confirm with the client.
 
@@ -72,10 +72,12 @@ npm run test:go-live-synthetic
 ## Day 5–7 — E2 shadow
 
 ```bash
-# POST /api/golive/shadow
+npm run test:shadow-golive-pack
+# or npm run test:go-live-shadow
+# or POST /api/golive/shadow
 ```
 
-≥10 live-shaped synthetic packets. MD signs. Fan-out may record **intent only**. **No final outbound to member or requesting provider** (`shadow_mode` / `go_live_mode=shadow`).
+≥10 live-shaped synthetic packets from [`fixtures/golive/shadow-e2.json`](../../fixtures/golive/shadow-e2.json) (every case `shadow=true`). MD signs. Fan-out may record **intent only**. **No final outbound to member or requesting provider** (`shadow_mode` / `go_live_mode=shadow`). How-to: [`fixtures/golive/README.md`](../../fixtures/golive/README.md).
 
 ## Day 8+ — E3 live hypercare (first 25)
 

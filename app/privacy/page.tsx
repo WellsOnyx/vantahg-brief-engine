@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import type { CSSProperties, ReactNode } from 'react';
 
 export const metadata: Metadata = {
@@ -21,12 +22,12 @@ export default function PrivacyPolicyPage() {
       }}
     >
       <article style={{ maxWidth: 760, margin: '0 auto', lineHeight: 1.7, fontSize: 16 }}>
-        <a
+        <Link
           href="/"
           style={{ color: '#c9a227', textDecoration: 'none', fontSize: 14, letterSpacing: '0.02em' }}
         >
           ← VantaUM
-        </a>
+        </Link>
 
         <h1
           style={{

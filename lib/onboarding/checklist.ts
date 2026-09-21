@@ -354,6 +354,23 @@ export const ONBOARDING_CHECKLIST: readonly OnboardingChecklistItem[] = [
     ],
     command: 'curl -s "http://localhost:3000/api/client-config?client_id=11111111-1111-1111-1111-111111111111&history=1"',
   },
+  {
+    id: 'B18',
+    phase: 'B',
+    title: 'vanta_med_review_contract (free UM Brief Engine gate)',
+    owner: 'CX / commercial',
+    artifact: 'client_config.vanta_med_review_contract + med_review_provider',
+    gate: 'required',
+    pointer:
+      'lib/entitlements/um-brief-engine.ts · Paid door is VantaHG Med Review. Flip true only when the buyer uses Vanta med review. Never standalone UM; never third_party.',
+    required: true,
+    how_to: [
+      'Paid door is VantaHG Med Review. Free UM Brief Engine is granted only when vanta_med_review_contract is true and med_review_provider is vanta.',
+      'Leave the flag false for a new published config. The synthetic staging seed is already true / vanta so demo packs keep working.',
+      'Never grant standalone free UM. Never set med_review_provider=third_party and expect Brief Engine access — that combination is always denied.',
+      'Do not invent a UM price. Do not flip ENABLE_AWS_* from this item.',
+    ],
+  },
 
   // ── Phase C — Access ─────────────────────────────────────────────────────
   {
@@ -563,9 +580,9 @@ export const ONBOARDING_CHECKLIST: readonly OnboardingChecklistItem[] = [
     phase: 'E',
     title: 'Shadow pack ≥ 10 (MD signs; no member/provider final send)',
     owner: 'Ops',
-    artifact: 'POST /api/golive/shadow · go-live log',
+    artifact: 'npm run test:shadow-golive-pack · POST /api/golive/shadow · go-live log',
     gate: 'required',
-    pointer: 'client_config.shadow_mode / go_live_mode=shadow. Fan-out records intent only.',
+    pointer: 'fixtures/golive/shadow-e2.json · client_config.shadow_mode / go_live_mode=shadow. Fan-out records intent only.',
     required: true,
     how_to: [
       'Click “Run shadow pack” or POST /api/golive/shadow. ≥10 live-shaped synthetic packets. MD signs.',
@@ -629,7 +646,7 @@ export const ONBOARDING_PHASE_META: Record<
 > = {
   A: {
     title: 'Commercial & legal',
-    blurb: 'Before any PHI. MSA, BAA (hard gate), subprocessors, billing entity.',
+    blurb: 'Before any PHI. MSA, BAA (hard gate), subprocessors, billing entity. Paid door is VantaHG Med Review.',
     days: 'Before Day 0',
   },
   B: {

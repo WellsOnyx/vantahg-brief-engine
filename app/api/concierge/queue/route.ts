@@ -125,8 +125,8 @@ export async function GET(request: NextRequest) {
     const reviewReadyOnly = request.nextUrl.searchParams.get('review_ready') === 'true';
 
     let targetStatuses = ACTIVE_STATUSES;
-    if (requestedStatus && ACTIVE_STATUSES.includes(requestedStatus as any)) {
-      targetStatuses = [requestedStatus as any];
+    if (requestedStatus && ACTIVE_STATUSES.includes(requestedStatus)) {
+      targetStatuses = [requestedStatus];
     } else if (reviewReadyOnly) {
       targetStatuses = ['brief_ready'];
     }

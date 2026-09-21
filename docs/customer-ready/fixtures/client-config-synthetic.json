@@ -30,5 +30,7 @@
   "reviewer_queue": "med_review_synth",
   "go_live_mode": "synthetic",
   "shadow_mode": false,
-  "sla_miss_rollback_threshold": 0.2
+  "sla_miss_rollback_threshold": 0.2,
+  "vanta_med_review_contract": true,
+  "med_review_provider": "vanta"
 }

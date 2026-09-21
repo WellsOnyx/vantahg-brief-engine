@@ -23,9 +23,59 @@ Phase 7.1 from `10-implementation-commits.md`: Cole can run A→E **without trib
 
 ---
 
+## 2026-09-20 — Phase 4.4 statement stub (PR #73)
+
+PR #57 already shipped the monthly statement portal + HTML/PDF renderer. This pass is the smallest 4.4 close-out for **one synthetic test client**:
+
+- `generateMonthlyStatement` stamps `statement_id` on grouped **open** ledger events. Status stays `open` (invoicing / Meow / QuickBooks export is later).
+- PDF + portal already live at `/portal/tpa/statements` and `GET /api/billing/statements/[id]?format=pdf`. Tests now assert `%PDF-` for that client.
+- Monthly job stub: `GET /api/cron/monthly-statement` — `SYNTHETIC_CLIENT_ID` only. Vercel schedule `0 8 1 * *`.
+
+Synthetic / demo only. No live PHI. No secrets. Med Review packaging lock unchanged. No Optum.
+
+**CI on this branch:** `npm run test:ci` 450 passed (3 todo). `npx tsc --noEmit` clean.
+
+---
+
+## 2026-09-20 — Phase 7.3 shadow pack scaffolding (foundation)
+
+JSON catalog for the E2 shadow pack: [`fixtures/golive/shadow-e2.json`](fixtures/golive/shadow-e2.json) (10 live-shaped synthetic cases, every row `shadow=true`). Loader rejects PHI-shaped fields. `runShadowPack` still MD-signs and fans out **intent only** — no member/provider final send — even if `client_config.go_live_mode=live`. How-to: [`fixtures/golive/README.md`](fixtures/golive/README.md). `npm run test:shadow-golive-pack` / `npm run test:go-live-shadow`. **CI:** `npm run test:ci` 450 passed (3 todo); `tsc --noEmit` clean. No `ENABLE_AWS_*` flips, no secrets, no Optum. Packaging lock unchanged: Med Review paid door; Brief Engine free only with Vanta med review.
+
+---
+
+## 2026-09-20 — Ops scoreboard stuck-count increment (Phase 6.3)
+
+`GET /api/ops/scoreboard` now returns `stuck.count` (plus `awaiting_clinicals` / `fanout_failed` split) alongside fan-out fail rate and R10–R12. Visible on `/admin/ops` and `/cx`. Aggregates only — no member refs or packets. Synthetic seed. Clients still 403.
+
+---
+
+## 2026-09-21 — Lint fail-closed (hydrate allowlist)
+
+`npm run lint` is green on this lineage (`eslint --max-warnings 0`). PR #67 cleared the historic backlog; five client-only `react-hooks/set-state-in-effect` hydrate sites stay as-is (no behavior change) with `eslint-disable-next-line` + WHY. Catalog: [`docs/customer-ready/lint-hydrate-allowlist.md`](docs/customer-ready/lint-hydrate-allowlist.md). New lint errors/warnings fail CI.
+
+---
+
+## 2026-09-20 — CM connect MVP hardening (6.2)
+
+Phase 6.2 already shipped on `main` (PR #59). This pass is the smallest increment on top: retry-safe `cm.handoff` emitter + PHI-free logs + tests that lock flag → webhook payload shape and flagged-only CSV.
+
+- Case `cm_flags` remain the v1 set from `09-care-management.md` (`high_cost`, `deny_with_alternative`, `readmission_risk`, `behavioral_health`, `needs_discharge_planning`, `appeals_in_flight`).
+- Webhook stub is retry-safe: same HMAC body + `X-VantaUM-Idempotency-Key` across the 8× budget; a second `deliver()` after `sent` does not re-POST.
+- Logs are `summarizeCmHandoffForLog` only — no payload body, `external_id`, `secure_summary_url`, `member_ref`, or rationale.
+- CSV columns stay `case_id,external_id,flags,determination,determined_at,secure_summary_url`. Unflagged never appear.
+- Synthetic fixtures only. No `ENABLE_AWS_*` flips. No Optum outreach. Med Review packaging lock unchanged.
+
+**CI on this branch:** `npm run test:ci` 451 passed (3 todo). `npx tsc --noEmit` clean.
+
+---
+
 ## 2026-09-20 — Packaging lock (Jonah)
 
 Paid door = Med Review (VantaHG). VantaUM Brief Engine / UM included free **only** with Vanta med review — not a standalone free UM SKU, not free with another shop’s med review. Phases 0–7 code path complete; this is packaging/GTM, not a new build phase. Canonical: [`docs/customer-ready/01-product-boundary.md`](docs/customer-ready/01-product-boundary.md).
+
+**Entitlement (code):** `client_config.vanta_med_review_contract` must be `true` for free UM Brief Engine access. `med_review_provider=third_party` is always denied. Guard: `lib/entitlements/um-brief-engine.ts`. New published configs default **false**; synthetic staging seed is **true** / `vanta`.
+
+**CI after entitlement guard on current main:** `npm run test:ci` 480 passed (3 todo). `npx tsc --noEmit` clean. `npm run test:go-live-synthetic` PASS. `npm run test:shadow-golive-pack` PASS. No `ENABLE_AWS_*` flips. RDS-native bootstrap stays on `cursor/rds-native-bootstrap-d1cf` (in flight, not this merge).
 
 ---
 
@@ -42,11 +92,11 @@ Shared brain: [`docs/customer-ready/`](docs/customer-ready/00-README.md). Board:
 | 2 Intake | #54 | ✅ on `main` |
 | 3 Brief → MD | #55 | ✅ on `main` |
 | 4 Fan-out + billing | #57 | ✅ Phase 4 — portal downloads, HMAC fan-out + retries, ledger, statement stub |
-| 5 Three role views | #58 | ✅ Phase 5 — Client / CX / Med lenses on one case object; RBAC deny cross-tenant + CX notes |
+| 5 Three role views | #58 | ✅ Phase 5 — Client / CX / Med lenses on one case object; RBAC deny cross-tenant + CX notes. **5.3 polish:** Client/CX/MD wrong-surface + cross-tenant denial tests; sign / brief POST / fan-out / audit gates. |
 | 6 Reporting + CM | #59 | ✅ Phase 6 — five client reports + CSV, CM HMAC handoff, ops scoreboard |
 | 7 Onboarding gates | #60 | ✅ Phase 7 — A→E runbook + `/admin/onboarding`, synthetic/shadow packs, SLA rollback. **Customer-ready code path complete.** |
 
-**CI at Phase 7 tip:** `npm run test:ci` 447 passed (3 todo); `tsc --noEmit` clean; `npm run test:go-live-synthetic` PASS.
+**CI at Phase 7 tip:** `npm run test:ci` 453 passed (3 todo); `tsc --noEmit` clean; `npm run test:go-live-synthetic` PASS; `npm run test:shadow-golive-pack` PASS.
 
 **Remaining = human ops (not code):** SES verify, Fargate image rebuild, BAA before live PHI, production vendor keys, RDS-native bootstrap. Do not claim HIPAA complete — these are code gates only.
 
@@ -175,13 +225,15 @@ Slices 5.1–5.3 from `10-implementation-commits.md`. One case object, three len
 
 **Acceptance:** client of tenant B gets 404 on tenant A case; client 403 on `/api/cx/notes` and `/api/views/cx`; CX `?stuck=1` / `?sla_status=missed` only return matching rows.
 
+**5.3 polish (follow-up):** Client of tenant B also 404s on tenant A portal package and fan-out status; forged `client_id` on `/api/views/client` stays session-bound. Client 403 on MD queue, clinical brief/package, attach-brief, sign, audit, and fan-out mutation. CX 403 on brief/package/sign/MD queue (case GET stays redacted). MD (`reviewer`) 403 on CX notes, CX lens, and client lens. No new product surfaces. Synthetic only.
+
 ### Phase 6 — Reporting + CM handoff (this PR)
 
 Slices 6.1–6.3 from `10-implementation-commits.md`. Synthetic / demo only. No live PHI. Wires off Phase 3–5 determination / `cm_flags` / fan-out. Does **not** change `ENABLE_AWS_*` defaults.
 
 - **6.1 Five client reports + CSV:** `GET /api/reports` + `/api/reports/{volume|turnaround|outcomes|deny_reasons|sla}?format=csv`. Portal `/portal/tpa/reports` filters by date, LOB, type. Volume.signed matches distinct non-void ledger case ids. Normalized deny reason codes on sign (`deny_reason_code`).
 - **6.2 CM flags + webhook/CSV:** Flagged determinations only. `cm.handoff` HMAC-SHA256 (same 8× exponential budget as `determination.signed`, ≤ 5 min). Portal CM queue `/portal/tpa/cm` + `GET /api/cm/queue`. Daily CSV drop stub `GET /api/cm/csv` + cron `/api/cron/cm-csv-drop`. Unflagged never appear in the feed and never post.
-- **6.3 Internal ops scoreboard:** `GET /api/ops/scoreboard` — fan-out fail rate + R10–R12 escalation counts. Visible on `/cx` to CX/admin; clients 403.
+- **6.3 Internal ops scoreboard:** `GET /api/ops/scoreboard` — fan-out fail rate + stuck-case count (clinicals / fan-out) + R10–R12. Visible on `/admin/ops` and `/cx` to CX/admin; clients 403.
 
 **Acceptance:** report CSV columns match 08; volume signed === ledger case count; CM webhook only when flags non-empty; unflagged never in CM feed; CX sees fan-out fail rate.
 

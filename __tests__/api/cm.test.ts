@@ -49,13 +49,30 @@ describe('CM queue + CSV API', () => {
 
   it('daily CSV stub is flagged-only', async () => {
     const { GET } = await import('@/app/api/cm/csv/route');
-    const res = await GET(
+    const jsonRes = await GET(
       req(`http://localhost:3000/api/cm/csv?seed=synthetic&format=json&client_id=${SYNTHETIC_CLIENT_ID}`),
     );
-    expect(res.status).toBe(200);
-    const body = await res.json();
+    expect(jsonRes.status).toBe(200);
+    const body = await jsonRes.json();
     expect(body.stub).toBe(true);
-    expect(body.columns[0]).toBe('case_id');
+    expect(body.columns).toEqual([
+      'case_id',
+      'external_id',
+      'flags',
+      'determination',
+      'determined_at',
+      'secure_summary_url',
+    ]);
     expect(body.items.every((item: { flags: string[] }) => item.flags.length > 0)).toBe(true);
+    expect(JSON.stringify(body)).not.toMatch(/approve-clean|ext-synth-p6-approve-clean/);
+
+    const csvRes = await GET(
+      req(`http://localhost:3000/api/cm/csv?seed=synthetic&client_id=${SYNTHETIC_CLIENT_ID}`),
+    );
+    expect(csvRes.status).toBe(200);
+    const csv = await csvRes.text();
+    expect(csv.split('\n')[0]).toBe(body.columns.join(','));
+    expect(csv).toMatch(/high_cost/);
+    expect(csv).not.toMatch(/approve-clean|ext-synth-p6-approve-clean/);
   });
 });

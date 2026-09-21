@@ -4,7 +4,7 @@ import type { Metadata } from 'next';
 export const metadata: Metadata = {
   title: 'Welcome | VantaUM',
   description:
-    'Concierge utilization management. Clinical intelligence that gives physicians more time with every case — so members get the care they deserve.',
+    'Included with VantaHG Med Review. Clinical intelligence that gives physicians more time with every case — so members get the care they deserve.',
 };
 
 export default function WelcomePage() {
@@ -29,8 +29,9 @@ export default function WelcomePage() {
           </h1>
 
           <p className="text-lg sm:text-xl text-white/70 max-w-2xl mx-auto mb-10">
-            Prior authorization, medical necessity, concurrent review, and peer-to-peer — with
-            clinical intelligence that gives your physicians more time on every case, delivered in 24–48 hours.
+            Prior authorization, medical necessity, concurrent review, and peer-to-peer — included
+            when you use Vanta med review, not as a standalone UM product, and not with another
+            shop&apos;s review. Clinical intelligence that gives your physicians more time on every case.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">

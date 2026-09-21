@@ -16,11 +16,12 @@ Onboarding is a **sellable checklist** first, software second. Every step produc
 
 ### Fee schedule (minimum fields)
 
-- Per prior auth
-- Per first-level appeal
-- Rush / after-hours multiplier (optional)
-- Monthly minimum
-- Pass-through (IRO filing fees if ever bundled — N/A until locked)
+Paid door is **VantaHG Med Review**. Do not invent prices here. Do not sell UM as a standalone SKU.
+
+- Vanta med-review contract (commercial door)
+- UM Brief Engine included **only** when `vanta_med_review_contract` is true
+- Per-auth / first-level-appeal / rush lines are **usage tracking** under that contract, not a standalone UM offer
+- Pass-through (IRO filing fees if ever bundled — N/A until locked; HG lane)
 
 ## Phase B — Client configuration (SoR)
 
@@ -43,6 +44,8 @@ business_hours
 escalation_contacts[]    # name, role, phone/email (business contact; minimize PHI)
 cx_owner                 # internal MX Delivery Lead / CX bot id
 reviewer_queue           # med review team
+vanta_med_review_contract # required true for free UM Brief Engine
+med_review_provider      # vanta | third_party | none  (third_party never gets free UM)
 ```
 
 **Config change control:** every change creates a new version + audit event; CX confirms with client in writing for SLA or route changes.

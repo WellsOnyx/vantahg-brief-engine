@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { NextRequest } from 'next/server';
 
 // Demo-mode bootstrap. The route short-circuits when isDemoMode() is true,
 // so we don't have to mock auth/supabase/storage for the happy path.
@@ -25,7 +26,7 @@ describe('POST /api/admin/contracts/[id]/send-for-signature', () => {
     const request = new Request('http://localhost:3000/api/admin/contracts/abc/send-for-signature', {
       method: 'POST',
     });
-    const response = await POST(request as any, { params: Promise.resolve({ id: 'abc' }) });
+    const response = await POST(new NextRequest(request), { params: Promise.resolve({ id: 'abc' }) });
     const data = await response.json();
 
     expect(response.status).toBe(200);

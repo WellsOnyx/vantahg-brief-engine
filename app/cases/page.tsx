@@ -204,7 +204,7 @@ export default function CasesListPage() {
         setReviewers([
           { id: 'rev1', name: 'Dr. Priya Patel' },
           { id: 'rev2', name: 'Dr. James Richardson' }
-        ] as any);
+        ] as Reviewer[]);
       });
   }, [selectedClientId]);
 
@@ -237,7 +237,7 @@ export default function CasesListPage() {
           fact_check: { overall_score: 96 },
           reviewer: { name: 'Dr. Priya Patel' },
           client: { name: 'Southwest Administrators' }
-        } as any,
+        } as unknown as Case,
         {
           id: 'demo-tka',
           case_number: 'VUM-2026-004822',
@@ -252,7 +252,7 @@ export default function CasesListPage() {
           turnaround_deadline: new Date(now + 1000 * 60 * 60 * 20).toISOString(),
           reviewer: null,
           client: { name: 'Southwest Administrators' }
-        } as any,
+        } as unknown as Case,
         {
           id: 'demo-cpap',
           case_number: 'VUM-2026-004823',
@@ -268,7 +268,7 @@ export default function CasesListPage() {
           turnaround_deadline: new Date(now + 1000 * 60 * 60 * 23).toISOString(),
           reviewer: null,
           client: { name: 'Southwest Administrators' }
-        } as any,
+        } as unknown as Case,
       ];
       setCases(staticDemo);
       setUsingDemoData(true);
@@ -300,7 +300,7 @@ export default function CasesListPage() {
       }
       const data = await res.json();
       setCases(data);
-    } catch (err) {
+    } catch (_err) {
       // Static synthetic demo data fallback for "explore full app UI" from canned demo.
       // Complete fields to avoid render errors in table/sorts/SLA etc.
       // Mirrors the rich demo-data used by /demo-tour.
@@ -327,7 +327,7 @@ export default function CasesListPage() {
           fact_check: { overall_score: 96 },
           reviewer: { name: 'Dr. Priya Patel' },
           client: { name: 'Southwest Administrators' }
-        } as any,
+        } as unknown as Case,
         {
           id: 'demo-tka',
           case_number: 'VUM-2026-004822',
@@ -345,7 +345,7 @@ export default function CasesListPage() {
           turnaround_deadline: new Date(now + 1000 * 60 * 60 * 20).toISOString(),
           reviewer: { name: 'Dr. James Richardson' },
           client: { name: 'Southwest Administrators' }
-        } as any,
+        } as unknown as Case,
         {
           id: 'demo-cpap',
           case_number: 'VUM-2026-004823',
@@ -363,7 +363,7 @@ export default function CasesListPage() {
           turnaround_deadline: new Date(now + 1000 * 60 * 60 * 23).toISOString(),
           reviewer: null,
           client: { name: 'Southwest Administrators' }
-        } as any,
+        } as unknown as Case,
       ];
       setCases(staticDemo);
     } finally {

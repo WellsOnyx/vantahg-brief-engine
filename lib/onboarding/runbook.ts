@@ -120,6 +120,9 @@ export const SYNTHETIC_CLIENT_CONFIG_FIXTURE: ClientConfigFields = {
   go_live_mode: 'synthetic',
   shadow_mode: false,
   sla_miss_rollback_threshold: 0.2,
+  // Synthetic staging is Vanta's own shop — Brief Engine included.
+  vanta_med_review_contract: true,
+  med_review_provider: 'vanta',
 };
 
 export const PUBLISH_SYNTHETIC_CONFIG_COMMAND = `curl -s -X POST http://localhost:3000/api/client-config \\

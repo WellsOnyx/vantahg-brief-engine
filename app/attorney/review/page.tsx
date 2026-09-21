@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { StatusBadge } from '@/components/StatusBadge';
 import { SlaTracker } from '@/components/SlaTracker';
+import type { CaseStatus } from '@/lib/types';
 
 /**
  * Dedicated Attorney Review Queue for Payer IDR cases.
@@ -153,7 +154,7 @@ export default function AttorneyReviewQueuePage() {
                   <div className="min-w-0">
                     <div className="flex items-center gap-3 flex-wrap">
                       <span className="font-mono text-sm font-semibold text-navy">{c.case_number}</span>
-                      <StatusBadge status={c.status as any} />
+                      <StatusBadge status={c.status as CaseStatus} />
                       <span className="text-xs px-2 py-0.5 rounded bg-purple-100 text-purple-700 font-medium">Payer IDR</span>
                     </div>
                     <div className="mt-1 text-sm text-foreground">

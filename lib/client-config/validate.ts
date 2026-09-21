@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { MED_REVIEW_PROVIDERS } from '@/lib/entitlements/um-brief-engine';
 import {
   AUTO_VS_MD_POLICIES,
   DEFAULT_CLIENT_CONFIG_FIELDS,
@@ -48,6 +49,12 @@ export const ClientConfigFieldsSchema = z.object({
     .min(0)
     .max(1)
     .default(DEFAULT_CLIENT_CONFIG_FIELDS.sla_miss_rollback_threshold),
+  vanta_med_review_contract: z
+    .boolean()
+    .default(DEFAULT_CLIENT_CONFIG_FIELDS.vanta_med_review_contract),
+  med_review_provider: z
+    .enum(MED_REVIEW_PROVIDERS)
+    .default(DEFAULT_CLIENT_CONFIG_FIELDS.med_review_provider),
 });
 
 export function parseClientConfigFields(input: unknown): ClientConfigFields {

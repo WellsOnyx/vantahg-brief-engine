@@ -60,6 +60,14 @@ export interface ClientConfigFields {
   shadow_mode: boolean;
   /** First-25 SLA miss rate (0–1) that pauses live intake. Config, not a HIPAA claim. */
   sla_miss_rollback_threshold: number;
+  /**
+   * Packaging lock (2026-09-20): required true for free UM Brief Engine access.
+   * Paid door is VantaHG Med Review. UM is included only under that Vanta
+   * med-review contract — not standalone, not with another shop’s review.
+   */
+  vanta_med_review_contract: boolean;
+  /** Who performs med review. `third_party` never gets free UM. */
+  med_review_provider: 'vanta' | 'third_party' | 'none';
 }
 
 export interface ClientConfigVersion {
@@ -91,6 +99,8 @@ export const DEFAULT_CLIENT_CONFIG_FIELDS: Omit<ClientConfigFields, 'client_id' 
   go_live_mode: 'synthetic',
   shadow_mode: false,
   sla_miss_rollback_threshold: DEFAULT_SLA_MISS_ROLLBACK_THRESHOLD,
+  vanta_med_review_contract: false,
+  med_review_provider: 'none',
 };
 
 export class ClientConfigNotFoundError extends Error {
