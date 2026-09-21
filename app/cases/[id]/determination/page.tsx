@@ -373,7 +373,7 @@ export default function DeterminationLetterPage() {
               {reviewer?.specialty && (
                 <p className="text-xs text-muted capitalize">{reviewer.specialty}</p>
               )}
-              {reviewer?.license_state?.length > 0 && (
+              {reviewer?.license_state && reviewer.license_state.length > 0 && (
                 <p className="text-xs text-muted">Licensed in: {reviewer.license_state.join(', ')}</p>
               )}
             </div>

@@ -10,23 +10,10 @@ async function getPgModule() {
   return _pg;
 }
 
-type Pool = {
-  query: (sql: string, params?: unknown[]) => Promise<{ rows: unknown[] }>;
-  on: (event: string, listener: (err: unknown) => void) => void;
-};
-type PoolConfig = {
-  connectionString?: string;
-  ssl?: { rejectUnauthorized: boolean };
-  host?: string;
-  port?: number;
-  database?: string;
-  user?: string;
-  password?: string;
-  max?: number;
-  idleTimeoutMillis?: number;
-  connectionTimeoutMillis?: number;
-  application_name?: string;
-};
+// Structural stand-in was too narrow for `pg.Pool` (and broke the shim's
+// `rows[0].count` read). Use the real pg types; the value import stays dynamic.
+type Pool = InstanceType<PgModule['Pool']>;
+type PoolConfig = ConstructorParameters<PgModule['Pool']>[0];
 type QueryResultRow = Record<string, unknown>;
 
 /**

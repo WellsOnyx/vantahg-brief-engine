@@ -179,7 +179,7 @@ function ChartTooltip({
       <p className="text-white/60 mb-1">{label} lives</p>
       {payload.map((p) => (
         <p key={p.dataKey} style={{ color: p.color }}>
-          {p.name}: {p.dataKey.startsWith('lives') ? fmtN(p.value) : fmt$(p.value)}
+          {p.name}: {p.dataKey.startsWith('lives') ? fmtN(p.value ?? 0) : fmt$(p.value ?? 0)}
         </p>
       ))}
     </div>

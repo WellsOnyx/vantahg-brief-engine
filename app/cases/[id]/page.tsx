@@ -990,7 +990,7 @@ export default function CaseDetailPage() {
           {caseData.status !== 'brief_ready' && (() => {
             const validationEvent = auditLog.find((e) => e.action === 'concierge_brief_validated');
             if (!validationEvent) return null;
-            const details = (validationEvent.details as { rationale?: string } | null) || {};
+            const details = (validationEvent.details as { rationale?: string; flags?: string[] } | null) || {};
             return (
               <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-5">
                 <div className="flex items-center gap-2 mb-2">
@@ -1002,9 +1002,9 @@ export default function CaseDetailPage() {
                   <span className="font-semibold text-emerald-800 text-sm uppercase tracking-wider">Concierge Brief Validation Complete</span>
                 </div>
                 <p className="text-sm text-emerald-900 leading-relaxed">{details.rationale || 'Validation recorded.'}</p>
-                {details.flags?.length > 0 && (
+                {details.flags && details.flags.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-1">
-                    {details.flags.map((f: string, i: number) => (
+                    {details.flags.map((f, i) => (
                       <span key={i} className="inline-block text-[10px] px-2 py-0.5 bg-white border border-emerald-200 rounded text-emerald-700">{f.replace(/_/g, ' ')}</span>
                     ))}
                   </div>
