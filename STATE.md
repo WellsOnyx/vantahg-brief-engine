@@ -11,6 +11,20 @@ Future Claude/Cole/Jonah sessions: read this first.
 
 ---
 
+## 2026-09-20 — CM connect MVP hardening (6.2)
+
+Phase 6.2 already shipped on `main` (PR #59). This pass is the smallest increment on top: retry-safe `cm.handoff` emitter + PHI-free logs + tests that lock flag → webhook payload shape and flagged-only CSV.
+
+- Case `cm_flags` remain the v1 set from `09-care-management.md` (`high_cost`, `deny_with_alternative`, `readmission_risk`, `behavioral_health`, `needs_discharge_planning`, `appeals_in_flight`).
+- Webhook stub is retry-safe: same HMAC body + `X-VantaUM-Idempotency-Key` across the 8× budget; a second `deliver()` after `sent` does not re-POST.
+- Logs are `summarizeCmHandoffForLog` only — no payload body, `external_id`, `secure_summary_url`, `member_ref`, or rationale.
+- CSV columns stay `case_id,external_id,flags,determination,determined_at,secure_summary_url`. Unflagged never appear.
+- Synthetic fixtures only. No `ENABLE_AWS_*` flips. No Optum outreach. Med Review packaging lock unchanged.
+
+**CI on this branch:** `npm run test:ci` 451 passed (3 todo). `npx tsc --noEmit` clean.
+
+---
+
 ## 2026-09-20 — Packaging lock (Jonah)
 
 Paid door = Med Review (VantaHG). VantaUM Brief Engine / UM included free **only** with Vanta med review — not a standalone free UM SKU, not free with another shop’s med review. Phases 0–7 code path complete; this is packaging/GTM, not a new build phase. Canonical: [`docs/customer-ready/01-product-boundary.md`](docs/customer-ready/01-product-boundary.md).
@@ -30,11 +44,11 @@ Shared brain: [`docs/customer-ready/`](docs/customer-ready/00-README.md). Board:
 | 2 Intake | #54 | ✅ on `main` |
 | 3 Brief → MD | #55 | ✅ on `main` |
 | 4 Fan-out + billing | #57 | ✅ Phase 4 — portal downloads, HMAC fan-out + retries, ledger, statement stub |
-| 5 Three role views | #58 | ✅ Phase 5 — Client / CX / Med lenses on one case object; RBAC deny cross-tenant + CX notes |
+| 5 Three role views | #58 | ✅ Phase 5 — Client / CX / Med lenses on one case object; RBAC deny cross-tenant + CX notes. **5.3 polish:** Client/CX/MD wrong-surface + cross-tenant denial tests; sign / brief POST / fan-out / audit gates. |
 | 6 Reporting + CM | #59 | ✅ Phase 6 — five client reports + CSV, CM HMAC handoff, ops scoreboard |
 | 7 Onboarding gates | #60 | ✅ Phase 7 — A→E runbook + `/admin/onboarding`, synthetic/shadow packs, SLA rollback. **Customer-ready code path complete.** |
 
-**CI at Phase 7 tip:** `npm run test:ci` 447 passed (3 todo); `tsc --noEmit` clean; `npm run test:go-live-synthetic` PASS.
+**CI at Phase 7 tip:** `npm run test:ci` 453 passed (3 todo); `tsc --noEmit` clean; `npm run test:go-live-synthetic` PASS.
 
 **Remaining = human ops (not code):** SES verify, Fargate image rebuild, BAA before live PHI, production vendor keys, RDS-native bootstrap. Do not claim HIPAA complete — these are code gates only.
 
@@ -162,6 +176,8 @@ Slices 5.1–5.3 from `10-implementation-commits.md`. One case object, three len
 - **5.3 RBAC:** `resolveSpineViewer` binds tenant from the session (demo/test: `x-vantaum-role` / `x-vantaum-client-id`). Query `client_id` is a filter, not identity. Client cannot see another tenant, CX notes, or clinical briefs. CX list filters `stuck` + `sla_status`. `/med-review` is the Med lens (SLA sort, packet + sign, fan-out after sign).
 
 **Acceptance:** client of tenant B gets 404 on tenant A case; client 403 on `/api/cx/notes` and `/api/views/cx`; CX `?stuck=1` / `?sla_status=missed` only return matching rows.
+
+**5.3 polish (follow-up):** Client of tenant B also 404s on tenant A portal package and fan-out status; forged `client_id` on `/api/views/client` stays session-bound. Client 403 on MD queue, clinical brief/package, attach-brief, sign, audit, and fan-out mutation. CX 403 on brief/package/sign/MD queue (case GET stays redacted). MD (`reviewer`) 403 on CX notes, CX lens, and client lens. No new product surfaces. Synthetic only.
 
 ### Phase 6 — Reporting + CM handoff (this PR)
 

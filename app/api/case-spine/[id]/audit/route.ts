@@ -3,7 +3,7 @@ import { requireAuth } from '@/lib/auth-guard';
 import { applyRateLimit } from '@/lib/rate-limit-middleware';
 import { apiError } from '@/lib/api-error';
 import { getRequestContext } from '@/lib/security';
-import { CaseNotFoundError, getCaseSpineService } from '@/lib/case-spine';
+import { CaseNotFoundError, canAccessCaseAudit, getCaseSpineService, resolveSpineViewer } from '@/lib/case-spine';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,7 +17,13 @@ export async function GET(
     const rateLimited = await applyRateLimit(request, { maxRequests: 200 });
     if (rateLimited) return rateLimited;
 
+    const viewer = resolveSpineViewer(authResult.user, request);
+    if (!canAccessCaseAudit(viewer)) {
+      return NextResponse.json({ error: 'Forbidden', surface: 'audit' }, { status: 403 });
+    }
+
     const { id } = await context.params;
+    await getCaseSpineService().getCase(id, viewer);
     const events = await getCaseSpineService().listAudit(id);
     return NextResponse.json({ events });
   } catch (err) {

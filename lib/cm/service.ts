@@ -19,6 +19,12 @@ import {
 import { buildCmFeed, isCmFlagged, type CmFeedItem } from './feed';
 import { buildDailyCmCsv } from './csv';
 import {
+  emitCmHandoffLog,
+  sanitizeCmTransportError,
+  summarizeCmHandoffForLog,
+  type CmHandoffLogEvent,
+} from './log';
+import {
   buildCmHandoffPayload,
   cmSecureSummaryUrl,
   signCmHandoffWebhook,
@@ -33,6 +39,7 @@ export interface CmHandoffResult {
     ok: boolean | null;
     attempts: number;
     last_error: string | null;
+    replayed?: boolean;
     payload?: CmHandoffPayload;
     signature?: string;
   };
@@ -49,6 +56,7 @@ export interface CmServiceOptions {
   webhookUrl?: string | null;
   webhookSecret?: string | null;
   appUrl?: string;
+  log?: (event: CmHandoffLogEvent) => void;
 }
 
 const noopSleep = async () => undefined;
@@ -63,6 +71,7 @@ export class CmHandoffService {
   private readonly webhookUrlOverride: string | null | undefined;
   private readonly webhookSecretOverride: string | null | undefined;
   private readonly appUrl: string | undefined;
+  private readonly log: (event: CmHandoffLogEvent) => void;
 
   constructor(opts: CmServiceOptions = {}) {
     this.spineOverride = opts.spine;
@@ -74,6 +83,7 @@ export class CmHandoffService {
     this.webhookUrlOverride = opts.webhookUrl;
     this.webhookSecretOverride = opts.webhookSecret;
     this.appUrl = opts.appUrl;
+    this.log = opts.log ?? emitCmHandoffLog;
   }
 
   private get spine(): CaseSpineService {
@@ -110,12 +120,54 @@ export class CmHandoffService {
   async deliver(caseId: string): Promise<CmHandoffResult> {
     const current = await this.spine.getCase(caseId);
     if (!isCmFlagged(current) || !current.determination) {
-      return {
+      const skipped: CmHandoffResult = {
         case_id: caseId,
         flagged: false,
         webhook: { configured: false, ok: null, attempts: 0, last_error: null },
         in_feed: false,
       };
+      this.log(
+        summarizeCmHandoffForLog({
+          case_id: caseId,
+          flagged: false,
+          flags: current.cm_flags,
+          configured: false,
+          ok: null,
+          attempts: 0,
+        }),
+      );
+      return skipped;
+    }
+
+    const prior = await this.store.listIntents(current.case_id);
+    const alreadySent = prior.find((intent) => intent.channel === 'cm_webhook' && intent.status === 'sent');
+    if (alreadySent) {
+      const payload = this.buildPayload(current);
+      const replayed: CmHandoffResult = {
+        case_id: caseId,
+        flagged: true,
+        webhook: {
+          configured: true,
+          ok: true,
+          attempts: 0,
+          last_error: null,
+          replayed: true,
+          payload,
+        },
+        in_feed: true,
+      };
+      this.log(
+        summarizeCmHandoffForLog({
+          case_id: caseId,
+          flagged: true,
+          flags: current.cm_flags,
+          configured: true,
+          ok: true,
+          attempts: 0,
+          replayed: true,
+        }),
+      );
+      return replayed;
     }
 
     const webhook = await this.deliverWebhook(current);
@@ -133,12 +185,35 @@ export class CmHandoffService {
       to: webhook.configured ? 'cm_webhook' : null,
     });
 
-    return {
+    const result: CmHandoffResult = {
       case_id: caseId,
       flagged: true,
       webhook,
       in_feed: true,
     };
+    this.log(
+      summarizeCmHandoffForLog({
+        case_id: caseId,
+        flagged: true,
+        flags: current.cm_flags,
+        configured: webhook.configured,
+        ok: webhook.ok,
+        attempts: webhook.attempts,
+        last_error: webhook.last_error,
+      }),
+    );
+    return result;
+  }
+
+  private buildPayload(c: CanonicalCase): CmHandoffPayload {
+    return buildCmHandoffPayload({
+      case_id: c.case_id,
+      external_id: c.external_id,
+      flags: c.cm_flags,
+      determination: c.determination!,
+      determined_at: c.determined_at ?? this.now().toISOString(),
+      secure_summary_url: cmSecureSummaryUrl(c.case_id, this.appUrl),
+    });
   }
 
   private async resolveWebhook(c: CanonicalCase): Promise<{ url: string | null; secret: string | null }> {
@@ -162,19 +237,13 @@ export class CmHandoffService {
       return { configured: false, ok: null, attempts: 0, last_error: null };
     }
 
-    const payload = buildCmHandoffPayload({
-      case_id: c.case_id,
-      external_id: c.external_id,
-      flags: c.cm_flags,
-      determination: c.determination,
-      determined_at: c.determined_at ?? this.now().toISOString(),
-      secure_summary_url: cmSecureSummaryUrl(c.case_id, this.appUrl),
-    });
+    const payload = this.buildPayload(c);
     const signed = signCmHandoffWebhook(payload, secret);
 
     let lastError: string | null = null;
     for (let attempt = 1; attempt <= FANOUT_MAX_ATTEMPTS; attempt++) {
       const delivered = await this.transport(url, signed.body, signed.headers);
+      const error = sanitizeCmTransportError(delivered.error ?? (delivered.ok ? null : `http_${delivered.status}`));
       await this.store.insertAttempt({
         attempt_id: randomUUID(),
         case_id: c.case_id,
@@ -183,7 +252,7 @@ export class CmHandoffService {
         at: this.now().toISOString(),
         ok: delivered.ok,
         status: delivered.status,
-        error: delivered.error ?? null,
+        error,
       });
       if (delivered.ok) {
         return {
@@ -195,7 +264,7 @@ export class CmHandoffService {
           signature: signed.signature,
         };
       }
-      lastError = delivered.error ?? `http_${delivered.status}`;
+      lastError = error ?? `http_${delivered.status}`;
       if (attempt < FANOUT_MAX_ATTEMPTS) {
         await this.sleep(nextBackoffMs(attempt));
       }
