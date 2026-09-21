@@ -1,10 +1,11 @@
 /**
  * E1 synthetic + E2 shadow packs. Tokenized refs only — no live PHI.
  *
- * E2 catalog lives in fixtures/golive/shadow-e2.json (every case shadow=true).
- * E1 remains inline until the Phase 7.2 JSON catalog lands.
+ * E1 catalog: fixtures/golive/synthetic-e1.json (prior_auth + first_level_appeal).
+ * E2 catalog: fixtures/golive/shadow-e2.json (every case shadow=true).
  */
 
+import { loadSyntheticE1Pack } from './load-fixtures';
 import { loadShadowE2Pack } from './load-shadow-fixtures';
 import type { PackCaseSpec } from './types';
 
@@ -17,159 +18,8 @@ const COMPLETE = {
   benefit_type: 'medical' as const,
 };
 
-export const SYNTHETIC_PACK: readonly PackCaseSpec[] = [
-  {
-    id: 'e1-happy-01',
-    scenario: 'happy_path',
-    label: 'Happy path MRI knee — Gravity Rail ingest',
-    intake: { ...COMPLETE, external_id: 'e1-happy-01', member_ref: 'memb_synth_e1_01' },
-    source: 'gravity_rail',
-    criteria: 'meet',
-    expected: { state: 'md_queue', criteria_result: 'meet' },
-  },
-  {
-    id: 'e1-happy-02',
-    scenario: 'happy_path',
-    label: 'Happy path PT — external API ingest',
-    intake: {
-      ...COMPLETE,
-      external_id: 'e1-happy-02',
-      member_ref: 'memb_synth_e1_02',
-      service_or_rx: 'CPT-97110',
-    },
-    source: 'external_api',
-    criteria: 'meet',
-    expected: { state: 'md_queue', criteria_result: 'meet' },
-  },
-  {
-    id: 'e1-happy-03',
-    scenario: 'happy_path',
-    label: 'Happy path urgent — fax ingest then sign',
-    intake: {
-      ...COMPLETE,
-      external_id: 'e1-happy-03',
-      member_ref: 'memb_synth_e1_03',
-      urgency: 'urgent',
-      service_or_rx: 'CPT-70553',
-    },
-    source: 'fax_phaxio',
-    criteria: 'meet',
-    sign: true,
-    determination: 'approve',
-    expected: { state: 'determined', criteria_result: 'meet' },
-  },
-  {
-    id: 'e1-happy-04',
-    scenario: 'happy_path',
-    label: 'Happy path spine create',
-    intake: { ...COMPLETE, external_id: 'e1-happy-04', member_ref: 'memb_synth_e1_04' },
-    source: 'spine',
-    criteria: 'meet',
-    expected: { state: 'md_queue', criteria_result: 'meet' },
-  },
-  {
-    id: 'e1-happy-05',
-    scenario: 'happy_path',
-    label: 'Happy path pharmacy lane',
-    intake: {
-      ...COMPLETE,
-      external_id: 'e1-happy-05',
-      member_ref: 'memb_synth_e1_05',
-      benefit_type: 'pharmacy',
-      service_or_rx: 'NDC-0002-1433',
-    },
-    source: 'spine',
-    criteria: 'meet',
-    expected: { state: 'md_queue', criteria_result: 'meet' },
-  },
-  {
-    id: 'e1-happy-06',
-    scenario: 'happy_path',
-    label: 'Happy path first-level appeal shape',
-    intake: { ...COMPLETE, external_id: 'e1-happy-06', member_ref: 'memb_synth_e1_06' },
-    source: 'spine',
-    criteria: 'meet',
-    expected: { state: 'md_queue', criteria_result: 'meet' },
-  },
-  {
-    id: 'e1-missing-01',
-    scenario: 'missing_clinicals',
-    label: 'Missing clinicals pointer — R01 pause',
-    intake: {
-      ...COMPLETE,
-      external_id: 'e1-missing-01',
-      member_ref: 'memb_synth_e1_m01',
-      clinicals_pointer: null,
-    },
-    source: 'gravity_rail',
-    expected: { state: 'intake_incomplete', sla_clock: 'paused' },
-  },
-  {
-    id: 'e1-missing-02',
-    scenario: 'missing_clinicals',
-    label: 'Missing member_ref — R01 pause',
-    intake: {
-      ...COMPLETE,
-      external_id: 'e1-missing-02',
-      member_ref: null,
-    },
-    source: 'external_api',
-    expected: { state: 'intake_incomplete', sla_clock: 'paused' },
-  },
-  {
-    id: 'e1-missing-03',
-    scenario: 'missing_clinicals',
-    label: 'Missing requesting provider — R01 pause',
-    intake: {
-      ...COMPLETE,
-      external_id: 'e1-missing-03',
-      member_ref: 'memb_synth_e1_m03',
-      requesting_provider: null,
-    },
-    source: 'spine',
-    expected: { state: 'intake_incomplete', sla_clock: 'paused' },
-  },
-  {
-    id: 'e1-gray-01',
-    scenario: 'gray_zone',
-    label: 'Gray zone criteria — MD queue, no auto-approve',
-    intake: { ...COMPLETE, external_id: 'e1-gray-01', member_ref: 'memb_synth_e1_g01' },
-    source: 'spine',
-    criteria: 'gray',
-    expected: { state: 'md_queue', criteria_result: 'gray' },
-  },
-  {
-    id: 'e1-gray-02',
-    scenario: 'gray_zone',
-    label: 'Gray zone urgent — MD must sign',
-    intake: {
-      ...COMPLETE,
-      external_id: 'e1-gray-02',
-      member_ref: 'memb_synth_e1_g02',
-      urgency: 'urgent',
-      service_or_rx: 'CPT-27447',
-    },
-    source: 'gravity_rail',
-    criteria: 'gray',
-    expected: { state: 'md_queue', criteria_result: 'gray' },
-  },
-  {
-    id: 'e1-gray-03',
-    scenario: 'gray_zone',
-    label: 'Gray zone fail-adjacent — draft pend',
-    intake: {
-      ...COMPLETE,
-      external_id: 'e1-gray-03',
-      member_ref: 'memb_synth_e1_g03',
-      service_or_rx: 'CPT-64483',
-    },
-    source: 'fax_phaxio',
-    criteria: 'gray',
-    expected: { state: 'md_queue', criteria_result: 'gray' },
-  },
-];
+/** Phase 7.2 E1 — loaded from fixtures/golive/synthetic-e1.json */
+export const SYNTHETIC_PACK: readonly PackCaseSpec[] = loadSyntheticE1Pack();
 
 /** Phase 7.3 E2 — loaded from fixtures/golive/shadow-e2.json. Every case is shadow=true. */
 export const SHADOW_PACK: readonly PackCaseSpec[] = loadShadowE2Pack();
-
-export const MIN_SYNTHETIC_PACK = 10;

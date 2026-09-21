@@ -19,9 +19,10 @@
 | 5 Three role views | [#58](https://github.com/WellsOnyx/vantahg-brief-engine/pull/58) | Client / CX / Med lenses on one case object; RBAC deny cross-tenant + CX-note isolation. 5.3 polish: sign / brief POST / fan-out / audit role gates + cross-tenant denial tests. |
 | 6 Reporting + CM | [#59](https://github.com/WellsOnyx/vantahg-brief-engine/pull/59) | Five client reports + CSV, CM HMAC handoff (flagged only), ops scoreboard |
 | 7 Onboarding + go-live | [#60](https://github.com/WellsOnyx/vantahg-brief-engine/pull/60) | A→E checklist UI + runbook, E1/E2 packs, first-25 SLA rollback log |
-| 7.1 Cole runbook | this PR | How-to on every A–E item, `11-cole-onboarding-runbook.md`, synthetic `client_config` fixture — Cole can run A→E without tribal knowledge |
+| 7.1 Cole runbook | [#64](https://github.com/WellsOnyx/vantahg-brief-engine/pull/64) | How-to on every A–E item, `11-cole-onboarding-runbook.md`, synthetic `client_config` fixture |
+| 7.2 E1 fixture pack | this PR | `fixtures/golive/synthetic-e1.json` — prior auth + first-level appeal, tokenized refs, `npm run test:synthetic-golive-pack` |
 
-**CI (Phase 7 tip):** `npm run test:ci` 453 passed (3 todo); `tsc --noEmit` clean; `npm run test:go-live-synthetic` PASS; `npm run test:shadow-golive-pack` PASS.
+**CI (Phase 7.2 on current main):** `npm run test:ci` 503 passed (3 todo); `tsc --noEmit` clean; `npm run test:go-live-synthetic` PASS; `npm run test:synthetic-golive-pack` PASS; `npm run test:shadow-golive-pack` PASS.
 
 ## 2026-09-20 — Packaging lock (Jonah)
 
@@ -36,8 +37,8 @@ Paid door = Med Review (VantaHG). VantaUM Brief Engine / UM is **included free o
 | 4 Fan-out + billing ledger | ✅ **Done** — portal downloads, HMAC webhook retries → `fanout_failed` + CX task, ledger on sign, statement stub |
 | 5 Three role views (Client / CX / Med polish) | ✅ **Done** — `/client`, `/cx`, `/med-review` share `/api/case-spine` + role filters |
 | 6 Reporting + CM handoff | ✅ **Done** — `/portal/tpa/reports`, `/portal/tpa/cm`, `/api/ops/scoreboard` + `/admin/ops` (fail rate + stuck count) |
-| 7 Onboarding runbook + synthetic/shadow/live gates | ✅ **Done** — `/admin/onboarding`, `docs/onboarding/`, `npm run test:go-live-synthetic`. Remaining = human ops |
-| 7.1 Cole A→E without tribal knowledge | ✅ **This PR** — `docs/customer-ready/11-cole-onboarding-runbook.md`, how_to per item, synthetic fixture |
+| 7 Onboarding runbook + synthetic/shadow/live gates | ✅ **Done** — `/admin/onboarding`, `docs/onboarding/`, `fixtures/golive/synthetic-e1.json`, `npm run test:go-live-synthetic` + `npm run test:synthetic-golive-pack`. Remaining = human ops |
+| 7.1 Cole A→E without tribal knowledge | ✅ **#64** — `docs/customer-ready/11-cole-onboarding-runbook.md`, how_to per item, synthetic fixture |
 
 ## Still needs a human (not code)
 
@@ -88,7 +89,7 @@ curl -s -X POST http://localhost:3000/api/case-spine/md-queue \
 # Portal: /portal/tpa/determinations  ·  statement: /portal/tpa/statements
 # Lenses: /client  ·  /cx  ·  /med-review
 # Reports: /portal/tpa/reports  ·  CM: /portal/tpa/cm  ·  scoreboard: /admin/ops + /cx
-# Onboarding: /admin/onboarding  ·  npm run test:go-live-synthetic  ·  npm run test:shadow-golive-pack
+# Onboarding: /admin/onboarding  ·  npm run test:synthetic-golive-pack · npm run test:go-live-synthetic · npm run test:shadow-golive-pack
 ```
 
 ## Roadmap / next connectors

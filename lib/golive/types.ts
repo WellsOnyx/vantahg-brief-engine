@@ -3,6 +3,7 @@ import type { AuthWorkflowType, CaseSpineState, CriteriaResult, SlaClock } from 
 export const PACK_SCENARIOS = ['happy_path', 'missing_clinicals', 'gray_zone'] as const;
 export type PackScenario = (typeof PACK_SCENARIOS)[number];
 
+export const MIN_SYNTHETIC_PACK = 10;
 export const MIN_SHADOW_PACK = 10;
 
 export const GO_LIVE_LOG_KINDS = [

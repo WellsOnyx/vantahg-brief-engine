@@ -5,7 +5,15 @@ Future Claude/Cole/Jonah sessions: read this first.
 
 ---
 
-## 2026-09-20 — Phase 7.1 Cole runbook (this PR)
+## 2026-09-20 — Phase 7.2 synthetic fixture pack (this PR)
+
+Portable E1 catalog at [`fixtures/golive/synthetic-e1.json`](fixtures/golive/synthetic-e1.json) (prior-auth + first-level appeal, tokenized refs only). `npm run test:synthetic-golive-pack` loads the JSON and creates cases on the demo path. `npm run test:go-live-synthetic` advances the same catalog. How-to: [`fixtures/golive/README.md`](fixtures/golive/README.md). E2 shadow catalog stays at `fixtures/golive/shadow-e2.json`. No `ENABLE_AWS_*` flips. No live PHI. Med Review packaging lock unchanged.
+
+**CI:** `npm run test:ci` 503 passed (3 todo). `tsc --noEmit` clean. E1 load, E1 runner, and E2 shadow pack PASS. RDS bootstrap notes from #74 kept.
+
+---
+
+## 2026-09-20 — Phase 7.1 Cole runbook (PR #64)
 
 Phase 7.1 from `10-implementation-commits.md`: Cole can run A→E **without tribal knowledge**. Builds on the Phase 7 catalog/UI from #60.
 
@@ -132,7 +140,7 @@ Queued future connector — **not** Phase 8 and **not** a live PHI path. See [`d
 Slices 7.1–7.4 from `10-implementation-commits.md`. Synthetic / demo only. No live PHI. No invented vendor credentials. Does **not** change `ENABLE_AWS_*` defaults. Does **not** claim HIPAA complete.
 
 - **7.1 Runbook + UI:** `docs/customer-ready/11-cole-onboarding-runbook.md` + `/admin/onboarding` checklist mirrors `02-onboarding.md` phases A–E with **how_to on every item**. Cole publishes the synthetic `client_config` fixture, checks items via `GET/PATCH /api/admin/onboarding`, and runs E1/E2/E4 from the page. Index: `docs/onboarding/README.md`.
-- **7.2 E1 synthetic pack (≥10):** happy path + missing clinicals (R01 → `intake_incomplete` + SLA paused) + gray zone (`md_queue`). `npm run test:go-live-synthetic` and `POST /api/golive/synthetic`. Asserts via case-spine and intake ingest.
+- **7.2 E1 synthetic pack (≥10):** happy path + missing clinicals (R01 → `intake_incomplete` + SLA paused) + gray zone (`md_queue`) + first-level appeals. Catalog: `fixtures/golive/synthetic-e1.json`. `npm run test:synthetic-golive-pack`, `npm run test:go-live-synthetic`, and `POST /api/golive/synthetic`. Asserts via case-spine and intake ingest.
 - **7.3 E2 shadow pack (≥10):** live-shaped synthetic; MD signs; fan-out records member/provider **intent only** (`shadow_mode` / `go_live_mode=shadow`). `POST /api/golive/shadow`. Never a final send to member or requesting provider.
 - **7.4 Live hypercare scaffolding:** first-25 scorecard already on `/cx`. Go-live log + rollback note when first-25 SLA miss rate exceeds `client_config.sla_miss_rollback_threshold` or `SLA_MISS_ROLLBACK_THRESHOLD` (default 0.2): pause live intake, stay on shadow.
 

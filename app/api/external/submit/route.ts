@@ -132,6 +132,7 @@ export async function POST(request: NextRequest) {
       client_id: mapped.client_id,
       intake: mapped.intake,
       type: mapped.type,
+      parent_case_id: mapped.parent_case_id,
       priority: mapped.priority,
       packet_storage_keys: Array.isArray(body.packet_storage_keys)
         ? body.packet_storage_keys.map(String)

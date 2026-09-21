@@ -70,6 +70,7 @@ export async function POST(request: NextRequest) {
       client_id: mapped.client_id,
       intake: mapped.intake,
       type: mapped.type,
+      parent_case_id: mapped.parent_case_id,
       priority: mapped.priority,
       actor: 'intake:gravity_rail',
     });

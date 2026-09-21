@@ -14,9 +14,15 @@ import { FanoutService } from '@/lib/fanout/service';
 import { MemoryFanoutStore } from '@/lib/fanout/store';
 import { ingestToCaseSpine, type IntakeSource } from '@/lib/intake/spine-ingest';
 import { SYNTHETIC_CLIENT_ID } from '@/lib/intake/constants';
-import { MIN_SYNTHETIC_PACK, SHADOW_PACK, SYNTHETIC_PACK } from './packs';
+import { SHADOW_PACK, SYNTHETIC_PACK } from './packs';
 import { getMemoryGoLiveStore, type MemoryGoLiveStore } from './store';
-import { MIN_SHADOW_PACK, type PackCaseResult, type PackCaseSpec, type PackRunResult } from './types';
+import {
+  MIN_SHADOW_PACK,
+  MIN_SYNTHETIC_PACK,
+  type PackCaseResult,
+  type PackCaseSpec,
+  type PackRunResult,
+} from './types';
 
 export interface RunPackOptions {
   clientId?: string;
@@ -123,18 +129,24 @@ function assertSpec(spec: PackCaseSpec, current: CanonicalCase | null, via: Pack
   }
   const stateOk = current.state === spec.expected.state;
   const clockOk = !spec.expected.sla_clock || current.sla_clock === spec.expected.sla_clock;
+  const typeOk = !spec.expected.type || current.type === spec.expected.type;
   const signed = Boolean(current.signer_id && current.determination);
   return {
     spec_id: spec.id,
     scenario: spec.scenario,
     case_id: current.case_id,
-    ok: stateOk && clockOk,
+    ok: stateOk && clockOk && typeOk,
     expected_state: spec.expected.state,
     actual_state: current.state,
     sla_clock: current.sla_clock,
     criteria_result: spec.expected.criteria_result ?? null,
     signed,
-    error: stateOk && clockOk ? null : `expected ${spec.expected.state} got ${current.state}`,
+    error:
+      stateOk && clockOk && typeOk
+        ? null
+        : !typeOk
+          ? `expected type ${spec.expected.type} got ${current.type}`
+          : `expected ${spec.expected.state} got ${current.state}`,
     via,
   };
 }
@@ -155,6 +167,7 @@ async function runPack(
   const min = pack === 'synthetic' ? MIN_SYNTHETIC_PACK : MIN_SHADOW_PACK;
 
   const results: PackCaseResult[] = [];
+  const parentByExternal = new Map<string, string>();
   const fanoutStore = new MemoryFanoutStore();
   const fanout = new FanoutService({
     spine,
@@ -163,7 +176,6 @@ async function runPack(
     now,
     shadowMode: shadow,
   });
-  const parentByExternal = new Map<string, string>();
 
   for (const spec of specs) {
     try {
@@ -174,10 +186,8 @@ async function runPack(
         throw new Error(`parent ${spec.parent_external_id} has not been created yet`);
       }
       const created = await createFromSpec(spec, clientId, actor, spine, !opts.spine, parentCaseId);
-      if (created.case.case_id && spec.intake.external_id) {
-        parentByExternal.set(spec.intake.external_id, created.case.case_id);
-      }
       let current = created.case;
+      if (current.external_id) parentByExternal.set(current.external_id, current.case_id);
       if (spec.scenario !== 'missing_clinicals') {
         current = await advanceHappyOrGray(spine, current.case_id, spec, actor);
       }

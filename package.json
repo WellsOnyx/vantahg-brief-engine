@@ -11,6 +11,7 @@
     "test:ci": "vitest run",
     "test:e2e-synthetic": "npx tsx scripts/smoke-e2e.ts",
     "test:go-live-synthetic": "npx tsx scripts/go-live-synthetic.ts",
+    "test:synthetic-golive-pack": "npx tsx scripts/load-synthetic-golive-pack.ts",
     "test:go-live-shadow": "npx tsx scripts/go-live-shadow.ts",
     "test:shadow-golive-pack": "npx tsx scripts/load-shadow-golive-pack.ts",
     "seed": "npx tsx scripts/seed-demo.ts",

@@ -125,6 +125,7 @@ export function mapUnknownToIntake(body: Record<string, unknown>): {
   client_id: string;
   intake: IntakePayload;
   type?: AuthWorkflowType;
+  parent_case_id?: string | null;
   priority?: CaseSpinePriority;
 } {
   const memberRef =
@@ -158,6 +159,7 @@ export function mapUnknownToIntake(body: Record<string, unknown>): {
     client_id: defaultIntakeClientId(asString(body.client_id)),
     intake,
     type: asWorkflowType(body.type) ?? asWorkflowType(body.review_type),
+    parent_case_id: asString(body.parent_case_id),
     priority: urgency ?? undefined,
   };
 }
