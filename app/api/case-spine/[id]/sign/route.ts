@@ -9,7 +9,9 @@ import {
   DETERMINATIONS,
   IllegalSignError,
   IllegalTransitionError,
+  canAccessMedReviewView,
   getCaseSpineService,
+  resolveSpineViewer,
   type SpineDetermination,
 } from '@/lib/case-spine';
 
@@ -25,7 +27,13 @@ export async function POST(
     const rateLimited = await applyRateLimit(request, { maxRequests: 30 });
     if (rateLimited) return rateLimited;
 
+    const viewer = resolveSpineViewer(authResult.user, request);
+    if (!canAccessMedReviewView(viewer)) {
+      return NextResponse.json({ error: 'Forbidden', surface: 'med_review' }, { status: 403 });
+    }
+
     const { id } = await context.params;
+    await getCaseSpineService().getCase(id, viewer);
     const body = (await request.json().catch(() => ({}))) as {
       determination?: string;
       rationale?: string;
