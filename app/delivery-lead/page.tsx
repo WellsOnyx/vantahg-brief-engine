@@ -34,6 +34,8 @@ interface UrgentCase {
   priority: string;
   turnaround_deadline: string;
   sla_label?: string;
+  conciergeId?: string;
+  conciergeName?: string;
 }
 
 interface Concierge {
@@ -216,7 +218,7 @@ export default function DeliveryLeadPage() {
         // Real path — refresh authoritative data
         void load();
       }
-    } catch (e) {
+    } catch (_e) {
       setActionMsg('Network error during reassignment.');
     } finally {
       setReassigning(null);
@@ -491,7 +493,7 @@ export default function DeliveryLeadPage() {
                               <div className="flex items-center gap-3 shrink-0">
                                 <SlaTracker deadline={uc.turnaround_deadline} compact />
                                 <button
-                                  onClick={() => setSelectedForFlag({ ...uc, conciergeId: c.id } as any)}
+                                  onClick={() => setSelectedForFlag({ ...uc, conciergeId: c.id })}
                                   className="text-xs px-3 py-1 rounded-lg border border-amber-300 text-amber-700 hover:bg-amber-50"
                                 >
                                   Flag for 2nd look
@@ -522,7 +524,7 @@ export default function DeliveryLeadPage() {
             <div className="text-center py-8 text-muted border border-dashed rounded-2xl">No urgent cases across the pod right now. Excellent.</div>
           ) : (
             <div className="divide-y">
-              {allUrgentCases.slice(0, 8).map((uc: any) => (
+              {allUrgentCases.slice(0, 8).map((uc) => (
                 <div key={uc.id} className="py-4 flex flex-col md:flex-row md:items-center gap-4 text-sm">
                   <div className="md:w-48 font-mono text-xs text-muted">{uc.case_number}</div>
                   <div className="flex-1 font-medium text-navy">{uc.patient_name} <span className="font-normal text-muted">· {uc.conciergeName}</span></div>
@@ -643,7 +645,7 @@ export default function DeliveryLeadPage() {
             <div className="flex gap-3 mt-6">
               <button onClick={() => setSelectedForFlag(null)} className="flex-1 py-3 border rounded-2xl text-sm">Cancel</button>
               <button
-                onClick={() => flagForSecondLook(selectedForFlag, (selectedForFlag as any).conciergeId)}
+                onClick={() => flagForSecondLook(selectedForFlag, selectedForFlag.conciergeId ?? '')}
                 className="flex-1 py-3 bg-navy text-white rounded-2xl text-sm font-semibold"
               >
                 Confirm &amp; Log Flag

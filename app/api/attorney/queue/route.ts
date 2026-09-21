@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth, requireRole } from '@/lib/auth-guard';
+import { requireRole } from '@/lib/auth-guard';
 import { applyRateLimit } from '@/lib/rate-limit-middleware';
 import { getServiceClient } from '@/lib/supabase';
 import { apiError } from '@/lib/api-error';

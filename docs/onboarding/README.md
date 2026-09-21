@@ -1,11 +1,16 @@
 # Client onboarding runbook (Cole)
 
-This is the **A→E** path from [`docs/customer-ready/02-onboarding.md`](../customer-ready/02-onboarding.md). Use it plus `/admin/onboarding` — no tribal knowledge required.
+**Canonical operator path (Phase 7.1):** [`docs/customer-ready/11-cole-onboarding-runbook.md`](../customer-ready/11-cole-onboarding-runbook.md).
+
+This file is the short index. Use **11** plus `/admin/onboarding` — no tribal knowledge required. Framework lock: [`02-onboarding.md`](../customer-ready/02-onboarding.md).
 
 **Synthetic only.** No live PHI. Empty vendor slots stay empty. `ENABLE_AWS_*` stay **false** until an operator exports them at deploy. Completing this runbook is a **code / ops gate**, not a HIPAA attestation.
 
+**Packaging lock:** paid door = Med Review (VantaHG). Brief Engine / UM is free only with Vanta med review.
+
 UI: [`/admin/onboarding`](../../app/admin/onboarding/page.tsx)  
-Catalog: [`lib/onboarding/checklist.ts`](../../lib/onboarding/checklist.ts)
+Catalog: [`lib/onboarding/checklist.ts`](../../lib/onboarding/checklist.ts)  
+Fixture: [`docs/customer-ready/fixtures/client-config-synthetic.json`](../customer-ready/fixtures/client-config-synthetic.json)
 
 ---
 
@@ -25,7 +30,7 @@ Confirm LOBs, SLAs, primary intake mode, determination channels, CX owner, revie
 | A4 | Client-dependent | Security / SOC pack |
 | A5 | Required | Invoice entity + billing contact (Meow, not Stripe) |
 
-Fee schedule minimums: per prior auth, per first-level appeal, optional rush multiplier, monthly minimum.
+Fee schedule: paid door is VantaHG Med Review. UM Brief Engine is included only when `client_config.vanta_med_review_contract` is true. Do not sell standalone UM. Do not invent prices.
 
 Pointers: [`06-hipaa-baa-path.md`](../customer-ready/06-hipaa-baa-path.md), [`07-billing-and-tracking.md`](../customer-ready/07-billing-and-tracking.md).
 
@@ -33,7 +38,7 @@ Pointers: [`06-hipaa-baa-path.md`](../customer-ready/06-hipaa-baa-path.md), [`07
 
 Publish via `POST /api/client-config` (append-only; PATCH/DELETE → 409). Required fields:
 
-`client_id`, `legal_name`, `lob[]`, `sla_hours_standard`, `sla_hours_urgent`, `auto_vs_md_policy` (**`always_md` at go-live**), `notify_channels[]`, `determination_recipients`, `cm_handoff_enabled`, `intake_modes[]`, `timezone`, `business_hours`, `escalation_contacts[]`, `cx_owner`, `reviewer_queue`, `go_live_mode`, `shadow_mode`, `sla_miss_rollback_threshold`.
+`client_id`, `legal_name`, `lob[]`, `sla_hours_standard`, `sla_hours_urgent`, `auto_vs_md_policy` (**`always_md` at go-live**), `notify_channels[]`, `determination_recipients`, `cm_handoff_enabled`, `intake_modes[]`, `timezone`, `business_hours`, `escalation_contacts[]`, `cx_owner`, `reviewer_queue`, `go_live_mode`, `shadow_mode`, `sla_miss_rollback_threshold`, `vanta_med_review_contract` (**required true for free UM Brief Engine**), `med_review_provider` (`vanta` | `third_party` | `none`).
 
 Every SLA or route change = new version + CX written confirm with the client.
 
@@ -68,10 +73,12 @@ npm run test:go-live-synthetic       # same catalog: brief → md_queue / one si
 ## Day 5–7 — E2 shadow
 
 ```bash
-# POST /api/golive/shadow
+npm run test:shadow-golive-pack
+# or npm run test:go-live-shadow
+# or POST /api/golive/shadow
 ```
 
-≥10 live-shaped synthetic packets. MD signs. Fan-out may record **intent only**. **No final outbound to member or requesting provider** (`shadow_mode` / `go_live_mode=shadow`).
+≥10 live-shaped synthetic packets from [`fixtures/golive/shadow-e2.json`](../../fixtures/golive/shadow-e2.json) (every case `shadow=true`). MD signs. Fan-out may record **intent only**. **No final outbound to member or requesting provider** (`shadow_mode` / `go_live_mode=shadow`). How-to: [`fixtures/golive/README.md`](../../fixtures/golive/README.md).
 
 ## Day 8+ — E3 live hypercare (first 25)
 

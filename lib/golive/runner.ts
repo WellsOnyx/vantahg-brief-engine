@@ -15,9 +15,14 @@ import { MemoryFanoutStore } from '@/lib/fanout/store';
 import { ingestToCaseSpine, type IntakeSource } from '@/lib/intake/spine-ingest';
 import { SYNTHETIC_CLIENT_ID } from '@/lib/intake/constants';
 import { SHADOW_PACK, SYNTHETIC_PACK } from './packs';
-import { MIN_SHADOW_PACK, MIN_SYNTHETIC_PACK } from './types';
 import { getMemoryGoLiveStore, type MemoryGoLiveStore } from './store';
-import type { PackCaseResult, PackCaseSpec, PackRunResult } from './types';
+import {
+  MIN_SHADOW_PACK,
+  MIN_SYNTHETIC_PACK,
+  type PackCaseResult,
+  type PackCaseSpec,
+  type PackRunResult,
+} from './types';
 
 export interface RunPackOptions {
   clientId?: string;
@@ -171,6 +176,7 @@ async function runPack(
     now,
     shadowMode: shadow,
   });
+  const parentByExternal = new Map<string, string>();
 
   for (const spec of specs) {
     try {

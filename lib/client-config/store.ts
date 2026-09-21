@@ -30,6 +30,8 @@ function cloneVersion(row: ClientConfigVersion): ClientConfigVersion {
       go_live_mode: row.config.go_live_mode ?? 'synthetic',
       shadow_mode: row.config.shadow_mode ?? false,
       sla_miss_rollback_threshold: row.config.sla_miss_rollback_threshold ?? 0.2,
+      vanta_med_review_contract: row.config.vanta_med_review_contract ?? false,
+      med_review_provider: row.config.med_review_provider ?? 'none',
     },
   };
 }
@@ -58,6 +60,9 @@ function seedSyntheticV1(): ClientConfigVersion {
     go_live_mode: 'synthetic',
     shadow_mode: false,
     sla_miss_rollback_threshold: 0.2,
+    // Synthetic staging is Vanta's own shop — Brief Engine included.
+    vanta_med_review_contract: true,
+    med_review_provider: 'vanta',
   };
   return {
     id: randomUUID(),

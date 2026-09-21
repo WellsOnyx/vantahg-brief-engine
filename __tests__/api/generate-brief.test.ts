@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { NextRequest } from 'next/server';
 
 // Mock supabase so we're in demo mode
 vi.mock('@/lib/supabase', () => ({
@@ -31,7 +32,7 @@ describe('POST /api/generate-brief', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({}),
     });
-    const response = await POST(request as any);
+    const response = await POST(new NextRequest(request));
     const data = await response.json();
 
     expect(response.status).toBe(400);
@@ -51,7 +52,7 @@ describe('POST /api/generate-brief', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ case_id: caseWithBrief.id }),
       });
-      const response = await POST(request as any);
+      const response = await POST(new NextRequest(request));
 
       expect(response.status).toBe(200);
     }

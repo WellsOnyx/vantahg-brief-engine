@@ -61,13 +61,13 @@ Work in this order. Each phase = PR (or stacked commits on one branch) with acce
 |-------|-------------|------------|
 | 6.1 | Five client reports + CSV | Matches ledger counts |
 | 6.2 | CM flags + webhook/CSV | Flagged only; < 5 min webhook |
-| 6.3 | Internal ops scoreboard | Fan-out fail rate visible |
+| 6.3 | Internal ops scoreboard | Fan-out fail rate + stuck-case count visible |
 
 ## Phase 7 — Onboarding + go-live
 
 | Slice | Deliverable | Acceptance |
 |-------|-------------|------------|
-| 7.1 | Onboarding checklist UI or runbook in repo + Drive | Cole can run A→E without tribal knowledge |
+| 7.1 | Onboarding checklist UI or runbook in repo + Drive | Cole can run A→E without tribal knowledge. Operator path: `docs/customer-ready/11-cole-onboarding-runbook.md` + `/admin/onboarding` (how_to on every item). |
 | 7.2 | Synthetic pack (10) | Pass |
 | 7.3 | Shadow (10) | Pass |
 | 7.4 | Live hypercare (25) | SLA threshold held or rollback |

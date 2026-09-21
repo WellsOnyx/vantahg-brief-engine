@@ -4,6 +4,8 @@ import {
   recordBillableEventsForSign,
   type BillableEventLedger,
 } from '@/lib/billing/events';
+import { getClientConfigService } from '@/lib/client-config';
+import { UmBriefEngineEntitlementError } from '@/lib/entitlements/um-brief-engine';
 import {
   buildSyntheticBriefContent,
   mintSpineBrief,
@@ -279,10 +281,11 @@ export class CaseSpineService {
     actor = 'system',
   ): Promise<AttachBriefResult> {
     const current = await this.requireCase(caseId);
+    await this.assertUmBriefEngineEntitlement(current.client_id);
     const now = this.now();
     const brief = await this.materializeBrief(current, input, now);
 
-    let next: CanonicalCase = {
+    const next: CanonicalCase = {
       ...current,
       brief_id: brief.brief_id,
       packet_storage_keys: [...current.packet_storage_keys],
@@ -660,5 +663,19 @@ export class CaseSpineService {
     });
     await this.store.insertBrief(brief);
     return brief;
+  }
+
+  /**
+   * Packaging lock: when a published client_config exists, free Brief Engine
+   * access requires vanta_med_review_contract. Spine unit tests that never
+   * publish a config are not a commercial offer path and are left open.
+   */
+  private async assertUmBriefEngineEntitlement(clientId: string): Promise<void> {
+    const latest = await getClientConfigService().getLatest(clientId);
+    if (!latest) return;
+    const decision = await getClientConfigService().resolveUmBriefEngineAccess(clientId);
+    if (!decision.allowed) {
+      throw new UmBriefEngineEntitlementError(decision.code, decision.reason, clientId);
+    }
   }
 }

@@ -10,6 +10,8 @@ import { applyRateLimit } from '@/lib/rate-limit-middleware';
 import { LlmError } from '@/lib/llm';
 import { apiError } from '@/lib/api-error';
 import { getRequestContext } from '@/lib/security';
+import { getClientConfigService } from '@/lib/client-config';
+import { UmBriefEngineEntitlementError } from '@/lib/entitlements/um-brief-engine';
 
 export const dynamic = 'force-dynamic';
 
@@ -64,6 +66,20 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    if (caseData.client_id) {
+      try {
+        await getClientConfigService().requireUmBriefEngineAccess(caseData.client_id);
+      } catch (err) {
+        if (err instanceof UmBriefEngineEntitlementError) {
+          return NextResponse.json(
+            { error: err.message, code: err.code, denial: err.denial },
+            { status: 403 },
+          );
+        }
+        throw err;
+      }
+    }
+
     // Generate the brief and run fact-check (pass client for criteria source context)
     const { brief, factCheck } = await generateBriefForCase(caseData, { client: caseData.client ?? null });
 
@@ -93,8 +109,8 @@ export async function POST(request: NextRequest) {
     // Log audit event (now carries self-improvement metadata via the brief object itself)
     await logAuditEvent(case_id, 'brief_generated', 'system', {
       triggered_manually: true,
-      passes: (brief as any)?.generation_metadata?.passes_completed ?? 1,
-      self_improved: (brief as any)?.generation_metadata?.self_improvement_applied ?? false,
+      passes: brief?.generation_metadata?.passes_completed ?? 1,
+      self_improved: brief?.generation_metadata?.self_improvement_applied ?? false,
     });
 
     // Auto-assign a reviewer now that brief is ready (non-blocking)

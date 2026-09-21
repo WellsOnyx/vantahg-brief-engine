@@ -111,7 +111,7 @@ export default function DeterminationLetterPage() {
     );
   }
 
-  const reviewer = (caseData as any).reviewer;
+  const reviewer = caseData.reviewer;
   const determinationDate = caseData.determination_at
     ? new Date(caseData.determination_at).toLocaleDateString('en-US', {
         year: 'numeric', month: 'long', day: 'numeric',
@@ -373,7 +373,7 @@ export default function DeterminationLetterPage() {
               {reviewer?.specialty && (
                 <p className="text-xs text-muted capitalize">{reviewer.specialty}</p>
               )}
-              {reviewer?.license_state?.length > 0 && (
+              {reviewer?.license_state && reviewer.license_state.length > 0 && (
                 <p className="text-xs text-muted">Licensed in: {reviewer.license_state.join(', ')}</p>
               )}
             </div>

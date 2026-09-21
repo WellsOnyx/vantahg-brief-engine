@@ -11,7 +11,8 @@
 
 import { useState, useEffect, useRef } from 'react';
 import type { Determination } from '@/lib/types';
-import { demoCases, demoReviewers, DEMO_REVIEWER_IDS, DEMO_CASE_IDS, DEMO_CLIENT_IDS } from '@/lib/demo-data';
+import Link from 'next/link';
+import { demoCases, demoReviewers, DEMO_REVIEWER_IDS, DEMO_CASE_IDS } from '@/lib/demo-data';
 
 // ── The single case we walk through ──────────────────────────────────────────
 const HERO_CASE = demoCases.find(c => c.id === DEMO_CASE_IDS.mriLumbar)!;
@@ -52,27 +53,18 @@ const TOUR_STEPS = [
 ];
 
 // ── Formatters ────────────────────────────────────────────────────────────────
-function AnimatedNumber({ value, duration = 1200 }: { value: number; duration?: number }) {
-  const [display, setDisplay] = useState(0);
-  useEffect(() => {
-    let start = 0;
-    const step = value / (duration / 16);
-    const t = setInterval(() => {
-      start += step;
-      if (start >= value) { setDisplay(value); clearInterval(t); }
-      else setDisplay(Math.floor(start));
-    }, 16);
-    return () => clearInterval(t);
-  }, [value, duration]);
-  return <>{display.toLocaleString()}</>;
-}
-
 function StreamingText({ text, active, speed = 6 }: { text: string; active: boolean; speed?: number }) {
   const [displayed, setDisplayed] = useState('');
   const [done, setDone] = useState(false);
+  const streamKey = `${active}:${text}`;
+  const [prevStreamKey, setPrevStreamKey] = useState(streamKey);
+  if (streamKey !== prevStreamKey) {
+    setPrevStreamKey(streamKey);
+    setDisplayed('');
+    setDone(false);
+  }
   useEffect(() => {
-    if (!active) { setDisplayed(''); setDone(false); return; }
-    setDisplayed(''); setDone(false);
+    if (!active) return;
     let i = 0;
     const interval = setInterval(() => {
       i += speed;
@@ -132,9 +124,13 @@ export default function DemoTourPage() {
   const criteria = brief?.criteria_match;
 
   // Analysis animation
-  useEffect(() => {
-    if (step !== 1) { setAnalysisProgress(0); return; }
+  const [progressStep, setProgressStep] = useState(step);
+  if (step !== progressStep) {
+    setProgressStep(step);
     setAnalysisProgress(0);
+  }
+  useEffect(() => {
+    if (step !== 1) return;
     let p = 0;
     const t = setInterval(() => {
       p += 1.4;
@@ -154,8 +150,6 @@ export default function DemoTourPage() {
     setStep(0); setDecision(null); setRationale(''); setDeciding(false);
     setDecided(false); setAnalysisProgress(0);
   }
-
-  const stepColors = ['blue', 'yellow', 'purple', 'gold', 'green'];
 
   return (
     <div className="min-h-screen bg-[#060d18] text-white font-[family-name:var(--font-dm-sans)] overflow-x-hidden">
@@ -532,7 +526,7 @@ export default function DemoTourPage() {
 
             {/* Easy play: jump to full app surfaces in this synthetic TPA */}
             <div className="mt-8 pt-6 border-t border-white/10 text-center text-xs text-white/40">
-              Ready to play more? <a href="/cases" className="text-gold underline">Open full cases list</a> · <a href="/quality" className="text-gold underline">Quality audits</a> · <a href="/dashboard" className="text-gold underline">Dashboard</a> (synthetic data)
+              Ready to play more? <Link href="/cases" className="text-gold underline">Open full cases list</Link> · <Link href="/quality" className="text-gold underline">Quality audits</Link> · <Link href="/dashboard" className="text-gold underline">Dashboard</Link> (synthetic data)
             </div>
           </div>
         )}

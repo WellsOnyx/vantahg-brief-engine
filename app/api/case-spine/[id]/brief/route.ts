@@ -10,6 +10,7 @@ import {
   resolveSpineViewer,
   type AttachBriefInput,
 } from '@/lib/case-spine';
+import { UmBriefEngineEntitlementError } from '@/lib/entitlements/um-brief-engine';
 
 export const dynamic = 'force-dynamic';
 
@@ -58,13 +59,25 @@ export async function POST(
     const rateLimited = await applyRateLimit(request, { maxRequests: 30 });
     if (rateLimited) return rateLimited;
 
+    const viewer = resolveSpineViewer(authResult.user, request);
+    if (!canAccessClinicalPacket(viewer)) {
+      return NextResponse.json({ error: 'Forbidden', surface: 'clinical_brief' }, { status: 403 });
+    }
+
     const { id } = await context.params;
+    await getCaseSpineService().getCase(id, viewer);
     const body = (await request.json().catch(() => ({}))) as AttachBriefInput;
     const result = await getCaseSpineService().attachBrief(id, body, authResult.user.id);
     return NextResponse.json(result, { status: 201 });
   } catch (err) {
     if (err instanceof CaseNotFoundError) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    }
+    if (err instanceof UmBriefEngineEntitlementError) {
+      return NextResponse.json(
+        { error: err.message, code: err.code, denial: err.denial },
+        { status: 403 },
+      );
     }
     return apiError(err, {
       operation: 'attach_case_spine_brief',

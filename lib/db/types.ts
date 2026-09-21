@@ -48,7 +48,10 @@ export interface QueryChain<T = Record<string, unknown>> extends PromiseLike<SbR
   select(cols?: string, opts?: CountOptions): QueryChain<T>;
   insert(payload: Record<string, unknown> | Array<Record<string, unknown>>): QueryChain<T>;
   update(patch: Record<string, unknown>): QueryChain<T>;
-  upsert(payload: Record<string, unknown> | Array<Record<string, unknown>>, opts?: { onConflict?: string }): QueryChain<T>;
+  upsert(
+    payload: Record<string, unknown> | Array<Record<string, unknown>>,
+    opts?: { onConflict?: string; ignoreDuplicates?: boolean },
+  ): QueryChain<T>;
   delete(): QueryChain<T>;
   eq(col: string, val: unknown): QueryChain<T>;
   neq(col: string, val: unknown): QueryChain<T>;

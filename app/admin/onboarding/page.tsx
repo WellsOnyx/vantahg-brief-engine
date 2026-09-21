@@ -2,6 +2,17 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import {
+  COLE_DAY_SCRIPT,
+  E1_SYNTHETIC_COMMAND,
+  E2_SHADOW_COMMAND,
+  HARD_CONSTRAINTS,
+  ONBOARDING_RUNBOOK_PATH,
+  PACKAGING_LOCK,
+  PUBLISH_SYNTHETIC_CONFIG_COMMAND,
+  RELATED_SURFACES,
+  SYNTHETIC_CLIENT_CONFIG_FIXTURE,
+} from '@/lib/onboarding/runbook';
 
 interface ChecklistItem {
   id: string;
@@ -13,6 +24,9 @@ interface ChecklistItem {
   pointer: string;
   required: boolean;
   done: boolean;
+  how_to?: string[];
+  href?: string;
+  command?: string;
 }
 
 interface PhaseMeta {
@@ -40,12 +54,21 @@ interface GoLiveStatus {
 
 const PHASES: Array<'A' | 'B' | 'C' | 'D' | 'E'> = ['A', 'B', 'C', 'D', 'E'];
 
+function gatePill(gate: string) {
+  if (gate === 'hard') return 'bg-red-50 text-red-800 border-red-200';
+  if (gate === 'required') return 'bg-navy/5 text-navy border-border';
+  if (gate === 'client_dependent') return 'bg-amber-50 text-amber-900 border-amber-200';
+  return 'bg-gray-50 text-gray-700 border-gray-200';
+}
+
 export default function AdminOnboardingPage() {
   const [items, setItems] = useState<ChecklistItem[]>([]);
   const [phases, setPhases] = useState<Record<string, PhaseMeta>>({});
   const [golive, setGolive] = useState<GoLiveStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [configVersion, setConfigVersion] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     setError(null);
@@ -85,6 +108,7 @@ export default function AdminOnboardingPage() {
   async function runPack(kind: 'synthetic' | 'shadow') {
     setBusy(kind);
     setError(null);
+    setNotice(null);
     try {
       const res = await fetch(`/api/golive/${kind}`, {
         method: 'POST',
@@ -112,24 +136,75 @@ export default function AdminOnboardingPage() {
     }
   }
 
+  async function publishFixture() {
+    setBusy('config');
+    setError(null);
+    setNotice(null);
+    try {
+      const res = await fetch('/api/client-config', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(SYNTHETIC_CLIENT_CONFIG_FIXTURE),
+      });
+      const body = await res.json();
+      if (!res.ok) {
+        setError(body.error || 'Could not publish synthetic client_config.');
+        return;
+      }
+      setConfigVersion(body.version?.version ?? body.version ?? null);
+      setNotice(
+        `Published synthetic client_config v${body.version?.version ?? body.version ?? '?'} for ${SYNTHETIC_CLIENT_CONFIG_FIXTURE.client_id}. Append-only — PATCH is 409.`,
+      );
+      await load();
+    } finally {
+      setBusy(null);
+    }
+  }
+
   const requiredLeft = items.filter((i) => i.required && !i.done).length;
 
   return (
     <div className="py-10 md:py-16 bg-background min-h-screen">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
         <header>
-          <p className="text-xs uppercase tracking-wide text-muted font-semibold">Phase 7 · Customer-ready</p>
+          <p className="text-xs uppercase tracking-wide text-muted font-semibold">Phase 7.1 · Customer-ready</p>
           <h1 className="text-3xl md:text-4xl font-bold text-navy mt-1">Onboarding runbook A→E</h1>
           <p className="text-sm text-muted mt-2 max-w-3xl">
             Cole can run commercial/legal → client_config → access → connectivity → go-live
-            gates without tribal knowledge. Synthetic only. Code gates — not a HIPAA attestation.
-            Runbook: <code className="text-xs">docs/onboarding/README.md</code>.
+            gates without tribal knowledge. Every item has how-to steps. Synthetic only.
+            Code gates — not a HIPAA attestation.
           </p>
-          <p className="text-xs text-muted mt-1">{requiredLeft} required items remaining</p>
+          <p className="text-xs text-muted mt-1">
+            {items.length === 0
+              ? 'Loading checklist…'
+              : `${requiredLeft} required items remaining`}{' '}
+            · runbook <code className="text-[11px]">{ONBOARDING_RUNBOOK_PATH}</code>
+          </p>
         </header>
+
+        <section className="rounded-xl border border-gold/40 bg-gold/5 p-5 text-navy">
+          <p className="text-xs uppercase tracking-wide font-semibold text-muted">Packaging lock</p>
+          <p className="text-sm mt-1">
+            Paid door = <strong>{PACKAGING_LOCK.paid_door}</strong>. {PACKAGING_LOCK.brief_engine}.
+            Not a standalone free UM SKU. Not free with another shop’s med review.{' '}
+            <span className="text-muted">{PACKAGING_LOCK.pointer}</span>
+          </p>
+        </section>
+
+        <section className="rounded-xl border border-border bg-surface p-5">
+          <h2 className="text-lg font-semibold text-navy">Hard constraints</h2>
+          <ol className="mt-2 space-y-1.5 text-sm text-navy/80 list-decimal list-inside">
+            {HARD_CONSTRAINTS.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ol>
+        </section>
 
         {error && (
           <div className="rounded-lg bg-red-50 border border-red-200 text-red-800 text-sm px-4 py-3">{error}</div>
+        )}
+        {notice && (
+          <div className="rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-900 text-sm px-4 py-3">{notice}</div>
         )}
 
         {golive?.hypercare?.breached && (
@@ -139,7 +214,46 @@ export default function AdminOnboardingPage() {
           </section>
         )}
 
-        <section className="grid md:grid-cols-3 gap-3">
+        <section className="bg-surface rounded-xl border border-border shadow-sm overflow-hidden">
+          <header className="px-5 py-4 border-b border-border">
+            <h2 className="text-lg font-semibold text-navy">Day script</h2>
+            <p className="text-sm text-muted">Same cadence as 02-onboarding.md. Expand a day for the exact steps.</p>
+          </header>
+          <ul className="divide-y divide-border">
+            {COLE_DAY_SCRIPT.map((day) => (
+              <li key={day.id}>
+                <details className="group">
+                  <summary className="cursor-pointer px-5 py-3 hover:bg-background list-none flex items-baseline gap-3">
+                    <span className="text-xs uppercase tracking-wide text-muted font-semibold w-20 shrink-0">{day.when}</span>
+                    <span className="font-semibold text-navy">{day.title}</span>
+                    <span className="ml-auto text-[11px] text-muted">Phases {day.phases.join(' · ')}</span>
+                  </summary>
+                  <ol className="px-5 pb-4 pl-9 text-sm text-navy/80 space-y-1.5 list-decimal">
+                    {day.steps.map((step) => (
+                      <li key={step}>{step}</li>
+                    ))}
+                  </ol>
+                </details>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <section className="grid md:grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={() => void publishFixture()}
+            disabled={!!busy}
+            className="rounded-xl border border-border bg-surface px-4 py-3 text-left hover:border-gold disabled:opacity-50"
+          >
+            <p className="text-xs uppercase tracking-wide text-muted">Phase B</p>
+            <p className="font-semibold text-navy">Publish synthetic client_config</p>
+            <p className="text-xs text-muted mt-1">
+              {configVersion
+                ? `Last published v${configVersion} · append-only`
+                : 'Fixture tenant 11111111-… · always_md · go_live_mode=synthetic'}
+            </p>
+          </button>
           <button
             type="button"
             onClick={() => void runPack('synthetic')}
@@ -182,41 +296,83 @@ export default function AdminOnboardingPage() {
           </button>
         </section>
 
+        <section className="rounded-xl border border-border bg-surface p-5 space-y-3">
+          <h2 className="text-lg font-semibold text-navy">Copy-paste commands</h2>
+          <p className="text-xs text-muted">Local demo. No secrets. Do not point these at production with live PHI.</p>
+          <pre className="text-[11px] bg-background border border-border rounded-md p-3 overflow-x-auto whitespace-pre-wrap">{PUBLISH_SYNTHETIC_CONFIG_COMMAND}</pre>
+          <pre className="text-[11px] bg-background border border-border rounded-md p-3 overflow-x-auto whitespace-pre-wrap">{E1_SYNTHETIC_COMMAND}</pre>
+          <pre className="text-[11px] bg-background border border-border rounded-md p-3 overflow-x-auto whitespace-pre-wrap">{E2_SHADOW_COMMAND}</pre>
+        </section>
+
         {PHASES.map((phase) => {
           const meta = phases[phase];
           const rows = items.filter((i) => i.phase === phase);
+          const remaining = rows.filter((i) => i.required && !i.done).length;
           return (
             <section key={phase} className="bg-surface rounded-xl border border-border shadow-sm overflow-hidden">
               <header className="px-5 py-4 border-b border-border">
                 <p className="text-xs uppercase tracking-wide text-muted">
-                  Phase {phase} · {meta?.days}
+                  Phase {phase} · {meta?.days} · {remaining} required left
                 </p>
                 <h2 className="text-lg font-semibold text-navy">{meta?.title ?? phase}</h2>
                 <p className="text-sm text-muted">{meta?.blurb}</p>
               </header>
               <ul className="divide-y divide-border">
                 {rows.map((item) => (
-                  <li key={item.id} className="px-5 py-3 flex gap-3 items-start">
-                    <button
-                      type="button"
-                      onClick={() => void toggle(item)}
-                      disabled={busy === item.id}
-                      className={`mt-0.5 w-5 h-5 rounded border shrink-0 ${
-                        item.done ? 'bg-emerald-600 border-emerald-600 text-white' : 'border-border bg-white'
-                      }`}
-                      aria-label={`Toggle ${item.id}`}
-                    >
-                      {item.done ? '✓' : ''}
-                    </button>
-                    <div className="min-w-0">
-                      <p className={`text-sm font-semibold ${item.done ? 'text-muted line-through' : 'text-navy'}`}>
-                        {item.id} · {item.title}
-                      </p>
-                      <p className="text-xs text-muted">
-                        {item.owner} · {item.artifact} · {item.gate}
-                        {item.required ? ' · required' : ''}
-                      </p>
-                      <p className="text-[11px] text-muted mt-0.5">{item.pointer}</p>
+                  <li key={item.id} className="px-5 py-3">
+                    <div className="flex gap-3 items-start">
+                      <button
+                        type="button"
+                        onClick={() => void toggle(item)}
+                        disabled={busy === item.id}
+                        className={`mt-0.5 w-5 h-5 rounded border shrink-0 ${
+                          item.done ? 'bg-emerald-600 border-emerald-600 text-white' : 'border-border bg-white'
+                        }`}
+                        aria-label={`Toggle ${item.id}`}
+                      >
+                        {item.done ? '✓' : ''}
+                      </button>
+                      <div className="min-w-0 flex-1">
+                        <p className={`text-sm font-semibold ${item.done ? 'text-muted line-through' : 'text-navy'}`}>
+                          {item.id} · {item.title}
+                        </p>
+                        <p className="text-xs text-muted mt-0.5">
+                          {item.owner} · {item.artifact}
+                        </p>
+                        <div className="flex flex-wrap gap-1.5 mt-1">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${gatePill(item.gate)}`}>
+                            {item.gate}
+                          </span>
+                          {item.required ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border bg-navy/5 text-navy border-border">
+                              required
+                            </span>
+                          ) : null}
+                        </div>
+                        <details className="mt-2" open={!item.done}>
+                          <summary className="cursor-pointer text-xs font-semibold text-navy/70 hover:text-navy">
+                            How to run this
+                          </summary>
+                          <ol className="mt-1.5 text-sm text-navy/80 space-y-1 list-decimal list-inside">
+                            {(item.how_to ?? []).map((step) => (
+                              <li key={step}>{step}</li>
+                            ))}
+                          </ol>
+                          {item.command ? (
+                            <pre className="mt-2 text-[11px] bg-background border border-border rounded-md p-2 overflow-x-auto whitespace-pre-wrap">
+                              {item.command}
+                            </pre>
+                          ) : null}
+                          <p className="text-[11px] text-muted mt-1">{item.pointer}</p>
+                          {item.href ? (
+                            <p className="text-xs mt-1">
+                              <Link href={item.href} className="underline text-navy">
+                                Open {item.href}
+                              </Link>
+                            </p>
+                          ) : null}
+                        </details>
+                      </div>
                     </div>
                   </li>
                 ))}
@@ -240,8 +396,15 @@ export default function AdminOnboardingPage() {
             </ul>
           )}
           <p className="text-xs text-muted mt-4">
-            Related: <Link href="/cx" className="underline">CX first-25 scorecard</Link> ·{' '}
-            <Link href="/admin/setup" className="underline">Production setup</Link>
+            Related:{' '}
+            {RELATED_SURFACES.map((s, idx) => (
+              <span key={s.href}>
+                {idx > 0 ? ' · ' : null}
+                <Link href={s.href} className="underline">
+                  {s.label}
+                </Link>
+              </span>
+            ))}
           </p>
         </section>
       </div>

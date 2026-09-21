@@ -9,6 +9,17 @@ import {
   buildOnboardingProgress,
   getOnboardingProgressStore,
 } from '@/lib/onboarding/progress';
+import {
+  COLE_DAY_SCRIPT,
+  E1_SYNTHETIC_COMMAND,
+  E2_SHADOW_COMMAND,
+  HARD_CONSTRAINTS,
+  ONBOARDING_RUNBOOK_PATH,
+  PACKAGING_LOCK,
+  PUBLISH_SYNTHETIC_CONFIG_COMMAND,
+  RELATED_SURFACES,
+  SYNTHETIC_CLIENT_CONFIG_FIXTURE,
+} from '@/lib/onboarding/runbook';
 import { buildGoLiveStatus } from '@/lib/golive';
 import { SYNTHETIC_CLIENT_ID } from '@/lib/intake/constants';
 
@@ -35,8 +46,21 @@ export async function GET(request: NextRequest) {
       catalog: ONBOARDING_CHECKLIST,
       progress,
       golive,
+      runbook: {
+        path: ONBOARDING_RUNBOOK_PATH,
+        constraints: HARD_CONSTRAINTS,
+        days: COLE_DAY_SCRIPT,
+        packaging: PACKAGING_LOCK,
+        fixture: SYNTHETIC_CLIENT_CONFIG_FIXTURE,
+        commands: {
+          publish_config: PUBLISH_SYNTHETIC_CONFIG_COMMAND,
+          e1: E1_SYNTHETIC_COMMAND,
+          e2: E2_SHADOW_COMMAND,
+        },
+        related: RELATED_SURFACES,
+      },
       hipaa_complete: false,
-      note: 'Code gates only. BAA + live PHI remain human ops.',
+      note: 'Code gates only. BAA + live PHI remain human ops. ENABLE_AWS_* stay false.',
     });
   } catch (err) {
     return apiError(err, {

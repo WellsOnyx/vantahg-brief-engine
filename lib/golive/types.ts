@@ -21,6 +21,8 @@ export interface PackCaseSpec {
   id: string;
   scenario: PackScenario;
   label: string;
+  /** Catalog + per-case flag. Shadow cases never write live PHI or final-send. */
+  shadow?: boolean;
   /** prior_auth | first_level_appeal — defaults to prior_auth. */
   type?: AuthWorkflowType;
   /** Resolve against an earlier fixture's intake.external_id (appeals). */

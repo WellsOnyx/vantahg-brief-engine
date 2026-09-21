@@ -4,14 +4,17 @@
  * Groups open billable events per client. Portal page + HTML/PDF.
  * Does not push to Meow / Stripe / QuickBooks — export is later.
  * Events stay `open` until a future invoicing job marks them invoiced.
+ * Synthetic staging only — no live PHI.
  */
 
 import { randomUUID } from 'crypto';
 import { jsPDF } from 'jspdf';
+import { SYNTHETIC_CLIENT_ID } from '@/lib/intake/constants';
 import { monthRange } from './invoice-generator';
 import {
   eventAmount,
   formatUsd,
+  getMemoryBillableEventLedger,
   type BillableEvent,
   type BillableEventLedger,
 } from './events';
@@ -142,22 +145,44 @@ export async function generateMonthlyStatement(
     return t >= startMs && t <= endMs + 86_400_000 - 1;
   });
 
+  const statementId = randomUUID();
+  const linked = open.map((event) => ({ ...event, statement_id: statementId }));
+  for (const event of linked) {
+    await ledger.update(event);
+  }
+
   const draft: Omit<BillingStatement, 'html'> = {
-    statement_id: randomUUID(),
+    statement_id: statementId,
     client_id: input.client_id,
     client_name: input.client_name ?? 'Synthetic Staging TPA',
     period_start: periodStart,
     period_end: periodEnd,
     generated_at: asOf.toISOString(),
     status: 'draft',
-    event_ids: open.map((e) => e.billable_event_id),
-    events: open,
-    subtotal: open.reduce((sum, e) => sum + eventAmount(e), 0),
+    event_ids: linked.map((e) => e.billable_event_id),
+    events: linked,
+    subtotal: linked.reduce((sum, e) => sum + eventAmount(e), 0),
     currency: 'USD',
   };
 
   const statement: BillingStatement = { ...draft, html: renderStatementHtml(draft) };
   return store.insert(statement);
+}
+
+/**
+ * Monthly job for the one synthetic test client (07 invoicing MVP step 1).
+ * Refuses any other client_id so this stub cannot wander onto another tenant.
+ */
+export async function runSyntheticMonthlyStatementJob(input: { as_of?: Date; client_id?: string } = {}) {
+  const clientId = input.client_id ?? SYNTHETIC_CLIENT_ID;
+  if (clientId !== SYNTHETIC_CLIENT_ID) {
+    throw new Error('statement_stub_synthetic_only');
+  }
+  return generateMonthlyStatement(getMemoryBillableEventLedger(), getMemoryStatementStore(), {
+    client_id: SYNTHETIC_CLIENT_ID,
+    client_name: 'Synthetic Staging TPA',
+    as_of: input.as_of,
+  });
 }
 
 export function renderStatementPdf(statement: BillingStatement): Buffer {

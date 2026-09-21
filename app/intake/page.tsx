@@ -279,7 +279,7 @@ export default function IntakePage() {
       const res = await fetch('/api/clients');
       if (res.ok) {
         const list = await res.json();
-        const normalized = (Array.isArray(list) ? list : (list.clients || [])).map((c: any) => ({ id: c.id, name: c.name || c.contact_email || 'Unnamed Client' }));
+        const normalized = (Array.isArray(list) ? list : (list.clients || [])).map((c: { id: string; name?: string; contact_email?: string }) => ({ id: c.id, name: c.name || c.contact_email || 'Unnamed Client' }));
         setAvailableClients(normalized);
       }
     } catch {
