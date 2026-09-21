@@ -14,9 +14,9 @@ import { FanoutService } from '@/lib/fanout/service';
 import { MemoryFanoutStore } from '@/lib/fanout/store';
 import { ingestToCaseSpine, type IntakeSource } from '@/lib/intake/spine-ingest';
 import { SYNTHETIC_CLIENT_ID } from '@/lib/intake/constants';
-import { MIN_SHADOW_PACK, MIN_SYNTHETIC_PACK, SHADOW_PACK, SYNTHETIC_PACK } from './packs';
+import { MIN_SYNTHETIC_PACK, SHADOW_PACK, SYNTHETIC_PACK } from './packs';
 import { getMemoryGoLiveStore, type MemoryGoLiveStore } from './store';
-import type { PackCaseResult, PackCaseSpec, PackRunResult } from './types';
+import { MIN_SHADOW_PACK, type PackCaseResult, type PackCaseSpec, type PackRunResult } from './types';
 
 export interface RunPackOptions {
   clientId?: string;
@@ -35,14 +35,18 @@ async function createFromSpec(
   actor: string,
   spine: CaseSpineService,
   useIntakeIngest: boolean,
+  parentCaseId?: string,
 ): Promise<{ case: CanonicalCase; via: 'case-spine' | 'intake' }> {
   const receivedAt = new Date().toISOString();
   const payload = { ...spec.intake, received_at: receivedAt };
+  const type = spec.type ?? 'prior_auth';
 
   if (useIntakeIngest && spec.source && spec.source !== 'spine') {
     const ingested = await ingestToCaseSpine({
       source: spec.source as IntakeSource,
       client_id: clientId,
+      type,
+      parent_case_id: parentCaseId,
       intake: payload,
       actor,
       packet_storage_keys: payload.clinicals_pointer ? [payload.clinicals_pointer] : [],
@@ -53,6 +57,8 @@ async function createFromSpec(
   const created = await spine.createCase(
     {
       client_id: clientId,
+      type,
+      parent_case_id: parentCaseId,
       external_id: spec.intake.external_id,
       priority: spec.intake.urgency ?? 'standard',
       packet_storage_keys: payload.clinicals_pointer ? [payload.clinicals_pointer] : [],
@@ -157,10 +163,20 @@ async function runPack(
     now,
     shadowMode: shadow,
   });
+  const parentByExternal = new Map<string, string>();
 
   for (const spec of specs) {
     try {
-      const created = await createFromSpec(spec, clientId, actor, spine, !opts.spine);
+      const parentCaseId = spec.parent_external_id
+        ? parentByExternal.get(spec.parent_external_id)
+        : undefined;
+      if (spec.parent_external_id && !parentCaseId) {
+        throw new Error(`parent ${spec.parent_external_id} has not been created yet`);
+      }
+      const created = await createFromSpec(spec, clientId, actor, spine, !opts.spine, parentCaseId);
+      if (created.case.case_id && spec.intake.external_id) {
+        parentByExternal.set(spec.intake.external_id, created.case.case_id);
+      }
       let current = created.case;
       if (spec.scenario !== 'missing_clinicals') {
         current = await advanceHappyOrGray(spine, current.case_id, spec, actor);
