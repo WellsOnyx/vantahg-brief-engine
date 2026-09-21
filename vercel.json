@@ -23,6 +23,10 @@
     {
       "path": "/api/cron/cm-csv-drop",
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/monthly-statement",
+      "schedule": "0 8 1 * *"
     }
   ]
 }

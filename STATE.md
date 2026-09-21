@@ -5,6 +5,20 @@ Future Claude/Cole/Jonah sessions: read this first.
 
 ---
 
+## 2026-09-20 — Phase 4.4 statement stub (PR #73)
+
+PR #57 already shipped the monthly statement portal + HTML/PDF renderer. This pass is the smallest 4.4 close-out for **one synthetic test client**:
+
+- `generateMonthlyStatement` stamps `statement_id` on grouped **open** ledger events. Status stays `open` (invoicing / Meow / QuickBooks export is later).
+- PDF + portal already live at `/portal/tpa/statements` and `GET /api/billing/statements/[id]?format=pdf`. Tests now assert `%PDF-` for that client.
+- Monthly job stub: `GET /api/cron/monthly-statement` — `SYNTHETIC_CLIENT_ID` only. Vercel schedule `0 8 1 * *`.
+
+Synthetic / demo only. No live PHI. No secrets. Med Review packaging lock unchanged. No Optum.
+
+**CI on this branch:** `npm run test:ci` 450 passed (3 todo). `npx tsc --noEmit` clean.
+
+---
+
 ## 2026-09-20 — Phase 7.3 shadow pack scaffolding (foundation)
 
 JSON catalog for the E2 shadow pack: [`fixtures/golive/shadow-e2.json`](fixtures/golive/shadow-e2.json) (10 live-shaped synthetic cases, every row `shadow=true`). Loader rejects PHI-shaped fields. `runShadowPack` still MD-signs and fans out **intent only** — no member/provider final send — even if `client_config.go_live_mode=live`. How-to: [`fixtures/golive/README.md`](fixtures/golive/README.md). `npm run test:shadow-golive-pack` / `npm run test:go-live-shadow`. **CI:** `npm run test:ci` 450 passed (3 todo); `tsc --noEmit` clean. No `ENABLE_AWS_*` flips, no secrets, no Optum. Packaging lock unchanged: Med Review paid door; Brief Engine free only with Vanta med review.

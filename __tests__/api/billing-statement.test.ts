@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { SYNTHETIC_CLIENT_ID } from '@/lib/intake/constants';
+import { OTHER_SYNTHETIC_CLIENT_ID, SYNTHETIC_CLIENT_ID } from '@/lib/intake/constants';
 
 vi.mock('@/lib/supabase', () => ({
   hasSupabaseConfig: () => false,
@@ -104,5 +104,66 @@ describe('billing statement API', () => {
     expect(stmt.statement.events.length).toBeGreaterThanOrEqual(1);
     expect(stmt.statement.events.some((e: { case_id: string }) => e.case_id === caseId)).toBe(true);
     expect(stmt.statement.html).toContain('prior_auth');
+    expect(stmt.statement.events.every((e: { status: string }) => e.status === 'open')).toBe(true);
+    expect(
+      stmt.statement.events.every(
+        (e: { statement_id: string }) => e.statement_id === stmt.statement.statement_id,
+      ),
+    ).toBe(true);
+
+    const { GET: getStatement } = await import('@/app/api/billing/statements/[id]/route');
+    const htmlRes = await getStatement(
+      new Request(
+        `http://localhost:3000/api/billing/statements/${stmt.statement.statement_id}?format=html`,
+      ) as never,
+      { params: Promise.resolve({ id: stmt.statement.statement_id }) },
+    );
+    expect(htmlRes.status).toBe(200);
+    expect(htmlRes.headers.get('content-type')).toContain('text/html');
+    expect(await htmlRes.text()).toContain('prior_auth');
+
+    const pdfRes = await getStatement(
+      new Request(
+        `http://localhost:3000/api/billing/statements/${stmt.statement.statement_id}?format=pdf`,
+      ) as never,
+      { params: Promise.resolve({ id: stmt.statement.statement_id }) },
+    );
+    expect(pdfRes.status).toBe(200);
+    expect(pdfRes.headers.get('content-type')).toBe('application/pdf');
+    const pdf = Buffer.from(await pdfRes.arrayBuffer());
+    expect(pdf.subarray(0, 5).toString('utf8')).toBe('%PDF-');
+  });
+
+  it('monthly cron groups open events for the synthetic client only', async () => {
+    const { mintBillableEvent, getMemoryBillableEventLedger } = await import('@/lib/billing/events');
+    const ledger = getMemoryBillableEventLedger();
+    await ledger.insert(
+      mintBillableEvent({
+        case_id: 'case-cron-synth',
+        client_id: SYNTHETIC_CLIENT_ID,
+        sku: 'prior_auth',
+        occurred_at: '2026-09-10T12:00:00.000Z',
+      }),
+    );
+
+    const { GET } = await import('@/app/api/cron/monthly-statement/route');
+    const denied = await GET(
+      new Request(
+        `http://localhost:3000/api/cron/monthly-statement?client_id=${OTHER_SYNTHETIC_CLIENT_ID}`,
+      ) as never,
+    );
+    expect(denied.status).toBe(400);
+
+    const res = await GET(
+      new Request(
+        `http://localhost:3000/api/cron/monthly-statement?client_id=${SYNTHETIC_CLIENT_ID}&as_of=2026-09-18T12:00:00.000Z`,
+      ) as never,
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.stub).toBe(true);
+    expect(body.client_id).toBe(SYNTHETIC_CLIENT_ID);
+    expect(body.event_count).toBeGreaterThanOrEqual(1);
+    expect(body.subtotal).toBeGreaterThan(0);
   });
 });
