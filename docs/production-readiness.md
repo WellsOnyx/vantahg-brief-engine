@@ -100,7 +100,9 @@ npx tsx scripts/bootstrap-real-client.ts \
 #   --dry-run
 ```
 
-Requires `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` in the environment. Refuses to run with anon credentials.
+RDS: `ENABLE_AWS_DB=true` plus `DATABASE_URL` (or `DB_HOST` + `DB_PASSWORD`). Uses the pg shim — no Supabase URL keys and no Auth admin. Schema: `npm run db:migrate:rds`. Local docker: `DATABASE_SSL=disable`.
+
+Leftover Supabase (only when `ENABLE_AWS_DB` is not true): `NEXT_PUBLIC_SUPABASE_URL` (or `SUPABASE_URL`) and `SUPABASE_SERVICE_ROLE_KEY`. The anon key is not used.
 
 ---
 
