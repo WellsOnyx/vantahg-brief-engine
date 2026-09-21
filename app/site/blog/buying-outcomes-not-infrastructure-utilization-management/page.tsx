@@ -173,7 +173,7 @@ export default function BlogPost() {
               <div className="pillar-card">
                 <div className="pillar-card-label">Predictable</div>
                 <div className="pillar-card-title">Included with Vanta med review</div>
-                <div className="pillar-card-body">The paid door is VantaHG Med Review. Authorization and first-level appeal ride with the Brief Engine only under that Vanta contract &mdash; not as a standalone UM SKU, and not if another shop performs the review. Full IRO stays on the VantaHG lane.</div>
+                <div className="pillar-card-body">VantaUM sells Med Review. Authorization and first-level appeal ride with the Brief Engine free only under UM&rsquo;s contract &mdash; not as a standalone UM SKU, and not if another shop performs the review. VantaHG is IRO and IDR only.</div>
               </div>
             </div>
 
@@ -182,7 +182,7 @@ export default function BlogPost() {
             {/* ── Section: Founding partners ── */}
             <h2>For founding TPA partners.</h2>
 
-            <p>VantaHG sells Med Review. Engage us under that contract and the VantaUM Brief Engine is included — or embed the same workflow inside your own clinical operation when the review is Vanta&apos;s. We do not sell UM as a standalone product, and we do not include it with another shop&apos;s med review.</p>
+            <p>VantaUM sells Med Review. Engage us under that contract and the Brief Engine is included free — or embed the same workflow inside your own clinical operation when the review is Vanta&apos;s. We do not sell UM as a standalone product, and we do not include it with another shop&apos;s med review. VantaHG is IRO and IDR only.</p>
 
             <p>If your TPA is ready to stop building UM infrastructure and start buying UM outcomes, we should talk.</p>
           </div>

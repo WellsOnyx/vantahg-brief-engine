@@ -1,13 +1,13 @@
 # 01 — Product boundary & ownership
 
-## What is included (under a Vanta med-review contract)
+## What is included (under UM’s Vanta med-review contract)
 
-These are **capabilities**, not standalone paid UM SKUs. The commercial door is VantaHG Med Review. Brief Engine / UM is included only when the buyer uses Vanta med review under that contract.
+These are **capabilities**, not standalone paid UM SKUs. **VantaUM sells Med Review** as the paid wedge. Brief Engine / UM is included free **only** when the buyer uses Vanta med review under **UM’s contract**.
 
 | Capability | Included | Not included (yet) |
 |-------|----------|--------------------|
 | **Prior authorization** | Intake, clinical brief, MD determination, notices as contracted, portal status | Full care management platform |
-| **First-level appeal** | Packet + prior auth attach, appeal brief, MD determination, IRO-ready export | External IRO decisioning (HG lane) |
+| **First-level appeal** | Packet + prior auth attach, appeal brief, MD determination, IRO-ready export | External IRO decisioning (VantaHG — IRO + IDR only) |
 | **CX layer** | Account relationship, stuck-case chase, scheduling/gifts/memory **non-PHI** | Clinical judgment |
 
 ## What sits underneath (SoR)
@@ -20,25 +20,27 @@ These are **capabilities**, not standalone paid UM SKUs. The commercial door is 
 
 | Lane | Owner | Notes |
 |------|-------|--------|
-| UM Brief Engine SoR + tech + UM ops/CX | **VantaUM** | Auth, appeals, client/CX views. Product and engineering stay UM. |
-| IDR Ops + IRO / med review commercial | **VantaHG** | **Paid door.** HG sells Med Review (VantaHG commercial lane). |
+| UM Brief Engine SoR + tech + UM ops/CX + Med Review commercial | **VantaUM** | **Paid wedge.** VantaUM sells Med Review. Brief Engine / UM included free only under UM’s med-review contract. |
+| IDR Ops + IRO | **VantaHG** | **IRO + IDR only.** Not the med-review commercial door. |
 | Total Rewards / CHRO | **VantaTR** | Out of scope for this plan |
 | Cross-bot coordination | **Onyx Health** | Health group chat |
 
-## LOCKED 2026-09-20 — Med Review wedge (Jonah)
+## LOCKED 2026-09-21 — Med Review wedge (Jonah, hard correction)
 
-Do not soften. Packaging / GTM + product-boundary only. Customer-ready Phases 0–7 code path remains complete; this is **not** a new build phase.
+Do not soften. Packaging / GTM + product-boundary only. Customer-ready Phases 0–7 code path remains complete; this is **not** a new build phase. Entitlement behavior is unchanged (`vanta_med_review_contract` + `med_review_provider=vanta`).
 
-- **Paid door = Med Review** (VantaHG commercial lane). HG sells med review.
-- **VantaUM Brief Engine / utilization management is included free only when the buyer uses Vanta med review.** Included under that HG med-review contract.
-- **Not a standalone free UM SKU.**
-- **Not available free if they use another shop’s med review.**
-- UM still owns Brief Engine SoR and tech. Do not merge GTM into a single SKU or move SoR ownership to HG.
+- **VantaUM sells Med Review** as the paid wedge.
+- **Brief Engine / UM is included free ONLY when the buyer uses Vanta med review under UM’s contract.**
+- **No standalone free UM SKU.**
+- **No free UM with a third-party review shop.**
+- **VantaHG = IRO + IDR only** — not the med-review commercial door.
+- **Optum frozen** (no outreach) until Jonah explicitly opens with context.
+- UM still owns Brief Engine SoR and tech. Do not move SoR ownership off UM.
 - Compute COGS planning band **~$0.05–$0.15 per review** vs **~$1 internal budget** (estimate; not measured COGS).
 
 ### Entitlement (code)
 
-Free UM Brief Engine access requires published `client_config.vanta_med_review_contract=true` (buyer uses Vanta med review). `med_review_provider=third_party` never grants free UM. Guard: [`lib/entitlements/um-brief-engine.ts`](../../lib/entitlements/um-brief-engine.ts). Default for a newly published config is **false** / `none`. Synthetic staging tenant is seeded `true` / `vanta` so demo packs stay on the Vanta shop.
+Free UM Brief Engine access requires published `client_config.vanta_med_review_contract=true` and `med_review_provider=vanta` (buyer uses Vanta med review under UM’s contract). `med_review_provider=third_party` never grants free UM. Guard: [`lib/entitlements/um-brief-engine.ts`](../../lib/entitlements/um-brief-engine.ts). Default for a newly published config is **false** / `none`. Synthetic staging tenant is seeded `true` / `vanta` so demo packs stay on the Vanta shop.
 
 ## Explicit non-goals for first customer
 

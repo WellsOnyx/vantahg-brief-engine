@@ -5,7 +5,7 @@ import DemoWalkthrough from '@/components/demo/DemoWalkthrough';
 /* ─── CSS-in-JS style object for the marketing page ─── */
 /* Uses the Wells Onyx dark palette with Cormorant Garamond + DM Sans */
 
-const EA_EMAIL = 'mailto:hello@wellsonyx.com?subject=VantaHG%20Med%20Review%20%2B%20included%20Brief%20Engine';
+const EA_EMAIL = 'mailto:hello@wellsonyx.com?subject=VantaUM%20Med%20Review%20%2B%20included%20Brief%20Engine';
 
 export default function SitePage() {
   return (
@@ -256,7 +256,7 @@ export default function SitePage() {
         {/* Early Access Bar */}
         <div className="ea-bar">
           <span className="ea-bar-pill">Now Onboarding</span>
-          <span className="ea-bar-text">VantaHG Med Review is the commercial door. VantaUM Brief Engine is included only under that Vanta med-review contract.</span>
+          <span className="ea-bar-text">VantaUM sells Med Review. Brief Engine is included free only under UM’s med-review contract.</span>
           <a href={EA_EMAIL} className="ea-bar-link">Talk to us →</a>
           <span className="ea-bar-text" aria-hidden="true">·</span>
           <a href="/demo-tour" className="ea-bar-link">Launch Demo</a>
@@ -289,9 +289,9 @@ export default function SitePage() {
         <section className="vum-hero">
           <span className="hero-vline" aria-hidden="true" />
           <div className="hero-left">
-            <div className="eyebrow">Included with VantaHG Med Review</div>
+            <div className="eyebrow">Included with VantaUM Med Review</div>
             <h1>Modern UM.<br />One clinician.<br /><em>Through appeal.</em></h1>
-            <p className="hero-body">Buy VantaHG Med Review. The VantaUM Brief Engine — concierge intake, clinical brief, authorization, and first-level appeal — is included under that contract only. Not a standalone UM product. Not included if you use another shop&apos;s med review. Built for independent TPAs, self-insured employers, and the clinical operations inside larger benefit organizations.</p>
+            <p className="hero-body">VantaUM sells Med Review. The Brief Engine — concierge intake, clinical brief, authorization, and first-level appeal — is included free only when you use Vanta med review under UM&apos;s contract. Not a standalone UM product. Not included if you use another shop&apos;s med review. VantaHG is IRO and IDR only. Built for independent TPAs, self-insured employers, and the clinical operations inside larger benefit organizations.</p>
             <div className="hero-actions">
               <a href="/demo-tour" className="btn-primary">Launch Demo →</a>
               <a href={EA_EMAIL} className="btn-ghost">Talk to Us</a>
@@ -323,7 +323,7 @@ export default function SitePage() {
             <div className="ea-left">
               <span className="kicker" style={{ color: 'var(--gold)' }}>How We Engage</span>
               <h2 className="sh">External service,<br />or an <em style={{ color: 'var(--gold)' }}>extension</em><br />of your team.</h2>
-              <p className="sb">VantaHG sells Med Review. When you use Vanta med review under that contract, the VantaUM Brief Engine drops into the way you already work — across the book or on the cases that carry the most clinical time. It is not a standalone UM product, and it is not included if another shop does the review.</p>
+              <p className="sb">VantaUM sells Med Review. When you use Vanta med review under UM&apos;s contract, the Brief Engine drops into the way you already work — across the book or on the cases that carry the most clinical time. It is not a standalone UM product, and it is not included if another shop does the review.</p>
               <p className="sb" style={{ marginTop: 16 }}>Under that contract the workflow is the same: a single clinician carrying each case from concierge intake through authorization and first-level appeal, with documentation prepared to be IRO-ready. Full IRO stays on the VantaHG lane.</p>
               <div className="ea-spots">
                 <div className="ea-spots-dot" />
@@ -332,7 +332,7 @@ export default function SitePage() {
             </div>
             <div className="ea-perks">
               {[
-                { num: '01', title: 'Included with Vanta med review', body: 'Brief Engine, authorization, and first-level appeal are included only when you use Vanta med review. Not a standalone UM SKU. Not included with another shop’s review. Full IRO stays on the VantaHG lane.' },
+                { num: '01', title: 'Included with Vanta med review', body: 'Brief Engine, authorization, and first-level appeal are included free only when you use Vanta med review under UM’s contract. Not a standalone UM SKU. Not included with another shop’s review. VantaHG is IRO and IDR only.' },
                 { num: '02', title: 'Embedded in your operation', body: 'Prefer to keep it in house? We run as a specialized extension of your existing clinical team, using your criteria and your voice, under your brand.' },
                 { num: '03', title: 'Continuity by design', body: 'The same clinician owns the authorization and the first-level appeal. No relay between reviewers, no context lost between stages.' },
                 { num: '04', title: 'White-glove onboarding', body: 'You stand us up once, directly with the Wells Onyx operating team — not a third-party integrator who read the manual last week.' },
@@ -353,7 +353,7 @@ export default function SitePage() {
               <span className="kicker" style={{ color: 'var(--teal)' }}>The Workflow</span>
               <h2 className="sh">One case.<br /><em>One owner.</em><br />No handoffs.</h2>
               <p className="sb" style={{ marginBottom: '24px' }}>Utilization management is where authorization decisions get made, appeals get filed, and documentation has to hold up when it&apos;s tested. Most operations split that journey across a queue of reviewers and lose the thread between every stage.</p>
-              <p className="sb" style={{ marginBottom: '40px' }}>Under a Vanta med-review contract, VantaUM runs one continuous workflow: a concierge opens the case, the Brief Engine pre-briefs it, and a single clinician carries it through the authorization and the first-level appeal — leaving a file that&apos;s already IRO-ready. Full IRO stays on the VantaHG lane.</p>
+              <p className="sb" style={{ marginBottom: '40px' }}>Under UM&apos;s Vanta med-review contract, VantaUM runs one continuous workflow: a concierge opens the case, the Brief Engine pre-briefs it, and a single clinician carries it through the authorization and the first-level appeal — leaving a file that&apos;s already IRO-ready. Full IRO stays on the VantaHG lane.</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '40px' }}>
                 {[
                   'Concierge intake. A named coordinator owns the record — no portal queue, no triage relay.',
@@ -393,7 +393,7 @@ export default function SitePage() {
             <div style={{ maxWidth: 600, marginBottom: 56 }}>
               <span className="kicker" style={{ color: 'var(--gold)' }}>Packaging</span>
               <h2 className="sh">Paid door: Med Review.<br /><em>UM included with Vanta.</em></h2>
-              <p className="sb">The commercial SKU is VantaHG Med Review. VantaUM Brief Engine / utilization management is included only when you use Vanta med review under that contract — not sold as a standalone UM product, and not included if another shop performs the review. <strong style={{ color: 'var(--white)', fontWeight: 500 }}>Full IRO stays on the VantaHG lane</strong>. Terms are scoped on a conversation — we do not publish a standalone UM price.</p>
+              <p className="sb">The commercial SKU is VantaUM Med Review. Brief Engine / utilization management is included free only when you use Vanta med review under UM&apos;s contract — not sold as a standalone UM product, and not included if another shop performs the review. <strong style={{ color: 'var(--white)', fontWeight: 500 }}>VantaHG is IRO and IDR only</strong>. Terms are scoped on a conversation — we do not publish a standalone UM price.</p>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px' }}>
               {/* Bundled card */}

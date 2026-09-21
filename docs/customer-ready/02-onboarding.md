@@ -16,10 +16,10 @@ Onboarding is a **sellable checklist** first, software second. Every step produc
 
 ### Fee schedule (minimum fields)
 
-Paid door is **VantaHG Med Review**. Do not invent prices here. Do not sell UM as a standalone SKU.
+**VantaUM sells Med Review** (paid wedge). Do not invent prices here. Do not sell UM as a standalone SKU. Do not include free UM with a third-party review shop. **VantaHG = IRO + IDR only.**
 
-- Vanta med-review contract (commercial door)
-- UM Brief Engine included **only** when `vanta_med_review_contract` is true
+- Vanta med-review contract under **UM** (paid wedge)
+- UM Brief Engine included free **only** when `vanta_med_review_contract` is true and `med_review_provider=vanta`
 - Per-auth / first-level-appeal / rush lines are **usage tracking** under that contract, not a standalone UM offer
 - Pass-through (IRO filing fees if ever bundled — N/A until locked; HG lane)
 

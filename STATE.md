@@ -5,6 +5,22 @@ Future Claude/Cole/Jonah sessions: read this first.
 
 ---
 
+## 2026-09-21 — Packaging ownership correction (Jonah)
+
+Hard correction. Do not soften. Copy and ownership only — entitlement behavior stays.
+
+- **VantaUM sells Med Review** as the paid wedge.
+- Brief Engine / UM is included free **only** when the buyer uses Vanta med review under **UM’s contract**.
+- No standalone free UM SKU. No free UM with a third-party review shop.
+- **VantaHG = IRO + IDR only** — not the med-review commercial door.
+- Optum frozen (no outreach).
+- Entitlement gate unchanged: `client_config.vanta_med_review_contract=true` and `med_review_provider=vanta`. Guard: `lib/entitlements/um-brief-engine.ts`.
+- Compute COGS planning band ~$0.05–$0.15 per review vs ~$1 internal budget (estimate; not measured COGS).
+
+Canonical: [`docs/customer-ready/01-product-boundary.md`](docs/customer-ready/01-product-boundary.md). No `ENABLE_AWS_*` flips.
+
+---
+
 ## 2026-09-21 — Gravity Rail loop on main (code-complete, not live-keyed)
 
 Port of the safe seams from PR #49 onto current `main`. Does **not** merge `feature/merge-and-instrument` and does **not** add a parallel `/api/gr/webhook` case writer. Inbound stays `POST /api/intake/gravity-rail` → case spine.
@@ -127,9 +143,9 @@ Phase 6.2 already shipped on `main` (PR #59). This pass is the smallest incremen
 
 ---
 
-## 2026-09-20 — Packaging lock (Jonah)
+## 2026-09-20 — Packaging lock (Jonah) — ownership corrected 2026-09-21
 
-Paid door = Med Review (VantaHG). VantaUM Brief Engine / UM included free **only** with Vanta med review — not a standalone free UM SKU, not free with another shop’s med review. Phases 0–7 code path complete; this is packaging/GTM, not a new build phase. Canonical: [`docs/customer-ready/01-product-boundary.md`](docs/customer-ready/01-product-boundary.md).
+**VantaUM sells Med Review** as the paid wedge. Brief Engine / UM is included free **only** under UM’s Vanta med-review contract — no standalone free UM SKU, no free UM with a third-party review shop. **VantaHG = IRO + IDR only.** Phases 0–7 code path complete; this is packaging/GTM, not a new build phase. Canonical: [`docs/customer-ready/01-product-boundary.md`](docs/customer-ready/01-product-boundary.md). Supersedes any earlier copy that put the Med Review wedge on VantaHG.
 
 **Entitlement (code):** `client_config.vanta_med_review_contract` must be `true` for free UM Brief Engine access. `med_review_provider=third_party` is always denied. Guard: `lib/entitlements/um-brief-engine.ts`. New published configs default **false**; synthetic staging seed is **true** / `vanta`.
 

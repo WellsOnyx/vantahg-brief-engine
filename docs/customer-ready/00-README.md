@@ -24,7 +24,7 @@ A TPA or self-insured employer can:
 
 - Live PHI only on AWS Brief Engine + BAA-covered services (RDS, S3, SES, Cognito). No live PHI in Grok chats, agent boxes, or CX memory.
 - Every live determination is human MD-signed at go-live (no silent auto-approve).
-- Paid door = Med Review (VantaHG). VantaUM Brief Engine / UM is included free only when the buyer uses Vanta med review — not a standalone free UM SKU, not free with another shop’s med review. UM still owns Brief Engine SoR/tech. See `01-product-boundary.md`.
+- **VantaUM sells Med Review** as the paid wedge. Brief Engine / UM is included free **only** when the buyer uses Vanta med review under **UM’s contract**. No standalone free UM SKU. No free UM with a third-party review shop. **VantaHG = IRO + IDR only** — not the med-review commercial door. UM still owns Brief Engine SoR/tech. See `01-product-boundary.md`.
 - Optum / Kari Cook: frozen until Jonah explicitly opens with context.
 - Same buyer across UM/IRO doors: flag Health before any external draft.
 

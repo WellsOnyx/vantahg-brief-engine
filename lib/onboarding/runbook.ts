@@ -10,10 +10,10 @@ import type { ClientConfigFields } from '@/lib/client-config/types';
 export const ONBOARDING_RUNBOOK_PATH = 'docs/customer-ready/11-cole-onboarding-runbook.md';
 export const ONBOARDING_UI_PATH = '/admin/onboarding';
 
-/** LOCKED 2026-09-20 — packaging / GTM. Not a new build phase. */
+/** LOCKED 2026-09-21 — VantaUM sells Med Review. VantaHG = IRO + IDR only. */
 export const PACKAGING_LOCK = {
-  paid_door: 'Med Review (VantaHG)',
-  brief_engine: 'Included free only with Vanta med review',
+  paid_door: 'Med Review (VantaUM)',
+  brief_engine: 'Included free only under UM’s Vanta med-review contract',
   not_standalone_free_um: true,
   not_free_with_other_shop_med_review: true,
   pointer: 'docs/customer-ready/01-product-boundary.md',
@@ -22,7 +22,7 @@ export const PACKAGING_LOCK = {
 export const HARD_CONSTRAINTS = [
   'Synthetic fixtures only. Tokenized refs. No live PHI in this runbook, UI, or packs.',
   'Do not flip ENABLE_AWS_AUTH or any ENABLE_AWS_* default. Do not invent production vendor keys.',
-  'Paid door = Med Review (VantaHG). Brief Engine / UM is free only with Vanta med review — not a standalone free UM SKU, not free with another shop’s med review.',
+  'VantaUM sells Med Review (paid wedge). Brief Engine / UM is free only when the buyer uses Vanta med review under UM’s contract — no standalone free UM SKU, no free UM with a third-party review shop. VantaHG = IRO + IDR only. Optum frozen (no outreach).',
   'Checking boxes is a code / ops gate, not a HIPAA attestation. BAA is a hard gate before live PHI.',
   'Every live determination is human MD-signed. No silent auto-approve.',
 ] as const;
@@ -43,7 +43,7 @@ export const COLE_DAY_SCRIPT: readonly RunbookDay[] = [
     phases: ['A', 'B'],
     steps: [
       'Confirm LOBs, SLAs, one primary intake mode, determination channels, CX owner, reviewer queue.',
-      'Confirm packaging: buyer is on Vanta med review (paid door). Brief Engine is included under that contract only.',
+      'Confirm packaging: buyer uses Vanta med review under UM’s contract (VantaUM sells Med Review). Brief Engine is included free only under that contract. VantaHG is IRO + IDR only.',
       'Write it down, then publish client_config v1 from the synthetic fixture (or a real staging tenant with synthetic data).',
     ],
   },

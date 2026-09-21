@@ -12,7 +12,7 @@ Checking boxes is a **code / ops gate**, not a HIPAA attestation.
 
 1. **Synthetic fixtures only.** Tokenized refs (`memb_synth_*`). No live PHI in this runbook, the UI, fixtures, or packs.
 2. **Do not flip `ENABLE_AWS_AUTH`** or any `ENABLE_AWS_*` default. Do not invent production vendor keys. Empty HMAC slots = synthetic allow.
-3. **Packaging lock (2026-09-20):** paid door = **Med Review (VantaHG)**. VantaUM Brief Engine / UM is included free **only** with Vanta med review — not a standalone free UM SKU, not free with another shop’s med review. Canonical: [`01-product-boundary.md`](01-product-boundary.md).
+3. **Packaging lock (corrected 2026-09-21):** **VantaUM sells Med Review** as the paid wedge. Brief Engine / UM is included free **only** when the buyer uses Vanta med review under **UM’s contract**. No standalone free UM SKU. No free UM with a third-party review shop. **VantaHG = IRO + IDR only.** Optum frozen (no outreach). Canonical: [`01-product-boundary.md`](01-product-boundary.md).
 4. **BAA is a hard gate** before live PHI ([`06-hipaa-baa-path.md`](06-hipaa-baa-path.md)). This runbook does not claim HIPAA complete.
 5. **Every live determination is human MD-signed.** No silent auto-approve. Billing path is **Meow**, not Stripe.
 
@@ -38,7 +38,7 @@ Local demo: `npm run dev` — no secrets. AWS-shaped local is optional and **not
 
 ### Day 0 — kickoff
 
-Confirm LOBs, SLAs, **one** primary intake mode, determination channels, CX owner, reviewer queue. Confirm the buyer is on **Vanta med review** (paid door). Write it down; publish `client_config` v1.
+Confirm LOBs, SLAs, **one** primary intake mode, determination channels, CX owner, reviewer queue. Confirm the buyer uses **Vanta med review under UM’s contract** (VantaUM sells Med Review). VantaHG is IRO + IDR only. Write it down; publish `client_config` v1.
 
 ### Day 1–2 — config + users + connectivity (staging)
 

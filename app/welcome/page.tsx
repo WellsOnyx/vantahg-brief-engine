@@ -4,7 +4,7 @@ import type { Metadata } from 'next';
 export const metadata: Metadata = {
   title: 'Welcome | VantaUM',
   description:
-    'Included with VantaHG Med Review. Clinical intelligence that gives physicians more time with every case — so members get the care they deserve.',
+    'Included with VantaUM Med Review. Clinical intelligence that gives physicians more time with every case — so members get the care they deserve.',
 };
 
 export default function WelcomePage() {
@@ -30,7 +30,7 @@ export default function WelcomePage() {
 
           <p className="text-lg sm:text-xl text-white/70 max-w-2xl mx-auto mb-10">
             Prior authorization, medical necessity, concurrent review, and peer-to-peer — included
-            when you use Vanta med review, not as a standalone UM product, and not with another
+            free when you use Vanta med review under UM&apos;s contract, not as a standalone UM product, and not with another
             shop&apos;s review. Clinical intelligence that gives your physicians more time on every case.
           </p>
 

@@ -41,7 +41,7 @@ export const ONBOARDING_CHECKLIST: readonly OnboardingChecklistItem[] = [
     how_to: [
       'Commercial executes the MSA with fee schedule minimums: per prior auth, per first-level appeal, optional rush / after-hours multiplier, monthly minimum.',
       'Store the signed PDF at clients/{client_id}/msa.pdf (Drive or S3 signup-contracts). No PHI in the filename.',
-      'Paid door is Med Review — Brief Engine / UM is included only under a Vanta med-review contract. Not a standalone free UM SKU.',
+      'VantaUM sells Med Review. Brief Engine / UM is included free only under UM’s Vanta med-review contract. No standalone free UM SKU. No free UM with a third-party review shop. VantaHG is IRO + IDR only.',
       'Check this box only when the signed file exists. Billing path is Meow, not Stripe.',
     ],
     href: '/admin/signups',
@@ -320,7 +320,7 @@ export const ONBOARDING_CHECKLIST: readonly OnboardingChecklistItem[] = [
     required: true,
     how_to: [
       'Set reviewer_queue to the med-review team id (fixture: med_review_synth).',
-      'Confirm the queue at /med-review (SLA due-at ascending). Paid door = Med Review.',
+      'Confirm the queue at /med-review (SLA due-at ascending). VantaUM sells Med Review; Brief Engine is free only under UM’s contract.',
     ],
     href: '/med-review',
   },
@@ -362,10 +362,10 @@ export const ONBOARDING_CHECKLIST: readonly OnboardingChecklistItem[] = [
     artifact: 'client_config.vanta_med_review_contract + med_review_provider',
     gate: 'required',
     pointer:
-      'lib/entitlements/um-brief-engine.ts · Paid door is VantaHG Med Review. Flip true only when the buyer uses Vanta med review. Never standalone UM; never third_party.',
+      'lib/entitlements/um-brief-engine.ts · VantaUM sells Med Review. Flip true only when the buyer uses Vanta med review under UM’s contract. Never standalone UM; never third_party. VantaHG is IRO + IDR only.',
     required: true,
     how_to: [
-      'Paid door is VantaHG Med Review. Free UM Brief Engine is granted only when vanta_med_review_contract is true and med_review_provider is vanta.',
+      'VantaUM sells Med Review. Free UM Brief Engine is granted only when vanta_med_review_contract is true and med_review_provider is vanta (UM’s contract).',
       'Leave the flag false for a new published config. The synthetic staging seed is already true / vanta so demo packs keep working.',
       'Never grant standalone free UM. Never set med_review_provider=third_party and expect Brief Engine access — that combination is always denied.',
       'Do not invent a UM price. Do not flip ENABLE_AWS_* from this item.',
@@ -647,7 +647,7 @@ export const ONBOARDING_PHASE_META: Record<
 > = {
   A: {
     title: 'Commercial & legal',
-    blurb: 'Before any PHI. MSA, BAA (hard gate), subprocessors, billing entity. Paid door is VantaHG Med Review.',
+    blurb: 'Before any PHI. MSA, BAA (hard gate), subprocessors, billing entity. VantaUM sells Med Review.',
     days: 'Before Day 0',
   },
   B: {
