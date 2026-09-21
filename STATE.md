@@ -57,6 +57,8 @@ Paid door = Med Review (VantaHG). VantaUM Brief Engine / UM included free **only
 
 **Entitlement (code):** `client_config.vanta_med_review_contract` must be `true` for free UM Brief Engine access. `med_review_provider=third_party` is always denied. Guard: `lib/entitlements/um-brief-engine.ts`. New published configs default **false**; synthetic staging seed is **true** / `vanta`.
 
+**CI after entitlement guard on current main:** `npm run test:ci` 480 passed (3 todo). `npx tsc --noEmit` clean. `npm run test:go-live-synthetic` PASS. `npm run test:shadow-golive-pack` PASS. No `ENABLE_AWS_*` flips. RDS-native bootstrap stays on `cursor/rds-native-bootstrap-d1cf` (in flight, not this merge).
+
 ---
 
 ## 🧭 Customer-ready plan — 2026-09-18 (updated)
