@@ -36,6 +36,20 @@ type QueryResultRow = Record<string, unknown>;
 
 let _pool: Pool | null = null;
 
+/**
+ * SSL selection shared with scripts/apply-rds-migrations.mjs.
+ * RDS stays on SSL. Local docker Postgres does not speak TLS — set
+ * DATABASE_SSL=disable or point DATABASE_URL / DB_HOST at localhost.
+ */
+export function resolvePgSsl(
+  env: NodeJS.ProcessEnv = process.env,
+): false | { rejectUnauthorized: false } {
+  if (env.DATABASE_SSL === 'disable') return false;
+  if (env.DB_HOST === 'localhost' || env.DB_HOST === '127.0.0.1') return false;
+  if (env.DATABASE_URL && /localhost|127\.0\.0\.1/.test(env.DATABASE_URL)) return false;
+  return { rejectUnauthorized: false };
+}
+
 export async function getPool(): Promise<Pool> {
   if (_pool) return _pool;
 
@@ -43,15 +57,16 @@ export async function getPool(): Promise<Pool> {
   const { Pool } = mod;
 
   const url = process.env.DATABASE_URL;
+  const ssl = resolvePgSsl();
   const cfg: PoolConfig = url
-    ? { connectionString: url, ssl: { rejectUnauthorized: false } }
+    ? { connectionString: url, ssl }
     : {
         host: process.env.DB_HOST,
         port: process.env.DB_PORT ? Number(process.env.DB_PORT) : 5432,
         database: process.env.DB_NAME,
         user: process.env.DB_USER,
         password: process.env.DB_PASSWORD,
-        ssl: { rejectUnauthorized: false },
+        ssl,
       };
 
   cfg.max = 10;

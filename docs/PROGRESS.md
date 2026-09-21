@@ -27,7 +27,7 @@
 
 Paid door = Med Review (VantaHG). VantaUM Brief Engine / UM is **included free only when the buyer uses Vanta med review**. Not a standalone free UM SKU; not free with another shop’s med review. Compute COGS planning band ~$0.05–$0.15 per review vs ~$1 internal budget (estimate; not measured COGS). Phases 0–7 code path unchanged — packaging/GTM + product-boundary only. Canonical: [`docs/customer-ready/01-product-boundary.md`](docs/customer-ready/01-product-boundary.md). Code gate: `client_config.vanta_med_review_contract` + `lib/entitlements/um-brief-engine.ts`.
 
-**CI (packaging guard on current main):** `npm run test:ci` 480 passed (3 todo); `tsc --noEmit` clean; synthetic + shadow packs PASS. RDS-native bootstrap remains in flight on `cursor/rds-native-bootstrap-d1cf` and is not part of this merge.
+**CI (packaging guard):** `npm run test:ci` 480 passed (3 todo) on the guard merge. RDS-native bootstrap is on `main` via [#74](https://github.com/WellsOnyx/vantahg-brief-engine/pull/74). This runbook PR does not rewrite those scripts.
 
 ## Not started / paused
 
@@ -46,7 +46,24 @@ Paid door = Med Review (VantaHG). VantaUM Brief Engine / UM is **included free o
 - Flip `ENABLE_AWS_AUTH=true` only after a staging tenant is ready
 - Client BAA + subprocessor BAAs before live PHI
 - Gravity Rail / Phaxio / HelloSign / Meow **production keys** (slots only today)
-- RDS-native bootstrap scripts (current bootstrap still Supabase JS)
+- Run the first real client roster against production RDS when that client exists (`npm run bootstrap-real-client`). The script is RDS-native. Do not put live PHI in the command or in shared logs.
+
+## RDS bootstrap (available)
+
+`scripts/bootstrap-real-client.ts` and `scripts/seed-demo.ts` use the pg shim when `ENABLE_AWS_DB=true` plus `DATABASE_URL` (or `DB_HOST` + `DB_PASSWORD`). That path does not read Supabase URL keys and does not call Supabase Auth admin. With a configured database, `bootstrap-real-client --dry-run` checks existing rows and does not insert. With no database env, `--dry-run` prints the plan and does not connect. `seed-demo --dry-run` never connects.
+
+```bash
+npm run db:migrate:rds
+ENABLE_AWS_DB=true DATABASE_URL=postgres://... DATABASE_SSL=disable \
+  npx tsx scripts/bootstrap-real-client.ts --dry-run \
+  --client-name "Acme TPA" --contact-email ops@acme.example \
+  --lpn-name "Pat LPN" --lpn-email pat@vantaum.example
+
+# Synthetic demo rows (not live PHI). --dry-run does not connect.
+ENABLE_AWS_DB=true DATABASE_URL=... npx tsx scripts/seed-demo.ts --dry-run
+```
+
+`ENABLE_AWS_DB` left false keeps the leftover Supabase JS client (`SUPABASE_URL` or `NEXT_PUBLIC_SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY`). `scripts/bootstrap-master-admin.ts` stays on that hybrid Auth admin path and refuses to run when `ENABLE_AWS_DB=true` (the shim has no `.auth`, and the script does not invent a password or flip `ENABLE_AWS_AUTH`).
 
 ## How to run (quick)
 

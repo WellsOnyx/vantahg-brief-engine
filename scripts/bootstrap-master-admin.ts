@@ -1,4 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
+import { masterAdminBlockReason } from '@/lib/bootstrap/master-admin';
+
+const blockReason = masterAdminBlockReason();
+if (blockReason) {
+  console.error(blockReason);
+  process.exit(2);
+}
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;

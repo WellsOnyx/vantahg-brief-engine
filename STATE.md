@@ -19,7 +19,24 @@ Phase 7.1 from `10-implementation-commits.md`: Cole can run A→E **without trib
 
 **Acceptance:** Cole runs A→E from the UI + 11-runbook. Synthetic only.
 
-**CI on this branch (after main):** `npm run test:ci` 483 passed (3 todo). `tsc --noEmit` clean. Packaging lock and Phase 4.4 / 5.3 / 6.3 / 7.3 notes kept. RDS-native bootstrap stays on `cursor/rds-native-bootstrap-d1cf`.
+**CI on this branch (after main, including #66 and #74):** `npm run test:ci` 501 passed (3 todo). `tsc --noEmit` clean. Packaging lock and Phase 4.4 / 5.3 / 6.3 / 7.3 notes kept. RDS-native bootstrap is on `main` via #74 — this PR does not rewrite those scripts.
+
+---
+
+## 2026-09-21 — RDS-native bootstrap
+
+`scripts/bootstrap-real-client.ts` and `scripts/seed-demo.ts` follow `ENABLE_AWS_DB`:
+
+- **`ENABLE_AWS_DB=true`** + `DATABASE_URL` (or `DB_HOST` + `DB_PASSWORD`) writes through the pg shim (`lib/db/supabase-shim.ts`). No Supabase URL keys. No `auth.admin`. Idempotent first client + LPN/RN/MD roster (skip existing name, or reviewer email). Seed upserts synthetic demo rows with `ON CONFLICT DO NOTHING`. `--dry-run` writes nothing; with no database env it prints the plan and does not connect.
+- **Flag off:** leftover Supabase JS client (`SUPABASE_URL` or `NEXT_PUBLIC_SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY`). Anon key is not used.
+- **`scripts/bootstrap-master-admin.ts`** stays on Supabase Auth admin. It refuses when `ENABLE_AWS_DB=true` (shim has no `.auth`). It does not invent a password and does not flip `ENABLE_AWS_AUTH`.
+- Local plain Postgres: `DATABASE_SSL=disable` or a localhost URL (same rule as `npm run db:migrate:rds`). Schema first.
+
+Reviewer rows now persist `email` (unique column already on `reviewers`). Re-runs skip a matching name or email. `audit_log` in the demo seed still appends.
+
+**CI on this branch:** `npm run test:ci` 486 passed (3 todo). `npx tsc --noEmit` clean. `npm run lint` clean on the files this change owns.
+
+Does not change `ENABLE_AWS_*` defaults. No live PHI. Med Review packaging lock unchanged.
 
 ---
 
@@ -98,9 +115,9 @@ Shared brain: [`docs/customer-ready/`](docs/customer-ready/00-README.md). Board:
 
 **CI at Phase 7 tip:** `npm run test:ci` 453 passed (3 todo); `tsc --noEmit` clean; `npm run test:go-live-synthetic` PASS; `npm run test:shadow-golive-pack` PASS.
 
-**Remaining = human ops (not code):** SES verify, Fargate image rebuild, BAA before live PHI, production vendor keys, RDS-native bootstrap. Do not claim HIPAA complete — these are code gates only.
+**Remaining = human ops (not code):** SES verify, Fargate image rebuild, BAA before live PHI, production vendor keys. RDS bootstrap script is in-repo — an operator still runs it against the real database when the first client exists. Do not claim HIPAA complete — these are code gates only.
 
-Operator blockers unchanged: SES verify, Fargate image rebuild, BAA before live PHI, production vendor keys, RDS-native bootstrap.
+Operator blockers unchanged: SES verify, Fargate image rebuild, BAA before live PHI, production vendor keys.
 
 ---
 
@@ -172,7 +189,7 @@ ENABLE_AWS_AUTH=true npx cdk deploy vantaum-prod-compute
 | Surface | Why it remains |
 |---|---|
 | Default `ENABLE_AWS_AUTH=false` | Safety. Hybrid password + inviteUserByEmail. |
-| `scripts/bootstrap-*.ts`, `scripts/seed-demo.ts` | Still construct a Supabase JS client. |
+| `scripts/bootstrap-master-admin.ts` | Supabase Auth `auth.admin` only. Refuses when `ENABLE_AWS_DB=true`. |
 | Optional `NEXT_PUBLIC_SUPABASE_*` | Only needed if you keep the hybrid path. |
 | `user_profiles` | Role store (RDS or leftover Postgres). Not Auth. |
 
@@ -273,7 +290,7 @@ wording in `infra-aws/README.md` and `docs/aws-migration.md`.
 |---|---|
 | `lib/adapters/auth/supabase.ts`, login password fallback, `lib/supabase-server.ts` | V1 hybrid when `ENABLE_AWS_AUTH=false`. Cognito path is wired; flag stays off by default. |
 | `app/api/team/*` `supabase.auth.admin` | Hybrid only. AWS auth uses the Cognito adapter. |
-| `scripts/bootstrap-*.ts`, `scripts/seed-demo.ts` | Operator scripts still construct a Supabase JS client. Need an RDS follow-up. |
+| `scripts/bootstrap-master-admin.ts` | Hybrid Auth admin. Client/roster bootstrap and `seed-demo` use the pg shim when `ENABLE_AWS_DB=true`. |
 | `ENABLE_AWS_AUTH=false` on Fargate | Intentional default. Export `true` at deploy to cut over. |
 | Empty `supabase_*` slots in `vantaum-prod-third-party-keys` | Fine when `ENABLE_AWS_DB=true`. |
 
