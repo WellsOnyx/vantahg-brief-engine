@@ -59,7 +59,7 @@ export interface Case {
   is_out_of_network?: boolean | null;
 
   // External review outcomes (P2P / IRO) - Task 13
-  external_outcomes?: Record<string, any> | null;
+  external_outcomes?: Record<string, unknown> | null;
 
   // Service classification (new medical-focused field)
   service_category: ServiceCategory | null;

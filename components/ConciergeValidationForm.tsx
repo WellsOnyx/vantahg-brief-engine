@@ -76,7 +76,12 @@ export function ConciergeValidationForm({ onSubmit, isSubmitting, caseNumber, fa
     }
 
     try {
-      const payload: any = {
+      const payload: {
+        rationale: string;
+        flags: string[];
+        fact_check_acknowledged?: boolean;
+        fact_check_review_notes?: string;
+      } = {
         rationale: rationale.trim(),
         flags: selectedFlags,
       };
@@ -85,7 +90,7 @@ export function ConciergeValidationForm({ onSubmit, isSubmitting, caseNumber, fa
         payload.fact_check_review_notes = factCheckNotes.trim();
       }
       await onSubmit(payload);
-    } catch (err) {
+    } catch (_err) {
       setError('Failed to submit validation. Please try again.');
     }
   };

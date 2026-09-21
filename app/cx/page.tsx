@@ -75,6 +75,7 @@ export default function CxLensPage() {
   const [lens, setLens] = useState<CxLens | null>(null);
   const [scoreboard, setScoreboard] = useState<{
     fanout: { fail_rate: number; failed: number; complete: number; open_cx_tasks: number };
+    stuck: { count: number; awaiting_clinicals: number; fanout_failed: number };
     escalations: { l1: number; l2: number; l3: number; total: number };
   } | null>(null);
   const [stuckOnly, setStuckOnly] = useState(false);
@@ -118,6 +119,9 @@ export default function CxLensPage() {
               <Link href="/med-review" className="text-sm text-white/80 underline">
                 Med review queue →
               </Link>
+              <Link href="/admin/ops" className="text-sm text-white/80 underline">
+                Ops scoreboard →
+              </Link>
               <Link href="/admin/onboarding" className="text-sm text-white/80 underline">
                 Onboarding A→E →
               </Link>
@@ -144,7 +148,16 @@ export default function CxLensPage() {
             <StatCard label="Open" value={lens.health.open} />
             <StatCard label="At-risk SLA" value={lens.health.at_risk} accent={lens.health.at_risk > 0} />
             <StatCard label="Breached" value={lens.health.missed} accent={lens.health.missed > 0} />
-            <StatCard label="Stuck" value={lens.health.stuck} hint="Clinicals / fan-out" />
+            <StatCard
+              label="Stuck"
+              value={scoreboard?.stuck.count ?? lens.health.stuck}
+              hint={
+                scoreboard
+                  ? `Clinicals ${scoreboard.stuck.awaiting_clinicals} · Fan-out ${scoreboard.stuck.fanout_failed}`
+                  : 'Clinicals / fan-out'
+              }
+              accent={Boolean((scoreboard?.stuck.count ?? lens.health.stuck) > 0)}
+            />
             <StatCard
               label="Fan-out fail"
               value={scoreboard ? `${Math.round(scoreboard.fanout.fail_rate * 100)}%` : '—'}

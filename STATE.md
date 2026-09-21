@@ -11,6 +11,18 @@ JSON catalog for the E2 shadow pack: [`fixtures/golive/shadow-e2.json`](fixtures
 
 ---
 
+## 2026-09-20 — Ops scoreboard stuck-count increment (Phase 6.3)
+
+`GET /api/ops/scoreboard` now returns `stuck.count` (plus `awaiting_clinicals` / `fanout_failed` split) alongside fan-out fail rate and R10–R12. Visible on `/admin/ops` and `/cx`. Aggregates only — no member refs or packets. Synthetic seed. Clients still 403.
+
+---
+
+## 2026-09-21 — Lint fail-closed (hydrate allowlist)
+
+`npm run lint` is green on this lineage (`eslint --max-warnings 0`). PR #67 cleared the historic backlog; five client-only `react-hooks/set-state-in-effect` hydrate sites stay as-is (no behavior change) with `eslint-disable-next-line` + WHY. Catalog: [`docs/customer-ready/lint-hydrate-allowlist.md`](docs/customer-ready/lint-hydrate-allowlist.md). New lint errors/warnings fail CI.
+
+---
+
 ## 2026-09-20 — CM connect MVP hardening (6.2)
 
 Phase 6.2 already shipped on `main` (PR #59). This pass is the smallest increment on top: retry-safe `cm.handoff` emitter + PHI-free logs + tests that lock flag → webhook payload shape and flagged-only CSV.
@@ -185,7 +197,7 @@ Slices 6.1–6.3 from `10-implementation-commits.md`. Synthetic / demo only. No 
 
 - **6.1 Five client reports + CSV:** `GET /api/reports` + `/api/reports/{volume|turnaround|outcomes|deny_reasons|sla}?format=csv`. Portal `/portal/tpa/reports` filters by date, LOB, type. Volume.signed matches distinct non-void ledger case ids. Normalized deny reason codes on sign (`deny_reason_code`).
 - **6.2 CM flags + webhook/CSV:** Flagged determinations only. `cm.handoff` HMAC-SHA256 (same 8× exponential budget as `determination.signed`, ≤ 5 min). Portal CM queue `/portal/tpa/cm` + `GET /api/cm/queue`. Daily CSV drop stub `GET /api/cm/csv` + cron `/api/cron/cm-csv-drop`. Unflagged never appear in the feed and never post.
-- **6.3 Internal ops scoreboard:** `GET /api/ops/scoreboard` — fan-out fail rate + R10–R12 escalation counts. Visible on `/cx` to CX/admin; clients 403.
+- **6.3 Internal ops scoreboard:** `GET /api/ops/scoreboard` — fan-out fail rate + stuck-case count (clinicals / fan-out) + R10–R12. Visible on `/admin/ops` and `/cx` to CX/admin; clients 403.
 
 **Acceptance:** report CSV columns match 08; volume signed === ledger case count; CM webhook only when flags non-empty; unflagged never in CM feed; CX sees fan-out fail rate.
 

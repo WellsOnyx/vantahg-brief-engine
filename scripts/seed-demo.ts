@@ -41,7 +41,7 @@ function daysAgo(days: number, hours = 0): string {
   return d.toISOString();
 }
 
-function hoursFromNow(hours: number): string {
+function _hoursFromNow(hours: number): string {
   const d = new Date();
   d.setTime(d.getTime() + hours * 3600000);
   return d.toISOString();

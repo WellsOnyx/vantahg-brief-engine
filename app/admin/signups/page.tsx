@@ -65,7 +65,6 @@ export default function AdminSignupsPage() {
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async (status: Status | '') => {
-    setError(null);
     try {
       const url = status
         ? `/api/admin/signups?status=${encodeURIComponent(status)}`
@@ -84,6 +83,7 @@ export default function AdminSignupsPage() {
         return;
       }
       const data = (await res.json()) as SignupRow[];
+      setError(null);
       setRows(data);
       setAccessStatus('ok');
     } catch {
@@ -92,6 +92,7 @@ export default function AdminSignupsPage() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- WHY: fetch-on-mount hydrates the queue after client mount (session unavailable during SSR)
     void load(filter);
   }, [filter, load]);
 

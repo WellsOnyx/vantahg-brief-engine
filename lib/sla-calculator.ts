@@ -82,7 +82,10 @@ export function calculateDeadline(
  * Get time remaining until deadline with urgency classification.
  * Production-grade: gracefully handles null/undefined (common on some IDR and legacy flows).
  */
-export function getTimeRemaining(deadline: string | Date | null | undefined): TimeRemaining {
+export function getTimeRemaining(
+  deadline: string | Date | null | undefined,
+  now: Date = new Date(),
+): TimeRemaining {
   if (!deadline) {
     return {
       hours: 0,
@@ -94,7 +97,6 @@ export function getTimeRemaining(deadline: string | Date | null | undefined): Ti
     };
   }
   const deadlineDate = new Date(deadline);
-  const now = new Date();
   const diffMs = deadlineDate.getTime() - now.getTime();
   const totalMinutes = Math.floor(diffMs / (1000 * 60));
   const isOverdue = diffMs < 0;
@@ -157,8 +159,11 @@ export function formatTimeRemaining(timeRemaining: TimeRemaining): string {
  * Get SLA status with color mapping for UI rendering.
  * Production-grade: handles missing deadline.
  */
-export function getSlaStatus(deadline: string | Date | null | undefined): SlaStatus {
-  const timeRemaining = getTimeRemaining(deadline);
+export function getSlaStatus(
+  deadline: string | Date | null | undefined,
+  now?: Date,
+): SlaStatus {
+  const timeRemaining = getTimeRemaining(deadline, now);
 
   const statusMap: Record<UrgencyLevel, SlaStatus> = {
     ok: {

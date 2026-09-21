@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { STEP_KEYS, STEP_LABELS, type OnboardingData, type StepKey } from '@/lib/onboarding/types';
 

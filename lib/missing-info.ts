@@ -1,6 +1,6 @@
 import { getServiceClient } from '@/lib/supabase';
 import { logAuditEvent } from '@/lib/audit';
-import { isDemoMode, getDemoCase, getDemoMissingInfoRequests } from '@/lib/demo-mode';
+import { isDemoMode, getDemoMissingInfoRequests } from '@/lib/demo-mode';
 import type { MissingInfoRequest } from '@/lib/types';
 
 export interface MissingInfoResult {

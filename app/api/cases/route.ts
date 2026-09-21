@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
 
     const supabase = getServiceClient();
 
-    const status = searchParams.get('status');
+    const _status = searchParams.get('status');
     const vertical = searchParams.get('vertical');
     const serviceCategory = searchParams.get('service_category');
     const priority = searchParams.get('priority');
@@ -167,7 +167,7 @@ export async function POST(request: NextRequest) {
 
     // === Item 12: Proper tenant scoping on case creation ===
     let effectiveClientId = body.client_id;
-    let effectivePracticeId = body.practice_id || null;
+    const effectivePracticeId = body.practice_id || null;
 
     if (authResult.user.role === 'client') {
       // TPA users: force their own client and validate practice

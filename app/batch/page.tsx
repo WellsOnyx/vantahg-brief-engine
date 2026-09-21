@@ -109,7 +109,7 @@ function parseCSVLine(line: string): string[] {
   return result;
 }
 
-function validateRow(row: Record<string, string>, index: number): { valid: boolean; errors: string[] } {
+function validateRow(row: Record<string, string>, _index: number): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
 
   if (!row.patient_name?.trim()) errors.push('patient_name is required');
@@ -173,7 +173,7 @@ export default function BatchUploadPage() {
   const [parsedRows, setParsedRows] = useState<ParsedRow[]>([]);
   const [fileName, setFileName] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
-  const [dragCounter, setDragCounter] = useState(0);
+  const [_dragCounter, setDragCounter] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [progress, setProgress] = useState(0);
   const [results, setResults] = useState<BatchResults | null>(null);

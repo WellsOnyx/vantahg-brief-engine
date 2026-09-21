@@ -3,7 +3,7 @@ import { getServiceClient } from '@/lib/supabase';
 import { logAuditEvent } from '@/lib/audit';
 import { generateBriefForCase, persistBriefResult } from '@/lib/generate-brief';
 import { isDemoMode } from '@/lib/demo-mode';
-import type { ServiceCategory, CasePriority, ReviewType, FacilityType } from '@/lib/types';
+import type { ServiceCategory, CasePriority, ReviewType, FacilityType, Case, Client } from '@/lib/types';
 import { requireRole } from '@/lib/auth-guard';
 import { applyRateLimit } from '@/lib/rate-limit-middleware';
 import { redactName } from '@/lib/security';
@@ -225,7 +225,7 @@ export async function POST(request: NextRequest) {
         });
 
         // Background brief generation (non-blocking) — uses centralized persistence for fact-check guarantee
-        generateBriefForCase(data, { client: (data as any).client ?? null }).then(async (result) => {
+        generateBriefForCase(data as Case, { client: (data as { client?: Client | null }).client ?? null }).then(async (result) => {
           if (result) {
             await persistBriefResult(data.id, result, supabase, {
               generatedFrom: 'batch_upload',

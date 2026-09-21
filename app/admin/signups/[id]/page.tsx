@@ -71,14 +71,6 @@ const STATUS_LABEL: Record<Status, string> = {
   live: 'Live',
 };
 
-const STATUS_PILL: Record<Status, string> = {
-  pending_review: 'bg-amber-100 text-amber-800 border-amber-200',
-  approved: 'bg-blue-100 text-blue-800 border-blue-200',
-  rejected: 'bg-red-100 text-red-800 border-red-200',
-  signed: 'bg-teal-100 text-teal-800 border-teal-200',
-  live: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-};
-
 export default function AdminSignupDetailPage() {
   const params = useParams<{ id: string }>();
   const id = params.id;
@@ -253,7 +245,7 @@ export default function AdminSignupDetailPage() {
 
 type ActionMode = 'idle' | 'confirming_approve' | 'confirming_reject';
 
-function ActionPanel({ row, onUpdate }: { row: SignupRow; onUpdate: (next: SignupRow) => void }) {
+export function ActionPanel({ row, onUpdate }: { row: SignupRow; onUpdate: (next: SignupRow) => void }) {
   const [mode, setMode] = useState<ActionMode>('idle');
   const [pepmDollars, setPepmDollars] = useState('');
   const [rejectReason, setRejectReason] = useState('');
@@ -475,7 +467,7 @@ function ActionPanel({ row, onUpdate }: { row: SignupRow; onUpdate: (next: Signu
 
 // ── Contract Panel ─────────────────────────────────────────────────────────
 
-function ContractPanel({ row, onUpdate }: { row: SignupRow; onUpdate: (next: SignupRow) => void }) {
+export function ContractPanel({ row, onUpdate }: { row: SignupRow; onUpdate: (next: SignupRow) => void }) {
   const [file, setFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -959,7 +951,7 @@ function Field({ label, value, mono, hint }: { label: string; value: string | nu
   );
 }
 
-function formatAddress(row: SignupRow): string | null {
+function _formatAddress(row: SignupRow): string | null {
   const parts = [row.street_address, row.city, row.state, row.zip].filter(Boolean);
   return parts.length > 0 ? parts.join(', ') : null;
 }

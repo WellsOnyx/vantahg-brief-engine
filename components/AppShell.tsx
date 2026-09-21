@@ -88,6 +88,7 @@ export function AppShell({
       window.location.search.includes('demo') ||
       pathname.includes('/demo')
     );
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- WHY: demo-signal detect uses document/location, unavailable during SSR
     setDemo(hasDemoSignal);
   }, [pathname]);
 
@@ -161,11 +162,11 @@ function Sidebar({
   onCloseMicro?: () => void;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
-
-  // Close mobile drawer on route change
-  useEffect(() => {
+  const [drawerPath, setDrawerPath] = useState(pathname);
+  if (pathname !== drawerPath) {
+    setDrawerPath(pathname);
     setMobileOpen(false);
-  }, [pathname]);
+  }
 
   return (
     <>
