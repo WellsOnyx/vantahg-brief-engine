@@ -16,11 +16,11 @@
 | 3 Brief → MD | [#55](https://github.com/WellsOnyx/vantahg-brief-engine/pull/55) | Brief before `md_queue`, `/med-review` queue, human sign + immutable package |
 | 4 Fan-out + billing | [#57](https://github.com/WellsOnyx/vantahg-brief-engine/pull/57) | Portal downloads, HMAC `determination.signed` + retries, real `billable_events` ledger, monthly statement stub |
 | 4.4 Statement stub | [#73](https://github.com/WellsOnyx/vantahg-brief-engine/pull/73) | PDF + portal for one synthetic client; `statement_id` stamped on open ledger events; monthly cron stub |
-| 5 Three role views | [#58](https://github.com/WellsOnyx/vantahg-brief-engine/pull/58) | Client / CX / Med lenses on one case object; RBAC deny cross-tenant + CX-note isolation |
+| 5 Three role views | [#58](https://github.com/WellsOnyx/vantahg-brief-engine/pull/58) | Client / CX / Med lenses on one case object; RBAC deny cross-tenant + CX-note isolation. 5.3 polish: sign / brief POST / fan-out / audit role gates + cross-tenant denial tests. |
 | 6 Reporting + CM | [#59](https://github.com/WellsOnyx/vantahg-brief-engine/pull/59) | Five client reports + CSV, CM HMAC handoff (flagged only), ops scoreboard |
 | 7 Onboarding + go-live | [#60](https://github.com/WellsOnyx/vantahg-brief-engine/pull/60) | A→E checklist UI + runbook, E1/E2 packs, first-25 SLA rollback log |
 
-**CI (Phase 7 tip):** `npm run test:ci` 447 passed (3 todo); `tsc --noEmit` clean; `npm run test:go-live-synthetic` PASS.
+**CI (Phase 7 tip):** `npm run test:ci` 453 passed (3 todo); `tsc --noEmit` clean; `npm run test:go-live-synthetic` PASS.
 
 ## 2026-09-20 — Packaging lock (Jonah)
 

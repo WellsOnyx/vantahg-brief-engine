@@ -3,7 +3,12 @@ import { requireAuth } from '@/lib/auth-guard';
 import { applyRateLimit } from '@/lib/rate-limit-middleware';
 import { apiError } from '@/lib/api-error';
 import { getRequestContext } from '@/lib/security';
-import { CaseNotFoundError, getCaseSpineService } from '@/lib/case-spine';
+import {
+  CaseNotFoundError,
+  canMutateFanout,
+  getCaseSpineService,
+  resolveSpineViewer,
+} from '@/lib/case-spine';
 import { getFanoutService } from '@/lib/fanout';
 
 export const dynamic = 'force-dynamic';
@@ -18,8 +23,13 @@ export async function POST(
     const rateLimited = await applyRateLimit(request, { maxRequests: 30 });
     if (rateLimited) return rateLimited;
 
+    const viewer = resolveSpineViewer(authResult.user, request);
+    if (!canMutateFanout(viewer)) {
+      return NextResponse.json({ error: 'Forbidden', surface: 'fanout' }, { status: 403 });
+    }
+
     const { id } = await context.params;
-    await getCaseSpineService().getCase(id);
+    await getCaseSpineService().getCase(id, viewer);
     const result = await getFanoutService().processCase(id, authResult.user.id);
     return NextResponse.json({ fanout: result });
   } catch (err) {
@@ -42,7 +52,8 @@ export async function GET(
     const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) return authResult;
     const { id } = await context.params;
-    const c = await getCaseSpineService().getCase(id);
+    const viewer = resolveSpineViewer(authResult.user, request);
+    const c = await getCaseSpineService().getCase(id, viewer);
     return NextResponse.json({
       case_id: c.case_id,
       state: c.state,
