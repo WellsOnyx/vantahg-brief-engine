@@ -74,8 +74,14 @@ const EnvSchema = z.object({
   // from real ones in the API surface, just marked test in Dropbox Sign.
   ENABLE_REAL_HELLOSIGN: z.coerce.boolean().default(false),
 
-  // Phase 2 intake HMAC slots — empty = synthetic/demo allow. Never ship live keys.
+  // Phase 2 intake HMAC slots — empty = synthetic/dev/test allow.
+  // Production with every Gravity Rail webhook secret unset fails closed.
+  // Never ship live keys. GRAVITY_RAIL_API_KEY empty → outbound 503.
+  GRAVITY_RAIL_API_KEY: z.string().min(1).optional(),
+  GRAVITY_RAIL_WORKSPACE_ID: z.string().min(1).optional(),
   GRAVITY_RAIL_WEBHOOK_SECRET: z.string().min(1).optional(),
+  GR_WEBHOOK_SECRET: z.string().min(1).optional(),
+  GR_WEBHOOK_SECRET_SECONDARY: z.string().min(1).optional(),
   EXTERNAL_API_KEYS: z.string().optional(),
   EXTERNAL_API_SECRET: z.string().min(1).optional(),
   VANTAHG_API_KEY: z.string().min(1).optional(),

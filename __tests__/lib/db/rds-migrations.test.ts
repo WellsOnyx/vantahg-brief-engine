@@ -69,6 +69,13 @@ describe('RDS migration catalog', () => {
     expect(billing?.path).toContain('infra-aws/rds-migrations');
   });
 
+  it('includes Gravity Rail staff columns 031 (RDS copy wins when both exist)', () => {
+    const gr = plan.apply.find((e) => e.prefix === '031');
+    expect(gr?.filename).toBe('031_gravity_rail_staff.sql');
+    expect(gr?.source).toBe('rds');
+    expect(gr?.path).toContain('infra-aws/rds-migrations');
+  });
+
   it('covers every numbered supabase migration except the skipped bucket one', () => {
     const prefixes = new Set(plan.apply.map((e) => e.prefix));
     expect(prefixes.has('000')).toBe(true);

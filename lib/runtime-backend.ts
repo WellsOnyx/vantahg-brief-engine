@@ -116,6 +116,6 @@ export const INTEGRATION_INGRESS = {
     path: '/api/intake/gravity-rail',
     env: ['GRAVITY_RAIL_API_KEY', 'GRAVITY_RAIL_WORKSPACE_ID', 'GRAVITY_RAIL_WEBHOOK_SECRET'],
     notes:
-      'Inbound webhook creates a case-spine case (HMAC when GRAVITY_RAIL_WEBHOOK_SECRET is set). Outbound client at lib/gravity-rails.ts is unused until GRAVITY_RAIL_API_KEY is filled. No live vendor calls in Phase 2.',
+      'Inbound POST /api/intake/gravity-rail creates a case-spine case. HMAC when a webhook secret is set; production with no secret fails closed. Outbound lib/gravity-rails.ts returns 503 when GRAVITY_RAIL_API_KEY is empty (no fake workspace). Not live-keyed.',
   },
 } as const;
