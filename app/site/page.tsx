@@ -1,6 +1,7 @@
 'use client';
 
 import DemoWalkthrough from '@/components/demo/DemoWalkthrough';
+import { SiteFooter } from '@/components/site/SiteFooter';
 
 /* ─── CSS-in-JS style object for the marketing page ─── */
 /* Uses the Wells Onyx dark palette with Cormorant Garamond + DM Sans */
@@ -172,10 +173,6 @@ export default function SitePage() {
         .cta-actions { display:flex;gap:20px;justify-content:center;flex-wrap:wrap; }
 
         /* ── Footer ── */
-        .vum-footer { background:var(--black);border-top:1px solid var(--border);padding:40px 56px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px; }
-        .footer-logo { font-family:var(--sans);font-size:13px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--white); }
-        .footer-logo span { color:var(--teal); }
-        .vum-footer p { font-size:12px;color:var(--white-dim); }
 
         /* ── Role Selector ── */
         .role-hero { min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:170px 56px 80px;position:relative;overflow:hidden; }
@@ -241,7 +238,6 @@ export default function SitePage() {
           .ea-inner { grid-template-columns:1fr;gap:48px; }
           .fam-banner { padding:20px 24px;flex-wrap:wrap; }
           .manifesto { padding:60px 24px; }
-          .vum-footer { padding:32px 24px;flex-direction:column;text-align:center; }
           .demo-cta-row { flex-direction:column;align-items:flex-start; }
           .cta-section { padding:72px 24px; }
         }
@@ -571,11 +567,7 @@ export default function SitePage() {
         </section>
 
         {/* Footer */}
-        <footer className="vum-footer">
-          <div className="footer-logo"><span>Vanta</span>UM</div>
-          <p>A Wells Onyx Company &middot; Houston &middot; Miami &middot; Tallahassee</p>
-          <p>&copy; 2026 VantaUM. All rights reserved.</p>
-        </footer>
+        <SiteFooter />
       </div>
     </>
   );
