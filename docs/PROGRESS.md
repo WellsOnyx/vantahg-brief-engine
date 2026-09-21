@@ -22,7 +22,7 @@
 | 7.1 Cole runbook | [#64](https://github.com/WellsOnyx/vantahg-brief-engine/pull/64) | How-to on every A–E item, `11-cole-onboarding-runbook.md`, synthetic `client_config` fixture |
 | 7.2 E1 fixture pack | this PR | `fixtures/golive/synthetic-e1.json` — prior auth + first-level appeal, tokenized refs, `npm run test:synthetic-golive-pack` |
 
-**CI (Phase 7 tip):** `npm run test:ci` 501 passed on #64; this branch re-checks after the E1 catalog. `tsc --noEmit` clean; `npm run test:go-live-synthetic` / `npm run test:synthetic-golive-pack` / `npm run test:shadow-golive-pack` are the gates.
+**CI (Phase 7.2 on current main):** `npm run test:ci` 503 passed (3 todo); `tsc --noEmit` clean; `npm run test:go-live-synthetic` PASS; `npm run test:synthetic-golive-pack` PASS; `npm run test:shadow-golive-pack` PASS.
 
 ## 2026-09-20 — Packaging lock (Jonah)
 

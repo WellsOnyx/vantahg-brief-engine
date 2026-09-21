@@ -9,6 +9,8 @@ Future Claude/Cole/Jonah sessions: read this first.
 
 Portable E1 catalog at [`fixtures/golive/synthetic-e1.json`](fixtures/golive/synthetic-e1.json) (prior-auth + first-level appeal, tokenized refs only). `npm run test:synthetic-golive-pack` loads the JSON and creates cases on the demo path. `npm run test:go-live-synthetic` advances the same catalog. How-to: [`fixtures/golive/README.md`](fixtures/golive/README.md). E2 shadow catalog stays at `fixtures/golive/shadow-e2.json`. No `ENABLE_AWS_*` flips. No live PHI. Med Review packaging lock unchanged.
 
+**CI:** `npm run test:ci` 503 passed (3 todo). `tsc --noEmit` clean. E1 load, E1 runner, and E2 shadow pack PASS. RDS bootstrap notes from #74 kept.
+
 ---
 
 ## 2026-09-20 — Phase 7.1 Cole runbook (PR #64)

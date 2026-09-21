@@ -176,7 +176,6 @@ async function runPack(
     now,
     shadowMode: shadow,
   });
-  const parentByExternal = new Map<string, string>();
 
   for (const spec of specs) {
     try {
