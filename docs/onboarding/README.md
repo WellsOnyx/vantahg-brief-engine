@@ -1,11 +1,16 @@
 # Client onboarding runbook (Cole)
 
-This is the **A→E** path from [`docs/customer-ready/02-onboarding.md`](../customer-ready/02-onboarding.md). Use it plus `/admin/onboarding` — no tribal knowledge required.
+**Canonical operator path (Phase 7.1):** [`docs/customer-ready/11-cole-onboarding-runbook.md`](../customer-ready/11-cole-onboarding-runbook.md).
+
+This file is the short index. Use **11** plus `/admin/onboarding` — no tribal knowledge required. Framework lock: [`02-onboarding.md`](../customer-ready/02-onboarding.md).
 
 **Synthetic only.** No live PHI. Empty vendor slots stay empty. `ENABLE_AWS_*` stay **false** until an operator exports them at deploy. Completing this runbook is a **code / ops gate**, not a HIPAA attestation.
 
+**Packaging lock:** paid door = Med Review (VantaHG). Brief Engine / UM is free only with Vanta med review.
+
 UI: [`/admin/onboarding`](../../app/admin/onboarding/page.tsx)  
-Catalog: [`lib/onboarding/checklist.ts`](../../lib/onboarding/checklist.ts)
+Catalog: [`lib/onboarding/checklist.ts`](../../lib/onboarding/checklist.ts)  
+Fixture: [`docs/customer-ready/fixtures/client-config-synthetic.json`](../customer-ready/fixtures/client-config-synthetic.json)
 
 ---
 

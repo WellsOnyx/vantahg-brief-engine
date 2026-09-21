@@ -35,8 +35,9 @@ We executed the plan in [`docs/customer-ready/`](docs/customer-ready/00-README.m
 | 5 Three role views | ✅ merged | Client / CX / Med lenses; RBAC deny cross-tenant + CX notes |
 | 6 Reporting + CM | ✅ merged | Five client reports + CSV, CM HMAC handoff, ops scoreboard |
 | 7 Onboarding + go-live | ✅ merged | A→E runbook + `/admin/onboarding`, synthetic/shadow packs, SLA rollback gate |
+| 7.1 Cole runbook | this PR | How-to on every A–E item + `docs/customer-ready/11-cole-onboarding-runbook.md` so Cole needs no tribal knowledge |
 
-Full board: [`docs/PROGRESS.md`](docs/PROGRESS.md) · live notes: [`STATE.md`](STATE.md) · Cole runbook: [`docs/onboarding/`](docs/onboarding/README.md)
+Full board: [`docs/PROGRESS.md`](docs/PROGRESS.md) · live notes: [`STATE.md`](STATE.md) · Cole runbook: [`docs/customer-ready/11-cole-onboarding-runbook.md`](docs/customer-ready/11-cole-onboarding-runbook.md)
 
 **Auth (updated):** Supabase Auth hybrid when `ENABLE_AWS_AUTH=false` (default, including Fargate). Cognito login / invite / session when `ENABLE_AWS_AUTH=true`. See Phase 0.2 notes in `STATE.md`.
 

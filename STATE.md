@@ -5,6 +5,24 @@ Future Claude/Cole/Jonah sessions: read this first.
 
 ---
 
+## 2026-09-20 — Phase 7.1 Cole runbook (this PR)
+
+Phase 7.1 from `10-implementation-commits.md`: Cole can run A→E **without tribal knowledge**. Builds on the Phase 7 catalog/UI from #60.
+
+- **Canonical runbook:** [`docs/customer-ready/11-cole-onboarding-runbook.md`](docs/customer-ready/11-cole-onboarding-runbook.md) — day script, copy-paste commands, hard constraints.
+- **UI:** `/admin/onboarding` now shows how-to per item, packaging lock, day script, publish-synthetic-config, E1/E2/E4 actions.
+- **Fixture:** [`docs/customer-ready/fixtures/client-config-synthetic.json`](docs/customer-ready/fixtures/client-config-synthetic.json) (same object as `lib/onboarding/runbook.ts`). Tokenized staging tenant only.
+- **Catalog:** every A–E item has `how_to` (+ optional `command` / `href`). `assertChecklistOperational()` is the acceptance test.
+- **API:** `GET /api/admin/onboarding` includes `runbook` (constraints, days, packaging, fixture). Clients still 403.
+
+**Does not:** flip `ENABLE_AWS_*`, invent vendor keys, claim HIPAA complete, or change Med Review packaging (paid door = Med Review; Brief Engine free only with Vanta med review).
+
+**Acceptance:** Cole runs A→E from the UI + 11-runbook. Synthetic only.
+
+**CI on this branch (after main, including #66 and #74):** `npm run test:ci` 501 passed (3 todo). `tsc --noEmit` clean. Packaging lock and Phase 4.4 / 5.3 / 6.3 / 7.3 notes kept. RDS-native bootstrap is on `main` via #74 — this PR does not rewrite those scripts.
+
+---
+
 ## 2026-09-21 — RDS-native bootstrap
 
 `scripts/bootstrap-real-client.ts` and `scripts/seed-demo.ts` follow `ENABLE_AWS_DB`:
@@ -113,7 +131,7 @@ Queued future connector — **not** Phase 8 and **not** a live PHI path. See [`d
 
 Slices 7.1–7.4 from `10-implementation-commits.md`. Synthetic / demo only. No live PHI. No invented vendor credentials. Does **not** change `ENABLE_AWS_*` defaults. Does **not** claim HIPAA complete.
 
-- **7.1 Runbook + UI:** `docs/onboarding/README.md` + `/admin/onboarding` checklist mirrors `02-onboarding.md` phases A–E (commercial/legal, `client_config`, access, connectivity, go-live). Cole can check items off via `GET/PATCH /api/admin/onboarding`.
+- **7.1 Runbook + UI:** `docs/customer-ready/11-cole-onboarding-runbook.md` + `/admin/onboarding` checklist mirrors `02-onboarding.md` phases A–E with **how_to on every item**. Cole publishes the synthetic `client_config` fixture, checks items via `GET/PATCH /api/admin/onboarding`, and runs E1/E2/E4 from the page. Index: `docs/onboarding/README.md`.
 - **7.2 E1 synthetic pack (≥10):** happy path + missing clinicals (R01 → `intake_incomplete` + SLA paused) + gray zone (`md_queue`). `npm run test:go-live-synthetic` and `POST /api/golive/synthetic`. Asserts via case-spine and intake ingest.
 - **7.3 E2 shadow pack (≥10):** live-shaped synthetic; MD signs; fan-out records member/provider **intent only** (`shadow_mode` / `go_live_mode=shadow`). `POST /api/golive/shadow`. Never a final send to member or requesting provider.
 - **7.4 Live hypercare scaffolding:** first-25 scorecard already on `/cx`. Go-live log + rollback note when first-25 SLA miss rate exceeds `client_config.sla_miss_rollback_threshold` or `SLA_MISS_ROLLBACK_THRESHOLD` (default 0.2): pause live intake, stay on shadow.

@@ -19,6 +19,7 @@
 | 5 Three role views | [#58](https://github.com/WellsOnyx/vantahg-brief-engine/pull/58) | Client / CX / Med lenses on one case object; RBAC deny cross-tenant + CX-note isolation. 5.3 polish: sign / brief POST / fan-out / audit role gates + cross-tenant denial tests. |
 | 6 Reporting + CM | [#59](https://github.com/WellsOnyx/vantahg-brief-engine/pull/59) | Five client reports + CSV, CM HMAC handoff (flagged only), ops scoreboard |
 | 7 Onboarding + go-live | [#60](https://github.com/WellsOnyx/vantahg-brief-engine/pull/60) | A→E checklist UI + runbook, E1/E2 packs, first-25 SLA rollback log |
+| 7.1 Cole runbook | this PR | How-to on every A–E item, `11-cole-onboarding-runbook.md`, synthetic `client_config` fixture — Cole can run A→E without tribal knowledge |
 
 **CI (Phase 7 tip):** `npm run test:ci` 453 passed (3 todo); `tsc --noEmit` clean; `npm run test:go-live-synthetic` PASS; `npm run test:shadow-golive-pack` PASS.
 
@@ -26,7 +27,7 @@
 
 Paid door = Med Review (VantaHG). VantaUM Brief Engine / UM is **included free only when the buyer uses Vanta med review**. Not a standalone free UM SKU; not free with another shop’s med review. Compute COGS planning band ~$0.05–$0.15 per review vs ~$1 internal budget (estimate; not measured COGS). Phases 0–7 code path unchanged — packaging/GTM + product-boundary only. Canonical: [`docs/customer-ready/01-product-boundary.md`](docs/customer-ready/01-product-boundary.md). Code gate: `client_config.vanta_med_review_contract` + `lib/entitlements/um-brief-engine.ts`.
 
-**CI (packaging guard on current main):** `npm run test:ci` 480 passed (3 todo); `tsc --noEmit` clean; synthetic + shadow packs PASS. RDS-native bootstrap remains in flight on `cursor/rds-native-bootstrap-d1cf` and is not part of this merge.
+**CI (packaging guard):** `npm run test:ci` 480 passed (3 todo) on the guard merge. RDS-native bootstrap is on `main` via [#74](https://github.com/WellsOnyx/vantahg-brief-engine/pull/74). This runbook PR does not rewrite those scripts.
 
 ## Not started / paused
 
@@ -36,6 +37,7 @@ Paid door = Med Review (VantaHG). VantaUM Brief Engine / UM is **included free o
 | 5 Three role views (Client / CX / Med polish) | ✅ **Done** — `/client`, `/cx`, `/med-review` share `/api/case-spine` + role filters |
 | 6 Reporting + CM handoff | ✅ **Done** — `/portal/tpa/reports`, `/portal/tpa/cm`, `/api/ops/scoreboard` + `/admin/ops` (fail rate + stuck count) |
 | 7 Onboarding runbook + synthetic/shadow/live gates | ✅ **Done** — `/admin/onboarding`, `docs/onboarding/`, `npm run test:go-live-synthetic`. Remaining = human ops |
+| 7.1 Cole A→E without tribal knowledge | ✅ **This PR** — `docs/customer-ready/11-cole-onboarding-runbook.md`, how_to per item, synthetic fixture |
 
 ## Still needs a human (not code)
 

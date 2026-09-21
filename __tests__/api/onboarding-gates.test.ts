@@ -48,6 +48,13 @@ describe('Phase 7 onboarding / go-live APIs', () => {
     expect(body.progress.items.map((i: { id: string }) => i.id)).toEqual(
       expect.arrayContaining(['A1', 'A2', 'B1', 'C1', 'D5', 'E1', 'E2', 'E4']),
     );
+    expect(body.progress.items.find((i: { id: string }) => i.id === 'A2').how_to.length).toBeGreaterThan(0);
+    expect(body.runbook.path).toMatch(/11-cole-onboarding-runbook/);
+    expect(body.runbook.packaging.paid_door).toMatch(/Med Review/);
+    expect(body.runbook.fixture.client_id).toBe(SYNTHETIC_CLIENT_ID);
+    expect(body.runbook.fixture.go_live_mode).toBe('synthetic');
+    expect(body.runbook.constraints.some((c: string) => c.includes('ENABLE_AWS_AUTH'))).toBe(true);
+    expect(body.note).toMatch(/ENABLE_AWS_/);
     expect(body.golive.threshold).toBeGreaterThan(0);
 
     const denied = await GET(req('http://localhost:3000/api/admin/onboarding', { role: 'client' }));

@@ -1,0 +1,36 @@
+{
+  "client_id": "11111111-1111-1111-1111-111111111111",
+  "legal_name": "VantaUM Synthetic Staging TPA",
+  "lob": ["medical"],
+  "sla_hours_standard": 72,
+  "sla_hours_urgent": 24,
+  "auto_vs_md_policy": "always_md",
+  "notify_channels": ["portal"],
+  "determination_recipients": ["tpa_portal"],
+  "cm_handoff_enabled": false,
+  "cm_webhook_url": null,
+  "cm_webhook_secret": null,
+  "determination_webhook_url": null,
+  "determination_webhook_secret": null,
+  "intake_modes": ["api"],
+  "timezone": "America/New_York",
+  "business_hours": {
+    "start": "09:00",
+    "end": "17:00",
+    "days": ["mon", "tue", "wed", "thu", "fri"]
+  },
+  "escalation_contacts": [
+    {
+      "name": "Synthetic CX",
+      "role": "cx_owner",
+      "email": "cx-synth@example.com"
+    }
+  ],
+  "cx_owner": "cx_synth",
+  "reviewer_queue": "med_review_synth",
+  "go_live_mode": "synthetic",
+  "shadow_mode": false,
+  "sla_miss_rollback_threshold": 0.2,
+  "vanta_med_review_contract": true,
+  "med_review_provider": "vanta"
+}
