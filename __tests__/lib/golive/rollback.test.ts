@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { blankUmPricing } from '@/lib/billing/um-price-card';
 import type { CanonicalCase } from '@/lib/case-spine';
 import { evaluateLiveHypercare, slaMissRate } from '@/lib/golive';
 import { MemoryGoLiveStore } from '@/lib/golive/store';
@@ -37,6 +38,7 @@ function liveCase(id: string, sla: 'ok' | 'missed'): CanonicalCase {
     determination_package_key: 'pkg',
     fanout_stub: null,
     billable_event_stub: null,
+    ...blankUmPricing(),
   };
 }
 

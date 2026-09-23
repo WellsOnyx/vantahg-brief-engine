@@ -18,6 +18,7 @@ import {
   type BillableEvent,
   type BillableEventLedger,
 } from './events';
+import { selectCommercialLedgerRows } from './um-invoice';
 
 export interface BillingStatement {
   statement_id: string;
@@ -140,10 +141,12 @@ export async function generateMonthlyStatement(
   const startMs = new Date(periodStart).getTime();
   const endMs = new Date(periodEnd).getTime();
 
-  const open = (await ledger.list({ client_id: input.client_id, status: 'open' })).filter((e) => {
-    const t = new Date(e.occurred_at).getTime();
-    return t >= startMs && t <= endMs + 86_400_000 - 1;
-  });
+  const open = selectCommercialLedgerRows(
+    (await ledger.list({ client_id: input.client_id, status: 'open' })).filter((e) => {
+      const t = new Date(e.occurred_at).getTime();
+      return t >= startMs && t <= endMs + 86_400_000 - 1;
+    }),
+  );
 
   const statementId = randomUUID();
   const linked = open.map((event) => ({ ...event, statement_id: statementId }));

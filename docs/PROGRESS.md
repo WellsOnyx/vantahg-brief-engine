@@ -32,11 +32,17 @@
 
 **CI (packaging guard):** `npm run test:ci` 480 passed (3 todo) on the guard merge. RDS-native bootstrap is on `main` via [#74](https://github.com/WellsOnyx/vantahg-brief-engine/pull/74). This runbook PR does not rewrite those scripts.
 
-## 2026-09-23 — UM unit economics rate card
+## 2026-09-23 — Two-line UM pricing (supersedes the review-only card)
 
-Planning lock only. Canonical card: [`docs/customer-ready/um-unit-economics-rate-card.md`](customer-ready/um-unit-economics-rate-card.md). Indexed from [`00-README.md`](customer-ready/00-README.md), [`01-product-boundary.md`](customer-ready/01-product-boundary.md), [`02-onboarding.md`](customer-ready/02-onboarding.md), and [`07-billing-and-tracking.md`](customer-ready/07-billing-and-tracking.md).
+Platform membership + one clinical review tier. Canonical card: [`docs/customer-ready/um-unit-economics-rate-card.md`](customer-ready/um-unit-economics-rate-card.md). Handoff: [`docs/customer-ready/um-pricing-rules.md`](customer-ready/um-pricing-rules.md). Config: `lib/billing/um-price-card.ts`. Migration `infra-aws/rds-migrations/032_um_two_line_pricing.sql`.
 
-333k EE / 500k lives / 750k auths. Base: **$45.61M** revenue, **$22.80M** contribution, **$11.42 PEPM / $7.61 PMPM** billed. Rules-only / auto **not billed**. Nurse, physician/MD, and external peer **billed**. Packaging unchanged: VantaUM sells Med Review; Brief Engine free only under the Vanta med-review contract; VantaHG = IRO + IDR only; Optum frozen. Entitlement gate not touched.
+333k EE (PEPM) / 500k lives (PMPM) / 750k inbound. Platform **$9.00M**. Deck total revenue **$54.61M** (exact dollars **$54.60M**). Exact contribution **$31.80M**. Total billed **$13.67 PEPM / $9.11 PMPM**. Rules/auto review posts at **$0**. Nurse / MD / external bill once. Platform default **$1.50 PMPM** and does not step down. Packaging unchanged except the open question: do not call the new platform fee $0 under Med Review. VantaHG = IRO + IDR only. Optum frozen. Entitlement gate not flipped.
+
+The earlier review-only figures ($45.61M / $11.42 PEPM) are retired.
+
+## 2026-09-23 — UM unit economics rate card (superseded)
+
+Review-only card landed in PR #78 and is replaced by the two-line section above. Do not quote $45.61M as current revenue.
 
 ## Not started / paused
 

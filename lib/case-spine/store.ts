@@ -176,6 +176,7 @@ function cloneCase(c: CanonicalCase): CanonicalCase {
         }
       : null,
     billable_event_stub: c.billable_event_stub ? { ...c.billable_event_stub } : null,
+    touch_stack: [...(c.touch_stack ?? [])],
   };
 }
 

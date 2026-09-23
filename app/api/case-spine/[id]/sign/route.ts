@@ -3,6 +3,7 @@ import { requireAuth } from '@/lib/auth-guard';
 import { applyRateLimit } from '@/lib/rate-limit-middleware';
 import { apiError } from '@/lib/api-error';
 import { getRequestContext } from '@/lib/security';
+import { UmProductGuardError } from '@/lib/billing/um-guards';
 import {
   BriefRequiredError,
   CaseNotFoundError,
@@ -39,6 +40,7 @@ export async function POST(
       rationale?: string;
       cm_flags?: string[];
       deny_reason_code?: string | null;
+      actor_kind?: string;
     };
 
     if (!body.determination || !(DETERMINATIONS as readonly string[]).includes(body.determination)) {
@@ -62,6 +64,7 @@ export async function POST(
         rationale: body.rationale,
         cm_flags: body.cm_flags as never,
         deny_reason_code: body.deny_reason_code as never,
+        actor_kind: body.actor_kind === 'ai' ? 'ai' : 'clinician',
         session_refs: { ip: ctx.ip, request_id: ctx.requestId },
       },
       authResult.user.id,
@@ -79,6 +82,9 @@ export async function POST(
         { error: err.message, code: err.code, from_state: err.from_state, to_state: err.to_state },
         { status: 409 },
       );
+    }
+    if (err instanceof UmProductGuardError) {
+      return NextResponse.json({ error: err.message, code: err.code }, { status: 409 });
     }
     if (err instanceof CaseNotFoundError) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
