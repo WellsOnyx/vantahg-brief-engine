@@ -37,6 +37,7 @@ Do not soften. Packaging / GTM + product-boundary only. Customer-ready Phases 0â
 - **Optum frozen** (no outreach) until Jonah explicitly opens with context.
 - UM still owns Brief Engine SoR and tech. Do not move SoR ownership off UM.
 - Compute COGS planning band **~$0.05â€“$0.15 per review** vs **~$1 internal budget** (estimate; not measured COGS).
+- Commercial UM review price/cost (planning case, locked 2026-09-23): [`um-unit-economics-rate-card.md`](um-unit-economics-rate-card.md). Rules-only / auto is not billed. Nurse, physician, and external peer are. Does not change this packaging lock or the entitlement gate.
 
 ### Entitlement (code)
 
