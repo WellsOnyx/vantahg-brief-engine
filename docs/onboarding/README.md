@@ -30,7 +30,7 @@ Confirm LOBs, SLAs, primary intake mode, determination channels, CX owner, revie
 | A4 | Client-dependent | Security / SOC pack |
 | A5 | Required | Invoice entity + billing contact (Meow, not Stripe) |
 
-Fee schedule: **VantaUM sells Med Review.** Rules/auto review is $0 under the Vanta med-review contract. Platform membership is a separate line (do not call it $0 under Med Review — open question on the rate card). Do not sell standalone UM. Do not include free UM with a third-party review shop. VantaHG is IRO + IDR only. Prices: [`um-unit-economics-rate-card.md`](../customer-ready/um-unit-economics-rate-card.md). Do not invent a second card.
+Fee schedule: **VantaUM sells Med Review.** Rules/auto review is $0 under the Vanta med-review contract. Platform membership is a separate line (do not call it $0 under Med Review — open question on the rate card). Do not sell standalone UM. Do not include free UM with a third-party review shop. VantaHG is IRO + IDR only. Prices: [`um-unit-economics-rate-card.md`](../customer-ready/um-unit-economics-rate-card.md). Working decision: [`pricing-strategy-memo-2026-09-23.md`](../customer-ready/pricing-strategy-memo-2026-09-23.md). Do not invent a second card. Do not publish internal margins.
 
 Pointers: [`06-hipaa-baa-path.md`](../customer-ready/06-hipaa-baa-path.md), [`07-billing-and-tracking.md`](../customer-ready/07-billing-and-tracking.md).
 

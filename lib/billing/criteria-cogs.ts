@@ -5,6 +5,10 @@
  * (rules $3 / nurse $35 / MD $80 / external $280). It does not split
  * MCG / InterQual out of those figures. This stub refuses to price a
  * route without a criteria quote, and it does not add a second fee.
+ *
+ * Planning band for criteria + residual intake / licenses is $2–5M
+ * (required COGS, memo §4). That band is not a per-case add-on and
+ * is not folded into variable COGS ($22.8M).
  */
 
 import { reviewCost, type ReviewRoute } from './um-price-card';
