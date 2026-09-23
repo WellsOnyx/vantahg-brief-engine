@@ -37,7 +37,7 @@ Do not soften. Packaging / GTM + product-boundary only. Customer-ready Phases 0â
 - **Optum frozen** (no outreach) until Jonah explicitly opens with context.
 - UM still owns Brief Engine SoR and tech. Do not move SoR ownership off UM.
 - Compute COGS planning band **~$0.05â€“$0.15 per review** vs **~$1 internal budget** (estimate; not measured COGS).
-- Commercial price card (two-line, locked 2026-09-23, supersedes the review-only card): [`um-unit-economics-rate-card.md`](um-unit-economics-rate-card.md). Rules/auto **review** is $0. Gold-card review is $0. Nurse, MD, and external peer are billed once at the highest touch. **Platform is a separate membership** (default $1.50 PMPM). Open question, unresolved: does the Med Review wedge waive the $1.50 platform, or only the $0 auto review? Platform remains not $0 under Med Review unless a fat-TPA waiver. Entitlement gate unchanged.
+- Commercial price card (two-line, working decision 2026-09-23, supersedes the review-only card): [`um-unit-economics-rate-card.md`](um-unit-economics-rate-card.md). Memo: [`pricing-strategy-memo-2026-09-23.md`](pricing-strategy-memo-2026-09-23.md). Rules/auto **review** is $0. Gold-card review is $0. Nurse, MD, and external peer are billed once at the highest touch. **Platform is a separate membership** (default $1.50 PMPM) and covers the engine, criteria, intake rails, gold-card file, and reporting. Open question, unresolved: does the Med Review wedge waive the $1.50 platform, or only the $0 auto review? Platform remains not $0 under Med Review unless a fat-TPA waiver. Entitlement gate unchanged. Do not publish internal margins in client materials.
 
 ### Entitlement (code)
 

@@ -1,12 +1,20 @@
 /**
  * Two-line UM price card (locked 2026-09-23).
  *
+ * Working decision: docs/customer-ready/pricing-strategy-memo-2026-09-23.md.
+ * Dollar amounts in this module match that memo. Do not edit them here.
  * Supersedes the review-only card from PR #78.
  * Routes and invoice code read this module. Do not hardcode these
  * numbers in API routes.
  *
- * Pricing rule R16 (commercial step-down) is NOT auth-workflow R16
- * in lib/case-spine/rules-catalog.ts. Those catalogs are different.
+ * Operating targets are canonical (memo §8). They are not "unrestated"
+ * and they are not prices or billing gates: auto ≥55% by month 12,
+ * nurse handle time ≤18 minutes, MD share of inbound ≤8%,
+ * external share of inbound ≤2.5%, first-pass ≥90%.
+ *
+ * Pricing rule R16 (commercial step-down) is NOT auth-workflow R16.
+ * Commercial R10–R13 are NOT auth-workflow R10–R13
+ * (lib/case-spine/rules-catalog.ts). See um-pricing-rules.md.
  */
 
 export const REVIEW_ROUTES = ['auto', 'nurse', 'md', 'external'] as const;
@@ -125,8 +133,10 @@ export const PUBLISHED_UNIT_RATES = {
 
 /**
  * Mix sensitivity outputs at the $1.50 platform (platform stays $9M).
- * Lean/heavy nurse-MD-external volume splits were not restated.
- * Do not back-solve a mix from these totals.
+ * Memo §6 also states variable COGS ($18.4M / $22.8M / $27.3M) on the
+ * rate card. This object does not store that column.
+ * Nurse / MD / external volume splits inside lean and heavy are not
+ * in the memo. Do not back-solve a mix from these totals.
  */
 export const MIX_SENSITIVITY = {
   platformAnnual: 9_000_000,

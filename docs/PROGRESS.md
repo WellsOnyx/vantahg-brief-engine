@@ -32,6 +32,12 @@
 
 **CI (packaging guard):** `npm run test:ci` 480 passed (3 todo) on the guard merge. RDS-native bootstrap is on `main` via [#74](https://github.com/WellsOnyx/vantahg-brief-engine/pull/74). This runbook PR does not rewrite those scripts.
 
+## 2026-09-23 — Pricing memo sync (Jonah Manning)
+
+Working decision memo: [`pricing-strategy-memo-2026-09-23.md`](customer-ready/pricing-strategy-memo-2026-09-23.md). Rate card and [`um-pricing-rules.md`](customer-ready/um-pricing-rules.md) point at it. Dollar amounts in `lib/billing/um-price-card.ts` are unchanged.
+
+Restored: operating targets (auto ≥55% by month 12, nurse ≤18 min, MD ≤8%, external ≤2.5%, first-pass ≥90%), the 733k-lives / 2.2 note, ~43 FTE staffing note on 285k nurse reviews, criteria + residual **$2–5M** (required COGS, separate from variable COGS $22.8M), vendor comparison ($70M+ vs $45.6M review line) as an advisor slide only, 400k inbound downside, and GTM (buyer = self-funded employer or TPA that owns the group). Commercial R10–R13 are restored to Jonah’s meanings. Deck rules D1–D8 match memo §9. Client materials lead with the fee table and 375k autos at $0. Do not publish internal margins. External slides are illustrative.
+
 ## 2026-09-23 — Gold-card $0 review (after the two-line card)
 
 `gold_card` posts a review row at **$0** (not billable), same as rules/auto. Rule index [`um-pricing-rules.md`](customer-ready/um-pricing-rules.md) has R1–R20, WHAT NOT TO DO, and deck-only D1–D8. Open question stays open: Med Review does not zero the $1.50 platform unless a fat-TPA waiver. First-pass tile stays an em dash.

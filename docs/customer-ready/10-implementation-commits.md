@@ -89,7 +89,7 @@ Packaging lock is unchanged: VantaUM sells Med Review; Brief Engine free only un
 - Lint cleanup on main
 - CX bot 1×10 accounts (non-PHI) — after client portal status API exists
 - Med Review wedge **corrected 2026-09-21** — **VantaUM sells Med Review**; Brief Engine / UM free only under UM’s Vanta med-review contract; **VantaHG = IRO + IDR only**. Packaging/GTM only; see `01-product-boundary.md`. Entitlement gate unchanged. Not a new build phase.
-- UM prices **superseded 2026-09-23** — two-line card (`um-unit-economics-rate-card.md`, `um-pricing-rules.md`). Platform PMPM + one clinical tier. Rules/auto review posts at $0. Gold-card review posts at $0 (R19). Config in `lib/billing/um-price-card.ts`. Migration `032`.
+- UM prices **working decision 2026-09-23** — memo `pricing-strategy-memo-2026-09-23.md`, two-line card (`um-unit-economics-rate-card.md`, `um-pricing-rules.md`). Platform PMPM + one clinical tier. Rules/auto review posts at $0. Gold-card review posts at $0 (R19). Config in `lib/billing/um-price-card.ts`. Migration `032`. Do not publish internal margins.
 - Muse Connector Platform (muse.ai) — **Phase 8 stub is in repo** (`12-muse-connector.md`). Still not live-keyed. No PHI. Production use gated by HIPAA review. Go-live order is `13-go-live-ops.md`, not this connector.
 
 ## PR discipline

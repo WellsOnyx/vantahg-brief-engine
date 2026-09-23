@@ -483,7 +483,7 @@ No silent overwrite; amendments = new version + link.
 
 **Case events create money events.** Do not bill from memory or spreadsheets as system of record.
 
-**Prices:** two-line card is [um-unit-economics-rate-card.md](um-unit-economics-rate-card.md) (supersedes the review-only card). Platform default $1.50 PMPM. Rules/auto review posts at $0. Nurse, MD, and external bill once at the highest touch. VantaUM sells Med Review. VantaHG = IRO + IDR only. Do not invent a second card here. Do not treat the platform line as $0 under Med Review.
+**Prices:** working decision memo is [pricing-strategy-memo-2026-09-23.md](pricing-strategy-memo-2026-09-23.md). Two-line card is [um-unit-economics-rate-card.md](um-unit-economics-rate-card.md) (supersedes the review-only card). Platform default $1.50 PMPM (engine, criteria, intake rails, gold-card file, reporting). Rules/auto review posts at $0. Nurse, MD, and external bill once at the highest touch. VantaUM sells Med Review. VantaHG = IRO + IDR only. Do not invent a second card here. Do not treat the platform line as $0 under Med Review. Do not publish internal margins.
 
 ## Billable event
 

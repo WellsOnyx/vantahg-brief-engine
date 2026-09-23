@@ -5,6 +5,22 @@ Future Claude/Cole/Jonah sessions: read this first.
 
 ---
 
+## 2026-09-23 — Pricing memo sync (Jonah Manning, 23 Sep 2026)
+
+Docs aligned to [`docs/customer-ready/pricing-strategy-memo-2026-09-23.md`](docs/customer-ready/pricing-strategy-memo-2026-09-23.md). No new rates. `lib/billing/um-price-card.ts` dollar amounts unchanged. No `ENABLE_AWS_*` flips. Entitlement gate unchanged. Packaging unchanged: VantaUM sells Med Review; VantaHG = IRO + IDR only.
+
+- **Status:** Working decision. Client deck runs in parallel. Do not publish internal margins. Lead external materials with the fee table and 375k autos at $0, not $54.6M. Label external slides illustrative.
+- **Restored as canonical (memo §8):** auto ≥55% by month 12, nurse handle time ≤18 minutes, MD share ≤8% of inbound, external share ≤2.5%, first-pass ≥90%. These are not “unrestated.”
+- **733k note (memo §2):** if dependents run 2.2 → 733k lives; keep 750k auths (~1.02 PMPY); recalc PMPM only; revenue unchanged. Recalculated PMPM dollar is **TODO** (not in the memo).
+- **Staffing:** 285k annual nurse reviews ≈ ~43 FTE at ≤18 min. Validate inbound by service category before that capacity (B10). First build task = service-category inbound file, not nurse hiring.
+- **Criteria + residual:** planning band **$2–5M**, required COGS, separate from variable COGS $22.8M. MCG/InterQual split out of path cost still **TODO**.
+- **R10–R13 restored** (not the PR #80 remap): R10 do not bill rules-only; R11 do not bill platform and a review fee on the same auto case; R12 quote-cap MD + external at 12% of inbound; R13 per-case is the default, PMPM-only is an alternate quote. Denominators, auto-rate formula, criteria, and the below-50% note stay off those labels.
+- **D1–D8** realigned to memo §9. D7 is two risk bullets; the 400k downside (~$24M review, ~$6–8M planning profit plus platform) is an advisor note, not a third bullet.
+- **OPEN QUESTION (unchanged):** Med Review does not zero the $1.50 platform unless an explicit fat-TPA waiver.
+- **Still TODO:** first-pass tile stays an em dash. Lean/heavy nurse-MD-external volume splits are not in the memo. No premium below 50% auto-rate. No dollar for a second external-specialty add-on. No published PMPM at 733k lives.
+
+---
+
 ## 2026-09-23 — Gold-card $0 review + pricing rules filled in
 
 Follow-up after PR #79 (`5e5201e`). No `ENABLE_AWS_*` flips. Entitlement gate unchanged.
