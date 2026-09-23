@@ -41,9 +41,13 @@ describe('billable event on sign', () => {
 
     expect(signed.case.billable_event_id).toBeTruthy();
     const rows = await ledger.getByCase(created.case.case_id);
-    expect(rows.length).toBe(2);
+    expect(rows.length).toBe(3);
     const primary = rows.find((r) => r.sku === 'prior_auth');
     const rush = rows.find((r) => r.sku === 'rush_addon');
+    const review = rows.find((r) => r.sku === 'um_review');
+    expect(review?.bill_tier).toBe('md');
+    expect(review?.unit_price).toBe(200);
+    expect(rows.filter((r) => r.sku === 'um_review')).toHaveLength(1);
     expect(primary?.billable_event_id).toBe(signed.case.billable_event_id);
     expect(primary?.client_id).toBe(CLIENT);
     expect(primary?.case_id).toBe(created.case.case_id);

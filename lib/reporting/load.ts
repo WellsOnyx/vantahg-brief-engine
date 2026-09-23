@@ -1,4 +1,4 @@
-import { getMemoryBillableEventLedger } from '@/lib/billing/events';
+import { getBillableEventLedger } from '@/lib/billing/ledger';
 import { getCaseSpineService, type SpineViewer } from '@/lib/case-spine';
 import type { ReportFilters, ReportSource } from './types';
 
@@ -10,7 +10,7 @@ export async function loadReportSource(
     client_id: filters.client_id ?? undefined,
     type: filters.type ?? undefined,
   });
-  const ledger = await getMemoryBillableEventLedger().list({
+  const ledger = await getBillableEventLedger().list({
     client_id: filters.client_id ?? undefined,
   });
   return { cases, ledger };

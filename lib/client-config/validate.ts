@@ -55,6 +55,12 @@ export const ClientConfigFieldsSchema = z.object({
   med_review_provider: z
     .enum(MED_REVIEW_PROVIDERS)
     .default(DEFAULT_CLIENT_CONFIG_FIELDS.med_review_provider),
+  /** Staging or contract census for one month. Not the 500k planning denominator. */
+  lives_in_month: z.number().nonnegative().nullable().optional(),
+  /** Staging or contract employee count for one month. Not the 333k planning denominator. */
+  employees_in_month: z.number().nonnegative().nullable().optional(),
+  /** Explicit fat-TPA waiver. Absent or false keeps the $1.50 platform. */
+  platform_fee_waived: z.boolean().optional(),
 });
 
 export function parseClientConfigFields(input: unknown): ClientConfigFields {

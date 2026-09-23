@@ -3,7 +3,8 @@ import { requireAuth } from '@/lib/auth-guard';
 import { applyRateLimit } from '@/lib/rate-limit-middleware';
 import { apiError } from '@/lib/api-error';
 import { getRequestContext } from '@/lib/security';
-import { getMemoryBillableEventLedger } from '@/lib/billing/events';
+import { getBillableEventLedger } from '@/lib/billing/ledger';
+import { periodKeyFromDate, resolvePlatformCensus, upsertMonthlyPlatformLine } from '@/lib/billing/um-platform';
 import {
   generateMonthlyStatement,
   getMemoryStatementStore,
@@ -46,22 +47,42 @@ export async function POST(request: NextRequest) {
       client_id?: string;
       period_start?: string;
       period_end?: string;
+      lives_in_month?: number | null;
+      employees_in_month?: number | null;
+      platform_waived?: boolean;
     };
 
     const viewer = resolveSpineViewer(authResult.user, request);
     const clientId =
       viewer.role === 'client' ? viewer.client_id || SYNTHETIC_CLIENT_ID : body.client_id || SYNTHETIC_CLIENT_ID;
     const cfg = await getClientConfigService().getLatest(clientId);
-    const statement = await generateMonthlyStatement(
-      getMemoryBillableEventLedger(),
-      getMemoryStatementStore(),
-      {
-        client_id: clientId,
-        client_name: cfg?.config.legal_name,
-        period_start: body.period_start,
-        period_end: body.period_end,
-      },
-    );
+    const asOf = body.period_end ? new Date(body.period_end) : new Date();
+    const census = resolvePlatformCensus({
+      livesInMonth: body.lives_in_month,
+      employeesInMonth: body.employees_in_month,
+      waived: body.platform_waived,
+      config: cfg?.config,
+    });
+    const ledger = getBillableEventLedger();
+    await upsertMonthlyPlatformLine(ledger, {
+      clientId,
+      periodKey: periodKeyFromDate(asOf),
+      livesInMonth: census.livesInMonth,
+      pmpm: census.pmpm,
+      waived: census.waived,
+      occurredAt: asOf.toISOString(),
+    });
+    const statement = await generateMonthlyStatement(ledger, getMemoryStatementStore(), {
+      client_id: clientId,
+      client_name: cfg?.config.legal_name,
+      period_start: body.period_start,
+      period_end: body.period_end,
+      as_of: asOf,
+      lives_in_month: census.livesInMonth,
+      employees_in_month: census.employeesInMonth,
+      platform_pmpm: census.livesInMonth == null ? null : census.pmpm,
+      platform_waived: census.waived,
+    });
     return NextResponse.json({ statement }, { status: 201 });
   } catch (err) {
     return apiError(err, {

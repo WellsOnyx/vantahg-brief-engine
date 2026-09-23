@@ -2,7 +2,7 @@
  * Synthetic pack for the three role lenses. Tokenized refs only.
  */
 
-import { getMemoryBillableEventLedger } from '@/lib/billing/events';
+import { getBillableEventLedger } from '@/lib/billing/ledger';
 import { generateMonthlyStatement, getMemoryStatementStore } from '@/lib/billing/statement';
 import { getCaseSpineService, type CanonicalCase } from '@/lib/case-spine';
 import { createCxNote, getMemoryCxNoteStore } from '@/lib/cx';
@@ -146,7 +146,7 @@ export async function seedSyntheticRoleViews(actor = 'system'): Promise<{
     }),
   );
 
-  await generateMonthlyStatement(getMemoryBillableEventLedger(), getMemoryStatementStore(), {
+  await generateMonthlyStatement(getBillableEventLedger(), getMemoryStatementStore(), {
     client_id: SYNTHETIC_CLIENT_ID,
     client_name: 'Synthetic Staging TPA',
   });

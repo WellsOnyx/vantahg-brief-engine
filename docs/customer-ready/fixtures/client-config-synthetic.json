@@ -32,5 +32,8 @@
   "shadow_mode": false,
   "sla_miss_rollback_threshold": 0.2,
   "vanta_med_review_contract": true,
-  "med_review_provider": "vanta"
+  "med_review_provider": "vanta",
+  "lives_in_month": 1200,
+  "employees_in_month": 800,
+  "platform_fee_waived": false
 }

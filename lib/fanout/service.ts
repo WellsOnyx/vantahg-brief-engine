@@ -10,13 +10,16 @@
 import { randomUUID } from 'crypto';
 import { getEmailAdapter } from '@/lib/adapters/email';
 import {
-  getMemoryBillableEventLedger,
   recordBillableEventsForSign,
   type BillableEvent,
   type BillableEventLedger,
 } from '@/lib/billing/events';
+import { getBillableEventLedger } from '@/lib/billing/ledger';
+import { upsertUmReviewLine } from '@/lib/billing/um-invoice';
+import { isReviewRoute } from '@/lib/billing/um-price-card';
 import { getClientConfigService, isShadowMode, type ClientConfigService } from '@/lib/client-config';
 import { CaseSpineService, getCaseSpineService, type CanonicalCase, type FanoutStub } from '@/lib/case-spine';
+import { SYNTHETIC_CLIENT_ID } from '@/lib/intake/constants';
 import { getMemoryFanoutStore, type FanoutStore } from './store';
 import {
   FANOUT_MAX_ATTEMPTS,
@@ -82,7 +85,7 @@ export class FanoutService {
     return this.spineOverride ?? getCaseSpineService();
   }
   private get ledger(): BillableEventLedger {
-    return this.ledgerOverride ?? getMemoryBillableEventLedger();
+    return this.ledgerOverride ?? getBillableEventLedger();
   }
   private get store(): FanoutStore {
     return this.storeOverride ?? getMemoryFanoutStore();
@@ -210,14 +213,33 @@ export class FanoutService {
   }
 
   private async ensureBillable(c: CanonicalCase): Promise<BillableEvent[]> {
-    return recordBillableEventsForSign(this.ledger, {
+    const occurredAt = c.determined_at ?? this.now().toISOString();
+    let commercial: BillableEvent[] = (await this.ledger.getByCase(c.case_id)).filter(
+      (event) => event.sku === 'um_review' && event.status !== 'void',
+    );
+    if (commercial.length === 0 && c.bill_tier && isReviewRoute(c.bill_tier)) {
+      commercial = [
+        await upsertUmReviewLine(this.ledger, {
+          caseId: c.case_id,
+          clientId: c.client_id,
+          tier: c.bill_tier,
+          charge: c.charge_amount ?? 0,
+          cost: c.cost_amount ?? 0,
+          touchStack: c.touch_stack ?? [],
+          occurredAt,
+        }),
+      ];
+    }
+    if (c.client_id !== SYNTHETIC_CLIENT_ID) return commercial;
+    const legacy = await recordBillableEventsForSign(this.ledger, {
       billable_event_id: c.billable_event_id ?? randomUUID(),
       case_id: c.case_id,
       client_id: c.client_id,
       type: c.type,
       priority: c.priority,
-      occurred_at: c.determined_at ?? this.now().toISOString(),
+      occurred_at: occurredAt,
     });
+    return [...legacy, ...commercial];
   }
 
   private async deliverPortal(c: CanonicalCase): Promise<TargetResult> {

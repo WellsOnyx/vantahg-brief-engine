@@ -5,6 +5,18 @@ Future Claude/Cole/Jonah sessions: read this first.
 
 ---
 
+## 2026-09-23 — Two-line pricing wired into the billable path
+
+The Sep 23 card is what case close writes. No new dollar rates. No `ENABLE_AWS_*` flips. Packaging lock unchanged.
+
+- **Review:** route assignment and MD sign persist bill fields and upsert one `um_review` row (`lib/case-spine/service.ts`). Auto and gold-card post at **$0**. Highest touch updates that row. Legacy $45/$75/$25 SKUs stay on the synthetic go-live client only. Statements drop them when `um_review` exists.
+- **Platform:** `upsertMonthlyPlatformLine` from lives-in-month on `client_config` or the cron/statement request. Synthetic fixture census is **1,200 lives / 800 employees** (not the 500k / 333k planning denominators). Platform is not $0 unless `platform_fee_waived` / `platform_waived=true`.
+- **Statement:** HTML, PDF, and `/portal/tpa/statements` show Platform vs Clinical, including $0 auto/gold-card, with denominators labeled. Monthly cron remains `SYNTHETIC_CLIENT_ID` only.
+- **RDS:** `ENABLE_AWS_DB=true` uses `billable_events` (migrations 030/032). Otherwise memory.
+- **Ops note:** [`docs/customer-ready/14-billing-wire.md`](docs/customer-ready/14-billing-wire.md). Memo unchanged.
+
+---
+
 ## 2026-09-23 — Pricing memo sync (Jonah Manning, 23 Sep 2026)
 
 Docs aligned to [`docs/customer-ready/pricing-strategy-memo-2026-09-23.md`](docs/customer-ready/pricing-strategy-memo-2026-09-23.md). No new rates. `lib/billing/um-price-card.ts` dollar amounts unchanged. No `ENABLE_AWS_*` flips. Entitlement gate unchanged. Packaging unchanged: VantaUM sells Med Review; VantaHG = IRO + IDR only.

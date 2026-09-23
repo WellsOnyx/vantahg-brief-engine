@@ -123,6 +123,10 @@ export const SYNTHETIC_CLIENT_CONFIG_FIXTURE: ClientConfigFields = {
   // Synthetic staging is Vanta's own shop — Brief Engine included.
   vanta_med_review_contract: true,
   med_review_provider: 'vanta',
+  // Synthetic staging census Cole can edit. Not the 500k / 333k planning denominators.
+  lives_in_month: 1200,
+  employees_in_month: 800,
+  platform_fee_waived: false,
 };
 
 export const PUBLISH_SYNTHETIC_CONFIG_COMMAND = `curl -s -X POST http://localhost:3000/api/client-config \\

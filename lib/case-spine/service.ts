@@ -1,10 +1,10 @@
 import { randomUUID } from 'crypto';
 import {
-  getMemoryBillableEventLedger,
   recordBillableEventsForSign,
   type BillableEvent,
   type BillableEventLedger,
 } from '@/lib/billing/events';
+import { getBillableEventLedger } from '@/lib/billing/ledger';
 import { assertAiCannotDenyMedicalNecessity, assertNoGoldCardReviewFee } from '@/lib/billing/um-guards';
 import { upsertUmReviewLine } from '@/lib/billing/um-invoice';
 import {
@@ -17,6 +17,7 @@ import {
   type ReviewRoute,
 } from '@/lib/billing/um-price-card';
 import { getClientConfigService } from '@/lib/client-config';
+import { SYNTHETIC_CLIENT_ID } from '@/lib/intake/constants';
 import { UmBriefEngineEntitlementError } from '@/lib/entitlements/um-brief-engine';
 import {
   buildSyntheticBriefContent,
@@ -82,7 +83,7 @@ export class CaseSpineService {
   constructor(
     private readonly store: CaseSpineStore,
     private readonly now: () => Date = () => new Date(),
-    private readonly billing: BillableEventLedger = getMemoryBillableEventLedger(),
+    private readonly billing: BillableEventLedger = getBillableEventLedger(),
   ) {}
 
   async createCase(input: CreateCaseInput, actor = 'system'): Promise<CreateCaseResult> {
@@ -446,6 +447,44 @@ export class CaseSpineService {
     return { case: next, brief, audit };
   }
 
+  /**
+   * MD sign is an md touch when the current highest tier is below md.
+   * Gold-card stays $0. An existing md or external tier is upserted once,
+   * not stacked as a second fee. Legacy synthetic SKUs stay on the
+   * synthetic go-live client only.
+   */
+  private async ensureCommercialReviewOnSign(current: CanonicalCase, actor: string): Promise<CanonicalCase> {
+    if (isUmVoidOrDuplicate(current)) return current;
+    const stack = current.touch_stack ?? [];
+    const highest = stack.length > 0 ? highestTouch(stack) : null;
+    const belowMd = highest == null || highest === 'auto' || highest === 'nurse';
+    if (current.gold_card) {
+      if (!current.bill_tier || stack.length === 0) {
+        const routed = await this.assignReviewRoute(
+          current.case_id,
+          { touch: 'md', gold_card: true },
+          actor,
+        );
+        return routed.case;
+      }
+    } else if (belowMd) {
+      const routed = await this.assignReviewRoute(current.case_id, { touch: 'md' }, actor);
+      return routed.case;
+    }
+    if (current.bill_tier) {
+      await upsertUmReviewLine(this.billing, {
+        caseId: current.case_id,
+        clientId: current.client_id,
+        tier: current.bill_tier,
+        charge: current.charge_amount ?? 0,
+        cost: current.cost_amount ?? 0,
+        touchStack: stack,
+        occurredAt: this.now().toISOString(),
+      });
+    }
+    return current;
+  }
+
   async signDetermination(
     caseId: string,
     input: SignDeterminationInput,
@@ -491,17 +530,25 @@ export class CaseSpineService {
       determination: input.determination,
       denyReason,
     });
-    const billableEventId = randomUUID();
-    const ledgerRows = await recordBillableEventsForSign(this.billing, {
-      billable_event_id: billableEventId,
-      case_id: current.case_id,
-      client_id: current.client_id,
-      type: current.type,
-      priority: current.priority,
-      occurred_at: signedAt,
-    });
+    const priced = await this.ensureCommercialReviewOnSign(current, actor);
+    const legacyId = randomUUID();
+    const legacyRows =
+      priced.client_id === SYNTHETIC_CLIENT_ID
+        ? await recordBillableEventsForSign(this.billing, {
+            billable_event_id: legacyId,
+            case_id: priced.case_id,
+            client_id: priced.client_id,
+            type: priced.type,
+            priority: priced.priority,
+            occurred_at: signedAt,
+          })
+        : [];
+    const reviewRow = (await this.billing.getByCase(priced.case_id)).find(
+      (event) => event.sku === 'um_review' && event.status !== 'void',
+    );
+    const billableEventId = legacyRows[0]?.billable_event_id ?? reviewRow?.billable_event_id ?? legacyId;
     const pkg = buildDeterminationPackage({
-      case: current,
+      case: priced,
       brief,
       sign: { ...input, rationale },
       version: 1,
@@ -513,7 +560,7 @@ export class CaseSpineService {
     await this.store.insertPackage(pkg);
 
     const stamped: CanonicalCase = {
-      ...current,
+      ...priced,
       determination: input.determination,
       signer_id: actor,
       signed_rationale: rationale,
@@ -521,14 +568,14 @@ export class CaseSpineService {
       determination_package_version: pkg.version,
       determination_package_key: pkg.storage_key,
       billable_event_id: billableEventId,
-      cm_flags: input.cm_flags ? [...input.cm_flags] : [...current.cm_flags],
+      cm_flags: input.cm_flags ? [...input.cm_flags] : [...priced.cm_flags],
       fanout_stub: {
         enqueued_at: signedAt,
         status: 'pending',
         targets: ['F1_portal', 'F5_billing', 'F7_archive'],
       },
       billable_event_stub: {
-        billable_event_id: ledgerRows[0]?.billable_event_id ?? billableEventId,
+        billable_event_id: billableEventId,
         event: 'determination.signed',
         enqueued_at: signedAt,
       },

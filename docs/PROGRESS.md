@@ -32,6 +32,10 @@
 
 **CI (packaging guard):** `npm run test:ci` 480 passed (3 todo) on the guard merge. RDS-native bootstrap is on `main` via [#74](https://github.com/WellsOnyx/vantahg-brief-engine/pull/74). This runbook PR does not rewrite those scripts.
 
+## 2026-09-23 — Two-line card wired to the ledger
+
+Route assignment and MD sign upsert one `um_review` row from `lib/billing/um-price-card.ts`. Auto and gold-card post at $0. The synthetic go-live client still mints the legacy $45/$75/$25 SKUs; the statement drops those rows when `um_review` exists. Monthly `um_platform` comes from lives-in-month (fixture: 1,200 lives / 800 employees — not the planning denominators). Operator steps: [`14-billing-wire.md`](customer-ready/14-billing-wire.md). Platform stays $1.50 unless an explicit fat-TPA waiver. No live PHI.
+
 ## 2026-09-23 — Pricing memo sync (Jonah Manning)
 
 Working decision memo: [`pricing-strategy-memo-2026-09-23.md`](customer-ready/pricing-strategy-memo-2026-09-23.md). Rate card and [`um-pricing-rules.md`](customer-ready/um-pricing-rules.md) point at it. Dollar amounts in `lib/billing/um-price-card.ts` are unchanged.
