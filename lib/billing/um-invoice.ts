@@ -10,7 +10,7 @@ import {
   type BillableEvent,
   type BillableEventLedger,
 } from './events';
-import { assertNoAutoReviewFee } from './um-guards';
+import { assertNoAutoReviewFee, assertNoGoldCardReviewFee } from './um-guards';
 import {
   resolvePlatformPmpm,
   reviewCharge,
@@ -26,6 +26,8 @@ export interface UmInvoiceCase {
   charge_amount: number | null;
   cost_amount: number | null;
   excluded: boolean;
+  /** R19. When true the review line must be $0. It still posts. */
+  gold_card?: boolean;
 }
 
 export interface UmInvoiceReviewLine {
@@ -83,6 +85,7 @@ export function buildTwoLineInvoice(input: {
     const quote = requireCriteriaCogs(row.bill_tier);
     const unit = row.charge_amount ?? reviewCharge(row.bill_tier, 0);
     assertNoAutoReviewFee(row.bill_tier, unit);
+    assertNoGoldCardReviewFee(row.gold_card === true, unit);
     const cost = row.cost_amount ?? quote.fully_loaded_cost;
     reviews.push({
       case_id: row.case_id,

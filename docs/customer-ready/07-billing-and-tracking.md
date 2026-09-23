@@ -9,7 +9,7 @@
 **Prices (superseded 2026-09-23):** two lines, not a review-only card. Canonical card: [`um-unit-economics-rate-card.md`](um-unit-economics-rate-card.md). Rule index: [`um-pricing-rules.md`](um-pricing-rules.md). Config: `lib/billing/um-price-card.ts`.
 
 1. **Platform** membership, default **$1.50 PMPM** (band $1.25–$1.75, floor $1.25). Never steps down. $0 only when explicitly waived inside a fat TPA admin PEPM. Do not treat “Brief Engine included” as a $0 platform. That conflict is an open question on the rate card.
-2. **Clinical review**, one tier per case: rules/auto **$0** (row still posts), nurse **$85**, MD **$200**, external **$350**. Highest touch bills once. Pricing rule R16 steps the review prices down with the trailing-90-day auto-rate. Fully loaded costs: rules $3, nurse $35, MD $80, external $280.
+2. **Clinical review**, one tier per case: rules/auto **$0** (row still posts), nurse **$85**, MD **$200**, external **$350**. Highest touch bills once. A gold-carded provider posts at **$0** like auto (R19) and is not billable. Pricing rule R16 steps the review prices down with the trailing-90-day auto-rate. Platform never steps down. Fully loaded costs: rules $3, nurse $35, MD $80, external $280. Gold-card uses the rules cost ($3).
 
 Legacy ledger SKUs (`prior_auth`, `first_level_appeal`, `rush_addon`) remain the synthetic usage schedule. Commercial rows are `um_review` and `um_platform`. A monthly statement drops the legacy rows for a case that already has `um_review`, so the two schedules are not added together.
 

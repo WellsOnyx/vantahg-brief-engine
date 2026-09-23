@@ -31,11 +31,11 @@ bill_tier             # highest touch; the only review line
 charge_amount
 cost_amount
 auto_reason
-gold_card
+gold_card             # true ⇒ route auto, billable false, charge 0, row still posts at $0 (R19)
 touch_stack[]         # every touch; invoice uses bill_tier once
 ```
 
-Two-line prices: [`um-unit-economics-rate-card.md`](um-unit-economics-rate-card.md). Rules/auto still posts a review row at $0.
+Two-line prices: [`um-unit-economics-rate-card.md`](um-unit-economics-rate-card.md). Rules/auto and gold-card still post a review row at $0.
 
 ## View: Client portal
 

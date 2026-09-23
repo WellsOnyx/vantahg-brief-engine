@@ -14,11 +14,15 @@ Packaging lock stays in [`01-product-boundary.md`](01-product-boundary.md). Ledg
 
 Never print a rate that is both PEPM and PMPM without both labels.
 
-## OPEN QUESTION — platform fee vs “Brief Engine included free”
+## OPEN QUESTION — does Med Review waive platform, or only auto review?
+
+**Does the Med Review wedge waive the $1.50 platform, or only the $0 auto review?**
+
+Do not resolve this. Platform remains **NOT $0** under Med Review unless a fat-TPA waiver.
 
 The packaging lock says Brief Engine / UM is included free **only** under a Vanta med-review contract. This card adds a **separate platform membership**.
 
-- Do **not** read the packaging lock as “platform is $0 under Med Review.” The docs do not say that.
+- Do **not** read the packaging lock as “platform is $0 under Med Review.”
 - Default platform price on this card is **$1.50 PMPM**.
 - **$0 platform** is allowed only when the fee sits inside a fat TPA admin PEPM that already carries criteria + rails. No dollar threshold for “fat” was locked. Code waives platform only when a caller sets that waiver explicitly. It does not infer $0 from `vanta_med_review_contract`.
 
@@ -51,7 +55,7 @@ Highest touch bills **once**. Touches are not stacked.
 
 External card charge $350 = cost $280 + $70, inside the list band. The ≥70% contract step-down ($315) is **below** that list band. It is still the contract price.
 
-Gold-card is a case flag. This lock does not say it changes the charge. **TODO:** price effect of `gold_card` was not specified. Code stores the flag and bills the tier.
+**Gold-card (R8, R19):** a gold-carded provider routes to auto. No review fee. `billable` is false, `charge_amount` is 0, and the review row still posts at $0 like auto. Cost on that row is the locked rules/auto cost **$3**, not a new rate. The flag sticks: a later clinical touch on that case stays $0. Intake, fax, portal, eligibility, criteria, and a gold-card pass are not billable (R3).
 
 ## Base mix on 750k inbound
 
@@ -132,10 +136,17 @@ Trailing **90-day** auto-rate. Platform never moves.
 
 **TODO:** below 50% has no separate band. Code uses card prices. Do not add a premium.
 
-Auto-rate = auto_count / inbound_count after voids and duplicates are removed. Final tier is what counts (the mix is mutually exclusive). A case that later goes to a nurse is not still “auto.”
+Auto-rate = auto_count / inbound_count after voids and duplicates are removed. Final tier is what counts (the mix is mutually exclusive). A case that later goes to a nurse is not still “auto.” A gold-card case counts as auto.
+
+Publish the auto-rate **quarterly** (R6, R17). Target **≥55% by month 12**. If auto ≥60% then ≥70%, review fees step down per the table above. Platform never steps down.
+
+## Quote cap and first-pass (locked, not new rates)
+
+- **R18.** MD + external modeled cap for quotes: **12% of inbound**. Base mix is already 9% + 3%. This is a quote cap, not a per-case billing gate. Do not back-solve lean/heavy nurse-MD-external volume from the sensitivity totals.
+- **R7.** First-pass approval target **≥90%**. Appeals are a cost center, not a fee center, unless the client buys the appeals module.
+- **First-pass definition for the dashboard tile:** a determination approved without appeal or overturn in the first clinical pass. The case object has no single field for overturn versus first clinical pass, so the tile stays an em dash. **TODO:** compute it when that field exists.
+- **R17.** Quarterly report to the group: auto-rate + first-pass + MD-rate.
 
 ## What this card does not carry forward
 
-The review-only card’s 733k-lives illustration, vendor-retail comparison, and operating targets (auto ≥55%, nurse minutes, MD ≤8%, external ≤2.5%, first-pass ≥90%) were **not** restated in this lock. Do not keep using them as canonical. **TODO** if Jonah still wants those targets.
-
-First-pass % is a dashboard tile with **no definition** in this lock. The tile renders as unknown until that definition exists.
+The review-only card’s 733k-lives illustration, vendor-retail comparison, nurse **≤18 min**, MD **≤8%** as a separate operating target, and external **≤2.5%** as a separate operating target were **not** restated. Do not keep using them as canonical. The locks that **did** come back are above: auto ≥55% by month 12, first-pass ≥90%, and MD + external **together** at a 12% quote cap.

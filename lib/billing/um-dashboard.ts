@@ -2,7 +2,8 @@
  * Dashboard tiles for the two-line card.
  * Planning-lock tiles use the published denominators.
  * Book tiles are the in-memory / live case mix and are labeled separately.
- * First-pass % has no definition in the 2026-09-23 lock.
+ * First-pass intent is locked. The tile stays unknown until the case
+ * object can mark appeal/overturn on the first clinical pass.
  */
 
 import {
@@ -15,7 +16,7 @@ import {
 } from './um-price-card';
 
 export const FIRST_PASS_TODO =
-  'TODO: first-pass % was named as a tile but not defined in the 2026-09-23 lock';
+  'TODO: first-pass means a determination approved without appeal or overturn in the first clinical pass. The case object has no single overturn / first-clinical-pass field, so this tile stays an em dash.';
 
 export interface UmPricingTiles {
   scope: 'planning_lock' | 'book';

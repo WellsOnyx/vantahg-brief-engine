@@ -73,6 +73,12 @@ export const UM_PRICE_CARD = {
   ],
 } as const;
 
+/**
+ * R18. Quote model only: MD + external together are capped at 12% of inbound.
+ * Not a per-case billing gate. Base mix is 9% + 3% = 12%.
+ */
+export const MD_EXTERNAL_QUOTE_CAP = 0.12;
+
 /** Mutually exclusive base mix on 750k inbound. */
 export const BASE_MIX = {
   auto: { share: 0.5, count: 375_000 },
@@ -257,6 +263,26 @@ export function priceTouchStack(input: {
   excluded?: boolean;
 }): UmCasePricingFields {
   const tier = highestTouch(input.touchStack);
+  const goldCard = input.goldCard === true;
+  const touchStack = [...input.touchStack];
+
+  // R8 + R19. Gold-card routes to auto. No review fee. The row still posts at $0.
+  // Cost is the locked rules/auto cost ($3), not a new rate. Touch stack is kept.
+  if (goldCard) {
+    const charge = 0;
+    const cost = input.excluded ? 0 : reviewCost('auto');
+    return {
+      route: 'auto',
+      billable: false,
+      bill_tier: 'auto',
+      charge_amount: charge,
+      cost_amount: cost,
+      auto_reason: input.autoReason ?? 'gold_card',
+      gold_card: true,
+      touch_stack: touchStack,
+    };
+  }
+
   const charge = input.excluded ? 0 : reviewCharge(tier, input.autoRateValue);
   const cost = input.excluded ? 0 : reviewCost(tier);
   return {
@@ -266,8 +292,8 @@ export function priceTouchStack(input: {
     charge_amount: charge,
     cost_amount: cost,
     auto_reason: input.autoReason ?? null,
-    gold_card: input.goldCard ?? false,
-    touch_stack: [...input.touchStack],
+    gold_card: false,
+    touch_stack: touchStack,
   };
 }
 
