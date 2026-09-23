@@ -16,7 +16,7 @@ Onboarding is a **sellable checklist** first, software second. Every step produc
 
 ### Fee schedule (minimum fields)
 
-**VantaUM sells Med Review** (paid wedge). Do not invent prices here. Do not sell UM as a standalone SKU. Do not include free UM with a third-party review shop. **VantaHG = IRO + IDR only.**
+**VantaUM sells Med Review** (paid wedge). Do not invent a second price list here. Locked planning card: [`um-unit-economics-rate-card.md`](um-unit-economics-rate-card.md) (rules-only/auto not billed; nurse / MD / external peer billed). Do not sell UM as a standalone SKU. Do not include free UM with a third-party review shop. **VantaHG = IRO + IDR only.**
 
 - Vanta med-review contract under **UM** (paid wedge)
 - UM Brief Engine included free **only** when `vanta_med_review_contract` is true and `med_review_provider=vanta`

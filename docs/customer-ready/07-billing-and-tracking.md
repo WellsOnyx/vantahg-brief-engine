@@ -4,7 +4,9 @@
 
 **Case events create money events.** Do not bill from memory or spreadsheets as system of record.
 
-**Packaging (corrected 2026-09-21):** **VantaUM sells Med Review** as the paid wedge. Ledger SKUs (`prior_auth`, `first_level_appeal`, `rush_addon`) are **usage tracking** under UM’s Vanta med-review contract — not a standalone UM storefront, and not free UM with a third-party review shop. **VantaHG = IRO + IDR only.** Do not invent prices here. Free Brief Engine access is gated by `client_config.vanta_med_review_contract` and `med_review_provider=vanta`.
+**Packaging (corrected 2026-09-21):** **VantaUM sells Med Review** as the paid wedge. Ledger SKUs (`prior_auth`, `first_level_appeal`, `rush_addon`) are **usage tracking** under UM’s Vanta med-review contract — not a standalone UM storefront, and not free UM with a third-party review shop. **VantaHG = IRO + IDR only.** Free Brief Engine access is gated by `client_config.vanta_med_review_contract` and `med_review_provider=vanta`. Entitlement gate unchanged.
+
+**Prices (locked 2026-09-23):** do not invent a second card in this file. Canonical planning rate card: [`um-unit-economics-rate-card.md`](um-unit-economics-rate-card.md). Rules-only / auto is **not billed** (Brief Engine value). Nurse, physician/MD, and external peer **are billed**.
 
 ## Billable event
 

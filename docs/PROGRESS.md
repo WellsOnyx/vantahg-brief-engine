@@ -32,6 +32,12 @@
 
 **CI (packaging guard):** `npm run test:ci` 480 passed (3 todo) on the guard merge. RDS-native bootstrap is on `main` via [#74](https://github.com/WellsOnyx/vantahg-brief-engine/pull/74). This runbook PR does not rewrite those scripts.
 
+## 2026-09-23 — UM unit economics rate card
+
+Planning lock only. Canonical card: [`docs/customer-ready/um-unit-economics-rate-card.md`](customer-ready/um-unit-economics-rate-card.md). Indexed from [`00-README.md`](customer-ready/00-README.md), [`01-product-boundary.md`](customer-ready/01-product-boundary.md), [`02-onboarding.md`](customer-ready/02-onboarding.md), and [`07-billing-and-tracking.md`](customer-ready/07-billing-and-tracking.md).
+
+333k EE / 500k lives / 750k auths. Base: **$45.61M** revenue, **$22.80M** contribution, **$11.42 PEPM / $7.61 PMPM** billed. Rules-only / auto **not billed**. Nurse, physician/MD, and external peer **billed**. Packaging unchanged: VantaUM sells Med Review; Brief Engine free only under the Vanta med-review contract; VantaHG = IRO + IDR only; Optum frozen. Entitlement gate not touched.
+
 ## Not started / paused
 
 | Phase | Status |

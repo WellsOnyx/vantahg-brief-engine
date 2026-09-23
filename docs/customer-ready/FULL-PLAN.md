@@ -39,7 +39,7 @@ A TPA or self-insured employer can:
 | 04 | Case object & role views | Client / CX / Med review dashboards |
 | 05 | Determination fan-out | Where signed decisions go |
 | 06 | HIPAA & BAA path | Compliance gates before live PHI |
-| 07 | Billing & tracking | Events → ledger → invoice |
+| 07 | Billing & tracking | Events → ledger → invoice. Prices: [um-unit-economics-rate-card.md](um-unit-economics-rate-card.md) |
 | 08 | Reporting | MVP reports + exports |
 | 09 | Care management connect | Flags, webhook, CSV — not Epic day one |
 | 10 | Implementation commits | Exact build sequence + owners + acceptance |
@@ -132,7 +132,7 @@ Onboarding is a **sellable checklist** first, software second. Every step produc
 
 ### Fee schedule (minimum fields)
 
-**VantaUM sells Med Review** (paid wedge). Do not invent prices here. Do not sell UM as a standalone SKU. Do not include free UM with a third-party review shop. **VantaHG = IRO + IDR only.**
+**VantaUM sells Med Review** (paid wedge). Do not invent a second price list here. Locked planning card: [um-unit-economics-rate-card.md](um-unit-economics-rate-card.md) (rules-only/auto not billed; nurse / MD / external peer billed). Do not sell UM as a standalone SKU. Do not include free UM with a third-party review shop. **VantaHG = IRO + IDR only.**
 
 - Vanta med-review contract under **UM** (paid wedge)
 - UM Brief Engine included free **only** when `vanta_med_review_contract` is true and `med_review_provider=vanta`
@@ -482,6 +482,8 @@ No silent overwrite; amendments = new version + link.
 ## Principle
 
 **Case events create money events.** Do not bill from memory or spreadsheets as system of record.
+
+**Prices:** locked planning card is [um-unit-economics-rate-card.md](um-unit-economics-rate-card.md). Rules-only / auto is not billed. Nurse, physician/MD, and external peer are billed. VantaUM sells Med Review. Brief Engine is free only under the Vanta med-review contract. VantaHG = IRO + IDR only. Do not invent a second card here.
 
 ## Billable event
 

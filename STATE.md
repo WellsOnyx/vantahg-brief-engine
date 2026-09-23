@@ -5,6 +5,18 @@ Future Claude/Cole/Jonah sessions: read this first.
 
 ---
 
+## 2026-09-23 — UM unit economics rate card (planning lock)
+
+Commercial doc only. Packaging lock unchanged. Entitlement gate unchanged (`lib/entitlements/um-brief-engine.ts`). No `ENABLE_AWS_*` flips.
+
+- **Canonical card:** [`docs/customer-ready/um-unit-economics-rate-card.md`](docs/customer-ready/um-unit-economics-rate-card.md).
+- Planning case: 333k EE / 500k lives / 750k auths. Base billable 375k (50%). Revenue **$45.61M**, variable COGS **$22.81M**, contribution **$22.80M**. Billed UM **$11.42 PEPM / $7.61 PMPM**.
+- **Rules-only / auto is not billed** (Brief Engine value). **Nurse, physician/MD, and external peer are billed.**
+- VantaUM still sells Med Review as the paid wedge. Brief Engine / UM stays free only under the Vanta med-review contract. **VantaHG = IRO + IDR only.** Optum frozen.
+- Ledger behavior in [`07-billing-and-tracking.md`](docs/customer-ready/07-billing-and-tracking.md) is unchanged. This card is the price source; it is not a new SKU.
+
+---
+
 ## 2026-09-21 — Phase 8 Muse CX stub + go-live ops punch list
 
 Two customer-ready increments. Packaging lock unchanged. Gravity Rail intake unchanged. No `ENABLE_AWS_*` default flips. No live Muse HTTP. No PHI in Muse.
