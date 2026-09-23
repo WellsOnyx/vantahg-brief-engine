@@ -126,6 +126,10 @@ export function resetMemoryBillableEventLedger(): MemoryBillableEventLedger {
   return memorySingleton;
 }
 
+export function isLegacyLedgerSku(sku: string): sku is BillableSku {
+  return (BILLABLE_SKUS as readonly string[]).includes(sku);
+}
+
 export function skuForWorkflow(type: AuthWorkflowType): BillableSku {
   return type === 'first_level_appeal' ? 'first_level_appeal' : 'prior_auth';
 }
@@ -172,7 +176,11 @@ export async function recordBillableEventsForSign(
   },
 ): Promise<BillableEvent[]> {
   const existing = await ledger.getByCase(input.case_id);
-  if (existing.length > 0) return existing;
+  const legacy = existing.filter((event) => isLegacyLedgerSku(event.sku) && event.status !== 'void');
+  const primarySku = skuForWorkflow(input.type);
+  // A commercial um_review row is not the synthetic schedule. Only a
+  // primary legacy SKU short-circuits this mint.
+  if (legacy.some((event) => event.sku === primarySku)) return legacy;
 
   const primary = mintBillableEvent({
     billable_event_id: input.billable_event_id,

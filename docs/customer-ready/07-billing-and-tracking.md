@@ -13,6 +13,16 @@
 
 Legacy ledger SKUs (`prior_auth`, `first_level_appeal`, `rush_addon`) remain the synthetic usage schedule. Commercial rows are `um_review` and `um_platform`. A monthly statement drops the legacy rows for a case that already has `um_review`, so the two schedules are not added together.
 
+## Wired path (2026-09-23)
+
+Case close writes the card. It does not recompute a second price.
+
+1. **Review line.** `POST /api/case-spine/[id]/review-route` with `touch` `auto|nurse|md|external` (optional `gold_card`, optional `trailing_auto_rate`) persists `route`, `billable`, `bill_tier`, `charge_amount`, `cost_amount`, `touch_stack` and upserts one `um_review` row. Auto and gold-card post at **$0** and are not billable. Highest touch updates that same row. MD sign (`POST /api/case-spine/[id]/sign`) does the same: an md touch when the current tier is below md, otherwise an upsert of the tier already on the case. Gold-card stays $0.
+2. **Legacy SKUs.** `recordBillableEventsForSign` ($45 / $75 / $25) still runs for the synthetic go-live client only (`SYNTHETIC_CLIENT_ID`). Other clients get `um_review` only. The statement uses `selectCommercialLedgerRows`, so a case with `um_review` is not also billed the synthetic SKU.
+3. **Platform line.** One `um_platform` row per client per month from **lives-in-month** (operator input, not the 500k planning denominator). See [`14-billing-wire.md`](14-billing-wire.md). $0 only with an explicit fat-TPA waiver (`platform_fee_waived` or `platform_waived=true`). Med Review does not waive it.
+4. **Statement.** HTML/PDF and `/portal/tpa/statements` show Platform PMPM and clinical lines by tier, including $0 auto/gold-card, with PEPM/PMPM denominators labeled. The monthly cron stays synthetic-client only.
+5. **Store.** `ENABLE_AWS_DB=true` writes `billable_events` through migrations 030/032. Otherwise the memory ledger. No new dollar rates.
+
 ## Billable event
 
 Created on R13 (MD signed), unless fee schedule says otherwise (e.g. cancel rules).

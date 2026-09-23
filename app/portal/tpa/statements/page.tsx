@@ -12,6 +12,29 @@ interface StatementEvent {
   quantity: number;
   unit_price: number;
   status: string;
+  bill_tier?: string | null;
+}
+
+interface ClinicalLine {
+  tier: string;
+  label: string;
+  case_id: string;
+  amount: number;
+  zero_priced: boolean;
+}
+
+interface StatementTwoLine {
+  platform: {
+    present: boolean;
+    label: string;
+    amount: number;
+    lives_in_month: number | null;
+    pmpm: number | null;
+    waived: boolean;
+  };
+  clinical: ClinicalLine[];
+  review_amount: number;
+  denominator_label: string;
 }
 
 interface BillingStatement {
@@ -24,6 +47,7 @@ interface BillingStatement {
   status: string;
   events: StatementEvent[];
   subtotal: number;
+  two_line?: StatementTwoLine | null;
 }
 
 function money(n: number) {
@@ -74,7 +98,7 @@ export default function TpaStatementsPage() {
         <PageHero
           eyebrow="TPA Portal"
           title="Monthly statement"
-          subtitle="Open billable events grouped for the synthetic staging client."
+          subtitle="Platform PMPM plus one clinical review tier. Rules/auto and gold-card post at $0."
           actions={
             <button type="button" className="btn btn-primary" onClick={() => void generate()} disabled={busy}>
               {busy ? 'Generating…' : 'Generate this month'}
@@ -147,6 +171,47 @@ export default function TpaStatementsPage() {
               {selected.events.length} open event{selected.events.length === 1 ? '' : 's'} · draft ·{' '}
               {money(selected.subtotal)}
             </p>
+            {selected.two_line ? (
+              <div className="space-y-4">
+                <p className="text-xs text-muted">{selected.two_line.denominator_label}</p>
+                <div>
+                  <h4 className="text-sm font-medium text-navy mb-2">Platform</h4>
+                  <p className="text-sm">
+                    {selected.two_line.platform.present
+                      ? `${selected.two_line.platform.label} · ${money(selected.two_line.platform.amount)}`
+                      : 'Platform line not posted. Supply lives-in-month. The $1.50 PMPM is not waived unless platform_fee_waived is set.'}
+                  </p>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium text-navy mb-2">Clinical review</h4>
+                  <table className="min-w-full text-sm">
+                    <thead className="text-xs uppercase tracking-wide text-muted">
+                      <tr>
+                        <th className="text-left py-2">Tier</th>
+                        <th className="text-left py-2">Case</th>
+                        <th className="text-right py-2">Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {selected.two_line.clinical.length === 0 && (
+                        <tr>
+                          <td className="py-2" colSpan={3}>
+                            No review lines.
+                          </td>
+                        </tr>
+                      )}
+                      {selected.two_line.clinical.map((line) => (
+                        <tr key={`${line.case_id}-${line.tier}`}>
+                          <td className="py-2">{line.zero_priced ? `${line.label} ($0)` : line.label}</td>
+                          <td className="py-2 font-mono text-xs">{line.case_id}</td>
+                          <td className="py-2 text-right">{money(line.amount)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : (
             <table className="min-w-full text-sm">
               <thead className="text-xs uppercase tracking-wide text-muted">
                 <tr>
@@ -165,6 +230,7 @@ export default function TpaStatementsPage() {
                 ))}
               </tbody>
             </table>
+            )}
           </div>
         )}
       </div>

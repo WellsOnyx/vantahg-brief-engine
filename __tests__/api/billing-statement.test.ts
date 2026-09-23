@@ -102,8 +102,11 @@ describe('billing statement API', () => {
     expect(stmtRes.status).toBe(201);
     const stmt = await stmtRes.json();
     expect(stmt.statement.events.length).toBeGreaterThanOrEqual(1);
-    expect(stmt.statement.events.some((e: { case_id: string }) => e.case_id === caseId)).toBe(true);
-    expect(stmt.statement.html).toContain('prior_auth');
+    expect(stmt.statement.events.some((e: { case_id: string; sku: string }) => e.case_id === caseId && e.sku === 'um_review')).toBe(true);
+    expect(stmt.statement.events.some((e: { sku: string }) => e.sku === 'prior_auth')).toBe(false);
+    expect(stmt.statement.html).toContain('Clinical review');
+    expect(stmt.statement.html).toContain('um_review');
+    expect(stmt.statement.html).not.toContain('prior_auth');
     expect(stmt.statement.events.every((e: { status: string }) => e.status === 'open')).toBe(true);
     expect(
       stmt.statement.events.every(
@@ -120,7 +123,10 @@ describe('billing statement API', () => {
     );
     expect(htmlRes.status).toBe(200);
     expect(htmlRes.headers.get('content-type')).toContain('text/html');
-    expect(await htmlRes.text()).toContain('prior_auth');
+    const html = await htmlRes.text();
+    expect(html).toContain('um_review');
+    expect(html).toContain('Clinical review');
+    expect(html).not.toContain('prior_auth');
 
     const pdfRes = await getStatement(
       new Request(

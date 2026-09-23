@@ -69,6 +69,21 @@ export interface ClientConfigFields {
   vanta_med_review_contract: boolean;
   /** Who performs med review. `third_party` never gets free UM. */
   med_review_provider: 'vanta' | 'third_party' | 'none';
+  /**
+   * Operator-supplied census for the billing month.
+   * Not the 500k planning PMPM denominator.
+   */
+  lives_in_month?: number | null;
+  /**
+   * Operator-supplied employee count for the billing month.
+   * Not the 333k planning PEPM denominator.
+   */
+  employees_in_month?: number | null;
+  /**
+   * Explicit fat-TPA waiver. Platform is $0 only when this is true.
+   * Med Review packaging does not set it.
+   */
+  platform_fee_waived?: boolean;
 }
 
 export interface ClientConfigVersion {

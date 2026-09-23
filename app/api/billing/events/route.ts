@@ -3,7 +3,8 @@ import { requireAuth } from '@/lib/auth-guard';
 import { applyRateLimit } from '@/lib/rate-limit-middleware';
 import { apiError } from '@/lib/api-error';
 import { getRequestContext } from '@/lib/security';
-import { getMemoryBillableEventLedger, type BillableStatus } from '@/lib/billing/events';
+import { type BillableStatus } from '@/lib/billing/events';
+import { getBillableEventLedger } from '@/lib/billing/ledger';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,7 +20,7 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status') as BillableStatus | null;
     const caseId = searchParams.get('case_id');
 
-    const ledger = getMemoryBillableEventLedger();
+    const ledger = getBillableEventLedger();
     const events = caseId
       ? await ledger.getByCase(caseId)
       : await ledger.list({
