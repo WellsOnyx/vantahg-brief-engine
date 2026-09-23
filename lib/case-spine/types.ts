@@ -6,6 +6,8 @@
  * Spine fields live in additive columns and this module.
  */
 
+import type { ReviewRoute } from '@/lib/billing/um-price-card';
+
 export const AUTH_WORKFLOW_TYPES = ['prior_auth', 'first_level_appeal'] as const;
 export type AuthWorkflowType = (typeof AUTH_WORKFLOW_TYPES)[number];
 
@@ -289,6 +291,17 @@ export interface CanonicalCase {
   determination_package_key: string | null;
   fanout_stub: FanoutStub | null;
   billable_event_stub: BillableEventStub | null;
+  /** Final invoiced tier: auto | nurse | md | external. Null until routed. */
+  route: ReviewRoute | null;
+  /** True when the invoiced tier carries a review fee. Rules/auto is false and still posts at $0. */
+  billable: boolean;
+  bill_tier: ReviewRoute | null;
+  charge_amount: number | null;
+  cost_amount: number | null;
+  auto_reason: string | null;
+  gold_card: boolean;
+  /** Every touch, including ones that are not invoiced. Highest touch bills once. */
+  touch_stack: ReviewRoute[];
 }
 
 export interface AuditEvent {
@@ -400,6 +413,8 @@ export interface SignDeterminationInput {
   rationale: string;
   cm_flags?: CmFlag[];
   deny_reason_code?: DenyReasonCode | null;
+  /** Defaults to clinician. `ai` cannot deny medical necessity (pricing rule R9). */
+  actor_kind?: 'ai' | 'clinician';
   session_refs?: {
     ip?: string | null;
     request_id?: string | null;

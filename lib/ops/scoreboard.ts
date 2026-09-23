@@ -12,6 +12,7 @@ import {
   type CanonicalCase,
   type SpineViewer,
 } from '@/lib/case-spine';
+import { bookTiles, planningLockTiles, type UmPricingTiles } from '@/lib/billing/um-dashboard';
 import { getMemoryFanoutStore } from '@/lib/fanout/store';
 
 export type ScoreableCase = Pick<CanonicalCase, 'state' | 'fanout_status' | 'open_tasks'>;
@@ -46,6 +47,10 @@ export interface OpsScoreboard {
   fanout: FanoutScore;
   stuck: StuckScore;
   escalations: EscalationScore;
+  um_pricing: {
+    planning: UmPricingTiles;
+    book: UmPricingTiles;
+  };
 }
 
 export function fanoutFailRate(complete: number, failed: number): number {
@@ -114,5 +119,9 @@ export async function buildOpsScoreboard(
     fanout: scoreFanout(cases, tasks.length),
     stuck: scoreStuck(cases),
     escalations: scoreEscalations(cases),
+    um_pricing: {
+      planning: planningLockTiles(),
+      book: bookTiles(cases),
+    },
   };
 }

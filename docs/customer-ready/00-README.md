@@ -46,7 +46,8 @@ A TPA or self-insured employer can:
 | 11 | Cole A→E runbook | Operator steps so Cole can run onboarding without tribal knowledge |
 | 12 | Muse connector (Phase 8 stub) | CX-only relationship surface. No PHI. Not live-keyed |
 | 13 | Go-live ops punch list | Ordered env, RDS `027`, bootstrap, A–E, BAA. No live PHI until the BAA path is confirmed |
-| — | [um-unit-economics-rate-card.md](um-unit-economics-rate-card.md) | Locked 2026-09-23 planning rate card. Rules-only/auto not billed; nurse / MD / external peer billed. Not a new SKU |
+| — | [um-unit-economics-rate-card.md](um-unit-economics-rate-card.md) | Two-line card (2026-09-23): platform PMPM + clinical review. Supersedes the review-only card. |
+| — | [um-pricing-rules.md](um-pricing-rules.md) | R1–R20, B1–B10, D1–D8 handoff. Missing rule text is marked TODO. |
 | — | [lint-hydrate-allowlist.md](lint-hydrate-allowlist.md) | Five intentional `set-state-in-effect` hydrate sites; lint is otherwise fail-closed |
 
 ## Related in-flight

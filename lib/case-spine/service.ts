@@ -2,8 +2,20 @@ import { randomUUID } from 'crypto';
 import {
   getMemoryBillableEventLedger,
   recordBillableEventsForSign,
+  type BillableEvent,
   type BillableEventLedger,
 } from '@/lib/billing/events';
+import { assertAiCannotDenyMedicalNecessity } from '@/lib/billing/um-guards';
+import { upsertUmReviewLine } from '@/lib/billing/um-invoice';
+import {
+  blankUmPricing,
+  highestTouch,
+  isReviewRoute,
+  isUmVoidOrDuplicate,
+  priceTouchStack,
+  trailingAutoRate,
+  type ReviewRoute,
+} from '@/lib/billing/um-price-card';
 import { getClientConfigService } from '@/lib/client-config';
 import { UmBriefEngineEntitlementError } from '@/lib/entitlements/um-brief-engine';
 import {
@@ -116,6 +128,7 @@ export class CaseSpineService {
       determination_package_key: null,
       fanout_stub: null,
       billable_event_stub: null,
+      ...blankUmPricing(),
       intake: {
         ...input.intake,
         external_id: input.external_id ?? input.intake?.external_id ?? null,
@@ -277,6 +290,94 @@ export class CaseSpineService {
     return this.listCases(viewer, { state: 'md_queue' });
   }
 
+  /**
+   * Append a review touch, persist the stack, and upsert one UM review
+   * ledger row at the highest tier. Rules/auto posts at $0.
+   * Voids and duplicates stay off the invoice.
+   */
+  async assignReviewRoute(
+    caseId: string,
+    input: {
+      touch: ReviewRoute;
+      auto_reason?: string | null;
+      gold_card?: boolean;
+      trailing_auto_rate?: number;
+    },
+    actor = 'system',
+  ): Promise<{ case: CanonicalCase; review_event: BillableEvent | null }> {
+    if (!isReviewRoute(input.touch)) {
+      throw new Error('review route must be auto|nurse|md|external');
+    }
+    const current = await this.requireCase(caseId);
+    const now = this.now();
+    const touchStack = [...current.touch_stack, input.touch];
+    const excluded = isUmVoidOrDuplicate(current);
+    const previewTier = highestTouch(touchStack);
+    const others = (await this.store.listCases()).filter((row) => row.case_id !== caseId);
+    const rate =
+      input.trailing_auto_rate ??
+      trailingAutoRate(
+        [
+          ...others.map((row) => ({
+            route: row.route,
+            state: row.state,
+            duplicate_of_case_id: row.duplicate_of_case_id,
+            received_at: row.received_at,
+          })),
+          {
+            route: previewTier,
+            state: current.state,
+            duplicate_of_case_id: current.duplicate_of_case_id,
+            received_at: current.received_at,
+          },
+        ],
+        now,
+      );
+    const priced = priceTouchStack({
+      touchStack,
+      autoRateValue: rate,
+      autoReason: input.auto_reason ?? current.auto_reason,
+      goldCard: input.gold_card ?? current.gold_card,
+      excluded,
+    });
+    const next: CanonicalCase = {
+      ...current,
+      ...priced,
+      packet_storage_keys: [...current.packet_storage_keys],
+      cm_flags: [...current.cm_flags],
+      open_tasks: [...current.open_tasks],
+      intake: { ...current.intake },
+    };
+    await this.store.updateCase(next);
+
+    let reviewEvent: BillableEvent | null = null;
+    if (!excluded && priced.bill_tier) {
+      reviewEvent = await upsertUmReviewLine(this.billing, {
+        caseId: next.case_id,
+        clientId: next.client_id,
+        tier: priced.bill_tier,
+        charge: priced.charge_amount ?? 0,
+        cost: priced.cost_amount ?? 0,
+        touchStack: priced.touch_stack,
+        occurredAt: now.toISOString(),
+      });
+    }
+
+    await this.writeAudit({
+      event_id: randomUUID(),
+      case_id: next.case_id,
+      at: now.toISOString(),
+      actor,
+      rule_id: null,
+      from_state: current.state,
+      to_state: current.state,
+      note: `review route ${priced.bill_tier ?? 'none'} charge ${priced.charge_amount ?? 0}`,
+      payload_hash: hashTransitionPayload(next, current.state),
+    });
+
+    return { case: next, review_event: reviewEvent };
+  }
+
   async getBrief(caseId: string): Promise<SpineBrief | null> {
     const c = await this.requireCase(caseId);
     if (c.brief_id) {
@@ -380,6 +481,11 @@ export class CaseSpineService {
       deny_reason_code: input.deny_reason_code,
       criteria_result: brief.criteria_result,
       cm_flags: input.cm_flags ?? current.cm_flags,
+    });
+    assertAiCannotDenyMedicalNecessity({
+      actorKind: input.actor_kind ?? 'clinician',
+      determination: input.determination,
+      denyReason,
     });
     const billableEventId = randomUUID();
     const ledgerRows = await recordBillableEventsForSign(this.billing, {

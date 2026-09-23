@@ -53,8 +53,14 @@ describe('ops scoreboard API', () => {
     expect(body.escalations.total).toBeGreaterThan(0);
     expect(body.fanout.open_cx_tasks).toBeGreaterThan(0);
     expect(Object.keys(body).sort()).toEqual(
-      ['client_id', 'demo', 'escalations', 'fanout', 'stuck', 'view'].sort(),
+      ['client_id', 'demo', 'escalations', 'fanout', 'stuck', 'um_pricing', 'view'].sort(),
     );
+    expect(body.um_pricing.planning.inbound).toBe(750_000);
+    expect(body.um_pricing.planning.billed_pepm).toBe(13.67);
+    expect(body.um_pricing.planning.billed_pmpm).toBe(9.11);
+    expect(body.um_pricing.planning.first_pass_pct).toBeNull();
+    expect(body.um_pricing.planning.denominator_label).toMatch(/333k EE/);
+    expect(body.um_pricing.planning.denominator_label).toMatch(/500k lives/);
     expect(JSON.stringify(body)).not.toMatch(/memb_|patient|ssn|date_of_birth|clinicals_pointer/i);
   });
 

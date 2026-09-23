@@ -16,6 +16,11 @@ import type { AuthWorkflowType, CaseSpinePriority } from '@/lib/case-spine/types
 export const BILLABLE_SKUS = ['prior_auth', 'first_level_appeal', 'rush_addon'] as const;
 export type BillableSku = (typeof BILLABLE_SKUS)[number];
 
+/** Commercial two-line ledger SKUs. Legacy SKUs stay on the synthetic schedule. */
+export const UM_LEDGER_SKUS = ['um_review', 'um_platform'] as const;
+export type UmLedgerSku = (typeof UM_LEDGER_SKUS)[number];
+export type LedgerSku = BillableSku | UmLedgerSku;
+
 export const BILLABLE_STATUSES = ['open', 'invoiced', 'void'] as const;
 export type BillableStatus = (typeof BILLABLE_STATUSES)[number];
 
@@ -30,7 +35,7 @@ export interface BillableEvent {
   billable_event_id: string;
   case_id: string;
   client_id: string;
-  sku: BillableSku;
+  sku: LedgerSku;
   quantity: number;
   unit_price: number;
   currency: 'USD';
@@ -40,6 +45,11 @@ export interface BillableEvent {
   status: BillableStatus;
   void_reason: string | null;
   voided_by: string | null;
+  /** legacy_sku = Phase 4 synthetic schedule. um_* = two-line commercial card. */
+  line_kind?: 'legacy_sku' | 'um_review' | 'um_platform';
+  bill_tier?: string | null;
+  cost_amount?: number | null;
+  touch_stack?: string[];
 }
 
 export interface RecordBillableEventInput {
@@ -139,6 +149,10 @@ export function mintBillableEvent(input: RecordBillableEventInput): BillableEven
     status: 'open',
     void_reason: null,
     voided_by: null,
+    line_kind: 'legacy_sku',
+    bill_tier: null,
+    cost_amount: null,
+    touch_stack: [],
   };
 }
 

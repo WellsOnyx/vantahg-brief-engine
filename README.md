@@ -19,7 +19,7 @@ The core principle is simple: **AI analyzes, physicians decide.** VantaUM uses A
 
 **Packaging (corrected 2026-09-21):** **VantaUM sells Med Review** as the paid wedge. VantaUM Brief Engine / utilization management is included free only when the buyer uses Vanta med review under UM's contract — no standalone free UM SKU, no free UM with a third-party review shop. **VantaHG = IRO + IDR only.** UM still owns Brief Engine SoR and tech. Code gate unchanged: `client_config.vanta_med_review_contract` and `med_review_provider=vanta`.
 
-**UM rate card (locked 2026-09-23):** [`docs/customer-ready/um-unit-economics-rate-card.md`](docs/customer-ready/um-unit-economics-rate-card.md). Planning case only. Rules-only / auto is not billed. Nurse, physician/MD, and external peer are billed. Not a new SKU.
+**UM price card (two-line, 2026-09-23):** [`docs/customer-ready/um-unit-economics-rate-card.md`](docs/customer-ready/um-unit-economics-rate-card.md). Platform membership plus one clinical review tier. Rules/auto review is $0 and still posts. Supersedes the review-only card. Handoff: [`docs/customer-ready/um-pricing-rules.md`](docs/customer-ready/um-pricing-rules.md).
 
 ---
 
