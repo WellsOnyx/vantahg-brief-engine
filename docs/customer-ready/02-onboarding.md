@@ -16,7 +16,7 @@ Onboarding is a **sellable checklist** first, software second. Every step produc
 
 ### Fee schedule (minimum fields)
 
-**VantaUM sells Med Review** (paid wedge). Do not invent a second price list here. Two-line card: [`um-unit-economics-rate-card.md`](um-unit-economics-rate-card.md) (platform membership + clinical review; rules/auto review is $0). Handoff: [`um-pricing-rules.md`](um-pricing-rules.md). Do not sell UM as a standalone SKU. Do not include free UM with a third-party review shop. **VantaHG = IRO + IDR only.** Do not tell a buyer the platform fee is $0 under Med Review; that point is an open question on the rate card.
+**VantaUM sells Med Review** (paid wedge). Do not invent a second price list here. Two-line card: [`um-unit-economics-rate-card.md`](um-unit-economics-rate-card.md) (platform membership + clinical review; rules/auto review is $0; gold-card review is $0). Handoff: [`um-pricing-rules.md`](um-pricing-rules.md). Do not sell UM as a standalone SKU. Do not include free UM with a third-party review shop. **VantaHG = IRO + IDR only.** Do not tell a buyer the platform fee is $0 under Med Review. Open question, unresolved: does the Med Review wedge waive the $1.50 platform, or only the $0 auto review? Platform remains not $0 unless a fat-TPA waiver.
 
 - Vanta med-review contract under **UM** (paid wedge)
 - UM Brief Engine included free **only** when `vanta_med_review_contract` is true and `med_review_provider=vanta`

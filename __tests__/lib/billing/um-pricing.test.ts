@@ -2,12 +2,17 @@ import { describe, expect, it } from 'vitest';
 import { CaseSpineService, MemoryCaseSpineStore } from '@/lib/case-spine';
 import { MemoryBillableEventLedger } from '@/lib/billing/events';
 import { requireCriteriaCogs } from '@/lib/billing/criteria-cogs';
-import { UmProductGuardError, assertNoAutoReviewFee } from '@/lib/billing/um-guards';
+import {
+  UmProductGuardError,
+  assertNoAutoReviewFee,
+  assertNoGoldCardReviewFee,
+} from '@/lib/billing/um-guards';
 import { bookTiles, planningLockTiles } from '@/lib/billing/um-dashboard';
 import { buildTwoLineInvoice, upsertPlatformLine, upsertUmReviewLine } from '@/lib/billing/um-invoice';
 import {
   BASE_MIX,
   DECK_MILLION_HUNDREDTHS,
+  MD_EXTERNAL_QUOTE_CAP,
   MIX_SENSITIVITY,
   PUBLISHED_UNIT_RATES,
   UM_DENOMINATORS,
@@ -42,6 +47,7 @@ describe('two-line UM price card', () => {
     expect(BASE_MIX.auto.count + BASE_MIX.nurse.count + BASE_MIX.md.count + BASE_MIX.external.count).toBe(
       UM_DENOMINATORS.inboundAnnual,
     );
+    expect(BASE_MIX.md.share + BASE_MIX.external.share).toBe(MD_EXTERNAL_QUOTE_CAP);
   });
 
   it('publishes the rounded deck millions without inventing a third total', () => {
@@ -167,8 +173,27 @@ describe('two-line invoice', () => {
     expect(await ledger.list({ client_id: CLIENT })).toHaveLength(2);
   });
 
-  it('refuses a review fee on auto', () => {
+  it('refuses a review fee on auto and on gold-card', () => {
     expect(() => assertNoAutoReviewFee('auto', 85)).toThrow(UmProductGuardError);
+    expect(() => assertNoGoldCardReviewFee(true, 85)).toThrow(UmProductGuardError);
+    expect(() =>
+      buildTwoLineInvoice({
+        clientId: CLIENT,
+        periodStart: '2026-09-01T00:00:00.000Z',
+        periodEnd: '2026-09-30T23:59:59.000Z',
+        livesInMonth: 1,
+        cases: [
+          {
+            case_id: 'gold',
+            bill_tier: 'md',
+            charge_amount: 200,
+            cost_amount: 80,
+            excluded: false,
+            gold_card: true,
+          },
+        ],
+      }),
+    ).toThrow(/R19/);
     expect(() =>
       buildTwoLineInvoice({
         clientId: CLIENT,
@@ -206,7 +231,7 @@ describe('case spine review routing', () => {
 
     const stacked = await spine.assignReviewRoute(
       created.case.case_id,
-      { touch: 'md', trailing_auto_rate: 0.55, gold_card: true },
+      { touch: 'md', trailing_auto_rate: 0.55 },
       'router',
     );
     expect(stacked.case.touch_stack).toEqual(['auto', 'md']);
@@ -214,7 +239,7 @@ describe('case spine review routing', () => {
     expect(stacked.case.bill_tier).toBe('md');
     expect(stacked.case.billable).toBe(true);
     expect(stacked.case.charge_amount).toBe(200);
-    expect(stacked.case.gold_card).toBe(true);
+    expect(stacked.case.gold_card).toBe(false);
     const rows = (await ledger.getByCase(created.case.case_id)).filter((row) => row.sku === 'um_review');
     expect(rows).toHaveLength(1);
     expect(rows[0].unit_price).toBe(200);
@@ -225,6 +250,55 @@ describe('case spine review routing', () => {
       autoRateValue: 0.72,
     });
     expect(stepped.charge_amount).toBe(70);
+  });
+
+  it('posts a gold-card provider at $0 and does not bill a later clinical touch', async () => {
+    const ledger = new MemoryBillableEventLedger();
+    const spine = new CaseSpineService(new MemoryCaseSpineStore(), () => NOW, ledger);
+    const created = await spine.createCase({
+      client_id: CLIENT,
+      intake: { external_id: 'ext-gold', member_ref: 'memb_gold', received_at: NOW.toISOString() },
+    });
+    const gold = await spine.assignReviewRoute(
+      created.case.case_id,
+      { touch: 'md', trailing_auto_rate: 0.55, gold_card: true },
+      'router',
+    );
+    expect(gold.case.gold_card).toBe(true);
+    expect(gold.case.route).toBe('auto');
+    expect(gold.case.bill_tier).toBe('auto');
+    expect(gold.case.billable).toBe(false);
+    expect(gold.case.charge_amount).toBe(0);
+    expect(gold.case.cost_amount).toBe(3);
+    expect(gold.case.touch_stack).toEqual(['md']);
+    expect(gold.review_event?.sku).toBe('um_review');
+    expect(gold.review_event?.unit_price).toBe(0);
+    expect(gold.review_event?.status).toBe('open');
+
+    const later = await spine.assignReviewRoute(
+      created.case.case_id,
+      { touch: 'external', trailing_auto_rate: 0.72 },
+      'router',
+    );
+    expect(later.case.gold_card).toBe(true);
+    expect(later.case.route).toBe('auto');
+    expect(later.case.billable).toBe(false);
+    expect(later.case.charge_amount).toBe(0);
+    expect(later.case.touch_stack).toEqual(['md', 'external']);
+    const rows = (await ledger.getByCase(created.case.case_id)).filter((row) => row.sku === 'um_review');
+    expect(rows).toHaveLength(1);
+    expect(rows[0].unit_price).toBe(0);
+    expect(rows[0].bill_tier).toBe('auto');
+
+    const priced = priceTouchStack({
+      touchStack: ['nurse', 'md'],
+      autoRateValue: 0.72,
+      goldCard: true,
+    });
+    expect(priced.billable).toBe(false);
+    expect(priced.charge_amount).toBe(0);
+    expect(priced.bill_tier).toBe('auto');
+    expect(priced.cost_amount).toBe(3);
   });
 
   it('blocks an AI medical-necessity deny and allows a clinician deny', async () => {

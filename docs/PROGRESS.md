@@ -32,6 +32,10 @@
 
 **CI (packaging guard):** `npm run test:ci` 480 passed (3 todo) on the guard merge. RDS-native bootstrap is on `main` via [#74](https://github.com/WellsOnyx/vantahg-brief-engine/pull/74). This runbook PR does not rewrite those scripts.
 
+## 2026-09-23 — Gold-card $0 review (after the two-line card)
+
+`gold_card` posts a review row at **$0** (not billable), same as rules/auto. Rule index [`um-pricing-rules.md`](customer-ready/um-pricing-rules.md) has R1–R20, WHAT NOT TO DO, and deck-only D1–D8. Open question stays open: Med Review does not zero the $1.50 platform unless a fat-TPA waiver. First-pass tile stays an em dash.
+
 ## 2026-09-23 — Two-line UM pricing (supersedes the review-only card)
 
 Platform membership + one clinical review tier. Canonical card: [`docs/customer-ready/um-unit-economics-rate-card.md`](customer-ready/um-unit-economics-rate-card.md). Handoff: [`docs/customer-ready/um-pricing-rules.md`](customer-ready/um-pricing-rules.md). Config: `lib/billing/um-price-card.ts`. Migration `infra-aws/rds-migrations/032_um_two_line_pricing.sql`.

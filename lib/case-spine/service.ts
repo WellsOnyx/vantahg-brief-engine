@@ -5,7 +5,7 @@ import {
   type BillableEvent,
   type BillableEventLedger,
 } from '@/lib/billing/events';
-import { assertAiCannotDenyMedicalNecessity } from '@/lib/billing/um-guards';
+import { assertAiCannotDenyMedicalNecessity, assertNoGoldCardReviewFee } from '@/lib/billing/um-guards';
 import { upsertUmReviewLine } from '@/lib/billing/um-invoice';
 import {
   blankUmPricing,
@@ -293,6 +293,7 @@ export class CaseSpineService {
   /**
    * Append a review touch, persist the stack, and upsert one UM review
    * ledger row at the highest tier. Rules/auto posts at $0.
+   * A gold-carded provider posts at $0 too (R19) and stays gold-carded.
    * Voids and duplicates stay off the invoice.
    */
   async assignReviewRoute(
@@ -312,7 +313,8 @@ export class CaseSpineService {
     const now = this.now();
     const touchStack = [...current.touch_stack, input.touch];
     const excluded = isUmVoidOrDuplicate(current);
-    const previewTier = highestTouch(touchStack);
+    const goldCard = input.gold_card === true || current.gold_card === true;
+    const previewTier = goldCard ? 'auto' : highestTouch(touchStack);
     const others = (await this.store.listCases()).filter((row) => row.case_id !== caseId);
     const rate =
       input.trailing_auto_rate ??
@@ -337,7 +339,7 @@ export class CaseSpineService {
       touchStack,
       autoRateValue: rate,
       autoReason: input.auto_reason ?? current.auto_reason,
-      goldCard: input.gold_card ?? current.gold_card,
+      goldCard,
       excluded,
     });
     const next: CanonicalCase = {
@@ -349,6 +351,8 @@ export class CaseSpineService {
       intake: { ...current.intake },
     };
     await this.store.updateCase(next);
+
+    assertNoGoldCardReviewFee(priced.gold_card, priced.charge_amount ?? 0);
 
     let reviewEvent: BillableEvent | null = null;
     if (!excluded && priced.bill_tier) {

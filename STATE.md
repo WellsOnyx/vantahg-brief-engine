@@ -5,6 +5,19 @@ Future Claude/Cole/Jonah sessions: read this first.
 
 ---
 
+## 2026-09-23 — Gold-card $0 review + pricing rules filled in
+
+Follow-up after PR #79 (`5e5201e`). No `ENABLE_AWS_*` flips. Entitlement gate unchanged.
+
+- **R19:** `gold_card` ⇒ `billable` false, `charge_amount` 0, route/bill tier `auto`, review row still posts at $0. Cost is the locked rules/auto **$3**. The flag sticks across later touches. Guard: `assertNoGoldCardReviewFee`.
+- **Docs:** [`docs/customer-ready/um-pricing-rules.md`](docs/customer-ready/um-pricing-rules.md) now has R1–R20, WHAT NOT TO DO, and D1–D8 (deck only). Rate card matches. R16 step-downs unchanged. R18 quote cap 12% of inbound is not a billing gate.
+- **OPEN QUESTION (unresolved):** Does the Med Review wedge waive the $1.50 platform, or only the $0 auto review? Platform remains **NOT $0** under Med Review unless a fat-TPA waiver.
+- **Still TODO:** first-pass tile stays an em dash (definition is locked; no overturn / first-clinical-pass field). Lean/heavy volume splits were not restated. No premium below 50% auto-rate. Criteria is not split out of fully loaded path cost. Validate 750k inbound before staffing 285k nurses. No dollar for a second external-specialty add-on.
+
+**CI:** `npm run test:ci` 580 passed (3 todo). `npx tsc --noEmit` clean.
+
+---
+
 ## 2026-09-23 — Two-line UM pricing (platform + clinical)
 
 Supersedes the review-only rate card from PR #78. No `ENABLE_AWS_*` flips. Entitlement gate unchanged (`lib/entitlements/um-brief-engine.ts`).
@@ -14,8 +27,8 @@ Supersedes the review-only rate card from PR #78. No `ENABLE_AWS_*` flips. Entit
 - Platform default **$1.50 PMPM** (band $1.25–$1.75, floor $1.25, never steps down) = **$9.00M**. Clinical: nurse $85 / MD $200 / external $350. Rules/auto review **$0** and still posts. Highest touch once.
 - Deck total revenue **$54.61M**. Exact dollars **$54,600,000**. Exact contribution **$31,800,000**. Total billed **$13.67 PEPM / $9.11 PMPM**. Planning profit band **$22–26M**, midpoint **$24M**.
 - Case fields: `route`, `billable`, `bill_tier`, `charge_amount`, `cost_amount`, `auto_reason`, `gold_card`, `touch_stack`. Invoice: `buildTwoLineInvoice`. Ops tiles on `/admin/ops` and `GET /api/ops/scoreboard` (`um_pricing`).
-- **OPEN QUESTION:** packaging still says Brief Engine is included under the med-review contract. This card does **not** set the platform fee to $0 because of that. $0 platform only on an explicit fat-TPA-admin waiver. No numeric definition of “fat” was locked.
-- **TODO:** full text of pricing rules R1, R3–R8, R14–R15, R17–R20, D1–D8, and WHAT NOT TO DO was not in the handoff. R2, R9, and R16 are implemented. First-pass % has no definition. Lean/heavy volume splits were not restated. Validate 750k inbound before staffing 285k nurses.
+- **OPEN QUESTION:** Does the Med Review wedge waive the $1.50 platform, or only the $0 auto review? Platform remains **NOT $0** under Med Review unless a fat-TPA waiver. No numeric definition of “fat” was locked.
+- Rule text R1–R20, D1–D8, and WHAT NOT TO DO are in the follow-up section above. First-pass tile stays an em dash. Lean/heavy volume splits were not restated. Validate 750k inbound before staffing 285k nurses.
 - VantaUM still sells Med Review. **VantaHG = IRO + IDR only.** Optum frozen. Do not quote the retired review-only total ($45.61M).
 
 ---

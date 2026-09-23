@@ -3,15 +3,16 @@
  *
  * R2 — no review fee on rules/auto. Charge stays $0. Callers cannot override it.
  * R9 — AI cannot deny medical necessity without a clinician.
+ * R19 — no review fee on a gold-carded provider. Charge stays $0.
  *
- * Pricing R2/R9 are not auth-workflow R02/R09.
+ * Pricing R2/R9/R19 are not auth-workflow R02/R09/R19.
  */
 
 import type { ReviewRoute } from './um-price-card';
 
 export class UmProductGuardError extends Error {
   constructor(
-    readonly code: 'r2_auto_review_fee' | 'r9_ai_deny_mn',
+    readonly code: 'r2_auto_review_fee' | 'r9_ai_deny_mn' | 'r19_gold_card_review_fee',
     message: string,
   ) {
     super(message);
@@ -25,6 +26,16 @@ export function assertNoAutoReviewFee(route: ReviewRoute, chargeAmount: number):
     throw new UmProductGuardError(
       'r2_auto_review_fee',
       'R2: rules/auto review fee is $0 and cannot be overridden',
+    );
+  }
+}
+
+/** R19. A gold-carded provider has no review fee. The row still posts at $0. */
+export function assertNoGoldCardReviewFee(goldCard: boolean, chargeAmount: number): void {
+  if (goldCard && chargeAmount !== 0) {
+    throw new UmProductGuardError(
+      'r19_gold_card_review_fee',
+      'R19: gold-carded providers have no review fee',
     );
   }
 }
