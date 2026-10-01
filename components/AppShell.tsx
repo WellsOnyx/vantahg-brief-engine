@@ -59,6 +59,7 @@ const CHROMELESS_PATHS = new Set(['/']);
 const CHROMELESS_PREFIXES = [
   '/demo',
   '/site',
+  '/blog',
   '/signup-tpa',
   '/login',
   '/signup',

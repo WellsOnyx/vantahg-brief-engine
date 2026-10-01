@@ -1,5 +1,7 @@
 'use client';
 
+import { SiteFooter } from '@/components/site/SiteFooter';
+
 const EA_EMAIL = 'mailto:hello@wellsonyx.com?subject=VantaUM%20Founding%20Partner%20Inquiry';
 
 export default function BlogPost() {
@@ -74,10 +76,6 @@ export default function BlogPost() {
         .btn-primary:hover { opacity:0.88;transform:translateY(-1px); }
 
         /* ── Footer ── */
-        .vum-footer { background:var(--black);border-top:1px solid var(--border);padding:40px 56px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px; }
-        .footer-logo { font-family:var(--sans);font-size:13px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--white); }
-        .footer-logo span { color:var(--teal); }
-        .vum-footer p { font-size:12px;color:var(--white-dim); }
 
         /* ── Animations ── */
         @keyframes fadeUp { from{opacity:0;transform:translateY(20px);} to{opacity:1;transform:translateY(0);} }
@@ -91,7 +89,6 @@ export default function BlogPost() {
           .vum-nav { padding:18px 24px; }
           .nav-links { display:none; }
           .blog-article { padding:100px 20px 72px; }
-          .vum-footer { padding:32px 24px;flex-direction:column;text-align:center; }
         }
       `}</style>
 
@@ -197,10 +194,7 @@ export default function BlogPost() {
         </article>
 
         {/* Footer */}
-        <footer className="vum-footer">
-          <div className="footer-logo"><span>Vanta</span>UM</div>
-          <p>&copy; {new Date().getFullYear()} Wells Onyx. All rights reserved.</p>
-        </footer>
+        <SiteFooter />
       </div>
     </>
   );
