@@ -158,7 +158,7 @@ export async function getRealModeStatus(): Promise<RealModeStatus> {
       ? {
           status: 'ready',
           missing: [],
-          hint: 'S3StorageAdapter (ENABLE_AWS_STORAGE). Buckets vantaum-<env>-{signup-contracts,efax-documents,public-assets}.',
+          hint: 'S3StorageAdapter (ENABLE_AWS_STORAGE). Buckets vantaum-<env>-{signup-contracts,efax-documents,public-assets,iro-credentialing}.',
         }
       : {
           status: demo ? 'demo' : 'ready',

@@ -22,6 +22,10 @@ export function landingPathForRole(role: string | null | undefined): string {
     case 'delivery-lead':
     case 'concierge':
       return '/cx';
+    case 'credentialing_admin':
+      return '/iro/credentialing';
+    case 'clinical_approver':
+      return '/iro/approval';
     default:
       return '/cases';
   }

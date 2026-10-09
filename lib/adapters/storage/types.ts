@@ -26,7 +26,7 @@
  *     to resolve it to a physical resource.
  */
 
-export type LogicalBucket = 'signup-contracts' | 'efax-documents' | 'public-assets';
+export type LogicalBucket = 'signup-contracts' | 'efax-documents' | 'public-assets' | 'iro-credentialing';
 
 export interface UploadResult {
   ok: true;

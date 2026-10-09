@@ -15,3 +15,16 @@ export type {
   UmBriefEngineAccessGranted,
   UmBriefEngineAccessDenied,
 } from './um-brief-engine';
+export {
+  IRO_PANEL_DENIALS,
+  isIroPanelFlagEnabled,
+  evaluateIroPanelAccess,
+  hasIroPanelEntitlement,
+} from './iro-panel';
+export type {
+  IroPanelDenial,
+  IroPanelEntitlementInput,
+  IroPanelAccess,
+  IroPanelAccessGranted,
+  IroPanelAccessDenied,
+} from './iro-panel';

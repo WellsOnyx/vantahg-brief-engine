@@ -20,6 +20,7 @@ export interface ComputeStackProps extends cdk.StackProps {
   signupContractsBucket?: s3.IBucket;
   efaxDocumentsBucket?: s3.IBucket;
   publicAssetsBucket?: s3.IBucket;
+  iroCredentialingBucket?: s3.IBucket;
   /** SES configuration set name from EmailStack. */
   sesConfigurationSet?: string;
 }
@@ -85,6 +86,7 @@ export class ComputeStack extends cdk.Stack {
     if (props.signupContractsBucket) props.signupContractsBucket.grantReadWrite(taskRole);
     if (props.efaxDocumentsBucket) props.efaxDocumentsBucket.grantReadWrite(taskRole);
     if (props.publicAssetsBucket) props.publicAssetsBucket.grantReadWrite(taskRole);
+    if (props.iroCredentialingBucket) props.iroCredentialingBucket.grantReadWrite(taskRole);
     if (props.storageKmsKey) props.storageKmsKey.grantEncryptDecrypt(taskRole);
 
     // SES v2 SendEmail / SendEmail Raw. Identities are account-level.

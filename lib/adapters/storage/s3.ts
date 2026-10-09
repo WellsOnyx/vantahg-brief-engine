@@ -26,6 +26,7 @@ import type {
  *   - 'signup-contracts'  -> vantaum-prod-signup-contracts
  *   - 'efax-documents'    -> vantaum-prod-efax-documents
  *   - 'public-assets'     -> vantaum-prod-public-assets
+ *   - 'iro-credentialing' -> vantaum-prod-iro-credentialing (private, KMS)
  *
  * The buckets are provisioned by StorageStack (KMS-encrypted, versioned,
  * block-public, TLS-only). The Fargate task role has GetObject /
