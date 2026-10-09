@@ -60,6 +60,9 @@ export const EDITABLE_FIELDS_BY_ROLE: Record<UserRole, ReadonlyArray<keyof Edita
   'delivery-lead': [],
   concierge: [],
   'idr-attorney': [],
+  // IRO credentialing roles do not edit UM case fields.
+  credentialing_admin: [],
+  clinical_approver: [],
 };
 
 const PRIORITY_VALUES: ReadonlySet<string> = new Set<CasePriority>([

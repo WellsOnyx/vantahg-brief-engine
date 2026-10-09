@@ -15,7 +15,9 @@ export type UserRole =
   | 'slt'
   | 'delivery-lead'
   | 'concierge'
-  | 'idr-attorney';   // External partner attorneys handling Payer IDR cases (Phase 2B)
+  | 'idr-attorney'   // External partner attorneys handling Payer IDR cases (Phase 2B)
+  | 'credentialing_admin' // Head of HR — IRO credentialing workspace only
+  | 'clinical_approver'; // Designated Medical Director — IRO panel signature. Assignable before appointment.
 
 /**
  * Roles considered "internal staff" — admin + organizational + exec views.
@@ -25,6 +27,12 @@ export type UserRole =
 export const INTERNAL_STAFF_ROLES: ReadonlyArray<UserRole> = [
   'admin', 'reviewer', 'builder', 'ceo', 'practice-lead', 'slt', 'delivery-lead', 'concierge',
 ];
+
+/**
+ * IRO credentialing roles are intentionally absent from INTERNAL_STAFF_ROLES.
+ * That list opens eFax triage, client rosters, and other UM staff surfaces.
+ * credentialing_admin and clinical_approver use the IRO module routes only.
+ */
 
 /**
  * Roles that can act as external IDR Attorneys.

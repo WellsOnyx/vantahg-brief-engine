@@ -17,6 +17,10 @@ export function toSpineViewRole(role: UserRole | string | null | undefined): Spi
     case 'idr-attorney':
     case 'med_review':
       return 'med_review';
+    case 'credentialing_admin':
+    case 'clinical_approver':
+      // IRO roles do not inherit the UM med-review packet.
+      return 'cx';
     case 'admin':
     case 'ceo':
     case 'slt':

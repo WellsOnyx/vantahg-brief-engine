@@ -14,6 +14,8 @@ export const dynamic = 'force-dynamic';
 const VALID_ROLES: ReadonlySet<UserRole> = new Set<UserRole>([
   'admin', 'reviewer', 'client', 'builder', 'ceo', 'practice-lead', 'slt',
   'idr-attorney',   // External Payer IDR attorneys
+  'credentialing_admin',
+  'clinical_approver',
 ]);
 
 /**

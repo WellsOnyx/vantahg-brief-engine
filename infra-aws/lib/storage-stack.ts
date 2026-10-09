@@ -10,11 +10,12 @@ export interface StorageStackProps extends cdk.StackProps {
 /**
  * S3 buckets replacing Supabase Storage.
  *
- * Three buckets, one per logical namespace from lib/adapters/storage/types.ts:
+ * Four buckets, one per logical namespace from lib/adapters/storage/types.ts:
  *   - vantaum-${env}-signup-contracts  (TPA contract PDFs)
  *   - vantaum-${env}-efax-documents    (intake PHI — strictest controls)
  *   - vantaum-${env}-public-assets     (logos, brand assets — still no public ACL,
  *                                       served via CloudFront origin access)
+ *   - vantaum-${env}-iro-credentialing (IRO panel evidence — private, KMS, signed URLs)
  *
  * All buckets:
  *   - SSE-KMS with a single per-env customer-managed key (rotation enabled)
@@ -37,6 +38,7 @@ export class StorageStack extends cdk.Stack {
   public readonly signupContractsBucket: s3.Bucket;
   public readonly efaxDocumentsBucket: s3.Bucket;
   public readonly publicAssetsBucket: s3.Bucket;
+  public readonly iroCredentialingBucket: s3.Bucket;
   public readonly logBucket: s3.Bucket;
 
   constructor(scope: Construct, id: string, props: StorageStackProps) {
@@ -102,10 +104,11 @@ export class StorageStack extends cdk.Stack {
         ],
       });
 
-    // ── Three application buckets ────────────────────────────────────────
+    // ── Application buckets ──────────────────────────────────────────────
     this.signupContractsBucket = phiBucket('SignupContractsBucket', 'signup-contracts');
     this.efaxDocumentsBucket = phiBucket('EfaxDocumentsBucket', 'efax-documents');
     this.publicAssetsBucket = phiBucket('PublicAssetsBucket', 'public-assets');
+    this.iroCredentialingBucket = phiBucket('IroCredentialingBucket', 'iro-credentialing');
 
     // ── Outputs — referenced by ComputeStack to grant the task role ──────
     new cdk.CfnOutput(this, 'StorageKmsKeyArn', {
@@ -123,6 +126,10 @@ export class StorageStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'PublicAssetsBucketName', {
       value: this.publicAssetsBucket.bucketName,
       exportName: `vantaum-${envName}-public-assets-bucket`,
+    });
+    new cdk.CfnOutput(this, 'IroCredentialingBucketName', {
+      value: this.iroCredentialingBucket.bucketName,
+      exportName: `vantaum-${envName}-iro-credentialing-bucket`,
     });
   }
 }

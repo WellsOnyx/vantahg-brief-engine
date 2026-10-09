@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useAuth } from '@/components/AuthProvider';
 import { EmptyState } from '@/components/EmptyState';
 
-type Role = 'admin' | 'reviewer' | 'client' | 'builder' | 'ceo' | 'practice-lead' | 'slt';
+type Role = 'admin' | 'reviewer' | 'client' | 'builder' | 'ceo' | 'practice-lead' | 'slt' | 'credentialing_admin' | 'clinical_approver';
 
 interface TeamMember {
   id: string;
@@ -23,6 +23,8 @@ const ROLE_OPTIONS: { value: Role; label: string; tone: string }[] = [
   { value: 'ceo',            label: 'CEO',            tone: 'bg-gold/20 text-gold-dark' },
   { value: 'practice-lead',  label: 'Practice Lead',  tone: 'bg-teal-100 text-teal-800' },
   { value: 'slt',            label: 'SLT',            tone: 'bg-amber-100 text-amber-800' },
+  { value: 'credentialing_admin', label: 'Credentialing admin', tone: 'bg-navy/10 text-navy' },
+  { value: 'clinical_approver', label: 'Clinical approver', tone: 'bg-sky-100 text-sky-900' },
 ];
 
 function roleTone(role: Role): string {

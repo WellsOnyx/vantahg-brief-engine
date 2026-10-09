@@ -73,6 +73,7 @@ const computeStack = new ComputeStack(app, `${appName}-compute`, {
   signupContractsBucket: storageStack.signupContractsBucket,
   efaxDocumentsBucket: storageStack.efaxDocumentsBucket,
   publicAssetsBucket: storageStack.publicAssetsBucket,
+  iroCredentialingBucket: storageStack.iroCredentialingBucket,
   sesConfigurationSet: emailStack.configSet.configurationSetName,
 });
 

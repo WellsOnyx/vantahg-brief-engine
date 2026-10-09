@@ -64,6 +64,7 @@ const _conciergeNav: NavGroup[] = [
       { href: "/cx", label: "CX lens" },
       { href: "/concierge", label: "My Queue" },
       { href: "/intake", label: "Intake Triage" },
+      { href: "/iro/panel", label: "IRO Panel" },
       { href: "/cases", label: "Cases" },
       { href: "/help", label: "Help" },
     ],
@@ -78,6 +79,7 @@ const _clinicianNav: NavGroup[] = [
       { href: "/cases", label: "Cases" },
       { href: "/cases?status=brief_ready", label: "Briefs" },
       { href: "/quality", label: "Quality" },
+      { href: "/iro/panel", label: "IRO Panel" },
     ],
   },
 ];
@@ -105,6 +107,9 @@ const adminInternalNav: NavGroup[] = [
       { href: "/admin/setup", label: "Setup" },
       { href: "/admin/ops", label: "Ops scoreboard" },
       { href: "/admin/onboarding", label: "Onboarding" },
+      { href: "/iro/credentialing", label: "IRO Credentialing" },
+      { href: "/iro/panel", label: "IRO Panel" },
+      { href: "/iro/approval", label: "IRO Approval" },
     ],
   },
 ];

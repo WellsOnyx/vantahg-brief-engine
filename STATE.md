@@ -5,6 +5,21 @@ Future Claude/Cole/Jonah sessions: read this first.
 
 ---
 
+## 2026-10-09 — IRO Panel & Credentialing (separately gated)
+
+VantaHG IRO line. Does **not** change UM pricing, the billing card, or Med Review packaging guards (`lib/entitlements/um-brief-engine.ts` and `lib/billing/um-price-card.ts` are untouched).
+
+- **Flag:** `ENABLE_IRO_PANEL=true`. **Entitlement:** `IRO_LINE_CONTRACT=true` (or `iro_module_settings.iro_line_contract`). A med-review contract does not open this module.
+- **Roles:** `credentialing_admin` (Thelma / Head of HR) and `clinical_approver` (Medical Director — role exists, not appointed). Neither is in `INTERNAL_STAFF_ROLES`.
+- **Surfaces:** `/iro/credentialing` (HR), `/iro/approval` (clinical packet, no contracts), `/iro/panel` (assignment card only).
+- **Case gate:** approved + unexpired + jurisdiction + specialty, and a per-case conflict/qualification attestation. Panel approval does not satisfy the attestation.
+- **Migration:** `033_iro_panel_credentialing.sql` (supabase + RDS catalog). Assignment view omits HR columns. History tables are append-only.
+- **Import:** `npm run import:iro-credentialing -- --file fixtures/iro/credentialing-workbook.template.csv`. Cutover gate stays closed until workspace, records, and access are confirmed.
+- **Docs:** [`docs/customer-ready/15-iro-credentialing.md`](docs/customer-ready/15-iro-credentialing.md).
+- **Not in this launch:** live OIG/SAM/NPDB calls, executing Thelma's real workbook cutover, Medical Director workflow finalization (pending appointment). No live PHI.
+
+---
+
 ## 2026-09-23 — Two-line pricing wired into the billable path
 
 The Sep 23 card is what case close writes. No new dollar rates. No `ENABLE_AWS_*` flips. Packaging lock unchanged.
