@@ -5,7 +5,7 @@ import { intBetween, mulberry32, pick } from './rng';
 import { scoreVhgCase } from './score';
 import type { MedReviewDemoCase, MedReviewPanel, VhgScoreInput } from './types';
 
-const FEATURED: MedReviewDemoCase[] = [
+export const FEATURED: MedReviewDemoCase[] = [
   {
     case_token: 'vhg-mr-0101',
     case_number: 'MR-SYN-0101',

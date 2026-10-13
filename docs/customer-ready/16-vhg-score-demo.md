@@ -8,7 +8,7 @@ The price card, billing wire, packaging guard, and IRO credentialing module are 
 
 ## What Jonah can click
 
-1. `/stoploss` — stop-loss partner dashboard. Public on the marketing host so the link does not ask for a login. Data is synthetic.
+1. `/stoploss` — stop-loss partner dashboard. Public on the marketing host so the link does not ask for a login. Data is synthetic. Year, quarter, month, and day drill-down, with YTD / 90 / 30 / today. The page polls `GET /api/stoploss/aggregate` and labels itself Demo, synthetic data.
 2. `/stoploss/review/vhg-mr-0101` — one med-review case with a **criteria result (demo)** beside **VHG™** (Likely IDR Contested Score, ranking, top 3 drivers).
 3. `/demo` — physician review step shows the same VHG™ card next to the criteria result. The existing intake → brief → determination steps stay in place.
 4. `/portal/stoploss` — same dashboard behind the app session. API allows `stoploss_partner`, `admin`, and `ceo`.

@@ -15,6 +15,7 @@ Clickable demo for Jonah. Synthetic data only. Flag `ENABLE_VHG_SCORE_DEMO` (def
 - **Guided tour:** `/demo-tour` step 3 (Clinical brief ready) shows the same synthetic score — 68% Moderate — full width under the APPROVE card and above Criteria met. Advisory. The physician decides.
 - **Case view:** criteria result (demo) beside VHG™. Placeholder criteria only. Not InterQual content. Public case: `/stoploss/review/vhg-mr-0101`. The `/demo` physician step shows the same score card. Signed-in med review loads the same panels when the flag is on.
 - **Stop-loss:** `/stoploss` (public synthetic showcase) and `/portal/stoploss` (role `stoploss_partner`, plus admin/ceo). Rows only when the existing Vanta Med Review entitlement grants. Banner: Included at no charge with Vanta Med Review.
+- **Time drill:** `/stoploss` aggregates about 24 months of daily synthetic cases. Grain is Year / Quarter / Month / Day, with click-through and breadcrumbs, plus YTD, last 90 days, last 30 days, and today. `GET /api/stoploss/aggregate` recomputes the tiles and charts. A Live indicator refreshes about every 20 seconds and appends synthetic arrivals.
 - **Run:** `npm run demo:vhg` then `ENABLE_VHG_SCORE_DEMO=true npm run dev`. Doc: [`docs/customer-ready/16-vhg-score-demo.md`](docs/customer-ready/16-vhg-score-demo.md).
 - **Published URL:** https://vantaum.com/stoploss
 
