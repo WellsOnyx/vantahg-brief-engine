@@ -60,6 +60,8 @@ export const EDITABLE_FIELDS_BY_ROLE: Record<UserRole, ReadonlyArray<keyof Edita
   'delivery-lead': [],
   concierge: [],
   'idr-attorney': [],
+  // Stop-loss partners see aggregated demo rows only. No case-field edits.
+  stoploss_partner: [],
 };
 
 const PRIORITY_VALUES: ReadonlySet<string> = new Set<CasePriority>([

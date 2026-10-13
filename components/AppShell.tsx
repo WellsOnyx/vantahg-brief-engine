@@ -59,6 +59,8 @@ const CHROMELESS_PATHS = new Set(['/']);
 const CHROMELESS_PREFIXES = [
   '/demo',
   '/site',
+  '/stoploss',
+  '/portal/stoploss',
   '/signup-tpa',
   '/login',
   '/signup',

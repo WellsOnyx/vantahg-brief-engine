@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { BackLink, PageFocused, PageHero } from '@/components/layouts/PageLayouts';
 import { SectionCard } from '@/components/SectionCard';
+import { VhgMedReviewAddon } from '@/components/vhg/VhgMedReviewAddon';
 import type {
   CanonicalCase,
   DeterminationPackage,
@@ -127,6 +128,7 @@ export default function MedReviewSignPage() {
       <PageFocused.Body
         main={
           <>
+            <VhgMedReviewAddon caseId={id} />
             <SectionCard eyebrow="Packet" title="Clinical packet (synthetic)">
               <dl className="grid grid-cols-2 gap-3 text-sm">
                 <div>
