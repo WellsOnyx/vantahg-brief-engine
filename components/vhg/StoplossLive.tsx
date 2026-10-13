@@ -159,8 +159,7 @@ export function StoplossLive({
         </div>
 
         <section className="rounded-xl border border-border bg-white p-4 sm:p-5 space-y-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="text-[11px] uppercase tracking-[0.16em] text-muted font-semibold mr-1">Grain</p>
+          <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Period">
             {GRAINS.map((grain) => (
               <button
                 key={grain}
