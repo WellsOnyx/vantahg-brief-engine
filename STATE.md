@@ -10,8 +10,9 @@ Future Claude/Cole/Jonah sessions: read this first.
 Clickable demo for Jonah. Synthetic data only. Flag `ENABLE_VHG_SCORE_DEMO` (default off in the repo; on for the published page). No price-card, billing, packaging-guard, or IRO credentialing edits.
 
 - **Redaction:** `lib/vhg/redact.ts` strips names, DOB, member IDs, addresses, provider person/NPI, and claim numbers. Dates stay month/year. ~200 redacted patterns in `fixtures/vhg/idr-patterns.redacted.json`.
-- **Score:** `lib/vhg/score.ts` hand-set logistic baseline. Score, low/medium/high band, drivers. Labeled demo, not validated. Advisory only — the physician decides.
-- **Case view:** criteria result (demo) beside VHG Score™. Placeholder criteria only. Not InterQual content. Public case: `/stoploss/review/vhg-mr-0101`. Signed-in med review loads the same panels when the flag is on.
+- **Score:** `lib/vhg/score.ts` hand-set logistic baseline. Likely IDR Contested Score is 0–100%. Ranking is Low / Moderate / High. Top 3 drivers. Labeled demo, not validated. Advisory only — the doctor decides.
+- **Brand:** every user-visible VHG on `/demo` and `/stoploss` renders `VHG™` from `VHG_BRAND` in `lib/vhg/brand.ts`.
+- **Case view:** criteria result (demo) beside VHG™. Placeholder criteria only. Not InterQual content. Public case: `/stoploss/review/vhg-mr-0101`. The `/demo` physician step shows the same score card. Signed-in med review loads the same panels when the flag is on.
 - **Stop-loss:** `/stoploss` (public synthetic showcase) and `/portal/stoploss` (role `stoploss_partner`, plus admin/ceo). Rows only when the existing Vanta Med Review entitlement grants. Banner: Included at no charge with Vanta Med Review.
 - **Run:** `npm run demo:vhg` then `ENABLE_VHG_SCORE_DEMO=true npm run dev`. Doc: [`docs/customer-ready/16-vhg-score-demo.md`](docs/customer-ready/16-vhg-score-demo.md).
 - **Published URL:** https://vantaum.com/stoploss

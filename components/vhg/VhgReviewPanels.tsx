@@ -1,10 +1,5 @@
+import { VhgScoreCard } from '@/components/vhg/VhgScoreCard';
 import type { MedReviewPanel } from '@/lib/vhg/types';
-
-function bandClass(band: string): string {
-  if (band === 'high') return 'bg-rose-100 text-rose-800';
-  if (band === 'medium') return 'bg-amber-100 text-amber-900';
-  return 'bg-emerald-100 text-emerald-800';
-}
 
 function money(value: number): string {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(value);
@@ -35,38 +30,7 @@ export function VhgReviewPanels({ panel }: { panel: MedReviewPanel }) {
           </ul>
         </section>
 
-        <section className="rounded-xl border border-gold/50 bg-white p-5" aria-label="VHG Score">
-          <p className="text-[11px] uppercase tracking-[0.16em] text-gold-dark font-semibold">Demo, synthetic data · IDR likelihood</p>
-          <h2 className="text-lg font-semibold text-navy mt-1">
-            VHG Score<sup className="text-xs ml-0.5">TM</sup>
-          </h2>
-          <div className="mt-4 flex items-end gap-3">
-            <p className="font-[family-name:var(--font-display)] text-6xl text-navy leading-none">{panel.score.score}</p>
-            <span className={`mb-1 text-xs font-semibold uppercase tracking-wider px-2 py-1 rounded-full ${bandClass(panel.score.band)}`}>
-              {panel.score.band}
-            </span>
-          </div>
-          <p className="text-xs text-muted mt-2">0–100 likelihood this synthetic case later becomes an IDR dispute.</p>
-          <p className="text-sm text-navy mt-4 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">{panel.score.advisory}</p>
-          <p className="text-[11px] uppercase tracking-wider text-muted mt-4">Top drivers</p>
-          <ol className="mt-2 space-y-2">
-            {panel.score.drivers.slice(0, 5).map((driver) => (
-              <li key={driver.key} className="text-sm">
-                <div className="flex justify-between gap-3">
-                  <span className="font-medium text-navy">{driver.label}</span>
-                  <span className={driver.points > 0 ? 'text-rose-700' : 'text-emerald-700'}>
-                    {driver.points > 0 ? '+' : ''}
-                    {driver.points}
-                  </span>
-                </div>
-                <p className="text-xs text-muted">{driver.detail}</p>
-              </li>
-            ))}
-          </ol>
-          <p className="text-[11px] text-muted mt-4">
-            {panel.score.model_id} · {panel.score.model_status.replaceAll('_', ' ')} · not a validated predictor
-          </p>
-        </section>
+        <VhgScoreCard score={panel.score} />
       </div>
 
       <section className="rounded-xl border border-border bg-white p-5">

@@ -1,6 +1,7 @@
 import { getRedactedIdrPatterns } from './patterns';
 import { billedToQpaRatio } from './redact';
 import type { RedactedIdrPattern, VhgBand, VhgPatternLookup, VhgScore, VhgScoreDriver, VhgScoreInput } from './types';
+import { VHG_SCORE_LABEL } from './brand';
 import { VHG_SCORE_ADVISORY } from './types';
 
 /**
@@ -193,7 +194,7 @@ export function scoreVhgCase(input: VhgScoreInput, patterns: RedactedIdrPattern[
     pattern_lookup: lookup,
     model_id: 'vhg-score-demo-v1',
     model_status: 'demo_not_validated',
-    label: 'VHG Score',
+    label: VHG_SCORE_LABEL,
     trademark: 'TM',
     advisory: VHG_SCORE_ADVISORY,
   };

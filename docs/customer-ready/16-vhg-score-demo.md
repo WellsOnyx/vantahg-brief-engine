@@ -9,9 +9,10 @@ The price card, billing wire, packaging guard, and IRO credentialing module are 
 ## What Jonah can click
 
 1. `/stoploss` — stop-loss partner dashboard. Public on the marketing host so the link does not ask for a login. Data is synthetic.
-2. `/stoploss/review/vhg-mr-0101` — one med-review case with a **criteria result (demo)** beside **VHG Score™**.
-3. `/portal/stoploss` — same dashboard behind the app session. API allows `stoploss_partner`, `admin`, and `ceo`.
-4. `/med-review/[id]` — when the flag is on and the viewer is signed in, the same two panels load from `GET /api/vhg/panel`. Unknown case ids get an illustrative profile. The clinical packet is not an input to the score.
+2. `/stoploss/review/vhg-mr-0101` — one med-review case with a **criteria result (demo)** beside **VHG™** (Likely IDR Contested Score, ranking, top 3 drivers).
+3. `/demo` — physician review step shows the same VHG™ card next to the criteria result. The existing intake → brief → determination steps stay in place.
+4. `/portal/stoploss` — same dashboard behind the app session. API allows `stoploss_partner`, `admin`, and `ceo`.
+5. `/med-review/[id]` — when the flag is on and the viewer is signed in, the same two panels load from `GET /api/vhg/panel`. Unknown case ids get an illustrative profile. The clinical packet is not an input to the score.
 
 Switch clients on the dashboard:
 
@@ -40,11 +41,13 @@ redacted IDR patterns (~200)  →  fixtures/vhg/idr-patterns.redacted.json
         ▼
 lib/vhg/score.ts  (hand-set logistic weights, demo_not_validated)
         │
-        ├─ med review case  →  criteria result (demo) + VHG Score + drivers
+        ├─ med review case  →  criteria result (demo) + VHG™ ranking + Likely IDR Contested Score + top 3 drivers
         └─ stop-loss dashboard  →  counts, exposure, stop-sign list, trend
 ```
 
-The score is the likelihood, 0–100, that a case later becomes an IDR dispute. Bands are low under 40, medium from 40, high from 70. Drivers can include network status, emergency vs scheduled, billed-to-QPA ratio, facility type, service line / CPT, state, and the historical win/loss mix on matching redacted patterns.
+The Likely IDR Contested Score is the likelihood, 0–100%, that a case later becomes an IDR dispute. Ranking labels are Low under 40, Moderate from 40, and High from 70. The panel shows the top 3 drivers. Drivers can include network status, emergency vs scheduled, billed-to-QPA ratio, facility type, service line / CPT, state, and the historical win/loss mix on matching redacted patterns.
+
+Visible copy uses `VHG_BRAND` (`VHG™`) from `lib/vhg/brand.ts`. The mark is not part of routes or code identifiers.
 
 The physician still decides. The panel says so. The score does not approve, deny, or file an IDR dispute.
 
@@ -77,7 +80,7 @@ Do not treat this demo as a go-live clearance.
 2. **IDR data-use restrictions.** Federal IDR filings and QPA data have their own use limits. A training or lookup set built from real filings needs a written use basis before it leaves the IDR workflow.
 3. **BAA with stop-loss partners.** A partner dashboard that can be tied back to a plan or a case needs a BAA (and a minimum necessary story) before any real row is shown. The published page is synthetic on purpose.
 4. **InterQual license.** The case view says **criteria result (demo)** and uses invented placeholder lines. It is not InterQual, MCG, or any other licensed criteria product. Do not paste licensed criteria into this module.
-5. **Trademark.** **VHG Score** is a working name. The panel shows a TM placeholder. File the mark before using it as a product name in market.
+5. **Trademark.** Pages render the brand as **VHG™** through `VHG_BRAND`. Filing the mark is still an open legal step before treating it as a registered product name.
 
 ## Not in this demo
 

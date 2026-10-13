@@ -44,7 +44,7 @@ describe('VHG demo routes', () => {
     const body = await response.json();
     expect(response.status).toBe(200);
     expect(body.panel.criteria.label).toBe('criteria result (demo)');
-    expect(body.panel.score.label).toBe('VHG Score');
+    expect(body.panel.score.label).toBe('VHG\u2122 Score');
     expect(body.panel.score.model_status).toBe('demo_not_validated');
     expect(body.panel.illustrative).toBe(false);
   });

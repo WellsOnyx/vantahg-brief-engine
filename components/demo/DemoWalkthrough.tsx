@@ -1,6 +1,9 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { VhgScoreCard } from '@/components/vhg/VhgScoreCard';
+import { DEMO_WALKTHROUGH_VHG_SCORE } from '@/lib/vhg/demo-brief-score';
+import type { VhgScore } from '@/lib/vhg/types';
 
 // ============================================================================
 // Demo data
@@ -268,7 +271,7 @@ function BriefGenerationStep({ onNext }: { onNext: () => void }) {
   );
 }
 
-function PhysicianReviewStep({ onNext }: { onNext: () => void }) {
+function PhysicianReviewStep({ onNext, vhgScore }: { onNext: () => void; vhgScore: VhgScore }) {
   const [phase, setPhase] = useState<'assigning' | 'reviewing' | 'deciding'>('assigning');
   useEffect(() => {
     const t1 = setTimeout(() => setPhase('reviewing'), 1500);
@@ -313,6 +316,21 @@ function PhysicianReviewStep({ onNext }: { onNext: () => void }) {
             </div>
           </div>
         )}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mt-4">
+          <section className="rounded-xl border border-gray-200 bg-[#f8f9fb] p-4" aria-label="criteria result (demo)">
+            <p className="text-[10px] uppercase tracking-wider text-[#0c2340]/40 font-semibold">Criteria</p>
+            <h3 className="font-semibold text-[#0c2340] text-sm mt-1">criteria result (demo)</h3>
+            <ul className="space-y-1.5 mt-3">
+              {(BRIEF_SECTIONS.find((section) => section.id === 'criteria')?.criteria_met ?? []).map((item) => (
+                <li key={item} className="flex items-start gap-2 text-sm text-[#0c2340]/70">
+                  <span className="text-emerald-500 mt-0.5 flex-shrink-0">✓</span>
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </section>
+          <VhgScoreCard score={vhgScore} />
+        </div>
       </div>
       {phase === 'deciding' && (
         <div className="flex justify-center pt-2 animate-fadeIn">
@@ -377,8 +395,14 @@ function DeterminationStep({ onRestart }: { onRestart: () => void }) {
 // Exported walkthrough
 // ============================================================================
 
-export default function DemoWalkthrough() {
-  const [step, setStep] = useState(0);
+export default function DemoWalkthrough({
+  vhgScore = DEMO_WALKTHROUGH_VHG_SCORE,
+  initialStep = 0,
+}: {
+  vhgScore?: VhgScore;
+  initialStep?: number;
+}) {
+  const [step, setStep] = useState(initialStep);
   const [key, setKey] = useState(0);
   const restart = useCallback(() => { setStep(0); setKey((k) => k + 1); }, []);
 
@@ -387,7 +411,7 @@ export default function DemoWalkthrough() {
       <StepIndicator step={step} total={4} />
       {step === 0 && <CaseIntakeStep onNext={() => setStep(1)} />}
       {step === 1 && <BriefGenerationStep onNext={() => setStep(2)} />}
-      {step === 2 && <PhysicianReviewStep onNext={() => setStep(3)} />}
+      {step === 2 && <PhysicianReviewStep vhgScore={vhgScore} onNext={() => setStep(3)} />}
       {step === 3 && <DeterminationStep onRestart={restart} />}
     </div>
   );

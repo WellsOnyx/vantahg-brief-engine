@@ -4,6 +4,7 @@ import { Suspense, use } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { StoplossDashboard } from '@/components/vhg/StoplossDashboard';
 import type { StoplossDashboardResult } from '@/lib/vhg/dashboard';
+import { VHG_BRAND } from '@/lib/vhg/brand';
 import { ENTITLED_CLIENT_ID } from '@/lib/vhg/catalog';
 
 interface Loaded {
@@ -33,7 +34,7 @@ function PortalBody() {
   if (loaded.status === 404) {
     return (
       <div className="max-w-xl mx-auto py-16 px-6">
-        <h1 className="text-2xl font-semibold text-navy">VHG Score demo is off</h1>
+        <h1 className="text-2xl font-semibold text-navy">{VHG_BRAND} Score demo is off</h1>
         <p className="text-sm text-muted mt-2">ENABLE_VHG_SCORE_DEMO is not true on this server.</p>
       </div>
     );
