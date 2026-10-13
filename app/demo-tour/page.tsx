@@ -12,6 +12,7 @@
 import { useState, useEffect, useRef } from 'react';
 import type { Determination } from '@/lib/types';
 import Link from 'next/link';
+import { VhgDemoBriefScore } from '@/components/vhg/VhgDemoBriefScore';
 import { demoCases, demoReviewers, DEMO_REVIEWER_IDS, DEMO_CASE_IDS } from '@/lib/demo-data';
 
 // ── The single case we walk through ──────────────────────────────────────────
@@ -319,6 +320,8 @@ export default function DemoTourPage() {
                 <StreamingText text={aiRec?.rationale ?? 'Medical necessity criteria are met. Patient presents with persistent lumbar radiculopathy unresponsive to 6 weeks of conservative management. MRI is appropriate to evaluate for disc herniation, stenosis, or other structural pathology prior to considering interventional therapy.'} active={step === 2} speed={5} />
               </p>
             </div>
+
+            <VhgDemoBriefScore />
 
             {/* Criteria match */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
