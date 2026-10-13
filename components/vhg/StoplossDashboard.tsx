@@ -49,7 +49,7 @@ export function StoplossDashboard({
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
-              <p className="text-[11px] uppercase tracking-[0.18em] text-gold font-semibold">VantaUM · VantaHG</p>
+              <p className="text-[11px] uppercase tracking-[0.18em] text-gold font-semibold">Demo, synthetic data</p>
               <h1 className="font-[family-name:var(--font-display)] text-4xl mt-2">Stop-loss partner</h1>
               <p className="text-sm text-white/70 mt-3 max-w-xl">
                 Aggregated, de-identified med-review cases. Role shown for this synthetic session: stoploss_partner.

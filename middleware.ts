@@ -5,6 +5,8 @@ import { isDemoMode } from '@/lib/demo-mode';
 // Public marketing / auth-flow page prefixes. `startsWith` semantics are
 // intentional here because routes like `/signup-tpa` and `/demo-tour` are
 // real pages that should remain reachable without auth.
+// /stoploss is the public synthetic demo (vantaum.com/stoploss). It must
+// return before the demo-password gate and before login redirects.
 const PUBLIC_PAGE_PREFIXES = ['/login', '/signup', '/sign-up', '/magic-link', '/forgot-password', '/welcome', '/demo-password', '/site', '/stoploss'];
 
 // Protected portal paths — these require an authenticated + approved TPA / Provider

@@ -21,7 +21,7 @@ export default async function StoplossReviewPage({
     <div className="min-h-screen bg-background">
       <header className="bg-navy text-white">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
-          <p className="text-[11px] uppercase tracking-[0.18em] text-gold font-semibold">Med review · synthetic</p>
+          <p className="text-[11px] uppercase tracking-[0.18em] text-gold font-semibold">Demo, synthetic data</p>
           <h1 className="font-[family-name:var(--font-display)] text-4xl mt-2">{panel.case_number}</h1>
           <p className="text-sm text-white/70 mt-3 max-w-2xl">
             Criteria result (demo) beside VHG Score. The physician still decides.

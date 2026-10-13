@@ -36,7 +36,7 @@ export function VhgReviewPanels({ panel }: { panel: MedReviewPanel }) {
         </section>
 
         <section className="rounded-xl border border-gold/50 bg-white p-5" aria-label="VHG Score">
-          <p className="text-[11px] uppercase tracking-[0.16em] text-gold-dark font-semibold">IDR likelihood · demo model</p>
+          <p className="text-[11px] uppercase tracking-[0.16em] text-gold-dark font-semibold">Demo, synthetic data · IDR likelihood</p>
           <h2 className="text-lg font-semibold text-navy mt-1">
             VHG Score<sup className="text-xs ml-0.5">TM</sup>
           </h2>
