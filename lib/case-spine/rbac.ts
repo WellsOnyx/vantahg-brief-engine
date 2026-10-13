@@ -8,6 +8,8 @@ import { TERMINAL_STATES, type CanonicalCase, type ListCasesFilters, type SpineV
 export function toSpineViewRole(role: UserRole | string | null | undefined): SpineViewRole {
   switch (role) {
     case 'client':
+    case 'stoploss_partner':
+      // Aggregated stop-loss view only. No clinical lens without a tenant bind.
       return 'client';
     case 'concierge':
     case 'delivery-lead':

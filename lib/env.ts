@@ -35,6 +35,8 @@ const EnvSchema = z.object({
 
   // Demo / feature flags
   NEXT_PUBLIC_DEMO_MODE: z.string().optional(),
+  ENABLE_VHG_SCORE_DEMO: z.string().optional(),
+  NEXT_PUBLIC_ENABLE_VHG_SCORE_DEMO: z.string().optional(),
   ENABLE_REAL_ANTHROPIC: z.coerce.boolean().default(false),
   ENABLE_REAL_EFAX: z.coerce.boolean().default(false),
 

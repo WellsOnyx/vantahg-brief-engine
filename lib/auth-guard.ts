@@ -15,7 +15,8 @@ export type UserRole =
   | 'slt'
   | 'delivery-lead'
   | 'concierge'
-  | 'idr-attorney';   // External partner attorneys handling Payer IDR cases (Phase 2B)
+  | 'idr-attorney'   // External partner attorneys handling Payer IDR cases (Phase 2B)
+  | 'stoploss_partner'; // Synthetic stop-loss partner demo. No clinical packet access.
 
 /**
  * Roles considered "internal staff" — admin + organizational + exec views.

@@ -1,0 +1,86 @@
+# 16 — VHG Score demo
+
+Synthetic walkthrough only. No live PHI. Default off until `ENABLE_VHG_SCORE_DEMO=true`.
+
+Published path: [https://vantaum.com/stoploss](https://vantaum.com/stoploss)
+
+The price card, billing wire, packaging guard, and IRO credentialing module are unchanged. VantaUM still sells Med Review. VantaHG remains IRO + IDR only. This demo does not add a fee.
+
+## What Jonah can click
+
+1. `/stoploss` — stop-loss partner dashboard. Public on the marketing host so the link does not ask for a login. Data is synthetic.
+2. `/stoploss/review/vhg-mr-0101` — one med-review case with a **criteria result (demo)** beside **VHG Score™**.
+3. `/portal/stoploss` — same dashboard behind the app session. API allows `stoploss_partner`, `admin`, and `ceo`.
+4. `/med-review/[id]` — when the flag is on and the viewer is signed in, the same two panels load from `GET /api/vhg/panel`. Unknown case ids get an illustrative profile. The clinical packet is not an input to the score.
+
+Switch clients on the dashboard:
+
+- Northwind Synthetic Benefits (`syn-vhg-med-review`) has `vanta_med_review_contract=true` and `med_review_provider=vanta`. Rows show.
+- Harbor Synthetic Benefits (`syn-vhg-no-contract`) fails the existing Brief Engine entitlement check. The page keeps the banner and shows no case rows.
+
+## One command
+
+```bash
+npm run demo:vhg
+ENABLE_VHG_SCORE_DEMO=true npm run dev
+```
+
+Open `http://localhost:3000/stoploss`.
+
+`npm run demo:vhg` rewrites `fixtures/vhg/idr-patterns.redacted.json` from the generator. It does not connect to a database.
+
+## Data flow
+
+```
+synthetic IDR filings (identifiable, in-memory only)
+        │  lib/vhg/redact.ts
+        ▼
+redacted IDR patterns (~200)  →  fixtures/vhg/idr-patterns.redacted.json
+        │  lookup
+        ▼
+lib/vhg/score.ts  (hand-set logistic weights, demo_not_validated)
+        │
+        ├─ med review case  →  criteria result (demo) + VHG Score + drivers
+        └─ stop-loss dashboard  →  counts, exposure, stop-sign list, trend
+```
+
+The score is the likelihood, 0–100, that a case later becomes an IDR dispute. Bands are low under 40, medium from 40, high from 70. Drivers can include network status, emergency vs scheduled, billed-to-QPA ratio, facility type, service line / CPT, state, and the historical win/loss mix on matching redacted patterns.
+
+The physician still decides. The panel says so. The score does not approve, deny, or file an IDR dispute.
+
+## Redaction
+
+`lib/vhg/redact.ts` runs on the synthetic filings before the pattern file is written.
+
+Removed: patient name, date of birth, member id, street, city, postal code, provider person name, NPI, claim number, and the raw record id.
+
+Kept, coarsened: service and dispute dates as `YYYY-MM`. Billed and QPA amounts collapse to a ratio. State, specialty, CPT, service line, facility type, encounter, network status, and IDR outcome stay, because those are the pattern features.
+
+This is a Safe Harbor-style strip for a demo, not an expert determination and not a certification that a live extract would pass HIPAA.
+
+## Gating
+
+| Gate | Behavior |
+| --- | --- |
+| `ENABLE_VHG_SCORE_DEMO` | Off unless the value is `true`. Pages and APIs return the off state or 404. |
+| Med review entitlement | Dashboard rows render only when `evaluateUmBriefEngineAccess` grants access. That function is unchanged. |
+| Role | `GET /api/vhg/stoploss` allows `stoploss_partner`, `admin`, `ceo`. The public `/stoploss` page is the synthetic showcase and does not read a session. |
+| Spine | `stoploss_partner` maps to the client lens, so it does not open the med-review packet view. |
+
+Banner on every dashboard state: **Included at no charge with Vanta Med Review**.
+
+## Open compliance items
+
+Do not treat this demo as a go-live clearance.
+
+1. **HIPAA de-identification.** Live IDR extracts need a documented Safe Harbor process or an expert determination. Month/year dates, state, and rare CPT combinations can still be quasi-identifiers. This repo only proves the strip on synthetic rows.
+2. **IDR data-use restrictions.** Federal IDR filings and QPA data have their own use limits. A training or lookup set built from real filings needs a written use basis before it leaves the IDR workflow.
+3. **BAA with stop-loss partners.** A partner dashboard that can be tied back to a plan or a case needs a BAA (and a minimum necessary story) before any real row is shown. The published page is synthetic on purpose.
+4. **InterQual license.** The case view says **criteria result (demo)** and uses invented placeholder lines. It is not InterQual, MCG, or any other licensed criteria product. Do not paste licensed criteria into this module.
+5. **Trademark.** **VHG Score** is a working name. The panel shows a TM placeholder. File the mark before using it as a product name in market.
+
+## Not in this demo
+
+- No change to `lib/billing/um-price-card.ts`, statement math, or packaging guards.
+- No live IDR feed, no model training on real filings, and no claim that the weights are validated.
+- No Optum outreach.
