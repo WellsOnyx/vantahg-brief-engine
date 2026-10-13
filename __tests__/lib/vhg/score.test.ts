@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { demoCriteriaFor } from '@/lib/vhg/criteria-demo';
 import { getMedReviewDemoCase, panelFromCase } from '@/lib/vhg/portfolio';
+import { VHG_BRAND, VHG_SCORE_LABEL } from '@/lib/vhg/brand';
 import { bandForScore, scoreVhgCase } from '@/lib/vhg/score';
 import type { VhgScoreInput } from '@/lib/vhg/types';
 
@@ -21,9 +22,11 @@ describe('VHG score demo model', () => {
     const score = scoreVhgCase(base);
     expect(score.model_status).toBe('demo_not_validated');
     expect(score.model_id).toBe('vhg-score-demo-v1');
-    expect(score.label).toBe('VHG Score');
+    expect(score.label).toBe(VHG_SCORE_LABEL);
+    expect(score.label).toBe(`${VHG_BRAND} Score`);
+    expect(score.label).not.toMatch(/VHG(?!\u2122)/);
     expect(score.trademark).toBe('TM');
-    expect(score.advisory).toMatch(/physician decides/i);
+    expect(score.advisory).toMatch(/doctor decides/i);
     expect(score.score).toBeGreaterThanOrEqual(0);
     expect(score.score).toBeLessThanOrEqual(100);
   });

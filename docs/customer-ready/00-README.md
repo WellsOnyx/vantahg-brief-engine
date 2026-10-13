@@ -47,7 +47,7 @@ A TPA or self-insured employer can:
 | 12 | Muse connector (Phase 8 stub) | CX-only relationship surface. No PHI. Not live-keyed |
 | 13 | Go-live ops punch list | Ordered env, RDS `027`, bootstrap, A–E, BAA. No live PHI until the BAA path is confirmed |
 | 14 | Billing wire | How Cole mints the platform line, runs a statement, and reads the scoreboard. Synthetic only. No live PHI |
-| 16 | [16-vhg-score-demo.md](16-vhg-score-demo.md) | Synthetic VHG Score + public stop-loss demo at `/stoploss`. Flagged. No live PHI |
+| 16 | [16-vhg-score-demo.md](16-vhg-score-demo.md) | Synthetic VHG™ score + public stop-loss demo at `/stoploss` and the `/demo` physician step. Flagged. No live PHI |
 | — | [pricing-strategy-memo-2026-09-23.md](pricing-strategy-memo-2026-09-23.md) | Working decision memo (Jonah Manning, 23 Sep 2026). Do not publish internal margins. |
 | — | [um-unit-economics-rate-card.md](um-unit-economics-rate-card.md) | Two-line card aligned to that memo. Platform PMPM + clinical review. External slides illustrative. |
 | — | [um-pricing-rules.md](um-pricing-rules.md) | R1–R20 (R10–R13 restored), B1–B10, D1–D8, memo §11. Platform-vs-Med-Review open question stays open. |

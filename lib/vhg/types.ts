@@ -100,7 +100,8 @@ export interface VhgScore {
   pattern_lookup: VhgPatternLookup;
   model_id: 'vhg-score-demo-v1';
   model_status: 'demo_not_validated';
-  label: 'VHG Score';
+  /** Display brand, always `VHG™ Score` from `VHG_SCORE_LABEL`. */
+  label: string;
   trademark: 'TM';
   advisory: string;
 }
@@ -159,7 +160,7 @@ export interface MedReviewPanel {
 }
 
 export const VHG_SCORE_ADVISORY =
-  'Advisory only. The reviewing physician decides. This score does not determine medical necessity and does not file an IDR dispute.';
+  'Advisory only. The doctor decides. This score does not determine medical necessity and does not file an IDR dispute.';
 
 export const VHG_BANNER = 'Included at no charge with Vanta Med Review';
 

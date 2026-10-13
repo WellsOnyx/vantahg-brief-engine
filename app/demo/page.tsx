@@ -1,9 +1,9 @@
-'use client';
-
 import Link from 'next/link';
 import DemoWalkthrough from '@/components/demo/DemoWalkthrough';
+import { demoWalkthroughVhgScore } from '@/lib/vhg/demo-brief';
 
 export default function DemoPage() {
+  const vhgScore = demoWalkthroughVhgScore();
   return (
     <div className="min-h-screen bg-[#f8f9fb]">
       <header className="bg-[#0c2340] text-white py-4 px-4 sm:px-6">
@@ -32,7 +32,7 @@ export default function DemoPage() {
         </div>
       </div>
       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
-        <DemoWalkthrough />
+        <DemoWalkthrough vhgScore={vhgScore} />
       </main>
       <div className="max-w-3xl mx-auto px-6 pb-8 text-center text-xs text-navy/50">
         All data synthetic. This demo runs entirely client-side with the same criteria engine (InterQual/MCG/ACR references) used in production.

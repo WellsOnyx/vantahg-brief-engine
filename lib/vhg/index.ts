@@ -1,3 +1,4 @@
+export { VHG_BRAND, VHG_SCORE_LABEL, LIKELY_IDR_CONTESTED_LABEL, vhgBandLabel } from './brand';
 export { isVhgScoreDemoEnabled } from './flag';
 export { getRedactedIdrPatterns } from './patterns';
 export { redactIdrRecord, residualIdentifierHits, toYearMonth } from './redact';

@@ -12,6 +12,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+import { VHG_BRAND, vhgBandLabel } from '@/lib/vhg/brand';
 import type { StoplossDashboardResult } from '@/lib/vhg/dashboard';
 
 function money(value: number): string {
@@ -107,7 +108,7 @@ export function StoplossDashboard({
                 <p className="text-xs text-muted mt-1">Vanta med review, synthetic</p>
               </article>
               <article className="rounded-xl border border-rose-200 bg-white p-5">
-                <p className="text-xs uppercase tracking-wider text-muted">High VHG risk</p>
+                <p className="text-xs uppercase tracking-wider text-muted">High {VHG_BRAND} risk</p>
                 <p className="font-[family-name:var(--font-display)] text-4xl text-rose-800 mt-2">{result.totals.high_vhg_risk_count}</p>
                 <p className="text-xs text-muted mt-1">Score 70–100</p>
               </article>
@@ -153,7 +154,7 @@ export function StoplossDashboard({
 
             <section className="rounded-xl border border-border bg-white p-5">
               <h2 className="text-sm font-semibold text-navy">Trend</h2>
-              <p className="text-xs text-muted mt-1">Cases reviewed and high-VHG-risk count by service month.</p>
+              <p className="text-xs text-muted mt-1">Cases reviewed and high-{VHG_BRAND}-risk count by service month.</p>
               <div className="h-64 mt-4">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={result.trend}>
@@ -162,7 +163,7 @@ export function StoplossDashboard({
                     <YAxis allowDecimals={false} />
                     <Tooltip />
                     <Area type="monotone" dataKey="cases_reviewed" stroke="#0c2340" fill="#0c2340" fillOpacity={0.15} name="Cases reviewed" />
-                    <Area type="monotone" dataKey="high_risk" stroke="#9f1239" fill="#9f1239" fillOpacity={0.2} name="High VHG risk" />
+                    <Area type="monotone" dataKey="high_risk" stroke="#9f1239" fill="#9f1239" fillOpacity={0.2} name={`High ${VHG_BRAND} risk`} />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
@@ -174,7 +175,7 @@ export function StoplossDashboard({
                 <div>
                   <h2 className="text-lg font-semibold text-navy">Stop sign list</h2>
                   <p className="text-sm text-muted">
-                    High-VHG-risk cases for early intervention. Showing {result.stop_sign.length} of {result.stop_sign_total}. De-identified.
+                    High-{VHG_BRAND}-risk cases for early intervention. Showing {result.stop_sign.length} of {result.stop_sign_total}. De-identified.
                   </p>
                 </div>
               </div>
@@ -186,7 +187,7 @@ export function StoplossDashboard({
                       <th className="py-2 pr-3">Month</th>
                       <th className="py-2 pr-3">Service line</th>
                       <th className="py-2 pr-3">State</th>
-                      <th className="py-2 pr-3">Score</th>
+                      <th className="py-2 pr-3">{VHG_BRAND}</th>
                       <th className="py-2 pr-3">Top driver</th>
                       <th className="py-2">Exposure</th>
                     </tr>
@@ -202,7 +203,9 @@ export function StoplossDashboard({
                         <td className="py-2 pr-3">{row.service_month}</td>
                         <td className="py-2 pr-3">{row.service_line}</td>
                         <td className="py-2 pr-3">{row.state}</td>
-                        <td className="py-2 pr-3 font-semibold">{row.score}</td>
+                        <td className="py-2 pr-3 font-semibold">
+                          {row.score}% · {vhgBandLabel(row.band)}
+                        </td>
                         <td className="py-2 pr-3">{row.top_driver}</td>
                         <td className="py-2">{money(row.projected_exposure_usd)}</td>
                       </tr>
@@ -217,7 +220,7 @@ export function StoplossDashboard({
               <Link href={`${reviewPath}/vhg-mr-0101`} className="text-navy underline">
                 MR-SYN-0101
               </Link>
-              . VHG Score is a demo model and is not validated.
+              . {VHG_BRAND} Score is a demo model and is not validated.
             </p>
           </>
         )}

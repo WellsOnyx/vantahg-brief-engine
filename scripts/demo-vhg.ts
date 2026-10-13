@@ -8,6 +8,7 @@
  */
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
+import { VHG_BRAND } from '../lib/vhg/brand';
 import { getStoplossDashboard } from '../lib/vhg/dashboard';
 import { getRedactedIdrPatterns } from '../lib/vhg/patterns';
 import { getMedReviewDemoCase, panelFromCase } from '../lib/vhg/portfolio';
@@ -27,11 +28,11 @@ console.log(`Redacted IDR patterns: ${patterns.length}`);
 console.log(`Wrote ${outFile}`);
 if (dashboard.ok) {
   console.log(
-    `Entitled med-review cases: ${dashboard.totals.cases_reviewed}; high VHG risk: ${dashboard.totals.high_vhg_risk_count}`,
+    `Entitled med-review cases: ${dashboard.totals.cases_reviewed}; high ${VHG_BRAND} risk: ${dashboard.totals.high_vhg_risk_count}`,
   );
 }
 if (panel) {
-  console.log(`Sample case ${panel.case_number}: VHG Score ${panel.score.score} (${panel.score.band})`);
+  console.log(`Sample case ${panel.case_number}: ${VHG_BRAND} Score ${panel.score.score} (${panel.score.band})`);
 }
 console.log('');
 console.log('Local:  ENABLE_VHG_SCORE_DEMO=true npm run dev');
