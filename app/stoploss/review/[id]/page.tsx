@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { DemoDisabled } from '@/components/vhg/DemoDisabled';
 import { VhgReviewPanels } from '@/components/vhg/VhgReviewPanels';
 import { isVhgScoreDemoEnabled } from '@/lib/vhg/flag';
+import { getLedgerCase } from '@/lib/vhg/ledger';
 import { getMedReviewDemoCase, panelFromCase } from '@/lib/vhg/portfolio';
 
 export const dynamic = 'force-dynamic';
@@ -15,7 +16,7 @@ export default async function StoplossReviewPage({
 }) {
   if (!isVhgScoreDemoEnabled()) return <DemoDisabled />;
   const { id } = await params;
-  const row = getMedReviewDemoCase(id);
+  const row = getMedReviewDemoCase(id) ?? getLedgerCase(id);
   if (!row) notFound();
   const panel = panelFromCase(row, false);
   return (

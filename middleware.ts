@@ -32,6 +32,7 @@ const PUBLIC_EXACT = new Set([
   '/api/auth/session',
   '/api/auth/request-access', // Concierge-mediated access request — unauthenticated by definition
   '/api/verify-demo-password', // password gate for demo preview
+  '/api/stoploss/aggregate', // public synthetic stop-loss time aggregate
 ]);
 
 // Public API prefixes whose sub-paths are themselves public. The trailing
