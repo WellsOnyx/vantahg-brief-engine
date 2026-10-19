@@ -1,3 +1,5 @@
+<cursor_untrusted_data_1337 source="CallDynamicTool">
+
 # 17 — IRO portal slice 1
 
 **Date:** 2026-10-19  
@@ -31,7 +33,7 @@ Tests live in `__tests__/lib/iro/`. They cover cross-line denial, Ohio standard 
 - PR #83 itself. It is draft, conflicting, and models IRO-only credentialing with one clinical approver. Oct 19 asks for a shared status read plus a separate 4-approval IRO panel. Re-scope that branch. Do not force-merge it.
 - Check-in timers (expedited every 2 hours, 12 hours before an expedited report, standard report 2 days before due, missing-records follow-up every 2 business days), outreach no-reply timers, PIPACA 10-day notice generation, and the first-two-cases quality hold.
 - SOP appendices D, E, and H, the 6-stage to 31-step map, and the 105-code specialty list. Those were not in the repo. Specialty is stored as a code and is not matched against an invented list.
-- Reviewer pay, Medical Director payouts, spending-limit approval, and the CFO invoice check are the financial suite in [`18-financial-billing-suite.md`](18-financial-billing-suite.md). Vendor charges are still deferred.
+- Reviewer pay, Medical Director payouts, vendor charges, spending-limit approval, and the CFO invoice check.
 - Live OIG / SAM / NPDB screening, primary-source verification, and Thelma's checklist. The credentialing service is a read interface.
 - Confirming Ohio, the other nine states, or the fee amounts. Every state row and the fee schedule is `preliminary: true` and `confirmed: false` except that Ohio's `go_live` flag is on for this synthetic skeleton only.
 - The Sep 21 packaging sentence "VantaHG = IRO + IDR only" is not rewritten here. The operational model in this slice is three lines. The entitlement function is unchanged on purpose.
@@ -55,3 +57,6 @@ PDF questions that are not in (a)–(f): billing inside the portal vs a fed syst
 `WellsOnyx/vantahg-brief-engine` reports as a **public** GitHub repository. Do not commit live PHI, credential files, or client contracts.
 
 `lib/auth-guard.ts` still auto-admins demo mode outside production. This slice adds no route, so that path was not widened and was not repaired.
+
+
+</cursor_untrusted_data_1337>

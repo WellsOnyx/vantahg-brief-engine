@@ -1,8 +1,12 @@
+<cursor_untrusted_data_1337 source="CallDynamicTool">
+
+<cursor_untrusted_data_redacted source="CallDynamicTool">
+
 # VantaUM Customer-Ready Plan
 
 **Status:** Working plan (Jonah → Cole, 2026-09-18)  
 **Repo home:** `docs/customer-ready/`  
-**Product:** Vanta Utilization Management — concierge clinical layer (intake → Brief Engine → MD determination → auth / first-level appeal → IRO-ready docs)  
+**Product:** Vanta Med Review — the only product sold here. The Brief Engine is the shared engine under IDR, IRO, and Medical Review (intake → brief → MD determination → auth / first-level appeal → IRO-ready docs). It is not a standalone UM product.  
 **Site:** https://vantaum.com · Contact: hello@wellsonyx.com  
 **North-star loop:** intake → rules → brief → MD sign → outbound decision → billable event → report
 
@@ -24,7 +28,7 @@ A TPA or self-insured employer can:
 
 - Live PHI only on AWS Brief Engine + BAA-covered services (RDS, S3, SES, Cognito). No live PHI in Grok chats, agent boxes, or CX memory.
 - Every live determination is human MD-signed at go-live (no silent auto-approve).
-- **VantaUM sells Med Review** as the paid wedge. Brief Engine / UM is included free **only** when the buyer uses Vanta med review under **UM’s contract**. No standalone free UM SKU. No free UM with a third-party review shop. **VantaHG = IRO + IDR only** — not the med-review commercial door. UM still owns Brief Engine SoR/tech. See `01-product-boundary.md`.
+- **Vanta Med Review** is the paid product. The Brief Engine is included **only** under that contract. No standalone UM product. No engine with a third-party review shop. The 2026-09-21 platform sentence that limited VantaHG to IRO and IDR is superseded: Vanta HG runs IDR, IRO, and Medical Review as separate lines. A Med Review contract does not open IRO or IDR. Engine code stays in this repo. See `01-product-boundary.md` and `17-med-review-pivot.md`.
 - Optum / Kari Cook: frozen until Jonah explicitly opens with context.
 - Same buyer across UM/IRO doors: flag Health before any external draft.
 
@@ -47,9 +51,9 @@ A TPA or self-insured employer can:
 | 12 | Muse connector (Phase 8 stub) | CX-only relationship surface. No PHI. Not live-keyed |
 | 13 | Go-live ops punch list | Ordered env, RDS `027`, bootstrap, A–E, BAA. No live PHI until the BAA path is confirmed |
 | 14 | Billing wire | How Cole mints the platform line, runs a statement, and reads the scoreboard. Synthetic only. No live PHI |
-| 16 | [16-vhg-score-demo.md](16-vhg-score-demo.md) | Synthetic VHG™ score + public stop-loss demo at `/stoploss` and the `/demo` physician step. Flagged. No live PHI |
+| 16 | [16-vhg-score-demo.md](16-vhg-score-demo.md) | Synthetic VHG™ score + public stop-loss demo at `/stoploss` and the `/demo` physician step. Flagged. No live PHI. Not a live IDR feed |
+| 17 | [17-med-review-pivot.md](17-med-review-pivot.md) | Oct 19 exclusive Med Review pivot: naming, redirects, what the parallel IRO slice still owns, open decisions (a)–(f) |
 | 17 | [17-iro-portal-slice-1.md](17-iro-portal-slice-1.md) | IRO portal slice 1: line firewall, 6-stage skeleton, Ohio deadlines, preliminary fees, adapter stubs. Synthetic only. No live PHI |
-| 18 | [18-financial-billing-suite.md](18-financial-billing-suite.md) | Financial suite: IRO fees and payouts, IDR fees/escrow, Med Review contracts, AR/AP, CFO reconciliation. Synthetic only. No live rails. Doc 17 on the med-review PR is a different file |
 | — | [pricing-strategy-memo-2026-09-23.md](pricing-strategy-memo-2026-09-23.md) | Working decision memo (Jonah Manning, 23 Sep 2026). Do not publish internal margins. |
 | — | [um-unit-economics-rate-card.md](um-unit-economics-rate-card.md) | Two-line card aligned to that memo. Platform PMPM + clinical review. External slides illustrative. |
 | — | [um-pricing-rules.md](um-pricing-rules.md) | R1–R20 (R10–R13 restored), B1–B10, D1–D8, memo §11. Platform-vs-Med-Review open question stays open. |
@@ -68,3 +72,8 @@ A TPA or self-insured employer can:
 1. Cole reviews and comments in the PR that lands these docs.
 2. Implementation follows `10-implementation-commits.md` in order; each phase is a PR (or stacked commits) with the listed acceptance tests.
 3. STATUS updates go in `STATE.md` when a phase flips from open → done.
+
+
+</cursor_untrusted_data_redacted>
+
+</cursor_untrusted_data_1337>
