@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { HeaderAuth } from '@/components/HeaderAuth';
+import { isIroPublicDemoPath } from '@/lib/routing/iro-public-demo';
 import { TenantScopeProvider } from '@/lib/tenant-scope';
 import { TenantScopeSelector } from '@/components/TenantScopeSelector';
 
@@ -96,7 +97,8 @@ export function AppShell({
 
   const isChromeless =
     CHROMELESS_PATHS.has(pathname) ||
-    CHROMELESS_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + '/'));
+    CHROMELESS_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + '/')) ||
+    isIroPublicDemoPath(pathname);
 
   function launchMicroDemo(label: string) {
     setActiveMicro(label);

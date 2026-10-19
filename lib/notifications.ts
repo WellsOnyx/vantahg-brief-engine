@@ -462,7 +462,7 @@ export async function notifyIntakeConfirmation(
     case_number: caseNumber,
     case_id: caseId,
     subject: `Authorization Request Received: ${authorizationNumber}`,
-    body: `This confirms receipt of your authorization request.\n\nAuthorization Number: ${authorizationNumber}\nCase Reference: ${caseNumber}\n\nYour request is being processed. You may check the status at ${baseUrl}/portal\n\nIf you have questions, contact us at (602) 555-0100.`,
+    body: `This confirms receipt of your authorization request.\n\nAuthorization Number: ${authorizationNumber}\nCase Reference: ${caseNumber}\n\nYour request is being processed. You may check the status at ${baseUrl}/portal/status\n\nIf you have questions, contact us at (602) 555-0100.`,
   });
 }
 

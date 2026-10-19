@@ -7,6 +7,17 @@ Future Claude/Cole/Jonah sessions: read this first.
 
 ---
 
+## 2026-10-19 — Public synthetic IRO demo (`/portal`)
+
+Jonah can share a read-only link. Synthetic Ohio case only. No auth. No live feed. No PHI. Prices are not on the page. Pricing, credentialing, and billing logic were not edited.
+
+- **IRO demo:** https://vantaum.com/portal — exact path only. Chromeless, same idea as `/stoploss`. Banner: Demo, synthetic data. Six stages, Ohio deadline, hard STOP gates, line firewall. Built from `runSyntheticOhioWalkthrough()` plus `routeIntake`.
+- **Authorization Status Portal:** https://vantaum.com/portal/status — moved off `/portal`. Same auth as before. Still inside the VantaUM Admin shell (Mission Control, Operations). Intake confirmation email now points here. No redirect from `/portal`, because that URL is the demo.
+- **Still signed-in:** `/portal/tpa` and `/portal/provider`. A `/portal` prefix match is not public.
+- **Proof:** `__tests__/lib/iro/public-demo.test.tsx`.
+
+---
+
 ## 2026-10-19 — Financial billing suite (synthetic ledger)
 
 Jonah's Oct 19 follow-up: a full financial billing suite across the three firewalled lines. In-memory. Synthetic tokens. No live PHI. No payment rail. No vendor picked. Stacked on the IRO portal slice. No new HTTP route. `lib/billing/um-price-card.ts` and the Med Review entitlement function are unchanged.

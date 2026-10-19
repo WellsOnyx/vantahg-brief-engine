@@ -1,0 +1,1108 @@
+'use client';
+
+import { useState, useMemo, useEffect, useCallback } from 'react';
+import Link from 'next/link';
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+type PortalStage = 'submitted' | 'ai_analysis' | 'physician_review' | 'determination';
+type PortalStatus = 'pending' | 'in_progress' | 'completed';
+type DeterminationResult = 'approved' | 'denied' | null;
+
+interface PortalCase {
+  id: string;
+  caseRef: string;
+  patientName: string;
+  patientMasked: string;
+  memberId: string;
+  procedureCode: string;
+  procedureDescription: string;
+  dateSubmitted: string;
+  currentStage: PortalStage;
+  determination: DeterminationResult;
+  estimatedCompletion: string;
+  priority: 'standard' | 'urgent' | 'expedited';
+  reviewType: string;
+  peerToPeerAvailable: boolean;
+  notes: string;
+  authorizationNumber: string | null;
+  serviceCategory: string | null;
+  requestingProvider: string | null;
+  payerName: string | null;
+  determinationAt: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// Stage pipeline definition
+// ---------------------------------------------------------------------------
+
+const STAGES: { key: PortalStage; label: string; description: string }[] = [
+  { key: 'submitted', label: 'Submitted', description: 'Case received and validated' },
+  { key: 'ai_analysis', label: 'AI Analysis', description: 'Clinical criteria analysis in progress' },
+  { key: 'physician_review', label: 'Physician Review', description: 'Board-certified physician reviewing' },
+  { key: 'determination', label: 'Determination', description: 'Final decision issued' },
+];
+
+function stageIndex(stage: PortalStage): number {
+  return STAGES.findIndex((s) => s.key === stage);
+}
+
+function stageStatus(stage: PortalStage, currentStage: PortalStage): PortalStatus {
+  const current = stageIndex(currentStage);
+  const target = stageIndex(stage);
+  if (target < current) return 'completed';
+  if (target === current) return 'in_progress';
+  return 'pending';
+}
+
+// ---------------------------------------------------------------------------
+// Demo data
+// ---------------------------------------------------------------------------
+
+const DEMO_CASES: PortalCase[] = [
+  {
+    id: '1',
+    caseRef: 'VUM-2026-00412',
+    patientName: 'Robert Garcia',
+    patientMasked: 'Robert G.',
+    memberId: 'MBR-88431',
+    procedureCode: 'E0601',
+    procedureDescription: 'Continuous Positive Airway Pressure (CPAP) Device',
+    dateSubmitted: '2026-02-17T09:15:00Z',
+    currentStage: 'submitted',
+    determination: null,
+    estimatedCompletion: '2026-02-19T17:00:00Z',
+    priority: 'standard',
+    reviewType: 'Prior Authorization',
+    peerToPeerAvailable: false,
+    notes: 'Case has been received and is queued for clinical analysis. Sleep study results and face-to-face evaluation documentation have been verified.',
+    authorizationNumber: null,
+    serviceCategory: 'dme',
+    requestingProvider: 'Dr. Patricia Reyes',
+    payerName: 'Western Employers Trust',
+    determinationAt: null,
+  },
+  {
+    id: '2',
+    caseRef: 'VUM-2026-00409',
+    patientName: 'Maria Santos',
+    patientMasked: 'Maria S.',
+    memberId: 'MBR-72104',
+    procedureCode: '72148',
+    procedureDescription: 'MRI Lumbar Spine without Contrast',
+    dateSubmitted: '2026-02-16T14:30:00Z',
+    currentStage: 'ai_analysis',
+    determination: null,
+    estimatedCompletion: '2026-02-18T12:00:00Z',
+    priority: 'standard',
+    reviewType: 'Medical Necessity',
+    peerToPeerAvailable: false,
+    notes: 'AI clinical analysis is actively evaluating submitted clinical notes and conservative treatment records against ACR Appropriateness Criteria and InterQual imaging guidelines.',
+    authorizationNumber: null,
+    serviceCategory: 'imaging',
+    requestingProvider: 'Dr. Michael Chen',
+    payerName: 'Western Employers Trust',
+    determinationAt: null,
+  },
+  {
+    id: '3',
+    caseRef: 'VUM-2026-00401',
+    patientName: 'James Wilson',
+    patientMasked: 'James W.',
+    memberId: 'MBR-55923',
+    procedureCode: '27447',
+    procedureDescription: 'Total Knee Arthroplasty (TKA)',
+    dateSubmitted: '2026-02-15T10:00:00Z',
+    currentStage: 'physician_review',
+    determination: null,
+    estimatedCompletion: '2026-02-17T17:00:00Z',
+    priority: 'urgent',
+    reviewType: 'Prior Authorization',
+    peerToPeerAvailable: false,
+    notes: 'A board-certified orthopedic reviewer is evaluating the AI-generated clinical brief, radiographic imaging, physical therapy records, and conservative treatment documentation.',
+    authorizationNumber: null,
+    serviceCategory: 'surgery',
+    requestingProvider: 'Dr. Linda Park',
+    payerName: 'CareFirst Blue Cross',
+    determinationAt: null,
+  },
+  {
+    id: '4',
+    caseRef: 'VUM-2026-00398',
+    patientName: 'Sarah Mitchell',
+    patientMasked: 'Sarah M.',
+    memberId: 'MBR-44810',
+    procedureCode: '64483',
+    procedureDescription: 'Transforaminal Epidural Steroid Injection (TFESI)',
+    dateSubmitted: '2026-02-14T08:45:00Z',
+    currentStage: 'physician_review',
+    determination: null,
+    estimatedCompletion: '2026-02-17T15:00:00Z',
+    priority: 'expedited',
+    reviewType: 'Prior Authorization',
+    peerToPeerAvailable: false,
+    notes: 'Expedited review in progress. Physician is evaluating MRI findings, documented radiculopathy, and prior conservative treatment history including physical therapy and oral medications.',
+    authorizationNumber: null,
+    serviceCategory: 'pain_management',
+    requestingProvider: 'Dr. Robert Kim',
+    payerName: 'Western Employers Trust',
+    determinationAt: null,
+  },
+  {
+    id: '5',
+    caseRef: 'VUM-2026-00385',
+    patientName: 'Angela Thompson',
+    patientMasked: 'Angela T.',
+    memberId: 'MBR-33201',
+    procedureCode: 'J1745',
+    procedureDescription: 'Infliximab (Remicade) Injection',
+    dateSubmitted: '2026-02-12T11:20:00Z',
+    currentStage: 'determination',
+    determination: 'approved',
+    estimatedCompletion: '2026-02-14T09:00:00Z',
+    priority: 'standard',
+    reviewType: 'Medical Necessity',
+    peerToPeerAvailable: false,
+    notes: 'Determination: Approved. Clinical documentation supports medical necessity per ACR Guidelines for RA management. Step therapy with conventional DMARDs documented. TB and Hepatitis B screening completed. Authorization valid for 6 months.',
+    authorizationNumber: 'AUTH-2026-08841',
+    serviceCategory: 'infusion',
+    requestingProvider: 'Dr. Amanda Foster',
+    payerName: 'Western Employers Trust',
+    determinationAt: '2026-02-14T08:30:00Z',
+  },
+  {
+    id: '6',
+    caseRef: 'VUM-2026-00379',
+    patientName: 'David Park',
+    patientMasked: 'David P.',
+    memberId: 'MBR-29087',
+    procedureCode: '90837',
+    procedureDescription: 'Psychotherapy, Extended Session (53+ Minutes)',
+    dateSubmitted: '2026-02-11T13:00:00Z',
+    currentStage: 'determination',
+    determination: 'denied',
+    estimatedCompletion: '2026-02-13T16:00:00Z',
+    priority: 'standard',
+    reviewType: 'Concurrent Review',
+    peerToPeerAvailable: true,
+    notes: 'Determination: Denied. Documentation does not support medical necessity for extended 53+ minute sessions at this time. No individualized treatment plan with measurable goals provided. Standard 38-52 minute sessions (90834) would be appropriate. A peer-to-peer review is available upon request.',
+    authorizationNumber: null,
+    serviceCategory: 'behavioral_health',
+    requestingProvider: 'Dr. Karen Liu',
+    payerName: 'CareFirst Blue Cross',
+    determinationAt: '2026-02-13T14:20:00Z',
+  },
+];
+
+// ---------------------------------------------------------------------------
+// Filter status options (client-facing labels)
+// ---------------------------------------------------------------------------
+
+type FilterStatus = '' | 'submitted' | 'in_review' | 'completed_approved' | 'completed_denied';
+
+const FILTER_OPTIONS: { value: FilterStatus; label: string }[] = [
+  { value: '', label: 'All Statuses' },
+  { value: 'submitted', label: 'Submitted' },
+  { value: 'in_review', label: 'Under Review' },
+  { value: 'completed_approved', label: 'Approved' },
+  { value: 'completed_denied', label: 'Denied' },
+];
+
+function matchesFilter(c: PortalCase, filter: FilterStatus): boolean {
+  if (filter === '') return true;
+  if (filter === 'submitted') return c.currentStage === 'submitted';
+  if (filter === 'in_review')
+    return c.currentStage === 'ai_analysis' || c.currentStage === 'physician_review';
+  if (filter === 'completed_approved')
+    return c.currentStage === 'determination' && c.determination === 'approved';
+  if (filter === 'completed_denied')
+    return c.currentStage === 'determination' && c.determination === 'denied';
+  return true;
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function formatDate(dateStr: string): string {
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
+function formatShortDate(dateStr: string): string {
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
+function formatServiceCategory(cat: string | null): string {
+  if (!cat) return '';
+  return cat
+    .split('_')
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
+}
+
+// ---------------------------------------------------------------------------
+// Map real API Case to PortalCase
+// ---------------------------------------------------------------------------
+
+function mapCaseToPortal(c: Record<string, unknown>): PortalCase {
+  const status = c.status as string;
+  let currentStage: PortalStage = 'submitted';
+  let determination: DeterminationResult = null;
+
+  if (status === 'intake') currentStage = 'submitted';
+  else if (status === 'processing' || status === 'brief_ready') currentStage = 'ai_analysis';
+  else if (status === 'lpn_review' || status === 'rn_review' || status === 'md_review' || status === 'pend_missing_info') currentStage = 'physician_review';
+  else if (status === 'determination_made' || status === 'delivered') {
+    currentStage = 'determination';
+    const det = c.determination as string;
+    if (det === 'deny') {
+      determination = 'denied';
+    } else if (det === 'approve' || det === 'modify' || det === 'partial_approve') {
+      determination = 'approved';
+    }
+  }
+
+  const patientName = (c.patient_name as string) || 'Unknown';
+  const nameParts = patientName.split(' ');
+  const masked = nameParts.length > 1
+    ? `${nameParts[0]} ${nameParts[nameParts.length - 1][0]}.`
+    : patientName;
+
+  const reviewType = ((c.review_type as string) || 'prior_auth')
+    .split('_')
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
+
+  return {
+    id: c.id as string,
+    caseRef: (c.case_number as string) || 'N/A',
+    patientName,
+    patientMasked: masked,
+    memberId: (c.patient_member_id as string) || '',
+    procedureCode: ((c.procedure_codes as string[]) || [])[0] || '',
+    procedureDescription: (c.procedure_description as string) || '',
+    dateSubmitted: (c.created_at as string) || new Date().toISOString(),
+    currentStage,
+    determination,
+    estimatedCompletion: (c.turnaround_deadline as string) || '',
+    priority: (c.priority as 'standard' | 'urgent' | 'expedited') || 'standard',
+    reviewType,
+    peerToPeerAvailable: c.determination === 'deny' || c.determination === 'partial_approve',
+    notes: (c.determination_rationale as string) || `Case is currently in ${status?.replace(/_/g, ' ')} stage.`,
+    authorizationNumber: (c.authorization_number as string) || null,
+    serviceCategory: (c.service_category as string) || null,
+    requestingProvider: (c.requesting_provider as string) || null,
+    payerName: (c.payer_name as string) || null,
+    determinationAt: (c.determination_at as string) || null,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// ProgressStepper
+// ---------------------------------------------------------------------------
+
+function ProgressStepper({
+  currentStage,
+  determination,
+}: {
+  currentStage: PortalStage;
+  determination: DeterminationResult;
+}) {
+  return (
+    <div className="flex items-center w-full mt-4">
+      {STAGES.map((stage, i) => {
+        const status = stageStatus(stage.key, currentStage);
+        const isLast = i === STAGES.length - 1;
+
+        // Determine node styling
+        let nodeClasses = '';
+        let labelClasses = 'text-[10px] sm:text-xs mt-1.5 font-medium text-center ';
+        let lineClasses = 'flex-1 h-0.5 mx-1 ';
+
+        if (status === 'completed') {
+          nodeClasses = 'bg-green-500 text-white';
+          labelClasses += 'text-green-700';
+        } else if (status === 'in_progress') {
+          if (stage.key === 'determination' && determination === 'denied') {
+            nodeClasses = 'bg-red-500 text-white';
+            labelClasses += 'text-red-700';
+          } else if (stage.key === 'determination' && determination === 'approved') {
+            nodeClasses = 'bg-green-500 text-white';
+            labelClasses += 'text-green-700';
+          } else if (stage.key === 'ai_analysis') {
+            nodeClasses = 'bg-gold text-navy animate-pulse';
+            labelClasses += 'text-gold-dark';
+          } else {
+            nodeClasses = 'bg-navy text-white';
+            labelClasses += 'text-navy';
+          }
+        } else {
+          nodeClasses = 'bg-gray-200 text-gray-400';
+          labelClasses += 'text-muted';
+        }
+
+        // Line color
+        if (status === 'completed') {
+          lineClasses += 'bg-green-400';
+        } else {
+          lineClasses += 'bg-gray-200';
+        }
+
+        return (
+          <div key={stage.key} className="flex items-center flex-1 last:flex-none">
+            <div className="flex flex-col items-center min-w-[60px]">
+              <div
+                className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs font-bold ${nodeClasses} transition-all duration-300`}
+              >
+                {status === 'completed' ? (
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                ) : status === 'in_progress' && stage.key === 'determination' && determination === 'denied' ? (
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                ) : (
+                  i + 1
+                )}
+              </div>
+              <span className={labelClasses}>
+                <span className="hidden sm:inline">{stage.label}</span>
+                <span className="sm:hidden">{['Submit', 'AI', 'MD', 'Done'][i]}</span>
+              </span>
+            </div>
+            {!isLast && <div className={lineClasses} />}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// CaseCard
+// ---------------------------------------------------------------------------
+
+function CaseCard({ caseData }: { caseData: PortalCase }) {
+  const [expanded, setExpanded] = useState(false);
+
+  const currentIdx = stageIndex(caseData.currentStage);
+  const isComplete = caseData.currentStage === 'determination';
+  const isActive = caseData.currentStage === 'ai_analysis';
+
+  // Determine the headline status text
+  let statusText = '';
+  let statusColor = '';
+  if (isComplete && caseData.determination === 'approved') {
+    statusText = 'Approved';
+    statusColor = 'bg-green-50 text-green-700 border-green-200';
+  } else if (isComplete && caseData.determination === 'denied') {
+    statusText = 'Denied';
+    statusColor = 'bg-red-50 text-red-700 border-red-200';
+  } else if (isActive) {
+    statusText = 'AI Analysis';
+    statusColor = 'bg-amber-50 text-amber-700 border-amber-200';
+  } else if (caseData.currentStage === 'physician_review') {
+    statusText = 'Physician Review';
+    statusColor = 'bg-purple-50 text-purple-700 border-purple-200';
+  } else {
+    statusText = 'Submitted';
+    statusColor = 'bg-blue-50 text-blue-700 border-blue-200';
+  }
+
+  // Priority badge
+  let priorityColor = 'bg-gray-100 text-gray-600';
+  if (caseData.priority === 'urgent') priorityColor = 'bg-red-50 text-red-700';
+  if (caseData.priority === 'expedited') priorityColor = 'bg-orange-50 text-orange-700';
+
+  return (
+    <div
+      className={`bg-surface rounded-xl border transition-all duration-200 ${
+        expanded ? 'border-navy/30 shadow-lg' : 'border-border shadow-sm hover:shadow-md'
+      } ${isActive ? 'ring-2 ring-gold/30' : ''}`}
+    >
+      {/* Card Header */}
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full text-left px-5 py-4 sm:px-6 sm:py-5 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-gold"
+      >
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-2 mb-1">
+              <span className="font-mono text-sm font-semibold text-navy">{caseData.caseRef}</span>
+              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${statusColor}`}>
+                {isActive && (
+                  <span className="w-1.5 h-1.5 bg-amber-500 rounded-full mr-1.5 animate-pulse" />
+                )}
+                {statusText}
+              </span>
+              {caseData.priority !== 'standard' && (
+                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${priorityColor}`}>
+                  {caseData.priority === 'urgent' ? 'Urgent' : 'Expedited'}
+                </span>
+              )}
+            </div>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-sm">
+              <span className="text-foreground font-medium">{caseData.patientMasked}</span>
+              <span className="text-muted hidden sm:inline">|</span>
+              <span className="text-muted">
+                {caseData.procedureCode && (
+                  <span className="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded mr-1.5">{caseData.procedureCode}</span>
+                )}
+                {caseData.procedureDescription}
+              </span>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 sm:flex-col sm:items-end sm:gap-1">
+            <span className="text-xs text-muted whitespace-nowrap">
+              Submitted {formatShortDate(caseData.dateSubmitted)}
+            </span>
+            {!isComplete && caseData.estimatedCompletion && (
+              <span className="text-xs text-muted whitespace-nowrap">
+                Est. {formatShortDate(caseData.estimatedCompletion)}
+              </span>
+            )}
+            <svg
+              className={`w-5 h-5 text-muted transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+        </div>
+
+        {/* Progress Stepper - always visible */}
+        <ProgressStepper currentStage={caseData.currentStage} determination={caseData.determination} />
+      </button>
+
+      {/* Expanded Details */}
+      {expanded && (
+        <div className="border-t border-border px-5 py-4 sm:px-6 sm:py-5 space-y-4 bg-gray-50/40">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <DetailField label="Case Reference" value={caseData.caseRef} />
+            <DetailField label="Member ID" value={caseData.memberId || '\u2014'} />
+            <DetailField label="Patient" value={caseData.patientMasked} />
+            <DetailField label="Procedure Code" value={caseData.procedureCode || '\u2014'} mono />
+            <DetailField label="Review Type" value={caseData.reviewType} />
+            <DetailField label="Date Submitted" value={formatDate(caseData.dateSubmitted)} />
+            {caseData.requestingProvider && (
+              <DetailField label="Requesting Provider" value={caseData.requestingProvider} />
+            )}
+            {caseData.payerName && (
+              <DetailField label="Payer" value={caseData.payerName} />
+            )}
+            {caseData.serviceCategory && (
+              <DetailField label="Service Category" value={formatServiceCategory(caseData.serviceCategory)} />
+            )}
+            {!isComplete && caseData.estimatedCompletion && (
+              <DetailField label="Estimated Completion" value={formatDate(caseData.estimatedCompletion)} />
+            )}
+            {isComplete && (
+              <DetailField
+                label="Determination"
+                value={caseData.determination === 'approved' ? 'Approved' : 'Denied'}
+                highlight={caseData.determination === 'approved' ? 'green' : 'red'}
+              />
+            )}
+            {caseData.authorizationNumber && (
+              <DetailField label="Authorization Number" value={caseData.authorizationNumber} mono />
+            )}
+            {caseData.determinationAt && (
+              <DetailField label="Determination Date" value={formatDate(caseData.determinationAt)} />
+            )}
+          </div>
+
+          {/* Status Notes */}
+          <div className="bg-white rounded-lg border border-border p-4">
+            <h4 className="text-xs font-semibold text-muted uppercase tracking-wider mb-1.5">Status Notes</h4>
+            <p className="text-sm text-foreground leading-relaxed">{caseData.notes}</p>
+          </div>
+
+          {/* Current stage description */}
+          <div className="flex items-start gap-3 bg-navy/5 rounded-lg p-4">
+            <div className="w-8 h-8 rounded-full bg-navy/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <svg className="w-4 h-4 text-navy" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div>
+              <h4 className="text-sm font-semibold text-navy">
+                {isComplete
+                  ? 'Review Complete'
+                  : `Current Stage: ${STAGES[currentIdx].label}`}
+              </h4>
+              <p className="text-sm text-muted mt-0.5">
+                {isComplete
+                  ? 'This case has been fully reviewed and a determination has been issued.'
+                  : STAGES[currentIdx].description}
+              </p>
+            </div>
+          </div>
+
+          {/* View Determination Letter */}
+          {isComplete && (
+            <a
+              href={`/cases/${caseData.id}/determination`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 bg-navy text-white text-sm font-medium px-4 py-2.5 rounded-lg hover:bg-navy-light transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              View Determination Letter
+            </a>
+          )}
+
+          {/* P2P option for denied cases */}
+          {caseData.peerToPeerAvailable && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+              <div className="flex items-center gap-2 flex-1">
+                <svg className="w-5 h-5 text-amber-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+                <div>
+                  <p className="text-sm font-semibold text-amber-800">Peer-to-Peer Review Available</p>
+                  <p className="text-xs text-amber-700 mt-0.5">
+                    The requesting provider may schedule a peer-to-peer discussion with the reviewing physician.
+                  </p>
+                </div>
+              </div>
+              <button className="bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors whitespace-nowrap">
+                Request P2P
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// DetailField helper
+// ---------------------------------------------------------------------------
+
+function DetailField({
+  label,
+  value,
+  mono,
+  highlight,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+  highlight?: 'green' | 'red';
+}) {
+  let valueClasses = 'text-sm text-foreground font-medium';
+  if (mono) valueClasses += ' font-mono';
+  if (highlight === 'green') valueClasses = 'text-sm font-semibold text-green-700';
+  if (highlight === 'red') valueClasses = 'text-sm font-semibold text-red-700';
+
+  return (
+    <div>
+      <dt className="text-xs font-semibold text-muted uppercase tracking-wider">{label}</dt>
+      <dd className={valueClasses}>{value}</dd>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Understanding Your Review sidebar section
+// ---------------------------------------------------------------------------
+
+function ReviewExplainer() {
+  const stages = [
+    {
+      icon: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+      ),
+      title: 'Submission',
+      description: 'Your case and clinical documentation are received, validated, and entered into our secure system.',
+    },
+    {
+      icon: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+        </svg>
+      ),
+      title: 'AI Analysis',
+      description: 'Our AI engine reviews clinical documentation against InterQual, MCG, ACR, and NCCN guidelines, identifying relevant medical necessity criteria and preparing a comprehensive brief for physician review.',
+    },
+    {
+      icon: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+        </svg>
+      ),
+      title: 'Physician Review',
+      description: 'A board-certified physician reviews the AI-prepared brief alongside all clinical documentation to make an independent clinical determination.',
+    },
+    {
+      icon: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      ),
+      title: 'Determination',
+      description: 'The physician issues a final determination. If denied, the requesting provider can request a peer-to-peer review with the reviewing physician.',
+    },
+  ];
+
+  return (
+    <div className="bg-surface rounded-xl border border-border shadow-sm overflow-hidden">
+      <div className="bg-navy px-5 py-4 sm:px-6">
+ <h2 className="text-lg text-white">
+          Understanding Your Review
+        </h2>
+        <p className="text-white/70 text-sm mt-1">What happens at each stage</p>
+      </div>
+      <div className="p-5 sm:p-6 space-y-5">
+        {stages.map((stage, i) => (
+          <div key={stage.title} className="flex gap-3">
+            <div className="flex flex-col items-center">
+              <div className="w-9 h-9 rounded-full bg-navy/10 text-navy flex items-center justify-center flex-shrink-0">
+                {stage.icon}
+              </div>
+              {i < stages.length - 1 && (
+                <div className="w-px flex-1 bg-border mt-2" />
+              )}
+            </div>
+            <div className="pb-4">
+              <h3 className="text-sm font-semibold text-foreground">{stage.title}</h3>
+              <p className="text-sm text-muted mt-0.5 leading-relaxed">{stage.description}</p>
+            </div>
+          </div>
+        ))}
+
+        {/* Trust message */}
+        <div className="bg-navy/5 rounded-lg p-4 mt-2">
+          <p className="text-sm text-navy leading-relaxed font-medium">
+            Every case is analyzed using evidence-based clinical criteria and reviewed by a board-certified physician.
+          </p>
+          <p className="text-xs text-muted mt-2 leading-relaxed">
+            Our AI technology assists physicians by preparing comprehensive clinical briefs, but all determinations are made by licensed medical professionals. We are committed to transparency, accuracy, and timely decisions.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Loading skeleton
+// ---------------------------------------------------------------------------
+
+function CaseCardSkeleton() {
+  return (
+    <div className="bg-surface rounded-xl border border-border shadow-sm p-5 sm:p-6 animate-pulse">
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="h-4 w-32 bg-gray-200 rounded" />
+            <div className="h-5 w-20 bg-gray-200 rounded-full" />
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="h-4 w-24 bg-gray-200 rounded" />
+            <div className="h-4 w-48 bg-gray-200 rounded" />
+          </div>
+        </div>
+        <div className="flex flex-col items-end gap-1">
+          <div className="h-3 w-20 bg-gray-200 rounded" />
+          <div className="h-3 w-16 bg-gray-200 rounded" />
+        </div>
+      </div>
+      <div className="flex items-center w-full mt-4 gap-2">
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className="flex items-center flex-1">
+            <div className="flex flex-col items-center min-w-[60px]">
+              <div className="w-8 h-8 rounded-full bg-gray-200" />
+              <div className="h-3 w-12 bg-gray-200 rounded mt-1.5" />
+            </div>
+            {i < 3 && <div className="flex-1 h-0.5 mx-1 bg-gray-200" />}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Portal Page
+// ---------------------------------------------------------------------------
+
+export default function CaseStatusPortal() {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<FilterStatus>('');
+  const [cases, setCases] = useState<PortalCase[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isDemo, setIsDemo] = useState(false);
+  const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
+
+  // Debounce search input for API calls
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const fetchCases = useCallback(async (search?: string) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const params = new URLSearchParams();
+      if (search) params.set('search', search);
+
+      const res = await fetch(`/api/portal/cases${params.toString() ? `?${params}` : ''}`);
+      if (!res.ok) throw new Error(`Server responded with ${res.status}`);
+
+      const data: Record<string, unknown>[] = await res.json();
+      if (Array.isArray(data) && data.length > 0) {
+        setCases(data.map(mapCaseToPortal));
+        setIsDemo(false);
+      } else if (Array.isArray(data) && data.length === 0 && !search) {
+        // Empty database, fall back to demo
+        setCases(DEMO_CASES);
+        setIsDemo(true);
+      } else {
+        // Empty search result
+        setCases([]);
+        setIsDemo(false);
+      }
+    } catch {
+      // API not available or errored -- fall back to demo data
+      setCases(DEMO_CASES);
+      setIsDemo(true);
+    } finally {
+      setLoading(false);
+      setLastRefreshed(new Date());
+    }
+  }, []);
+
+  // Initial fetch and refetch when debounced search changes
+  useEffect(() => {
+    fetchCases(debouncedSearch || undefined);
+  }, [debouncedSearch, fetchCases]);
+
+  // Client-side filter (status filter applied after fetch)
+  const filteredCases = useMemo(() => {
+    return cases.filter((c) => {
+      if (!matchesFilter(c, statusFilter)) return false;
+
+      // If we're in demo mode, also apply client-side search
+      // (since demo data isn't filtered server-side via this component's search)
+      if (isDemo && searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        return (
+          c.caseRef.toLowerCase().includes(q) ||
+          c.patientMasked.toLowerCase().includes(q) ||
+          c.patientName.toLowerCase().includes(q) ||
+          c.memberId.toLowerCase().includes(q) ||
+          c.procedureCode.toLowerCase().includes(q) ||
+          (c.authorizationNumber && c.authorizationNumber.toLowerCase().includes(q))
+        );
+      }
+
+      return true;
+    });
+  }, [cases, searchQuery, statusFilter, isDemo]);
+
+  // Summary counts (from full case set, not filtered)
+  const totalCases = cases.length;
+  const activeCases = cases.filter(
+    (c) => c.currentStage !== 'determination'
+  ).length;
+  const completedCases = cases.filter(
+    (c) => c.currentStage === 'determination'
+  ).length;
+  const approvedCases = cases.filter(
+    (c) => c.determination === 'approved'
+  ).length;
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+      {/* Header */}
+      <div className="mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+ <h1 className="text-3xl sm:text-4xl text-navy">
+              Authorization Status Portal
+            </h1>
+            <p className="text-muted mt-2 text-base sm:text-lg">
+              Track your utilization review cases in real-time
+            </p>
+            <Link href="/portal" className="inline-block mt-2 text-xs text-navy underline underline-offset-2">
+              Synthetic Ohio IRO demo
+            </Link>
+          </div>
+          <div className="flex items-center gap-3">
+            {isDemo && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                <span className="w-1.5 h-1.5 bg-amber-500 rounded-full" />
+                Demo Mode
+              </span>
+            )}
+            <button
+              onClick={() => fetchCases(debouncedSearch || undefined)}
+              disabled={loading}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-navy bg-navy/5 hover:bg-navy/10 border border-navy/10 transition-colors disabled:opacity-50"
+            >
+              <svg
+                className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Refresh
+            </button>
+          </div>
+        </div>
+        {lastRefreshed && (
+          <p className="text-xs text-muted mt-2">
+            Last updated: {lastRefreshed.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+          </p>
+        )}
+      </div>
+
+      {/* Summary Stats */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6">
+        <div className="bg-surface rounded-xl border border-border p-4 sm:p-5 shadow-sm">
+          <div className="text-2xl sm:text-3xl font-bold text-navy">{totalCases}</div>
+          <div className="text-xs sm:text-sm font-medium text-muted mt-0.5">Total Cases</div>
+        </div>
+        <div className="bg-surface rounded-xl border border-border p-4 sm:p-5 shadow-sm">
+          <div className="text-2xl sm:text-3xl font-bold text-gold-dark">{activeCases}</div>
+          <div className="text-xs sm:text-sm font-medium text-muted mt-0.5">In Progress</div>
+        </div>
+        <div className="bg-surface rounded-xl border border-border p-4 sm:p-5 shadow-sm">
+          <div className="text-2xl sm:text-3xl font-bold text-green-700">{approvedCases}</div>
+          <div className="text-xs sm:text-sm font-medium text-muted mt-0.5">Approved</div>
+        </div>
+        <div className="bg-surface rounded-xl border border-border p-4 sm:p-5 shadow-sm">
+          <div className="text-2xl sm:text-3xl font-bold text-foreground">{completedCases}</div>
+          <div className="text-xs sm:text-sm font-medium text-muted mt-0.5">Completed</div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
+        {/* Case List */}
+        <div className="flex-1 min-w-0">
+          {/* Search and Filter Bar */}
+          <div className="flex flex-col sm:flex-row gap-3 mb-5">
+            <div className="relative flex-1">
+              <svg
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <input
+                type="text"
+                placeholder="Search by case number, auth number, patient name, or member ID..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 text-sm border border-border rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-gold/50 focus:border-gold placeholder:text-muted/60"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-foreground"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+            </div>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as FilterStatus)}
+              className="text-sm border border-border rounded-lg px-3 py-2.5 bg-surface focus:outline-none focus:ring-2 focus:ring-gold/50 focus:border-gold sm:w-44"
+            >
+              {FILTER_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Error State */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-5 flex items-start gap-3">
+              <svg className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+              <div>
+                <p className="text-sm font-semibold text-red-800">Unable to load cases</p>
+                <p className="text-sm text-red-700 mt-0.5">{error}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Loading State */}
+          {loading && cases.length === 0 && (
+            <div className="space-y-4">
+              <CaseCardSkeleton />
+              <CaseCardSkeleton />
+              <CaseCardSkeleton />
+            </div>
+          )}
+
+          {/* Case Cards */}
+          {!loading && filteredCases.length === 0 ? (
+            <div className="text-center py-16 bg-surface rounded-xl border border-border">
+              <svg
+                className="mx-auto h-12 w-12 text-muted/40"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={1.5}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m5.231 13.481L15 17.25m-4.5-15H5.625c-.621 0-1.125.504-1.125 1.125v16.5c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9zm3.75 11.625a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"
+                />
+              </svg>
+              <h3 className="mt-3 text-sm font-semibold text-foreground">No cases found</h3>
+              <p className="mt-1 text-sm text-muted">
+                {searchQuery
+                  ? 'No cases match your search. Try a different case number, authorization number, or patient name.'
+                  : 'No cases match your filter criteria. Try adjusting your filters.'}
+              </p>
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="mt-3 text-sm font-medium text-navy hover:text-gold-dark transition-colors"
+                >
+                  Clear search
+                </button>
+              )}
+            </div>
+          ) : (
+            !loading && (
+              <div className="space-y-4">
+                {filteredCases.map((caseData) => (
+                  <CaseCard key={caseData.id} caseData={caseData} />
+                ))}
+              </div>
+            )
+          )}
+
+          {/* Results count */}
+          {!loading && filteredCases.length > 0 && (
+            <div className="text-xs text-muted mt-4 text-center">
+              Showing {filteredCases.length} of {cases.length} case{cases.length !== 1 ? 's' : ''}
+              {statusFilter && ` (filtered by ${FILTER_OPTIONS.find((o) => o.value === statusFilter)?.label})`}
+            </div>
+          )}
+        </div>
+
+        {/* Sidebar */}
+        <div className="lg:w-[360px] flex-shrink-0">
+          <div className="lg:sticky lg:top-8 space-y-6">
+            {/* Quick Lookup */}
+            <div className="bg-surface rounded-xl border border-border shadow-sm overflow-hidden">
+              <div className="bg-navy px-5 py-4 sm:px-6">
+ <h2 className="text-lg text-white">
+                  Quick Lookup
+                </h2>
+                <p className="text-white/70 text-sm mt-1">Find a case by authorization number</p>
+              </div>
+              <div className="p-5 sm:p-6">
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const form = e.target as HTMLFormElement;
+                    const input = form.elements.namedItem('authLookup') as HTMLInputElement;
+                    if (input.value.trim()) {
+                      setSearchQuery(input.value.trim());
+                      setStatusFilter('');
+                    }
+                  }}
+                  className="flex gap-2"
+                >
+                  <input
+                    name="authLookup"
+                    type="text"
+                    placeholder="AUTH-2026-XXXXX"
+                    className="flex-1 px-3 py-2 text-sm border border-border rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-gold/50 focus:border-gold placeholder:text-muted/60 font-mono"
+                  />
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-navy text-white text-sm font-medium rounded-lg hover:bg-navy-light transition-colors"
+                  >
+                    Look Up
+                  </button>
+                </form>
+                <p className="text-xs text-muted mt-2">
+                  Enter your authorization number, case number, or member ID
+                </p>
+              </div>
+            </div>
+
+            <ReviewExplainer />
+
+            {/* Contact Support */}
+            <div className="bg-surface rounded-xl border border-border shadow-sm p-5 sm:p-6">
+              <h3 className="font-semibold text-foreground text-sm">Need Assistance?</h3>
+              <p className="text-sm text-muted mt-1.5 leading-relaxed">
+                Our team is available to help with any questions about your case status or the review process.
+              </p>
+              <div className="mt-4 space-y-2">
+                <a
+                  href="mailto:support@vantaum.com"
+                  className="flex items-center gap-2 text-sm text-navy hover:text-gold-dark transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                  support@vantaum.com
+                </a>
+                <a
+                  href="tel:+18005551234"
+                  className="flex items-center gap-2 text-sm text-navy hover:text-gold-dark transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                  </svg>
+                  1-800-555-1234
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
