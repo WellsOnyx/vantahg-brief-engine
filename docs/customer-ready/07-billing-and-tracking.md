@@ -4,7 +4,7 @@
 
 **Case events create money events.** Do not bill from memory or spreadsheets as system of record.
 
-**Packaging (corrected 2026-09-21):** **VantaUM sells Med Review** as the paid wedge. Ledger SKUs (`prior_auth`, `first_level_appeal`, `rush_addon`) are **usage tracking** under UM’s Vanta med-review contract — not a standalone UM storefront, and not free UM with a third-party review shop. **VantaHG = IRO + IDR only.** Free Brief Engine access is gated by `client_config.vanta_med_review_contract` and `med_review_provider=vanta`. Entitlement gate unchanged.
+**Packaging (offer locked 2026-09-21; platform sentence superseded 2026-10-19):** **Vanta Med Review** is the paid product. Ledger SKUs (`prior_auth`, `first_level_appeal`, `rush_addon`) are **usage tracking** under that contract — not a standalone UM storefront, and not the engine with a third-party review shop. A Med Review contract does not open IRO or IDR. This card is not an IRO fee schedule. Brief Engine access is gated by `client_config.vanta_med_review_contract` and `med_review_provider=vanta`. Entitlement keys unchanged.
 
 **Prices (working decision 2026-09-23):** two lines, not a review-only card. Memo: [`pricing-strategy-memo-2026-09-23.md`](pricing-strategy-memo-2026-09-23.md). Canonical card: [`um-unit-economics-rate-card.md`](um-unit-economics-rate-card.md). Rule index: [`um-pricing-rules.md`](um-pricing-rules.md). Config: `lib/billing/um-price-card.ts`. Do not publish internal margins.
 

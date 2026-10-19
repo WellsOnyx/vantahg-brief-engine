@@ -15,11 +15,13 @@ import type { ContractTemplate } from '../types';
  *   - All other [[PLACEHOLDER]] areas and standard sections remain
  *     immutable in this template version.
  *
- * PACKAGING (corrected 2026-09-21, Jonah): VantaUM sells Med Review.
- * VantaUM Brief Engine / UM is included free only when Client uses Vanta med
- * review under UM's contract. No standalone UM SKU. Not included if Client
- * uses another shop's med review. VantaHG = IRO + IDR only. Do not invent
- * prices in this file.
+ * PACKAGING (offer locked 2026-09-21; platform sentence superseded 2026-10-19):
+ * Vanta Med Review is the paid product. The Brief Engine is included only
+ * when Client holds that contract. No standalone UM product. Not included if
+ * Client uses another shop's med review. A Med Review contract does not open
+ * IRO or IDR. Do not invent prices in this file. Attorney review of the
+ * locked legal sections is still required; this note updates the commercial
+ * sentence only.
  * Fee schedule / PEPM placeholders stay contract variables — they are not
  * a license to sell UM alone.
  */
@@ -38,7 +40,7 @@ This Master Services Agreement ("Agreement") is entered into as of {{effective_d
 
 VantaUM will provide utilization review and prior authorization management services (the "Services") to Client in accordance with the service levels and scope set forth in this Agreement and any executed Statements of Work.
 
-Commercial packaging: VantaUM sells Med Review. VantaUM Brief Engine / utilization management is included free only when Client uses Vanta med review under UM's contract. Services are not offered as a standalone UM SKU and are not included if Client uses another shop's med review. VantaHG is IRO and IDR only.
+Commercial packaging: Vanta Med Review is the paid product. The Brief Engine is included only when Client holds a paid Vanta Med Review contract. Services are not offered as a standalone UM product and are not included if Client uses another shop's med review. A Med Review contract does not include IRO or IDR.
 
 [[PLACEHOLDER: Detailed scope of services — concierge intake, clinician determination, brief generation, dashboard access, integrations. Replace with attorney-drafted language.]]
 

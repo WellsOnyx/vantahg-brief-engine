@@ -54,7 +54,7 @@ export default function PrivacyPolicyPage() {
 
         <Section title="1. Who we are">
           <p>
-            VantaUM provides a concierge utilization-management and clinical-intelligence service for
+            VantaUM provides Vanta Med Review, a concierge clinical-review service, for
             third-party administrators (TPAs), health plans, and self-funded employers. This policy
             governs the information we handle through our public website and business interactions. It
             is not a Notice of Privacy Practices under the Health Insurance Portability and
@@ -158,7 +158,7 @@ export default function PrivacyPolicyPage() {
 
         <Section title="7. Protected health information (HIPAA)">
           <p>
-            In providing utilization-management services to our clients, VantaUM may act as a “business
+            In providing Med Review services to our clients, VantaUM may act as a “business
             associate” and process protected health information (“PHI”) on their behalf. That PHI is
             handled in accordance with HIPAA, our Business Associate Agreements, and our clients’
             instructions — <strong>not</strong> under this website policy. This Site is not intended for

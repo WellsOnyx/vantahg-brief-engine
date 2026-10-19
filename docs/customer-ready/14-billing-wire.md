@@ -2,7 +2,7 @@
 
 How to run synthetic billing off the locked Sep 23 card. No live PHI. Do not edit dollar amounts in `lib/billing/um-price-card.ts`. The memo is [`pricing-strategy-memo-2026-09-23.md`](pricing-strategy-memo-2026-09-23.md). The rule index is [`um-pricing-rules.md`](um-pricing-rules.md).
 
-Packaging is unchanged: VantaUM sells Med Review. VantaHG is IRO + IDR only. Optum stays frozen.
+Packaging offer is unchanged in code: Vanta Med Review is the paid product. The 2026-09-21 platform sentence that limited VantaHG to IRO and IDR is superseded; a Med Review contract still does not open IRO or IDR. Optum stays frozen. Do not treat this card as an IRO fee schedule.
 
 ## What posts
 

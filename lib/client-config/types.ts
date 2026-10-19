@@ -61,13 +61,13 @@ export interface ClientConfigFields {
   /** First-25 SLA miss rate (0–1) that pauses live intake. Config, not a HIPAA claim. */
   sla_miss_rollback_threshold: number;
   /**
-   * Packaging lock (corrected 2026-09-21): required true for free UM Brief Engine access.
-   * VantaUM sells Med Review. UM is included free only under UM’s Vanta
-   * med-review contract — not standalone, not with another shop’s review.
-   * VantaHG = IRO + IDR only.
+   * Packaging gate: required true for Brief Engine access.
+   * Vanta Med Review is the paid product. The engine is included only under
+   * that contract — not as standalone UM, not with another shop’s review.
+   * The flag does not open IRO or IDR.
    */
   vanta_med_review_contract: boolean;
-  /** Who performs med review. `third_party` never gets free UM. */
+  /** Who performs med review. `third_party` never gets the engine. */
   med_review_provider: 'vanta' | 'third_party' | 'none';
   /**
    * Operator-supplied census for the billing month.

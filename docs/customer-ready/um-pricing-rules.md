@@ -1,6 +1,8 @@
-# UM pricing rules — Claude handoff
+# Med Review pricing rules — Claude handoff
 
-**Working decision 2026-09-23.** Client deck runs in parallel. **Do not publish internal margins** in client materials. Lead external materials with the fee table and the 375k autos at $0 — not $54.6M. Label every external slide “illustrative.”
+**Working decision 2026-09-23. Repositioned 2026-10-19.** This card prices **Vanta Med Review** (platform membership + clinical touch). It is not a standalone UM SKU and it is not an IRO fee schedule. Do not copy these dollars into IRO billing. No IRO fee amount belongs in code. Client deck runs in parallel. **Do not publish internal margins** in client materials. Lead external materials with the fee table and the 375k autos at $0 — not $54.6M. Label every external slide “illustrative.”
+
+The open platform question stays open: Med Review does not waive the $1.50 platform unless an explicit fat-TPA waiver.
 
 Working decision memo: [`pricing-strategy-memo-2026-09-23.md`](pricing-strategy-memo-2026-09-23.md) (Jonah Manning, 23 September 2026). Canonical dollars: [`um-unit-economics-rate-card.md`](um-unit-economics-rate-card.md). Code: `lib/billing/um-price-card.ts`.
 
@@ -145,11 +147,11 @@ Docs only. Not code. Not a second price list. Realignment to memo §9 and the or
 - Do not treat criteria licenses as optional. The planning band is $2–5M, separate from variable COGS $22.8M (B5).
 - Do not publish internal margins, the $70M+ vendor comparison, or the $54.6M total as the lead of client materials (D2, D4).
 - Do not staff ~43 FTE off 285k nurse reviews until inbound is proven by service category (B10, memo §11).
-- VantaHG stays IRO + IDR only. Optum stays frozen.
+- Optum stays frozen. Do not copy this card into an IRO fee schedule. A Med Review contract does not open IRO or IDR.
 
-## Packaging (unchanged)
+## Packaging (offer unchanged; platform sentence superseded 2026-10-19)
 
-- VantaUM sells Med Review as the paid wedge.
-- Brief Engine free **review** on rules/auto under the Vanta med-review contract.
+- Vanta Med Review is the paid product.
+- Rules/auto **review** is $0 under the Vanta med-review contract. The engine is not a standalone product.
 - Platform fee is a separate membership. It covers the engine, criteria, intake rails, gold-card file, and reporting. See the open question.
-- VantaHG = IRO + IDR only. Optum frozen.
+- A Med Review contract does not open IRO or IDR. Optum frozen.

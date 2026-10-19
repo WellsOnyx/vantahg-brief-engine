@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'VantaUM — Med Review sold by VantaUM',
+  title: 'VantaUM — Vanta Med Review',
   description:
-    'VantaUM sells Med Review. Brief Engine is included free only under UM’s contract. Not a standalone UM product. Not included with another shop’s review. VantaHG is IRO and IDR only.',
+    'Vanta Med Review is the only product we sell. The Brief Engine is included only under that contract. Not a standalone UM product. Not included with another shop’s review. IRO and IDR are separate lines.',
 };
 
 export default function SiteLayout({ children }: { children: React.ReactNode }) {

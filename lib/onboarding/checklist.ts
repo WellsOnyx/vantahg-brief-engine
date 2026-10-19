@@ -41,7 +41,7 @@ export const ONBOARDING_CHECKLIST: readonly OnboardingChecklistItem[] = [
     how_to: [
       'Commercial executes the MSA with fee schedule minimums: per prior auth, per first-level appeal, optional rush / after-hours multiplier, monthly minimum.',
       'Store the signed PDF at clients/{client_id}/msa.pdf (Drive or S3 signup-contracts). No PHI in the filename.',
-      'VantaUM sells Med Review. Brief Engine / UM is included free only under UM’s Vanta med-review contract. No standalone free UM SKU. No free UM with a third-party review shop. VantaHG is IRO + IDR only.',
+      'Vanta Med Review is the paid product. The Brief Engine is included only under that contract. No standalone UM product. No engine with a third-party review shop. A Med Review contract does not open IRO or IDR.',
       'Check this box only when the signed file exists. Billing path is Meow, not Stripe.',
     ],
     href: '/admin/signups',
@@ -357,18 +357,18 @@ export const ONBOARDING_CHECKLIST: readonly OnboardingChecklistItem[] = [
   {
     id: 'B18',
     phase: 'B',
-    title: 'vanta_med_review_contract (free UM Brief Engine gate)',
+    title: 'vanta_med_review_contract (Brief Engine gate)',
     owner: 'CX / commercial',
     artifact: 'client_config.vanta_med_review_contract + med_review_provider',
     gate: 'required',
     pointer:
-      'lib/entitlements/um-brief-engine.ts · VantaUM sells Med Review. Flip true only when the buyer uses Vanta med review under UM’s contract. Never standalone UM; never third_party. VantaHG is IRO + IDR only.',
+      'lib/entitlements/um-brief-engine.ts · Flip true only for a paid Vanta Med Review contract. Never standalone UM; never third_party. The flag does not open IRO or IDR.',
     required: true,
     how_to: [
-      'VantaUM sells Med Review. Free UM Brief Engine is granted only when vanta_med_review_contract is true and med_review_provider is vanta (UM’s contract).',
+      'Vanta Med Review is the paid product. Brief Engine access is granted only when vanta_med_review_contract is true and med_review_provider is vanta.',
       'Leave the flag false for a new published config. The synthetic staging seed is already true / vanta so demo packs keep working.',
-      'Never grant standalone free UM. Never set med_review_provider=third_party and expect Brief Engine access — that combination is always denied.',
-      'Do not invent a UM price. Do not flip ENABLE_AWS_* from this item.',
+      'Never grant standalone UM. Never set med_review_provider=third_party and expect Brief Engine access — that combination is always denied.',
+      'Do not invent a Med Review price and do not hard-code an IRO fee. Do not flip ENABLE_AWS_* from this item.',
     ],
   },
 

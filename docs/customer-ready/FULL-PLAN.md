@@ -2,7 +2,7 @@
 
 **Status:** Working plan (Jonah → Cole, 2026-09-18)  
 **Repo home:** `docs/customer-ready/`  
-**Product:** Vanta Utilization Management — concierge clinical layer (intake → Brief Engine → MD determination → auth / first-level appeal → IRO-ready docs)  
+**Product:** Vanta Med Review. The Brief Engine is the shared engine under IDR, IRO, and Medical Review (intake → brief → MD determination → auth / first-level appeal → IRO-ready docs), not a standalone UM product.  
 **Site:** https://vantaum.com · Contact: hello@wellsonyx.com  
 **North-star loop:** intake → rules → brief → MD sign → outbound decision → billable event → report
 
@@ -24,7 +24,7 @@ A TPA or self-insured employer can:
 
 - Live PHI only on AWS Brief Engine + BAA-covered services (RDS, S3, SES, Cognito). No live PHI in Grok chats, agent boxes, or CX memory.
 - Every live determination is human MD-signed at go-live (no silent auto-approve).
-- **VantaUM sells Med Review** as the paid wedge. Brief Engine / UM is included free **only** when the buyer uses Vanta med review under **UM’s contract**. No standalone free UM SKU. No free UM with a third-party review shop. **VantaHG = IRO + IDR only** — not the med-review commercial door. UM still owns Brief Engine SoR/tech. See `01-product-boundary.md`.
+- **Vanta Med Review** is the paid product. The Brief Engine is included **only** under that contract. No standalone UM product. No engine with a third-party review shop. The 2026-09-21 platform sentence that limited VantaHG to IRO and IDR is superseded. A Med Review contract does not open IRO or IDR. Engine code stays in this repo. See `01-product-boundary.md`.
 - Optum / Kari Cook: frozen until Jonah explicitly opens with context.
 - Same buyer across UM/IRO doors: flag Health before any external draft.
 
@@ -62,12 +62,12 @@ A TPA or self-insured employer can:
 
 ## What is included (under a Vanta med-review contract)
 
-These are **capabilities**, not standalone paid UM SKUs. **VantaUM sells Med Review** as the paid wedge. Brief Engine / UM is included free **only** when the buyer uses Vanta med review under **UM’s contract**.
+These are **capabilities** under a paid Med Review contract, not standalone UM products. **Vanta Med Review** is the paid product. The Brief Engine is included **only** under that contract.
 
 | Capability | Included | Not included (yet) |
 |-------|----------|--------------------|
 | **Prior authorization** | Intake, clinical brief, MD determination, notices as contracted, portal status | Full care management platform |
-| **First-level appeal** | Packet + prior auth attach, appeal brief, MD determination, IRO-ready export | External IRO decisioning (VantaHG — IRO + IDR only) |
+| **First-level appeal** | Packet + prior auth attach, appeal brief, MD determination, IRO-ready export | IRO decisioning (separate line; not opened by a Med Review contract) |
 | **CX layer** | Account relationship, stuck-case chase, scheduling/gifts/memory **non-PHI** | Clinical judgment |
 
 ## What sits underneath (SoR)
@@ -80,8 +80,8 @@ These are **capabilities**, not standalone paid UM SKUs. **VantaUM sells Med Rev
 
 | Lane | Owner | Notes |
 |------|-------|--------|
-| UM Brief Engine SoR + tech + UM ops/CX + Med Review commercial | **VantaUM** | **Paid wedge.** VantaUM sells Med Review. Brief Engine / UM included free only under UM’s med-review contract. |
-| IDR Ops + IRO | **VantaHG** | **IRO + IDR only.** Not the med-review commercial door. |
+| Medical Review commercial + shared Brief Engine code | **This repo** | **Paid product.** Vanta Med Review. Engine included only under that contract. |
+| IDR and IRO | **Separate lines** | Not opened by a Med Review contract. Firewall enforcement is the parallel IRO slice. |
 | Total Rewards / CHRO | **VantaTR** | Out of scope for this plan |
 | Cross-bot coordination | **Onyx Health** | Health group chat |
 
@@ -89,13 +89,13 @@ These are **capabilities**, not standalone paid UM SKUs. **VantaUM sells Med Rev
 
 Do not soften. Packaging / GTM + product-boundary only. Customer-ready Phases 0–7 code path remains complete; this is **not** a new build phase. Entitlement behavior is unchanged (`vanta_med_review_contract` + `med_review_provider=vanta`).
 
-- **VantaUM sells Med Review** as the paid wedge.
-- **Brief Engine / UM is included free ONLY when the buyer uses Vanta med review under UM’s contract.**
-- **No standalone free UM SKU.**
-- **No free UM with a third-party review shop.**
-- **VantaHG = IRO + IDR only** — not the med-review commercial door.
+- **Vanta Med Review** is the paid product.
+- **The Brief Engine is included only under a paid Vanta Med Review contract.**
+- **No standalone UM product.**
+- **No engine with a third-party review shop.**
+- **A Med Review contract does not open IRO or IDR.** The 2026-09-21 platform sentence that limited VantaHG to IRO and IDR is superseded.
 - **Optum frozen** (no outreach) until Jonah explicitly opens with context.
-- UM still owns Brief Engine SoR and tech. Do not move SoR ownership off UM.
+- Engine code stays in this repo. Do not fork a second engine for this pivot.
 - Compute COGS planning band **~$0.05–$0.15 per review** vs **~$1 internal budget** (estimate; not measured COGS).
 
 ### Entitlement (code)
@@ -132,10 +132,10 @@ Onboarding is a **sellable checklist** first, software second. Every step produc
 
 ### Fee schedule (minimum fields)
 
-**VantaUM sells Med Review** (paid wedge). Do not invent a second price list here. Two-line card: [um-unit-economics-rate-card.md](um-unit-economics-rate-card.md) (platform + clinical review; rules/auto review is $0). Do not sell UM as a standalone SKU. Do not include free UM with a third-party review shop. **VantaHG = IRO + IDR only.** Do not call the platform fee $0 under Med Review (open question on the rate card).
+**Vanta Med Review** is the paid product. Do not invent a second price list here. Two-line card: [um-unit-economics-rate-card.md](um-unit-economics-rate-card.md) (platform + clinical review; rules/auto review is $0). Do not sell UM as a standalone product. Do not include the engine with a third-party review shop. A Med Review contract does not open IRO or IDR. Do not call the platform fee $0 under Med Review (open question on the rate card). Do not hard-code an IRO fee.
 
-- Vanta med-review contract under **UM** (paid wedge)
-- UM Brief Engine included free **only** when `vanta_med_review_contract` is true and `med_review_provider=vanta`
+- Paid Vanta Med Review contract
+- Brief Engine included **only** when `vanta_med_review_contract` is true and `med_review_provider=vanta`
 - Per-auth / first-level-appeal / rush lines are **usage tracking** under that contract, not a standalone UM offer
 - Pass-through (IRO filing fees if ever bundled — N/A until locked; HG lane)
 
@@ -483,7 +483,7 @@ No silent overwrite; amendments = new version + link.
 
 **Case events create money events.** Do not bill from memory or spreadsheets as system of record.
 
-**Prices:** working decision memo is [pricing-strategy-memo-2026-09-23.md](pricing-strategy-memo-2026-09-23.md). Two-line card is [um-unit-economics-rate-card.md](um-unit-economics-rate-card.md) (supersedes the review-only card). Platform default $1.50 PMPM (engine, criteria, intake rails, gold-card file, reporting). Rules/auto review posts at $0. Nurse, MD, and external bill once at the highest touch. VantaUM sells Med Review. VantaHG = IRO + IDR only. Do not invent a second card here. Do not treat the platform line as $0 under Med Review. Do not publish internal margins.
+**Prices:** working decision memo is [pricing-strategy-memo-2026-09-23.md](pricing-strategy-memo-2026-09-23.md). Two-line card is [um-unit-economics-rate-card.md](um-unit-economics-rate-card.md) (supersedes the review-only card). Platform default $1.50 PMPM (engine, criteria, intake rails, gold-card file, reporting). Rules/auto review posts at $0. Nurse, MD, and external bill once at the highest touch. Vanta Med Review is the paid product. This card is not an IRO fee schedule. Do not invent a second card here. Do not treat the platform line as $0 under Med Review. Do not publish internal margins.
 
 ## Billable event
 
@@ -695,7 +695,7 @@ Work in this order. Each phase = PR (or stacked commits on one branch) with acce
 
 - Lint cleanup on main
 - CX bot 1×10 accounts (non-PHI) — after client portal status API exists
-- Med Review wedge **corrected 2026-09-21** — **VantaUM sells Med Review**; Brief Engine / UM free only under UM’s Vanta med-review contract; **VantaHG = IRO + IDR only**. Packaging/GTM only; see `01-product-boundary.md`. Entitlement gate unchanged. Not a new build phase.
+- Med Review offer **corrected 2026-09-21**, platform sentence **superseded 2026-10-19** — **Vanta Med Review** is the paid product; the Brief Engine is included only under that contract; a Med Review contract does not open IRO or IDR. See `01-product-boundary.md` and `17-med-review-pivot.md`. Entitlement keys unchanged. Not a line-firewall build.
 
 ## PR discipline
 
