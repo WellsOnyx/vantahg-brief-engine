@@ -5,6 +5,23 @@ Future Claude/Cole/Jonah sessions: read this first.
 
 ---
 
+## 2026-10-19 — Financial billing suite (synthetic ledger)
+
+Jonah's Oct 19 follow-up: a full financial billing suite across the three firewalled lines. In-memory. Synthetic tokens. No live PHI. No payment rail. No vendor picked. Stacked on the IRO portal slice. No new HTTP route. `lib/billing/um-price-card.ts` and the Med Review entitlement function are unchanged.
+
+- **Books:** `lib/billing/suite/`. IRO operating money, IDR fees, IDR escrow, and Medical Review contracts do not settle each other. Escrow is a liability. Applying it to any invoice, including an IDR fee, returns `book_separation`. The consolidated view sets `blended_cash_cents` to null.
+- **IRO:** case-fee AR posts the confirmable quote total (Ohio specialist proof is $1,700.00). Reviewer and Medical Director pay is flat from `PAYOUT_SCHEDULE_PRELIMINARY`. Hourly pay exists only as a flagged peer-to-peer exception. Amounts over the spending limit stay `pending_approval` until a configured approver opens them.
+- **IDR:** synthetic case fee on `idr_fees`. Escrow deposit and release stay on `idr_escrow`. A release cannot exceed the case hold.
+- **Medical Review:** contract platform plus per-review, posted only when `evaluateUmBriefEngineAccess` allows it. A third-party shop posts nothing.
+- **Ledger:** invoices, internal payments (`external_settlement: not_configured`), AR/AP aging, approved adjustments (no self-approval, cannot go below what is paid), closure notes that do not create invoices, and CFO reconciliation of invoices against completed cases. Escrow is reported and left out of the variance.
+- **Access:** line firewall on every read and post. Consolidated statement requires `finance_role: cfo` and coverage of all three lines. Those finance roles are local. They are not added to `UserRole`.
+- **Adapters:** payment processor, bank/ACH, accounting, and reviewer payroll are interfaces plus stubs (`vendor: null`, `live_call: false`, `settled: false`). A receipt that claims a live rail is refused.
+- **Left intact:** IDR never-submit / DRAFT, Med Review packaging copy, Phase 7 onboarding, UM price card, draft PR #83.
+- **Proof:** `__tests__/lib/billing/suite/` (fee totals, escrow separation, cross-line denial, reconciliation math).
+- **Doc:** [`docs/customer-ready/18-financial-billing-suite.md`](docs/customer-ready/18-financial-billing-suite.md).
+
+---
+
 ## 2026-10-19 — IRO portal slice 1 (synthetic skeleton)
 
 Jonah's Oct 19 direction: Clinical IRO Portal is build priority #1. Three firewalled lines (IDR, IRO, Medical Review). This slice is the skeleton only. Synthetic tokens. No live PHI. No vendor calls. No new HTTP route.
