@@ -6,7 +6,7 @@ This file is the short index. Use **11** plus `/admin/onboarding` — no tribal 
 
 **Synthetic only.** No live PHI. Empty vendor slots stay empty. `ENABLE_AWS_*` stay **false** until an operator exports them at deploy. Completing this runbook is a **code / ops gate**, not a HIPAA attestation.
 
-**Packaging lock (corrected 2026-09-21):** **VantaUM sells Med Review.** Brief Engine / UM is free only under UM’s Vanta med-review contract. No standalone free UM SKU. No free UM with a third-party review shop. **VantaHG = IRO + IDR only.** Optum frozen (no outreach).
+**Packaging (offer locked 2026-09-21; platform sentence superseded 2026-10-19):** **Vanta Med Review** is the paid product. The Brief Engine is included only under that contract. No standalone UM product. No engine with a third-party review shop. A Med Review contract does not open IRO or IDR. Optum frozen (no outreach).
 
 UI: [`/admin/onboarding`](../../app/admin/onboarding/page.tsx)  
 Catalog: [`lib/onboarding/checklist.ts`](../../lib/onboarding/checklist.ts)  
@@ -30,7 +30,7 @@ Confirm LOBs, SLAs, primary intake mode, determination channels, CX owner, revie
 | A4 | Client-dependent | Security / SOC pack |
 | A5 | Required | Invoice entity + billing contact (Meow, not Stripe) |
 
-Fee schedule: **VantaUM sells Med Review.** Rules/auto review is $0 under the Vanta med-review contract. Platform membership is a separate line (do not call it $0 under Med Review — open question on the rate card). Do not sell standalone UM. Do not include free UM with a third-party review shop. VantaHG is IRO + IDR only. Prices: [`um-unit-economics-rate-card.md`](../customer-ready/um-unit-economics-rate-card.md). Working decision: [`pricing-strategy-memo-2026-09-23.md`](../customer-ready/pricing-strategy-memo-2026-09-23.md). Do not invent a second card. Do not publish internal margins.
+Fee schedule: **Vanta Med Review** is the paid product. Rules/auto review is $0 under that contract. Platform membership is a separate line (do not call it $0 under Med Review — open question on the rate card). Do not sell standalone UM. Do not include the engine with a third-party review shop. A Med Review contract does not open IRO or IDR. Do not hard-code an IRO fee. Prices: [`um-unit-economics-rate-card.md`](../customer-ready/um-unit-economics-rate-card.md). Working decision: [`pricing-strategy-memo-2026-09-23.md`](../customer-ready/pricing-strategy-memo-2026-09-23.md). Do not invent a second card. Do not publish internal margins.
 
 Pointers: [`06-hipaa-baa-path.md`](../customer-ready/06-hipaa-baa-path.md), [`07-billing-and-tracking.md`](../customer-ready/07-billing-and-tracking.md).
 

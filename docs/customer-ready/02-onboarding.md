@@ -16,12 +16,12 @@ Onboarding is a **sellable checklist** first, software second. Every step produc
 
 ### Fee schedule (minimum fields)
 
-**VantaUM sells Med Review** (paid wedge). Do not invent a second price list here. Two-line card: [`um-unit-economics-rate-card.md`](um-unit-economics-rate-card.md) (platform membership + clinical review; rules/auto review is $0; gold-card review is $0). Working decision: [`pricing-strategy-memo-2026-09-23.md`](pricing-strategy-memo-2026-09-23.md). Handoff: [`um-pricing-rules.md`](um-pricing-rules.md). Do not sell UM as a standalone SKU. Do not include free UM with a third-party review shop. **VantaHG = IRO + IDR only.** Do not tell a buyer the platform fee is $0 under Med Review. Open question, unresolved: does the Med Review wedge waive the $1.50 platform, or only the $0 auto review? Platform remains not $0 unless a fat-TPA waiver.
+**Vanta Med Review** is the paid product. Do not invent a second price list here. Two-line card: [`um-unit-economics-rate-card.md`](um-unit-economics-rate-card.md) (platform membership + clinical review; rules/auto review is $0; gold-card review is $0). Working decision: [`pricing-strategy-memo-2026-09-23.md`](pricing-strategy-memo-2026-09-23.md). Handoff: [`um-pricing-rules.md`](um-pricing-rules.md). Do not sell UM as a standalone product. Do not include the engine with a third-party review shop. A Med Review contract does not open IRO or IDR. Do not tell a buyer the platform fee is $0 under Med Review. Open question, unresolved: does the Med Review wedge waive the $1.50 platform, or only the $0 auto review? Platform remains not $0 unless a fat-TPA waiver. Do not hard-code an IRO fee.
 
-- Vanta med-review contract under **UM** (paid wedge)
-- UM Brief Engine included free **only** when `vanta_med_review_contract` is true and `med_review_provider=vanta`
+- Paid Vanta Med Review contract (`vanta_med_review_contract=true`, `med_review_provider=vanta`)
+- Brief Engine included **only** under that contract
 - Per-auth / first-level-appeal / rush lines are **usage tracking** under that contract, not a standalone UM offer
-- Pass-through (IRO filing fees if ever bundled — N/A until locked; HG lane)
+- IRO filing fees are not on this card. No amount is locked. Do not copy the Med Review card into an IRO schedule.
 
 ## Phase B — Client configuration (SoR)
 

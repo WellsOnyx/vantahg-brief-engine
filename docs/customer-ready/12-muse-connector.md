@@ -20,7 +20,7 @@ No live patient data. No case content. The PHI gate is an allowlist (`lib/muse/p
 
 - Not a live Muse API client. `lib/muse` has no HTTP transport. `GET /api/muse/status` with a key still returns `live_call: false` / `code: stub_only`.
 - Not Gravity Rail intake. Inbound case creation stays `POST /api/intake/gravity-rail`.
-- Not a change to the Med Review packaging lock. **VantaUM sells Med Review.** Brief Engine / UM is free only under UM’s Vanta med-review contract. **VantaHG = IRO + IDR only.** Optum stays frozen.
+- Not a change to the Med Review packaging gate. **Vanta Med Review** is the paid product. The Brief Engine is included only under that contract. A Med Review contract does not open IRO or IDR. Optum stays frozen.
 - Not a HIPAA attestation. Production use of even this non-clinical surface waits on the BAA path in [`06-hipaa-baa-path.md`](06-hipaa-baa-path.md).
 
 ## Fail closed

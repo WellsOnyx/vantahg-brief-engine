@@ -1,4 +1,6 @@
-# Customer-ready build progress (2026-09-18; packaging ownership corrected 2026-09-21)
+# Customer-ready build progress (2026-09-18; packaging offer corrected 2026-09-21; platform sentence superseded 2026-10-19)
+
+> **2026-10-19.** Current boundary is [`docs/customer-ready/01-product-boundary.md`](customer-ready/01-product-boundary.md) and [`17-med-review-pivot.md`](customer-ready/17-med-review-pivot.md). Sentences below that limit VantaHG to IRO and IDR are the historical 2026-09-21 lock. They are superseded. Entitlement keys did not change. Line-firewall code is not in that pivot.
 
 **North star:** intake → rules → brief → MD sign → outbound decision → billable event → report  
 **Plan:** [`docs/customer-ready/`](docs/customer-ready/00-README.md) · implement via [`10-implementation-commits.md`](docs/customer-ready/10-implementation-commits.md)  

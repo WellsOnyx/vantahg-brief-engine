@@ -1,6 +1,6 @@
-# VantaUM Clinical Brief Engine
+# VantaUM — Vanta Med Review
 
-**AI-powered first-level utilization review for healthcare compliance.**
+**Medical review for TPAs and self-funded plans. The Brief Engine is included only under that contract.**
 
 [![Next.js 16](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript)](https://www.typescriptlang.org/)
@@ -13,13 +13,13 @@
 
 ## What is VantaUM?
 
-VantaUM is an AI-powered utilization review platform built for health plans, TPAs, IROs, and managed care organizations. It transforms clinical documentation into structured, evidence-based briefs that assist board-certified physicians in making coverage determinations. The platform handles the entire first-level review workflow -- from case intake through AI analysis, physician review, and determination delivery -- with full audit trails and compliance controls.
+VantaUM’s sold product is **Vanta Med Review**. The Brief Engine turns clinical documentation into structured briefs that assist board-certified physicians making coverage determinations. It runs the first-level review workflow — intake, brief, physician review, and determination delivery — and it is included only under a paid Med Review contract. It is the shared engine under IDR, IRO, and Medical Review, not a product you can buy on its own.
 
 The core principle is simple: **AI analyzes, physicians decide.** VantaUM uses Anthropic Claude to generate clinical briefs that summarize patient documentation, match procedure codes against evidence-based criteria, and surface relevant guidelines. A deterministic fact-checking engine then verifies every AI-generated claim against known medical databases. All clinical determinations are made by licensed, board-certified physicians -- the AI never makes coverage decisions.
 
-**Packaging (corrected 2026-09-21):** **VantaUM sells Med Review** as the paid wedge. VantaUM Brief Engine / utilization management is included free only when the buyer uses Vanta med review under UM's contract — no standalone free UM SKU, no free UM with a third-party review shop. **VantaHG = IRO + IDR only.** UM still owns Brief Engine SoR and tech. Code gate unchanged: `client_config.vanta_med_review_contract` and `med_review_provider=vanta`.
+**Packaging (offer locked 2026-09-21; platform sentence superseded 2026-10-19):** **Vanta Med Review** is the paid product. The Brief Engine is included only under that contract — no standalone UM product, no engine with a third-party review shop. Vanta HG runs three lines (IDR, IRO, and Medical Review). A Med Review contract does not open IRO or IDR. Line-firewall code is the parallel IRO slice. Code gate unchanged: `client_config.vanta_med_review_contract` and `med_review_provider=vanta`. See [`docs/customer-ready/17-med-review-pivot.md`](docs/customer-ready/17-med-review-pivot.md).
 
-**UM price card (two-line, working decision 2026-09-23):** [`docs/customer-ready/um-unit-economics-rate-card.md`](docs/customer-ready/um-unit-economics-rate-card.md). Memo: [`docs/customer-ready/pricing-strategy-memo-2026-09-23.md`](docs/customer-ready/pricing-strategy-memo-2026-09-23.md). Platform membership plus one clinical review tier. Rules/auto review is $0 and still posts. Gold-card review is $0 and still posts. Do not publish internal margins. Handoff: [`docs/customer-ready/um-pricing-rules.md`](docs/customer-ready/um-pricing-rules.md).
+**Med Review price card (two-line, working decision 2026-09-23):** [`docs/customer-ready/um-unit-economics-rate-card.md`](docs/customer-ready/um-unit-economics-rate-card.md). Memo: [`docs/customer-ready/pricing-strategy-memo-2026-09-23.md`](docs/customer-ready/pricing-strategy-memo-2026-09-23.md). Platform membership plus one clinical review tier. Rules/auto review is $0 and still posts. Gold-card review is $0 and still posts. Do not publish internal margins. Do not treat this card as an IRO fee schedule. Handoff: [`docs/customer-ready/um-pricing-rules.md`](docs/customer-ready/um-pricing-rules.md).
 
 ---
 

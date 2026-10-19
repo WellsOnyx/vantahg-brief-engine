@@ -134,7 +134,7 @@ function StatBar({ state }: { state: DemoState }) {
     <div className="flex items-center gap-6 px-6 py-2 bg-navy-dark border-b border-white/5 text-xs">
       <div className="flex items-center gap-2">
         <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-        <span className="text-white/40">Live Demo</span>
+        <span className="text-white/40">Synthetic demo</span>
       </div>
       {[
         { label: 'Cases in Queue', value: demoCases.length },

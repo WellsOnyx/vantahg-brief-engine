@@ -4,7 +4,7 @@ Synthetic walkthrough only. No live PHI. Default off until `ENABLE_VHG_SCORE_DEM
 
 Published path: [https://vantaum.com/stoploss](https://vantaum.com/stoploss)
 
-The price card, billing wire, packaging guard, and IRO credentialing module are unchanged. VantaUM still sells Med Review. VantaHG remains IRO + IDR only. This demo does not add a fee.
+The price card, billing wire, and packaging guard are unchanged. Vanta Med Review is still the paid product. This demo does not add a fee and does not open IRO or IDR. It is synthetic data only. It is not a live IDR exposure product. Legal review is still open on IDR data use, IDRE conflict, InterQual, and the VHG trademark. Draft PR #83 (IRO credentialing panel) is not part of this demo and is not merged.
 
 ## What Jonah can click
 

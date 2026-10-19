@@ -6,7 +6,7 @@
 
 ## Overview
 
-VantaUM replaces the operational burden of utilization management with a fully managed service: concierge intake, AI-assisted clinical brief generation, and board-certified physician review — all under one platform with real-time visibility and SLA guarantees. Your team stays focused on member relationships while we handle the authorization workflow end to end.
+Vanta Med Review is the service you buy: concierge intake, a clinical brief from the shared Brief Engine, and board-certified physician review — under one Med Review contract, with real-time visibility and SLA guarantees. The Brief Engine is included only under that contract. It is not a standalone UM product. Your team stays focused on member relationships while we handle the authorization workflow end to end.
 
 ---
 

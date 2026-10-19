@@ -23,7 +23,7 @@ export default function DemoPage() {
             Clinical Intelligence. <span className="text-[#c9a227]">Delivered in Minutes.</span>
           </h1>
           <p className="text-white/60 text-sm sm:text-base max-w-xl mx-auto">
-            Watch a real utilization review case flow through VantaUM — from intake to AI-generated clinical brief to physician determination.
+            Watch a synthetic Med Review case flow through VantaUM — from intake to a clinical brief to physician determination. No live PHI.
           </p>
           <div className="mt-4 flex flex-wrap gap-3 justify-center">
             <a href="/demo-tour" className="px-5 py-2 rounded-full bg-gold text-navy text-sm font-semibold hover:bg-[#d4b25c]">Start Guided Tour (prospect call)</a>
@@ -35,7 +35,7 @@ export default function DemoPage() {
         <DemoWalkthrough vhgScore={vhgScore} />
       </main>
       <div className="max-w-3xl mx-auto px-6 pb-8 text-center text-xs text-navy/50">
-        All data synthetic. This demo runs entirely client-side with the same criteria engine (InterQual/MCG/ACR references) used in production.
+        All data synthetic. Criteria lines on this demo are placeholders. They are not InterQual, MCG, or ACR content.
       </div>
       <footer className="text-center py-6 text-xs text-[#0c2340]/30">
         <p>VantaUM — A <a href="https://wellsonyx.com" target="_blank" rel="noopener noreferrer" className="hover:text-[#c9a227]">Wells Onyx</a> Service</p>
