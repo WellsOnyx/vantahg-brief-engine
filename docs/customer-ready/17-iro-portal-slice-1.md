@@ -28,7 +28,7 @@ Tests live in `__tests__/lib/iro/`. They cover cross-line denial, Ohio standard 
 
 - Screens, API routes, and a queue UI. Nothing new is exposed on the public app.
 - RDS migration. Draft PR #83 already claims `033_iro_panel_credentialing.sql` and does not merge cleanly. This slice stays in memory so it does not collide with that file.
-- PR #83 itself. It is draft, conflicting, and models IRO-only credentialing with one clinical approver. Oct 19 asks for a shared status read plus a separate 4-approval IRO panel. Re-scope that branch. Do not force-merge it.
+- PR #83 itself. It is draft and models IRO-only credentialing with one clinical approver. The shared record and the separate four-approver IRO activation are in [`19-shared-credentialing.md`](19-shared-credentialing.md). Do not merge #83.
 - Check-in timers (expedited every 2 hours, 12 hours before an expedited report, standard report 2 days before due, missing-records follow-up every 2 business days), outreach no-reply timers, PIPACA 10-day notice generation, and the first-two-cases quality hold.
 - SOP appendices D, E, and H, the 6-stage to 31-step map, and the 105-code specialty list. Those were not in the repo. Specialty is stored as a code and is not matched against an invented list.
 - Reviewer pay, Medical Director payouts, vendor charges, spending-limit approval, and the CFO invoice check.
@@ -46,7 +46,7 @@ Tests live in `__tests__/lib/iro/`. They cover cross-line denial, Ohio standard 
 | (c) | Mailing vendor | `MailingAdapter.send` with `regular` or `certified`, plus `manual_fallback` on the stub receipt. |
 | (d) | 24/7 phone vendor | `PhoneLineAdapter.logMessage`. The log stores a case id and an opaque token. |
 | (e) | File storage and BAA signer | `IroStorageAdapter`. Originals reject a second put. Revisions are a new number. No live bucket and no PHI. |
-| (f) | Vendor vs delegated credentialing | `CredentialingService.readStatus` / `readPanelActivation`. Provenance (Vanta-verified vs vendor-attested) is not stored yet. The interface does not accept an HR file. |
+| (f) | Vendor vs delegated credentialing | `CredentialingService.readStatus` / `readPanelActivation` still returns status only. Provenance now lives on the shared record in [`19-shared-credentialing.md`](19-shared-credentialing.md). That record stores `vanta_verified` or `vendor_attested` per item and does not pick a model. |
 
 PDF questions that are not in (a)–(f): billing inside the portal vs a fed system, and shared vs built-in credentialing. This slice keeps billing as a per-case quote and event on the IRO case, separate from closure, and credentialing as a service the workflow calls. Neither choice is locked.
 

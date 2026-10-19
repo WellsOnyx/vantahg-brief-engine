@@ -3,7 +3,25 @@
 **This is the single source of truth for "where the build is right now."**
 Future Claude/Cole/Jonah sessions: read this first.
 
-**Stacking:** #89, #90, and #91 each prepend a dated section at this same anchor. On a `STATE.md` conflict, keep every dated section, newest first. The sections do not overlap. Doc number 17 is two different files across that stack (`17-med-review-pivot.md` on the med-review PR, `17-iro-portal-slice-1.md` on the IRO slice). This suite is doc 18.
+**Stacking:** #89, #90, and #91 each prepend a dated section at this same anchor. On a `STATE.md` conflict, keep every dated section, newest first. The sections do not overlap. Doc number 17 is two different files across that stack (`17-med-review-pivot.md` on the med-review PR, `17-iro-portal-slice-1.md` on the IRO slice). The financial suite is doc 18. Shared credentialing is doc 19.
+
+---
+
+## 2026-10-19 — Shared credentialing (re-scope of draft PR #83)
+
+Jonah's Oct 19 follow-up: draft PR #83 is IRO-only with one clinical approver and does not merge. This slice puts one shared credential record per reviewer on current main (`d07e772`). In-memory. Synthetic tokens. No live PHI. No new prices. No new HTTP route. `lib/billing/um-price-card.ts` is unchanged.
+
+- **Record:** `lib/credentialing/`. IRO, Medical Review, and Sagility read the same items. A second write updates that record. Sagility is a credential consumer and is not added to `LINES_OF_BUSINESS`.
+- **Source:** each item is `vanta_verified` or `vendor_attested`. Decision (f) stays `open`. Neither source is the default. `vendor` stays null and `live_call` stays false.
+- **Lapse:** an expired, lapsed, or restricted item blocks assignment on IRO, Medical Review, and Sagility. The IRO projection sets `active` false, so the existing IRO assigner stops as well.
+- **IRO activation:** separate from the record. Four distinct approvers from `DEFAULT_IRO_ACCESS_POLICY.panel_approvers` (Santana, Jonah, Jonathan, Johana). Self-approval is refused. Each decision is an audit row with codes and synthetic ids only.
+- **Medical Review activation:** `MEDICAL_REVIEW_ACTIVATION.required_approver_count` is null. TODO points at `lib/assignment-engine.ts` (status active, category match, capacity). This slice does not invent a count and does not replace that function.
+- **Sagility activation:** `SAGILITY_ACTIVATION.required_approver_count` is null. TODO. No approval count.
+- **Firewall:** credential writes refuse `case_id`, `line_of_business`, and direct identifiers. `lib/lines` still denies cross-line case search. The shared view has no case body.
+- **Left intact:** IDR never-submit, Med Review packaging, Phase 7 onboarding, UM price card, IRO fee schedule, financial suite.
+- **Proof:** `__tests__/lib/credentialing/shared-service.test.ts`.
+- **Doc:** [`docs/customer-ready/19-shared-credentialing.md`](docs/customer-ready/19-shared-credentialing.md).
+- **PR #83:** superseded. Close it. Do not merge it.
 
 ---
 

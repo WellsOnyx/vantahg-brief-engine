@@ -1,5 +1,11 @@
 import type { CredentialStatus, PanelActivation } from './types';
 
+/**
+ * Status projection for the IRO workflow.
+ * Shared records live in lib/credentialing and reach this file through
+ * iroCredentialingFromShared. License numbers stay off the projection.
+ */
+
 /** Fields a portal may read. License numbers, contracts, and screening files are not here. */
 export const CREDENTIAL_STATUS_FIELDS = [
   'physician_id',
