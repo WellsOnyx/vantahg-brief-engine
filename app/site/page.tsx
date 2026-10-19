@@ -251,7 +251,7 @@ export default function SitePage() {
         {/* Early Access Bar */}
         <div className="ea-bar">
           <span className="ea-bar-pill">Early Access</span>
-          <span className="ea-bar-text">VantaUM sells Med Review. Brief Engine included free only under UM’s contract.</span>
+          <span className="ea-bar-text">Vanta Med Review is the only product we sell. The Brief Engine is included only under that contract.</span>
           <a href={EA_EMAIL} className="ea-bar-link">Apply now →</a>
         </div>
 
@@ -266,7 +266,7 @@ export default function SitePage() {
             <li><a href="#broker">For Brokers</a></li>
             <li><a href="#chro">For CHROs</a></li>
             <li><a href="#philosophy">Philosophy</a></li>
-            <li><a href="#demo">Live Demo</a></li>
+            <li><a href="#demo">Synthetic demo</a></li>
           </ul>
           <a className="nav-cta" href="#contact">Request Early Access</a>
         </nav>
@@ -281,7 +281,7 @@ export default function SitePage() {
             <a href="#tpa" className="role-card tpa">
               <div className="role-card-eyebrow">TPA</div>
               <div className="role-card-title">You Run<br />the Plan</div>
-              <p className="role-card-body">Buy Vanta med review. First-level authorizations and the Brief Engine are included under that contract — not as a standalone UM product.</p>
+              <p className="role-card-body">Buy Vanta Med Review. First-level authorizations and the Brief Engine are included under that contract — not as a standalone UM product.</p>
               <div className="role-card-cta">See how VantaUM works for TPAs →</div>
             </a>
 
@@ -311,18 +311,18 @@ export default function SitePage() {
             <div className="ea-left">
               <span className="kicker" style={{ color: 'var(--gold)' }}>Founding Partner Program</span>
               <h2 className="sh">We are new.<br />That is the <em style={{ color: 'var(--gold)' }}>point.</em></h2>
-              <p className="sb">Most UM platforms were built in a different era — before AI could compress physician review time, before concierge coordination was operationally viable at scale. We built VantaUM from a blank page with those tools available from day one.</p>
-              <p className="sb" style={{ marginTop: 16 }}>The TPAs that partner with us now don&apos;t inherit someone else&apos;s technical debt. They help shape a platform designed around how UM should actually work.</p>
+              <p className="sb">Most review platforms were built in a different era — before AI could compress physician review time, before concierge coordination was operationally viable at scale. We built Vanta Med Review from a blank page with those tools available from day one.</p>
+              <p className="sb" style={{ marginTop: 16 }}>The TPAs that partner with us now don&apos;t inherit someone else&apos;s technical debt. They help shape a Med Review practice designed around how the work should actually run.</p>
               <div className="ea-spots">
                 <div className="ea-spots-dot" />
-                <div className="ea-spots-text"><strong>Packaging is locked.</strong> VantaUM sells Med Review. Brief Engine / UM is included free only under UM’s contract — not standalone, not with another shop. VantaHG is IRO and IDR only.</div>
+                <div className="ea-spots-text"><strong>Packaging is locked.</strong> Vanta Med Review is the paid product. The Brief Engine is included only under that contract — not as standalone UM, not with another shop. IRO and IDR are separate lines.</div>
               </div>
             </div>
             <div className="ea-perks">
               {[
-                { num: '01', title: 'Vanta med-review contract', body: 'VantaUM sells Med Review. Brief Engine / UM is included free only under UM’s contract. Not a standalone UM SKU. Not included with another shop’s review. VantaHG is IRO and IDR only. Terms are scoped on a conversation — we do not publish a UM price here.' },
+                { num: '01', title: 'Vanta Med Review contract', body: 'Vanta Med Review is the paid product. The Brief Engine is included only under that contract. Not a standalone UM product. Not included with another shop’s review. IRO and IDR are separate lines. Terms are scoped on a conversation — we do not publish a UM price or an IRO fee here.' },
                 { num: '02', title: 'Roadmap Input', body: 'Your operational reality shapes what we build next. Founding partners have a direct line to the product team — not a support ticket and a quarterly roadmap review.' },
-                { num: '03', title: 'Reference Account Status', body: 'Be among the first TPAs in the market to operate a concierge UM model. Reference status positions your organization as a clinical quality leader to your plan sponsors.' },
+                { num: '03', title: 'Reference Account Status', body: 'Be among the first TPAs in the market to operate concierge Med Review. Reference status positions your organization as a clinical quality leader to your plan sponsors.' },
                 { num: '04', title: 'White-Glove Onboarding', body: 'Founding partners get hands-on implementation directly with the Wells Onyx operating team — not a third-party integrator who read the manual last week.' },
               ].map((p) => (
                 <div key={p.num} className="ea-perk">
@@ -340,8 +340,8 @@ export default function SitePage() {
             <div>
               <span className="kicker" style={{ color: 'var(--teal)' }}>For TPAs</span>
               <h2 className="sh">You Run<br /><em>the Plan.</em><br />Let us run the auths.</h2>
-              <p className="sb" style={{ marginBottom: '24px' }}>First-level utilization management is the part of your operation that consumes the most time, produces the most friction, and carries the most compliance risk — without adding clinical value to your book.</p>
-              <p className="sb" style={{ marginBottom: '40px' }}>Under a Vanta med-review contract, VantaUM handles the Brief Engine work. We intake every prior auth request, run it through clinical criteria, route it through our nursing tier, and get a determination back — typically in hours, not days. You receive a clean file and a decision. This is not sold as standalone UM, and it is not included if another shop does the review.</p>
+              <p className="sb" style={{ marginBottom: '24px' }}>First-level medical review is the part of your operation that consumes the most time, produces the most friction, and carries the most compliance risk — without adding clinical value to your book.</p>
+              <p className="sb" style={{ marginBottom: '40px' }}>Under a paid Vanta Med Review contract, we handle the Brief Engine work. We intake every prior auth request, run it through clinical criteria, route it through our nursing tier, and get a determination back — typically in hours, not days. You receive a clean file and a decision. This is not sold as standalone UM, and it is not included if another shop does the review.</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '40px' }}>
                 {[
                   'Clean files. Every case documented, criteria-cited, audit-ready on delivery.',
@@ -383,7 +383,7 @@ export default function SitePage() {
                 <span className="kicker" style={{ color: 'var(--gold)' }}>For Brokers</span>
                 <h2 className="sh">You Win<br /><em>the Business.</em><br />We help you keep it.</h2>
                 <p className="sb" style={{ marginBottom: '24px' }}>Your producers are selling self-funded accounts against carriers who&apos;ve been in the market for decades. The question on every plan sponsor&apos;s mind: what do I get from you that I can&apos;t get elsewhere?</p>
-                <p className="sb" style={{ marginBottom: '40px' }}>VantaUM is the answer. Partner with us and bring your clients a modern, URAC-accredited utilization management layer that holds up under scrutiny — faster decisions, better member experience, and clinical compliance that actually protects the plan.</p>
+                <p className="sb" style={{ marginBottom: '40px' }}>Vanta Med Review is the answer. Partner with us and bring your clients a URAC-accredited Med Review practice that holds up under scrutiny — faster decisions, better member experience, and clinical compliance that actually protects the plan.</p>
                 <a href={EA_EMAIL} className="btn-primary" style={{ background: 'transparent', border: '1px solid var(--gold)', color: 'var(--gold)' }}>Become a broker partner →</a>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
@@ -518,12 +518,12 @@ export default function SitePage() {
         <section className="vum-section" id="demo" style={{ background: 'var(--black)' }}>
           <div style={{ maxWidth: 1100, margin: '0 auto' }}>
             <div style={{ maxWidth: 600, marginBottom: 48 }}>
-              <span className="kicker">See It Live</span>
+              <span className="kicker">Synthetic demo</span>
               <h2 className="sh">Watch the AI work.<br /><em>Then meet the humans behind it.</em></h2>
-              <p className="sb">This is a live demo of the VantaUM intake and clinical routing engine. Submit a case and see how AI compresses the middle — so the clinician receives a fully pre-briefed file, not a raw document stack.</p>
+              <p className="sb">This is a synthetic demo of Med Review intake and the Brief Engine. No live PHI. Submit a sample case and see how the brief compresses the middle — so the clinician receives a pre-briefed file, not a raw document stack.</p>
             </div>
             <div>
-              <div className="demo-frame-label"><span className="demo-live-dot" /> Live Demo Environment <span style={{ fontWeight: 300, opacity: 0.5, fontSize: '11px', marginLeft: '8px' }}>All patients, cases, and organizations shown are fictional and for illustrative purposes only.</span></div>
+              <div className="demo-frame-label"><span className="demo-live-dot" /> Synthetic demo <span style={{ fontWeight: 300, opacity: 0.5, fontSize: '11px', marginLeft: '8px' }}>All patients, cases, and organizations shown are fictional. Not a live feed.</span></div>
               <div style={{ borderRadius: '0 12px 12px 12px', overflow: 'hidden', border: '1px solid var(--border-strong)' }}>
                 <DemoWalkthrough />
               </div>

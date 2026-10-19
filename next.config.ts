@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
 import path from "node:path";
+import { PUBLIC_REDIRECTS } from "./lib/routing/public-redirects";
 
 const securityHeaders = [
   { key: 'X-Frame-Options', value: 'DENY' },
@@ -59,9 +60,7 @@ const nextConfig: NextConfig = {
   // which breaks the Dockerfile COPY paths.
   outputFileTracingRoot: path.join(__dirname),
   async redirects() {
-    return [
-      { source: '/sign-up', destination: '/signup', permanent: false },
-    ];
+    return [...PUBLIC_REDIRECTS];
   },
   async headers() {
     return [

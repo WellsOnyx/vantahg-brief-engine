@@ -53,7 +53,7 @@ export function StoplossDashboard({
               <p className="text-[11px] uppercase tracking-[0.18em] text-gold font-semibold">Demo, synthetic data</p>
               <h1 className="font-[family-name:var(--font-display)] text-4xl mt-2">Stop-loss partner</h1>
               <p className="text-sm text-white/70 mt-3 max-w-xl">
-                Aggregated, de-identified med-review cases. Role shown for this synthetic session: stoploss_partner.
+                Aggregated synthetic med-review cases. Not a live IDR feed. Role shown for this synthetic session: stoploss_partner.
               </p>
             </div>
             <Link href="/" className="text-sm text-gold hover:text-gold-light">

@@ -1,10 +1,12 @@
 /**
- * Look up published client_config and evaluate free UM Brief Engine access.
+ * Look up published client_config and evaluate Brief Engine access.
  *
- * Missing published config is not entitled (no standalone free UM).
+ * Missing published config is not entitled (no standalone UM product).
  * Demo / spine unit tests that never publish a config skip this lookup
  * and call evaluateUmBriefEngineAccess themselves when they need the gate.
  */
+
+import { PUBLISHED_CONFIG_REQUIRED_REASON } from '@/lib/packaging/med-review-positioning';
 
 import {
   UmBriefEngineEntitlementError,
@@ -39,7 +41,7 @@ export async function requireUmBriefEngineAccess(
   if (!latest) {
     throw new UmBriefEngineEntitlementError(
       'missing_vanta_med_review_contract',
-      'Free UM Brief Engine access requires a published client_config with vanta_med_review_contract=true.',
+      PUBLISHED_CONFIG_REQUIRED_REASON,
       clientId,
     );
   }

@@ -1,13 +1,20 @@
 /**
- * Packaging lock (Jonah, corrected 2026-09-21):
+ * Packaging gate (offer locked 2026-09-21; platform sentence superseded 2026-10-19).
  *
- * VantaUM sells Med Review as the paid wedge. VantaUM Brief Engine / UM is
- * included free only when the buyer uses Vanta med review under UM’s contract.
- * No standalone free UM SKU. No free UM with a third-party review shop.
- * VantaHG = IRO + IDR only. UM still owns Brief Engine SoR/tech.
+ * Vanta Med Review is the paid product. The Brief Engine is included only
+ * under that contract. No standalone UM product. No engine with another shop.
+ * A Med Review contract does not open IRO or IDR.
  *
- * Canonical: docs/customer-ready/01-product-boundary.md
+ * Field names and denial codes are stable. Canonical:
+ * docs/customer-ready/01-product-boundary.md
  */
+
+import {
+  GRANTED_REASON,
+  MISSING_CONTRACT_DENIAL_REASON,
+  STANDALONE_UM_DENIAL_REASON,
+  THIRD_PARTY_DENIAL_REASON,
+} from '@/lib/packaging/med-review-positioning';
 
 export const VANTA_MED_REVIEW_CONTRACT_FIELD = 'vanta_med_review_contract' as const;
 
@@ -22,10 +29,10 @@ export const UM_BRIEF_ENGINE_DENIALS = [
 export type UmBriefEngineDenial = (typeof UM_BRIEF_ENGINE_DENIALS)[number];
 
 export interface UmBriefEngineEntitlementInput {
-  /** Required true for free UM / Brief Engine access. */
+  /** Required true for Brief Engine access under a paid Med Review contract. */
   vanta_med_review_contract?: boolean | null;
   /**
-   * Who performs med review. `third_party` never gets free UM, even if
+   * Who performs med review. `third_party` never gets the engine, even if
    * someone mistakenly flips the contract flag.
    */
   med_review_provider?: MedReviewProvider | string | null;
@@ -69,7 +76,7 @@ function normalizeProvider(
 }
 
 /**
- * Source of truth for free UM Brief Engine access.
+ * Source of truth for Brief Engine access under a paid Med Review contract.
  *
  * Granted only when `vanta_med_review_contract === true` and the med-review
  * shop is Vanta (or omitted, which means “Vanta under that contract”).
@@ -83,8 +90,7 @@ export function evaluateUmBriefEngineAccess(
     return {
       allowed: false,
       code: 'third_party_med_review',
-      reason:
-        'VantaUM Brief Engine / UM is not included free when med review is performed by another shop. VantaUM sells Med Review under UM’s contract.',
+      reason: THIRD_PARTY_DENIAL_REASON,
     };
   }
 
@@ -93,22 +99,20 @@ export function evaluateUmBriefEngineAccess(
       return {
         allowed: false,
         code: 'standalone_um_not_offered',
-        reason:
-          'VantaUM Brief Engine / UM is not offered as a standalone free SKU. It is included free only when the buyer uses Vanta med review under UM’s contract.',
+        reason: STANDALONE_UM_DENIAL_REASON,
       };
     }
     return {
       allowed: false,
       code: 'missing_vanta_med_review_contract',
-      reason:
-        'Free UM Brief Engine access requires client_config.vanta_med_review_contract=true (buyer uses Vanta med review).',
+      reason: MISSING_CONTRACT_DENIAL_REASON,
     };
   }
 
   return {
     allowed: true,
     code: 'granted',
-    reason: 'Vanta med-review contract under UM: Brief Engine / UM included free under that contract.',
+    reason: GRANTED_REASON,
   };
 }
 

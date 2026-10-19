@@ -82,13 +82,13 @@ CX / relationship surface only. Clinical SoR stays on AWS. No PHI in Muse. No li
 | 8.2 | PHI allowlist + CX panel | `screenMusePayload` rejects PHI fields and does not store them. `/cx` “Muse touchpoints” lists rows only when `MUSE_CX_ENABLED=true` and `MUSE_API_KEY` is set; empty state otherwise |
 | 8.3 | Go-live ops punch list | `13-go-live-ops.md` — Cole runs env slots → RDS migrations including `027` → `scripts/bootstrap-real-client.ts` → synthetic/shadow/hypercare (runbook A–E) → BAA pointers. No live PHI until `06-hipaa-baa-path.md` is confirmed |
 
-Packaging lock is unchanged: VantaUM sells Med Review; Brief Engine free only under the Vanta med-review contract; VantaHG = IRO + IDR only; Optum frozen. Gravity Rail intake stays fail-closed and idempotent.
+Packaging offer is unchanged in code: Vanta Med Review is the paid product; the Brief Engine is included only under that contract; a Med Review contract does not open IRO or IDR; Optum frozen. Gravity Rail intake stays fail-closed and idempotent.
 
 ## Parallel / non-blocking (do not block Phase 0–7)
 
 - Lint cleanup on main
 - CX bot 1×10 accounts (non-PHI) — after client portal status API exists
-- Med Review wedge **corrected 2026-09-21** — **VantaUM sells Med Review**; Brief Engine / UM free only under UM’s Vanta med-review contract; **VantaHG = IRO + IDR only**. Packaging/GTM only; see `01-product-boundary.md`. Entitlement gate unchanged. Not a new build phase.
+- Med Review offer **corrected 2026-09-21**, platform sentence **superseded 2026-10-19** — **Vanta Med Review** is the paid product; the Brief Engine is included only under that contract; a Med Review contract does not open IRO or IDR. See `01-product-boundary.md` and `17-med-review-pivot.md`. Entitlement keys unchanged. Line firewall is the parallel IRO slice.
 - UM prices **working decision 2026-09-23** — memo `pricing-strategy-memo-2026-09-23.md`, two-line card (`um-unit-economics-rate-card.md`, `um-pricing-rules.md`). Platform PMPM + one clinical tier. Rules/auto review posts at $0. Gold-card review posts at $0 (R19). Config in `lib/billing/um-price-card.ts`. Migration `032`. Do not publish internal margins.
 - Muse Connector Platform (muse.ai) — **Phase 8 stub is in repo** (`12-muse-connector.md`). Still not live-keyed. No PHI. Production use gated by HIPAA review. Go-live order is `13-go-live-ops.md`, not this connector.
 

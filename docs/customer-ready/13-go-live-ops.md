@@ -8,10 +8,10 @@
 
 Packaging lock (do not change while running this):
 
-- **VantaUM sells Med Review** (paid wedge).
-- Brief Engine / UM is free **only** when `client_config.vanta_med_review_contract=true` and `med_review_provider=vanta`.
-- No standalone free UM SKU. No free UM with a third-party review shop.
-- **VantaHG = IRO + IDR only.**
+- **Vanta Med Review** is the paid product.
+- The Brief Engine is included **only** when `client_config.vanta_med_review_contract=true` and `med_review_provider=vanta`.
+- No standalone UM product. No engine with a third-party review shop.
+- A Med Review contract does not open IRO or IDR.
 - Optum frozen (no outreach).
 - Guard: `lib/entitlements/um-brief-engine.ts`. Canonical: [`01-product-boundary.md`](01-product-boundary.md).
 

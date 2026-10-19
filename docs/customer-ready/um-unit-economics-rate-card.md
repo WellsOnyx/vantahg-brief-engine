@@ -1,6 +1,6 @@
-# VantaUM two-line UM price card
+# Vanta Med Review two-line price card
 
-**Status:** Working decision 2026-09-23. Client deck runs in parallel. **Do not publish internal margins** in client materials. Lead external materials with the fee table and the 375k autos at $0 — not $54.6M.
+**Status:** Working decision 2026-09-23. Commercial label updated 2026-10-19: this is the Med Review card, not a standalone UM product and not an IRO fee schedule. Internal file name `lib/billing/um-price-card.ts` is unchanged on purpose. Client deck runs in parallel. **Do not publish internal margins** in client materials. Lead external materials with the fee table and the 375k autos at $0 — not $54.6M.
 
 **Label every external slide “illustrative.”**
 

@@ -21,12 +21,12 @@ export const metadata: Metadata = {
     template: '%s · VantaUM',
     default: 'VantaUM',
   },
-  description: 'Concierge member advocacy meets clinical intelligence. VantaUM gives physicians more time with every case so members get the care they deserve.',
-  keywords: ['utilization management', 'member advocacy', 'concierge clinical review', 'prior authorization', 'physician review', 'healthcare compliance', 'Wells Onyx'],
+  description: 'Vanta Med Review. The Brief Engine is included only under that contract. Physicians get more time with every case so members get the care they deserve.',
+  keywords: ['medical review', 'med review', 'member advocacy', 'concierge clinical review', 'prior authorization', 'physician review', 'healthcare compliance', 'Wells Onyx'],
   authors: [{ name: 'VantaUM' }, { name: 'Wells Onyx' }],
   openGraph: {
-    title: 'VantaUM | Concierge Utilization Management',
-    description: 'Concierge member advocacy powered by clinical intelligence. More human, not less. A Wells Onyx service for TPAs, health plans, and self-funded employers.',
+    title: 'VantaUM | Vanta Med Review',
+    description: 'Vanta Med Review for TPAs, health plans, and self-funded employers. The Brief Engine is included only under that contract.',
     type: 'website',
   },
   icons: {

@@ -160,8 +160,8 @@ export default function SignupTpaPage() {
             Apply for early access
           </h1>
           <p className="text-muted mt-4 text-lg leading-relaxed">
-            Tell us about your operation. VantaUM sells Med Review — the Brief Engine
-            is included free only under UM&rsquo;s med-review contract, not as a standalone UM product.
+            Tell us about your operation. Vanta Med Review is the product you are applying for — the Brief Engine
+            is included only under that contract, not as a standalone UM product.
             We&rsquo;ll review and reach out within one business day with next steps and onboarding plan.
           </p>
         </div>

@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Blog — VantaUM',
-  description: 'Insights on utilization management, AI in healthcare, and the future of prior authorization.',
+  description: 'Insights on medical review, clinical briefs, and prior authorization.',
 };
 
 export default function BlogLayout({ children }: { children: React.ReactNode }) {

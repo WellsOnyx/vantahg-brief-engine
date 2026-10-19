@@ -1,6 +1,8 @@
 # Pricing & Strategy Update
 
-**AI-assisted utilization management · the two-line fee model**
+> **2026-10-19 label.** This memo remains the 23 September 2026 working decision for **Vanta Med Review** economics. It is not a license to sell standalone UM, and it is not an IRO fee schedule. The platform-waiver question in the memo stays unresolved. Do not add IRO dollar amounts here.
+
+**Vanta Med Review · the two-line fee model**
 
 | | |
 |--|--|
