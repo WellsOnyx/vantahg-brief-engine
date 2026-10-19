@@ -3,6 +3,25 @@
 **This is the single source of truth for "where the build is right now."**
 Future Claude/Cole/Jonah sessions: read this first.
 
+**Stacking:** #89, #90, and #91 each prepend a dated section at this same anchor. On a `STATE.md` conflict, keep every dated section, newest first. The sections do not overlap. Doc number 17 is two different files across that stack (`17-med-review-pivot.md` on the med-review PR, `17-iro-portal-slice-1.md` on the IRO slice). This suite is doc 18.
+
+---
+
+## 2026-10-19 — Financial billing suite (synthetic ledger)
+
+Jonah's Oct 19 follow-up: a full financial billing suite across the three firewalled lines. In-memory. Synthetic tokens. No live PHI. No payment rail. No vendor picked. Stacked on the IRO portal slice. No new HTTP route. `lib/billing/um-price-card.ts` and the Med Review entitlement function are unchanged.
+
+- **Books:** `lib/billing/suite/`. IRO operating money, IDR fees, IDR escrow, and Medical Review contracts do not settle each other. Escrow is a liability. Applying it to any invoice, including an IDR fee, returns `book_separation`. The consolidated view sets `blended_cash_cents` to null.
+- **IRO:** case-fee AR posts issued lines from the preliminary quote (Ohio specialist proof is $1,700.00). Invoice numbers are line-scoped (`IRO-AR-000001`). A patient payer is re-checked against the state row (IL and NC stay blocked). Reviewer and Medical Director pay reads `PAYOUT_SCHEDULE_UNCONFIGURED`: amounts are null and posting is `payout_unconfigured`. Hourly pay exists only as a flagged peer-to-peer exception once a supplied schedule includes a rate and a spending limit.
+- **IDR:** `IDR_ADMIN_FEE_UNCONFIGURED` and `IDR_IDRE_FEE_UNCONFIGURED` have no amount and no `source_ref`. Posting either is `idr_unconfigured`. A filled schedule with a blank or expired citation is `idr_source_missing` or `idr_source_expired`. IDRE and administrative fees stay separate types on `idr_fees`. Escrow stays on `idr_escrow`. An earned-fee release is `earned_fee_stop` and does not move money.
+- **Medical Review:** `MED_REVIEW_CONTRACT_UNCONFIGURED` has null prices. An entitled post of that contract is `med_review_unconfigured`. A third-party shop still posts nothing.
+- **Ledger:** line-scoped invoice numbers, issued vs draft lines, internal payments (`external_settlement: not_configured`), overpayment credits that stay on the same line and book, AR/AP aging, approved adjustments, closure notes that do not create invoices, and CFO reconciliation. `reconcileLine` and `ageOpenItems` require a CFO actor. Escrow is reported and left out of the variance. A repeated invoice id is refused.
+- **Access:** line firewall on every read and post. Consolidated statement, reconciliation, and aging require `finance_role: cfo`. Those finance roles are local. They are not added to `UserRole`.
+- **Adapters:** payment processor, bank/ACH, accounting, and reviewer payroll are interfaces plus stubs (`vendor: null`, `live_call: false`, `settled: false`). A receipt that claims a live rail is refused.
+- **Left intact:** IDR never-submit / DRAFT, Med Review packaging copy, Phase 7 onboarding, UM price card, draft PR #83.
+- **Proof:** `__tests__/lib/billing/suite/` (fee totals, escrow separation, cross-line denial, reconciliation math).
+- **Doc:** [`docs/customer-ready/18-financial-billing-suite.md`](docs/customer-ready/18-financial-billing-suite.md).
+
 ---
 
 ## 2026-10-19 — Exclusive Med Review pivot (naming and docs)
