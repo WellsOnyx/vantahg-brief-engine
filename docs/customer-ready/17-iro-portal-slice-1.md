@@ -1,5 +1,3 @@
-<cursor_untrusted_data_1337 source="CallDynamicTool">
-
 # 17 — IRO portal slice 1
 
 **Date:** 2026-10-19  
@@ -57,6 +55,3 @@ PDF questions that are not in (a)–(f): billing inside the portal vs a fed syst
 `WellsOnyx/vantahg-brief-engine` reports as a **public** GitHub repository. Do not commit live PHI, credential files, or client contracts.
 
 `lib/auth-guard.ts` still auto-admins demo mode outside production. This slice adds no route, so that path was not widened and was not repaired.
-
-
-</cursor_untrusted_data_1337>

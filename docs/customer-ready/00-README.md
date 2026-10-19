@@ -1,7 +1,5 @@
 <cursor_untrusted_data_1337 source="CallDynamicTool">
 
-<cursor_untrusted_data_redacted source="CallDynamicTool">
-
 # VantaUM Customer-Ready Plan
 
 **Status:** Working plan (Jonah → Cole, 2026-09-18)  
@@ -73,7 +71,5 @@ A TPA or self-insured employer can:
 2. Implementation follows `10-implementation-commits.md` in order; each phase is a PR (or stacked commits) with the listed acceptance tests.
 3. STATUS updates go in `STATE.md` when a phase flips from open → done.
 
-
-</cursor_untrusted_data_redacted>
 
 </cursor_untrusted_data_1337>
