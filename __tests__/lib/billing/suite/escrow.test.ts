@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  IDR_FEE_SCHEDULE_PRELIMINARY,
+  IDR_ADMIN_FEE_UNCONFIGURED,
+  IDR_IDRE_FEE_UNCONFIGURED,
   applyEscrowToInvoice,
   depositEscrow,
   emptyFinance,
@@ -10,7 +11,7 @@ import {
   postIroCaseFee,
   releaseEscrow,
 } from '@/lib/billing/suite';
-import { actor, deps, DUE, ohioSpecialistQuote } from './fixture';
+import { actor, deps, DUE, ohioSpecialistQuote, TEST_ONLY_IDR_ADMIN_FEE } from './fixture';
 
 describe('IDR escrow separation', () => {
   it('refuses to use escrow or an IDR fee to pay IRO', () => {
@@ -23,6 +24,8 @@ describe('IDR escrow separation', () => {
       party_ref: 'SYN-PLAN-OH',
       due_at: DUE,
       quote: ohioSpecialistQuote(),
+      payer: 'client',
+      state: 'OH',
       case_closed: false,
     });
     expect(fee.ok).toBe(true);
@@ -56,18 +59,62 @@ describe('IDR escrow separation', () => {
     if (swept.ok) return;
     expect(swept.code).toBe('book_separation');
 
-    const idrFee = postIdrCaseFee(swept.state, idrActor, rails, {
+    const unconfigured = postIdrCaseFee(swept.state, idrActor, rails, {
+      id: 'inv-idr-empty',
+      case_id: 'idr-syn-0001',
+      party_ref: 'SYN-IDR-PLAN',
+      due_at: DUE,
+      schedule: IDR_ADMIN_FEE_UNCONFIGURED,
+      case_closed: false,
+    });
+    expect(unconfigured.ok).toBe(false);
+    if (unconfigured.ok) return;
+    expect(unconfigured.code).toBe('idr_unconfigured');
+    expect(IDR_IDRE_FEE_UNCONFIGURED.fee_type).toBe('idre');
+    expect(IDR_ADMIN_FEE_UNCONFIGURED.fee_type).toBe('administrative');
+    expect(IDR_IDRE_FEE_UNCONFIGURED.amount_cents).toBeNull();
+    expect(IDR_IDRE_FEE_UNCONFIGURED.source_ref).toBeNull();
+
+    const uncited = postIdrCaseFee(unconfigured.state, idrActor, rails, {
+      id: 'inv-idr-uncited',
+      case_id: 'idr-syn-0001',
+      party_ref: 'SYN-IDR-PLAN',
+      due_at: DUE,
+      schedule: { ...TEST_ONLY_IDR_ADMIN_FEE, source_ref: '  ', id: 'idr-no-source' },
+      case_closed: false,
+    });
+    expect(uncited.ok).toBe(false);
+    if (uncited.ok) return;
+    expect(uncited.code).toBe('idr_source_missing');
+
+    const expired = postIdrCaseFee(uncited.state, idrActor, rails, {
+      id: 'inv-idr-expired',
+      case_id: 'idr-syn-0001',
+      party_ref: 'SYN-IDR-PLAN',
+      due_at: DUE,
+      schedule: { ...TEST_ONLY_IDR_ADMIN_FEE, effective_to: '2026-01-02T00:00:00.000Z', id: 'idr-expired' },
+      case_closed: false,
+    });
+    expect(expired.ok).toBe(false);
+    if (expired.ok) return;
+    expect(expired.code).toBe('idr_source_expired');
+    expect(expired.state.invoices.some((row) => row.book === 'idr_fees')).toBe(false);
+
+    const idrFee = postIdrCaseFee(expired.state, idrActor, rails, {
       id: 'inv-idr',
       case_id: 'idr-syn-0001',
       party_ref: 'SYN-IDR-PLAN',
       due_at: DUE,
-      schedule: IDR_FEE_SCHEDULE_PRELIMINARY,
+      schedule: TEST_ONLY_IDR_ADMIN_FEE,
       case_closed: false,
     });
     expect(idrFee.ok).toBe(true);
     if (!idrFee.ok) return;
     expect(idrFee.value.book).toBe('idr_fees');
-    expect(idrFee.value.amount_cents).toBe(IDR_FEE_SCHEDULE_PRELIMINARY.case_fee_cents);
+    expect(idrFee.value.fee_type).toBe('administrative');
+    expect(idrFee.value.flags).toContain('test_only');
+    expect(idrFee.value.invoice_number).toBe('IDR-AR-000001');
+    expect(idrFee.value.amount_cents).toBe(TEST_ONLY_IDR_ADMIN_FEE.amount_cents);
     const feeToIro = applyEscrowToInvoice(idrFee.state, idrActor, rails, {
       invoice_id: 'inv-idr',
       amount_cents: 40_000,
@@ -75,10 +122,23 @@ describe('IDR escrow separation', () => {
     expect(feeToIro.ok).toBe(false);
     if (!feeToIro.ok) expect(feeToIro.code).toBe('book_separation');
 
-    const released = releaseEscrow(idrFee.state, idrActor, rails, {
+    const earned = releaseEscrow(idrFee.state, actor('idr-approver', ['IDR'], 'line_billing', 'santana'), rails, {
+      id: 'escrow-earned',
+      case_id: 'idr-syn-0001',
+      amount_cents: 1_000_000,
+      release_type: 'earned_fee',
+      source_ref: 'TEST-ONLY: not a CMS citation',
+    });
+    expect(earned.ok).toBe(false);
+    if (earned.ok) return;
+    expect(earned.code).toBe('earned_fee_stop');
+    expect(escrowLiabilityCents(earned.state)).toBe(1_000_000);
+
+    const released = releaseEscrow(earned.state, actor('idr-approver', ['IDR'], 'line_billing', 'santana'), rails, {
       id: 'escrow-rel',
       case_id: 'idr-syn-0001',
       amount_cents: 1_000_000,
+      release_type: 'party_payment',
     });
     expect(released.ok).toBe(true);
     if (!released.ok) return;

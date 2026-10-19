@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
-  MED_REVIEW_CONTRACT_PRELIMINARY,
+  MED_REVIEW_CONTRACT_UNCONFIGURED,
+  applyCredit,
   consolidatedStatement,
   depositEscrow,
   emptyFinance,
@@ -9,7 +10,7 @@ import {
   readInvoice,
   recordPayment,
 } from '@/lib/billing/suite';
-import { actor, deps, DUE, ohioSpecialistQuote } from './fixture';
+import { actor, deps, DUE, ohioSpecialistQuote, TEST_ONLY_MED_REVIEW_CONTRACT } from './fixture';
 
 describe('line-scoped financial access', () => {
   it('denies an IRO biller the IDR book and reserves the consolidated view for a CFO', () => {
@@ -20,6 +21,8 @@ describe('line-scoped financial access', () => {
       party_ref: 'SYN-PLAN-OH',
       due_at: DUE,
       quote: ohioSpecialistQuote(),
+      payer: 'client',
+      state: 'OH',
       case_closed: false,
     });
     expect(posted.ok).toBe(true);
@@ -41,6 +44,8 @@ describe('line-scoped financial access', () => {
       party_ref: 'SYN-PLAN-OH',
       due_at: DUE,
       quote: ohioSpecialistQuote(),
+      payer: 'client',
+      state: 'OH',
       case_closed: false,
     });
     expect(idrInvoiceAttempt.ok).toBe(false);
@@ -73,7 +78,7 @@ describe('line-scoped financial access', () => {
       case_id: 'mr-syn-0001',
       party_ref: 'SYN-TPA',
       due_at: DUE,
-      contract: MED_REVIEW_CONTRACT_PRELIMINARY,
+      contract: MED_REVIEW_CONTRACT_UNCONFIGURED,
       review_count: 2,
       entitlement: { vanta_med_review_contract: true, med_review_provider: 'third_party' },
       case_closed: false,
@@ -88,7 +93,7 @@ describe('line-scoped financial access', () => {
       case_id: 'mr-syn-0001',
       party_ref: 'SYN-TPA',
       due_at: DUE,
-      contract: MED_REVIEW_CONTRACT_PRELIMINARY,
+      contract: TEST_ONLY_MED_REVIEW_CONTRACT,
       review_count: 2,
       entitlement: { vanta_med_review_contract: true, med_review_provider: 'vanta' },
       case_closed: true,
@@ -96,7 +101,24 @@ describe('line-scoped financial access', () => {
     expect(posted.ok).toBe(true);
     if (!posted.ok) return;
     expect(posted.value.book).toBe('med_review');
+    expect(posted.value.flags).toContain('test_only');
+    expect(posted.value.lines.map((line) => line.charge_key)).toEqual(['platform', 'per_review']);
     expect(posted.value.amount_cents).toBe(268_000);
+
+    const bare = postMedReviewContract(posted.state, actor('mr', ['MEDICAL_REVIEW']), deps(), {
+      id: 'inv-mr-empty',
+      case_id: 'mr-syn-0002',
+      party_ref: 'SYN-TPA',
+      due_at: DUE,
+      contract: MED_REVIEW_CONTRACT_UNCONFIGURED,
+      review_count: 2,
+      entitlement: { vanta_med_review_contract: true, med_review_provider: 'vanta' },
+      case_closed: false,
+    });
+    expect(bare.ok).toBe(false);
+    if (bare.ok) return;
+    expect(bare.code).toBe('med_review_unconfigured');
+    expect(bare.state.invoices).toHaveLength(1);
   });
 
   it('records a payment on the ledger without calling a live rail', () => {
@@ -108,6 +130,8 @@ describe('line-scoped financial access', () => {
       party_ref: 'SYN-PLAN-OH',
       due_at: DUE,
       quote: ohioSpecialistQuote(),
+      payer: 'client',
+      state: 'OH',
       case_closed: false,
     });
     expect(posted.ok).toBe(true);
@@ -127,5 +151,66 @@ describe('line-scoped financial access', () => {
     expect(rails.bank.settled).toBeUndefined();
     expect(fetchSpy).not.toHaveBeenCalled();
     fetchSpy.mockRestore();
+
+    const over = recordPayment(paid.state, actor('iro', ['IRO']), rails, {
+      id: 'pay-over',
+      invoice_id: 'inv-pay',
+      amount_cents: 5_000,
+    });
+    expect(over.ok).toBe(true);
+    if (!over.ok) return;
+    expect(over.value.amount_cents).toBe(0);
+    expect(over.value.credit_cents).toBe(5_000);
+    expect(over.state.credits).toHaveLength(1);
+    expect(over.state.credits[0].line_of_business).toBe('IRO');
+    expect(over.state.credits[0].book).toBe('iro_operating');
+
+    const second = postIroCaseFee(over.state, actor('iro', ['IRO']), rails, {
+      id: 'inv-pay-2',
+      case_id: 'iro-syn-oh-0002',
+      party_ref: 'SYN-PLAN-OH',
+      due_at: DUE,
+      quote: ohioSpecialistQuote(),
+      payer: 'client',
+      state: 'OH',
+      case_closed: false,
+    });
+    expect(second.ok).toBe(true);
+    if (!second.ok) return;
+    expect(second.state.credits[0].amount_cents).toBe(5_000);
+    const otherLine = postMedReviewContract(second.state, actor('mr', ['MEDICAL_REVIEW']), rails, {
+      id: 'inv-mr-credit',
+      case_id: 'mr-syn-0003',
+      party_ref: 'SYN-PLAN-OH',
+      due_at: DUE,
+      contract: TEST_ONLY_MED_REVIEW_CONTRACT,
+      review_count: 0,
+      entitlement: { vanta_med_review_contract: true, med_review_provider: 'vanta' },
+      case_closed: false,
+    });
+    expect(otherLine.ok).toBe(true);
+    if (!otherLine.ok) return;
+    const crossed = applyCredit(otherLine.state, actor('cfo', ['IRO', 'IDR', 'MEDICAL_REVIEW'], 'cfo', 'cfo'), rails, {
+      id: 'pay-cross',
+      credit_id: over.state.credits[0].id,
+      invoice_id: 'inv-mr-credit',
+      amount_cents: 5_000,
+    });
+    expect(crossed.ok).toBe(false);
+    if (crossed.ok) return;
+    expect(crossed.code).toBe('book_separation');
+    expect(crossed.state.credits[0].amount_cents).toBe(5_000);
+
+    const applied = applyCredit(crossed.state, actor('iro', ['IRO']), rails, {
+      id: 'pay-credit',
+      credit_id: over.state.credits[0].id,
+      invoice_id: 'inv-pay-2',
+      amount_cents: 5_000,
+    });
+    expect(applied.ok).toBe(true);
+    if (!applied.ok) return;
+    expect(applied.state.credits[0].amount_cents).toBe(0);
+    expect(applied.state.invoices.find((row) => row.id === 'inv-pay-2')?.amount_cents).toBe(170_000);
+    expect(rails.processor.calls).toBe(1);
   });
 });

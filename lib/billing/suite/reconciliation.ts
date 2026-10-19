@@ -1,6 +1,69 @@
-import type { LineOfBusiness } from '@/lib/lines';
+import type { FirewallAuditEvent, LineOfBusiness } from '@/lib/lines';
+import { appendAudit, canViewConsolidated, financeGate } from './access';
 import { booksForLine } from './books';
-import type { AgingBucket, FinanceInvoice, FinanceState } from './types';
+import type { AgingBucket, FinanceActor, FinanceInvoice, FinanceNo, FinancePolicy, FinanceResult, FinanceState } from './types';
+
+export interface ReportDeps {
+  now: () => string;
+  policy: FinancePolicy;
+  firewallAudit?: FirewallAuditEvent[];
+}
+
+function denyReport(
+  state: FinanceState,
+  actor: FinanceActor,
+  deps: ReportDeps,
+  action: string,
+  line: LineOfBusiness,
+  code: string,
+  message: string,
+): FinanceNo {
+  return {
+    ok: false,
+    code,
+    message,
+    state: appendAudit(state, {
+      at: deps.now(),
+      actor_id: actor.id,
+      action,
+      code,
+      line_of_business: line,
+      book: null,
+      amount_cents: null,
+      record_id: null,
+    }),
+  };
+}
+
+/** CFO role plus line report access. A line biller cannot open these views. */
+function requireCfoReport(
+  state: FinanceState,
+  actor: FinanceActor,
+  deps: ReportDeps,
+  action: string,
+  line: LineOfBusiness,
+): FinanceNo | null {
+  if (!canViewConsolidated(actor, deps.policy)) {
+    return denyReport(
+      state,
+      actor,
+      deps,
+      action,
+      line,
+      'cfo_required',
+      'Reconciliation and aging are CFO views.',
+    );
+  }
+  const gate = financeGate(
+    actor,
+    { id: `${action}:${line}`, case_id: `${action}:${line}`, line_of_business: line },
+    'report',
+    deps.firewallAudit ?? [],
+    deps.now,
+  );
+  if (gate.allowed) return null;
+  return denyReport(state, actor, deps, action, line, gate.code, gate.message);
+}
 
 const DAY_MS = 86_400_000;
 
@@ -40,10 +103,14 @@ export function agingBucket(dueAt: string, asOf: string): AgingBucket {
 
 export function ageOpenItems(
   state: FinanceState,
+  actor: FinanceActor,
+  deps: ReportDeps,
   line: LineOfBusiness,
   direction: 'AR' | 'AP',
   asOf: string,
-): Record<AgingBucket, number> {
+): FinanceResult<Record<AgingBucket, number>> {
+  const denied = requireCfoReport(state, actor, deps, 'age_open_items', line);
+  if (denied) return denied;
   const buckets: Record<AgingBucket, number> = {
     current: 0,
     '1_30': 0,
@@ -59,7 +126,20 @@ export function ageOpenItems(
     if (open <= 0) continue;
     buckets[agingBucket(invoice.due_at, asOf)] += open;
   }
-  return buckets;
+  return {
+    ok: true,
+    value: buckets,
+    state: appendAudit(state, {
+      at: deps.now(),
+      actor_id: actor.id,
+      action: 'age_open_items',
+      code: 'ok',
+      line_of_business: line,
+      book: null,
+      amount_cents: null,
+      record_id: null,
+    }),
+  };
 }
 
 export function escrowLiabilityCents(state: FinanceState, caseId?: string): number {
@@ -98,9 +178,13 @@ export interface LineReconciliation {
  */
 export function reconcileLine(
   state: FinanceState,
+  actor: FinanceActor,
+  deps: ReportDeps,
   line: LineOfBusiness,
   completed: readonly CompletedCaseMoney[],
-): LineReconciliation {
+): FinanceResult<LineReconciliation> {
+  const denied = requireCfoReport(state, actor, deps, 'reconcile_line', line);
+  if (denied) return denied;
   const books = new Set(booksForLine(line));
   const completedIds = new Set(completed.map((row) => row.case_id));
   const ar = state.invoices.filter(
@@ -131,7 +215,7 @@ export function reconcileLine(
   const expectedPayout = completed.reduce((sum, row) => sum + row.expected_payout_cents, 0);
   const recordedPayout = completed.reduce((sum, row) => sum + payFor(row.case_id), 0);
 
-  return {
+  const value: LineReconciliation = {
     line,
     expected_fee_cents: expectedFee,
     invoiced_fee_cents: invoicedFee,
@@ -144,5 +228,19 @@ export function reconcileLine(
     missing_payout_case_ids: completed.filter((row) => payFor(row.case_id) === 0 && row.expected_payout_cents > 0).map((row) => row.case_id),
     escrow_liability_cents: line === 'IDR' ? escrowLiabilityCents(state) : 0,
     escrow_in_variance: false,
+  };
+  return {
+    ok: true,
+    value,
+    state: appendAudit(state, {
+      at: deps.now(),
+      actor_id: actor.id,
+      action: 'reconcile_line',
+      code: 'ok',
+      line_of_business: line,
+      book: null,
+      amount_cents: null,
+      record_id: null,
+    }),
   };
 }

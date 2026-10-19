@@ -28,51 +28,86 @@ export interface FinancePolicy {
   payout_approver_roles: readonly string[];
 }
 
-/** Preliminary. Not a locked payout card. The pricer reads this object. */
+/**
+ * Payout shape only. The shipped schedule is unconfigured: every amount is null.
+ * A caller may supply amounts later. Test fixtures are marked `test_only`.
+ */
 export interface PayoutSchedule {
   id: string;
   preliminary: true;
-  effective_from: string;
+  configured: boolean;
+  test_only: boolean;
+  effective_from: string | null;
   effective_to: string | null;
-  reviewer_flat_cents: number;
-  md_flat_cents: number;
-  peer_to_peer_hourly_cents: number;
-  spending_limit_cents: number;
+  reviewer_flat_cents: number | null;
+  md_flat_cents: number | null;
+  peer_to_peer_hourly_cents: number | null;
+  spending_limit_cents: number | null;
   change_note: string;
 }
 
-/** Synthetic IDR case fee. Not a CMS or IDRE fee schedule. */
+/** IDRE fees and administrative fees are separate citations. Neither is invented here. */
+export type IdrFeeType = 'idre' | 'administrative';
+
+/**
+ * IDR fee shape. Amounts stay null until `source_ref` cites a source.
+ * Uncited, unconfigured, or expired config is a STOP. Not a CMS schedule.
+ */
 export interface IdrFeeSchedule {
   id: string;
   preliminary: true;
-  case_fee_cents: number;
+  configured: boolean;
+  test_only: boolean;
+  fee_type: IdrFeeType;
+  effective_from: string | null;
+  effective_to: string | null;
+  amount_cents: number | null;
+  source_ref: string | null;
   change_note: string;
 }
 
 /**
- * Medical Review contract terms for this ledger.
- * This is not `lib/billing/um-price-card.ts`. Posting still requires the
- * existing Med Review entitlement.
+ * Medical Review contract shape for this ledger.
+ * This is not `lib/billing/um-price-card.ts`. The shipped contract is unconfigured.
+ * Posting still requires the existing Med Review entitlement.
  */
 export interface MedReviewContractTerms {
   id: string;
   preliminary: true;
-  platform_cents: number;
-  per_review_cents: number;
+  configured: boolean;
+  test_only: boolean;
+  effective_from: string | null;
+  effective_to: string | null;
+  platform_cents: number | null;
+  per_review_cents: number | null;
   change_note: string;
 }
 
 export type InvoiceDirection = 'AR' | 'AP';
 export type InvoiceStatus = 'pending_approval' | 'open' | 'paid' | 'void';
 
+/** Issued lines sum to the invoice amount. Draft lines are held and are not in that sum. */
+export interface FinanceInvoiceLine {
+  line_no: number;
+  charge_key: string;
+  description: string;
+  amount_cents: number;
+  status: 'issued' | 'draft';
+}
+
 export interface FinanceInvoice {
   id: string;
+  /** Line-scoped sequence, e.g. IRO-AR-000001. Not reused across lines or directions. */
+  invoice_number: string;
   company: 'VANTA_HG';
   line_of_business: LineOfBusiness;
   book: FinanceBook;
   direction: InvoiceDirection;
   case_id: string;
   party_ref: string;
+  lines: readonly FinanceInvoiceLine[];
+  /** IDR only. Keeps an IDRE fee distinct from an administrative fee. */
+  fee_type: IdrFeeType | null;
   amount_cents: number;
   status: InvoiceStatus;
   issued_at: string;
@@ -88,10 +123,24 @@ export interface FinancePayment {
   invoice_id: string;
   line_of_business: LineOfBusiness;
   book: FinanceBook;
+  /** Cents applied to this invoice. */
   amount_cents: number;
+  /** Remainder held as a credit on this same line and book. Never auto-applied. */
+  credit_cents: number;
   at: string;
   /** Internal ledger only. No processor or bank was settled. */
   external_settlement: 'not_configured';
+}
+
+/** Line-scoped credit. Applying it to another line or book is refused. */
+export interface FinanceCredit {
+  id: string;
+  line_of_business: LineOfBusiness;
+  book: FinanceBook;
+  party_ref: string;
+  amount_cents: number;
+  source_payment_id: string;
+  source_invoice_id: string;
 }
 
 export interface FinanceAdjustment {
@@ -107,13 +156,31 @@ export interface FinanceAdjustment {
   at: string;
 }
 
+export type EscrowReleaseType = 'party_payment' | 'refund' | 'earned_fee';
+
 export interface EscrowEntry {
   id: string;
   case_id: string;
   line_of_business: 'IDR';
   book: 'idr_escrow';
   direction: 'deposit' | 'release';
+  release_type: EscrowReleaseType | null;
+  source_ref: string | null;
+  approved_by: string | null;
   amount_cents: number;
+  at: string;
+}
+
+/** Refund of escrow. Linked to the release. It does not fund IRO or IDR fees. */
+export interface FinanceRefund {
+  id: string;
+  escrow_entry_id: string;
+  case_id: string;
+  line_of_business: 'IDR';
+  book: 'idr_escrow';
+  amount_cents: number;
+  source_ref: string;
+  approved_by: string;
   at: string;
 }
 
@@ -140,7 +207,9 @@ export interface FinanceState {
   invoices: FinanceInvoice[];
   payments: FinancePayment[];
   adjustments: FinanceAdjustment[];
+  credits: FinanceCredit[];
   escrow: EscrowEntry[];
+  refunds: FinanceRefund[];
   closures: CaseClosureNote[];
   audit: FinanceAuditEvent[];
 }

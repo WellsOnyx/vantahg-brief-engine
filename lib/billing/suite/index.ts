@@ -10,17 +10,20 @@ export { canApproveSpend, canViewConsolidated } from './access';
 export { booksForLine, lineOwnsBook, transferAllowed } from './books';
 export {
   FINANCE_POLICY,
-  IDR_FEE_SCHEDULE_PRELIMINARY,
-  MED_REVIEW_CONTRACT_PRELIMINARY,
-  PAYOUT_SCHEDULE_PRELIMINARY,
+  IDR_ADMIN_FEE_UNCONFIGURED,
+  IDR_IDRE_FEE_UNCONFIGURED,
+  MED_REVIEW_CONTRACT_UNCONFIGURED,
+  PAYOUT_SCHEDULE_UNCONFIGURED,
 } from './config';
 export {
+  applyCredit,
   applyEscrowToInvoice,
   approveAdjustment,
   approvePayout,
   consolidatedStatement,
   depositEscrow,
   emptyFinance,
+  idrPostBlock,
   moveBetweenBooks,
   noteCaseClosed,
   postIdrCaseFee,
@@ -49,7 +52,9 @@ export type {
   FinanceInvoice,
   FinancePolicy,
   FinanceState,
+  FinanceCredit,
   IdrFeeSchedule,
+  IdrFeeType,
   MedReviewContractTerms,
   PayoutSchedule,
 } from './types';

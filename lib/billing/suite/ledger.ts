@@ -2,7 +2,7 @@ import type { UmBriefEngineEntitlementInput } from '@/lib/entitlements/um-brief-
 import { evaluateUmBriefEngineAccess } from '@/lib/entitlements/um-brief-engine';
 import type { LineOfBusiness } from '@/lib/lines';
 import type { FirewallAuditEvent } from '@/lib/lines';
-import { quoteIsConfirmable } from '@/lib/iro/fees';
+import { STATE_SETTINGS_REGISTRY } from '@/lib/iro/config/state-settings';
 import type { FeeQuote } from '@/lib/iro/types';
 import type { AccountingSystemAdapter, BankAchAdapter, PaymentProcessorAdapter, ReviewerPayrollAdapter } from './adapters/types';
 import { appendAudit, canApproveSpend, canViewConsolidated, financeGate } from './access';
@@ -10,14 +10,17 @@ import { lineOwnsBook, transferAllowed } from './books';
 import { pricePayout, type PayoutPriceInput } from './payouts';
 import { escrowLiabilityCents, invoiceNetCents, openBalanceCents, paidCents } from './reconciliation';
 import type {
+  EscrowReleaseType,
   FinanceActor,
   FinanceBook,
   FinanceInvoice,
+  FinanceInvoiceLine,
   FinanceNo,
   FinancePolicy,
   FinanceResult,
   FinanceState,
   IdrFeeSchedule,
+  InvoiceDirection,
   MedReviewContractTerms,
   PayoutSchedule,
 } from './types';
@@ -33,7 +36,75 @@ export interface FinanceDeps {
 }
 
 export function emptyFinance(): FinanceState {
-  return { invoices: [], payments: [], adjustments: [], escrow: [], closures: [], audit: [] };
+  return {
+    invoices: [],
+    payments: [],
+    adjustments: [],
+    credits: [],
+    escrow: [],
+    refunds: [],
+    closures: [],
+    audit: [],
+  };
+}
+
+function nextInvoiceNumber(state: FinanceState, line: LineOfBusiness, direction: InvoiceDirection): string {
+  const seq = state.invoices.filter((row) => row.line_of_business === line && row.direction === direction).length + 1;
+  return `${line}-${direction}-${String(seq).padStart(6, '0')}`;
+}
+
+function issuedCents(lines: readonly FinanceInvoiceLine[]): number {
+  return lines.filter((line) => line.status === 'issued').reduce((sum, line) => sum + line.amount_cents, 0);
+}
+
+function quoteLines(quote: FeeQuote): FinanceInvoiceLine[] {
+  return quote.lines.map((line, index) => ({
+    line_no: index + 1,
+    charge_key: line.code,
+    description: line.description,
+    amount_cents: line.amount_cents,
+    status: line.permitted && line.flag == null ? 'issued' : 'draft',
+  }));
+}
+
+function withTestOnly(flags: readonly string[], testOnly: boolean): string[] {
+  return testOnly && !flags.includes('test_only') ? [...flags, 'test_only'] : [...flags];
+}
+
+function stateProhibitsPatientBilling(state: string): boolean {
+  return STATE_SETTINGS_REGISTRY.versions.some(
+    (row) => row.state === state && row.patient_billing === 'prohibited',
+  );
+}
+
+/** Uncited, empty, or expired IDR config cannot be invoiced. */
+export function idrPostBlock(schedule: IdrFeeSchedule, now: string): { code: string; message: string } | null {
+  const source = schedule.source_ref?.trim() ?? '';
+  if (!schedule.configured || schedule.amount_cents == null) {
+    return {
+      code: 'idr_unconfigured',
+      message: 'IDR fees are unconfigured. No amount is posted until a cited source is supplied.',
+    };
+  }
+  if (!source) {
+    return {
+      code: 'idr_source_missing',
+      message: 'IDR amounts require a cited source_ref. Uncited config is a STOP.',
+    };
+  }
+  if (schedule.amount_cents <= 0) {
+    return { code: 'idr_unconfigured', message: 'An IDR amount must be a positive cited figure.' };
+  }
+  const expired =
+    (schedule.effective_to !== null && schedule.effective_to <= now) ||
+    (schedule.effective_from !== null && schedule.effective_from > now);
+  if (expired) {
+    return {
+      code: 'idr_source_expired',
+      message: 'This IDR citation is outside its effective dates. Posting stops.',
+    };
+  }
+  return null;
 }
 
 function fail(
@@ -86,6 +157,12 @@ function pushInvoice(
   action: string,
   exportJournal = true,
 ): FinanceResult<FinanceInvoice> {
+  if (state.invoices.some((row) => row.id === invoice.id)) {
+    return fail(state, actor, deps, action, 'duplicate_invoice', 'This invoice id was already posted.', invoice.line_of_business, invoice.book, invoice.amount_cents, invoice.id);
+  }
+  if (issuedCents(invoice.lines) !== invoice.amount_cents) {
+    return fail(state, actor, deps, action, 'invoice_lines_mismatch', 'Issued invoice lines must sum to the invoice amount.', invoice.line_of_business, invoice.book, invoice.amount_cents, invoice.id);
+  }
   if (exportJournal) {
     const exported = deps.accounting.exportJournal({
       book: invoice.book,
@@ -122,23 +199,36 @@ export function postIroCaseFee(
     party_ref: string;
     due_at: string;
     quote: FeeQuote;
+    payer: 'client' | 'carrier' | 'patient';
+    state: string;
     case_closed: boolean;
   },
 ): FinanceResult<FinanceInvoice> {
   const denied = guard(state, actor, deps, 'post_iro_fee', { id: input.id, case_id: input.case_id, line_of_business: 'IRO' }, 'write');
   if (denied) return denied;
-  if (!quoteIsConfirmable(input.quote)) {
-    return fail(state, actor, deps, 'post_iro_fee', 'quote_not_confirmable', 'Flagged or prohibited IRO charges are not invoiced.', 'IRO', 'iro_operating', input.quote.display_total_cents, input.case_id);
+  if (input.quote.patient_billing_blocked || (input.payer === 'patient' && stateProhibitsPatientBilling(input.state))) {
+    return fail(state, actor, deps, 'post_iro_fee', 'patient_billing_prohibited', 'This state prohibits billing the patient. The quote is not invoiced.', 'IRO', 'iro_operating', input.quote.display_total_cents, input.case_id);
+  }
+  if (input.quote.exceeds_cap) {
+    return fail(state, actor, deps, 'post_iro_fee', 'quote_not_confirmable', 'The quote exceeds the state cap and is not invoiced.', 'IRO', 'iro_operating', input.quote.display_total_cents, input.case_id);
+  }
+  const lines = quoteLines(input.quote);
+  const amount = issuedCents(lines);
+  if (amount <= 0 || amount !== input.quote.billable_total_cents) {
+    return fail(state, actor, deps, 'post_iro_fee', 'quote_not_confirmable', 'Issued IRO lines do not match the billable total.', 'IRO', 'iro_operating', input.quote.billable_total_cents, input.case_id);
   }
   const invoice: FinanceInvoice = {
     id: input.id,
+    invoice_number: nextInvoiceNumber(state, 'IRO', 'AR'),
     company: 'VANTA_HG',
     line_of_business: 'IRO',
     book: 'iro_operating',
     direction: 'AR',
     case_id: input.case_id,
     party_ref: input.party_ref,
-    amount_cents: input.quote.billable_total_cents,
+    lines,
+    fee_type: null,
+    amount_cents: amount,
     status: 'open',
     issued_at: deps.now(),
     due_at: input.due_at,
@@ -171,21 +261,35 @@ export function postIroPayout(
   const pending = priced.needs_approval;
   const invoice: FinanceInvoice = {
     id: input.id,
+    invoice_number: nextInvoiceNumber(state, 'IRO', 'AP'),
     company: 'VANTA_HG',
     line_of_business: 'IRO',
     book: 'iro_operating',
     direction: 'AP',
     case_id: input.case_id,
     party_ref: input.party_ref,
+    lines: [
+      {
+        line_no: 1,
+        charge_key: input.role,
+        description: input.peer_to_peer ? 'peer_to_peer' : input.role,
+        amount_cents: priced.amount_cents,
+        status: 'issued',
+      },
+    ],
+    fee_type: null,
     amount_cents: priced.amount_cents,
     status: pending ? 'pending_approval' : 'open',
     issued_at: deps.now(),
     due_at: input.due_at,
     case_closed_at_billing: input.case_closed,
-    flags: [
-      ...(priced.flag ? [priced.flag] : []),
-      ...(priced.needs_approval ? ['spending_limit'] : []),
-    ],
+    flags: withTestOnly(
+      [
+        ...(priced.flag ? [priced.flag] : []),
+        ...(priced.needs_approval ? ['spending_limit'] : []),
+      ],
+      input.schedule.test_only,
+    ),
     schedule_id: input.schedule.id,
   };
   if (!pending) {
@@ -253,20 +357,36 @@ export function postIdrCaseFee(
 ): FinanceResult<FinanceInvoice> {
   const denied = guard(state, actor, deps, 'post_idr_fee', { id: input.id, case_id: input.case_id, line_of_business: 'IDR' }, 'write');
   if (denied) return denied;
+  const blocked = idrPostBlock(input.schedule, deps.now());
+  if (blocked) {
+    return fail(state, actor, deps, 'post_idr_fee', blocked.code, blocked.message, 'IDR', 'idr_fees', input.schedule.amount_cents, input.case_id);
+  }
+  const amount = input.schedule.amount_cents ?? 0;
   const invoice: FinanceInvoice = {
     id: input.id,
+    invoice_number: nextInvoiceNumber(state, 'IDR', 'AR'),
     company: 'VANTA_HG',
     line_of_business: 'IDR',
     book: 'idr_fees',
     direction: 'AR',
     case_id: input.case_id,
     party_ref: input.party_ref,
-    amount_cents: input.schedule.case_fee_cents,
+    lines: [
+      {
+        line_no: 1,
+        charge_key: input.schedule.fee_type,
+        description: input.schedule.fee_type === 'idre' ? 'IDRE fee' : 'IDR administrative fee',
+        amount_cents: amount,
+        status: 'issued',
+      },
+    ],
+    fee_type: input.schedule.fee_type,
+    amount_cents: amount,
     status: 'open',
     issued_at: deps.now(),
     due_at: input.due_at,
     case_closed_at_billing: input.case_closed,
-    flags: [],
+    flags: withTestOnly([], input.schedule.test_only),
     schedule_id: input.schedule.id,
   };
   return pushInvoice(state, actor, deps, invoice, 'post_idr_fee');
@@ -293,21 +413,42 @@ export function postMedReviewContract(
   if (!access.allowed) {
     return fail(state, actor, deps, 'post_med_review', access.code, access.reason, 'MEDICAL_REVIEW', 'med_review', null, input.case_id);
   }
-  const amount = input.contract.platform_cents + input.review_count * input.contract.per_review_cents;
+  const platform = input.contract.platform_cents;
+  const perReview = input.contract.per_review_cents;
+  if (!input.contract.configured || platform == null || perReview == null || input.review_count < 0) {
+    return fail(state, actor, deps, 'post_med_review', 'med_review_unconfigured', 'Medical Review contract prices are unconfigured. Nothing is posted.', 'MEDICAL_REVIEW', 'med_review', null, input.case_id);
+  }
+  const reviewCents = input.review_count * perReview;
+  const lines: FinanceInvoiceLine[] = [
+    { line_no: 1, charge_key: 'platform', description: 'Medical Review platform', amount_cents: platform, status: 'issued' },
+  ];
+  if (input.review_count > 0) {
+    lines.push({
+      line_no: 2,
+      charge_key: 'per_review',
+      description: 'Medical Review per review',
+      amount_cents: reviewCents,
+      status: 'issued',
+    });
+  }
+  const amount = platform + reviewCents;
   const invoice: FinanceInvoice = {
     id: input.id,
+    invoice_number: nextInvoiceNumber(state, 'MEDICAL_REVIEW', 'AR'),
     company: 'VANTA_HG',
     line_of_business: 'MEDICAL_REVIEW',
     book: 'med_review',
     direction: 'AR',
     case_id: input.case_id,
     party_ref: input.party_ref,
+    lines,
+    fee_type: null,
     amount_cents: amount,
     status: 'open',
     issued_at: deps.now(),
     due_at: input.due_at,
     case_closed_at_billing: input.case_closed,
-    flags: [],
+    flags: withTestOnly([], input.contract.test_only),
     schedule_id: input.contract.id,
   };
   return pushInvoice(state, actor, deps, invoice, 'post_med_review');
@@ -330,6 +471,9 @@ export function depositEscrow(
     line_of_business: 'IDR' as const,
     book: 'idr_escrow' as const,
     direction: 'deposit' as const,
+    release_type: null,
+    source_ref: null,
+    approved_by: null,
     amount_cents: input.amount_cents,
     at: deps.now(),
   };
@@ -353,10 +497,37 @@ export function releaseEscrow(
   state: FinanceState,
   actor: FinanceActor,
   deps: FinanceDeps,
-  input: { id: string; case_id: string; amount_cents: number },
+  input: {
+    id: string;
+    case_id: string;
+    amount_cents: number;
+    release_type: EscrowReleaseType;
+    source_ref?: string | null;
+  },
 ): FinanceResult<FinanceState['escrow'][number]> {
   const denied = guard(state, actor, deps, 'escrow_release', { id: input.id, case_id: input.case_id, line_of_business: 'IDR' }, 'write');
   if (denied) return denied;
+  if (input.release_type === 'earned_fee') {
+    return fail(
+      state,
+      actor,
+      deps,
+      'escrow_release',
+      'earned_fee_stop',
+      'Earned-fee release into an operating book stays stopped until a cited source is activated. No money moved.',
+      'IDR',
+      'idr_escrow',
+      input.amount_cents,
+      input.case_id,
+    );
+  }
+  if (!canApproveSpend(actor, deps.policy)) {
+    return fail(state, actor, deps, 'escrow_release', 'escrow_approval_denied', 'Escrow release needs a configured approver.', 'IDR', 'idr_escrow', input.amount_cents, input.case_id);
+  }
+  const source = input.source_ref?.trim() ?? '';
+  if (input.release_type === 'refund' && !source) {
+    return fail(state, actor, deps, 'escrow_release', 'escrow_source_missing', 'A refund needs a source_ref and stays on the escrow book.', 'IDR', 'idr_escrow', input.amount_cents, input.case_id);
+  }
   const held = escrowLiabilityCents(state, input.case_id);
   if (input.amount_cents <= 0 || input.amount_cents > held) {
     return fail(state, actor, deps, 'escrow_release', 'escrow_insufficient', 'Release cannot exceed IDR escrow held for this case.', 'IDR', 'idr_escrow', input.amount_cents, input.case_id);
@@ -367,11 +538,30 @@ export function releaseEscrow(
     line_of_business: 'IDR' as const,
     book: 'idr_escrow' as const,
     direction: 'release' as const,
+    release_type: input.release_type,
+    source_ref: source || null,
+    approved_by: actor.id,
     amount_cents: input.amount_cents,
     at: deps.now(),
   };
+  const refunds = input.release_type === 'refund'
+    ? [
+        ...state.refunds,
+        {
+          id: `refund-${input.id}`,
+          escrow_entry_id: input.id,
+          case_id: input.case_id,
+          line_of_business: 'IDR' as const,
+          book: 'idr_escrow' as const,
+          amount_cents: input.amount_cents,
+          source_ref: source,
+          approved_by: actor.id,
+          at: deps.now(),
+        },
+      ]
+    : state.refunds;
   const next = appendAudit(
-    { ...state, escrow: [...state.escrow, entry] },
+    { ...state, escrow: [...state.escrow, entry], refunds },
     {
       at: deps.now(),
       actor_id: actor.id,
@@ -444,33 +634,59 @@ export function recordPayment(
   }
   const denied = guard(state, actor, deps, 'record_payment', invoice, 'write');
   if (denied) return denied;
+  if (state.payments.some((row) => row.id === input.id)) {
+    return fail(state, actor, deps, 'record_payment', 'duplicate_payment', 'This payment id was already recorded.', invoice.line_of_business, invoice.book, input.amount_cents, input.id);
+  }
   if (!lineOwnsBook(invoice.line_of_business, invoice.book) || invoice.book === 'idr_escrow') {
     return fail(state, actor, deps, 'record_payment', 'book_separation', 'This book cannot take a payment.', invoice.line_of_business, invoice.book, input.amount_cents, invoice.id);
   }
-  const open = openBalanceCents(state, invoice);
-  if (input.amount_cents <= 0 || input.amount_cents > open) {
-    return fail(state, actor, deps, 'record_payment', 'amount_invalid', 'Payment must be positive and within the open balance.', invoice.line_of_business, invoice.book, input.amount_cents, invoice.id);
+  if (invoice.status === 'void' || invoice.status === 'pending_approval') {
+    return fail(state, actor, deps, 'record_payment', 'invoice_not_payable', 'This invoice cannot take a payment.', invoice.line_of_business, invoice.book, input.amount_cents, invoice.id);
   }
-  const processor = deps.processor.authorize({ invoice_id: invoice.id, amount_cents: input.amount_cents });
-  const ach = deps.bank.submit({ invoice_id: invoice.id, amount_cents: input.amount_cents });
-  if (processor.settled || ach.settled || processor.vendor !== null || ach.vendor !== null || processor.live_call || ach.live_call) {
-    return fail(state, actor, deps, 'record_payment', 'rail_refused', 'Payment adapters are not a live rail.', invoice.line_of_business, invoice.book, input.amount_cents, invoice.id);
+  const open = openBalanceCents(state, invoice);
+  if (input.amount_cents <= 0) {
+    return fail(state, actor, deps, 'record_payment', 'amount_invalid', 'Payment must be positive.', invoice.line_of_business, invoice.book, input.amount_cents, invoice.id);
+  }
+  const applied = Math.min(input.amount_cents, Math.max(open, 0));
+  const excess = input.amount_cents - applied;
+  if (applied > 0) {
+    const processor = deps.processor.authorize({ invoice_id: invoice.id, amount_cents: applied });
+    const ach = deps.bank.submit({ invoice_id: invoice.id, amount_cents: applied });
+    if (processor.settled || ach.settled || processor.vendor !== null || ach.vendor !== null || processor.live_call || ach.live_call) {
+      return fail(state, actor, deps, 'record_payment', 'rail_refused', 'Payment adapters are not a live rail.', invoice.line_of_business, invoice.book, input.amount_cents, invoice.id);
+    }
   }
   const payment = {
     id: input.id,
     invoice_id: invoice.id,
     line_of_business: invoice.line_of_business,
     book: invoice.book,
-    amount_cents: input.amount_cents,
+    amount_cents: applied,
+    credit_cents: excess,
     at: deps.now(),
     external_settlement: 'not_configured' as const,
   };
-  const remaining = open - input.amount_cents;
+  const credits = excess > 0
+    ? [
+        ...state.credits,
+        {
+          id: `credit-${input.id}`,
+          line_of_business: invoice.line_of_business,
+          book: invoice.book,
+          party_ref: invoice.party_ref,
+          amount_cents: excess,
+          source_payment_id: input.id,
+          source_invoice_id: invoice.id,
+        },
+      ]
+    : state.credits;
+  const remaining = open - applied;
   const updated: FinanceInvoice = { ...invoice, status: remaining === 0 ? 'paid' : 'open' };
   const next: FinanceState = {
     ...state,
     invoices: state.invoices.map((row) => (row.id === invoice.id ? updated : row)),
     payments: [...state.payments, payment],
+    credits,
   };
   return {
     ok: true,
@@ -479,6 +695,68 @@ export function recordPayment(
       at: deps.now(),
       actor_id: actor.id,
       action: 'record_payment',
+      code: 'ok',
+      line_of_business: invoice.line_of_business,
+      book: invoice.book,
+      amount_cents: input.amount_cents,
+      record_id: payment.id,
+    }),
+  };
+}
+
+/** Apply a line-scoped credit to one invoice on that same line and book. Never automatic. */
+export function applyCredit(
+  state: FinanceState,
+  actor: FinanceActor,
+  deps: FinanceDeps,
+  input: { id: string; credit_id: string; invoice_id: string; amount_cents: number },
+): FinanceResult<FinanceState['payments'][number]> {
+  const credit = state.credits.find((row) => row.id === input.credit_id);
+  if (!credit) {
+    return fail(state, actor, deps, 'apply_credit', 'credit_missing', 'Credit was not found.', 'IRO', null, input.amount_cents, input.credit_id);
+  }
+  const invoice = state.invoices.find((row) => row.id === input.invoice_id);
+  if (!invoice) {
+    return fail(state, actor, deps, 'apply_credit', 'invoice_missing', 'Invoice was not found.', credit.line_of_business, credit.book, input.amount_cents, input.invoice_id);
+  }
+  const denied = guard(state, actor, deps, 'apply_credit', invoice, 'write');
+  if (denied) return denied;
+  if (credit.line_of_business !== invoice.line_of_business || credit.book !== invoice.book) {
+    return fail(state, actor, deps, 'apply_credit', 'book_separation', 'A credit stays on its line and book. It is not applied across lines.', credit.line_of_business, credit.book, input.amount_cents, credit.id);
+  }
+  if (credit.party_ref !== invoice.party_ref) {
+    return fail(state, actor, deps, 'apply_credit', 'credit_party_mismatch', 'A credit applies only to the same party on this line.', invoice.line_of_business, invoice.book, input.amount_cents, credit.id);
+  }
+  const open = openBalanceCents(state, invoice);
+  if (input.amount_cents <= 0 || input.amount_cents > credit.amount_cents || input.amount_cents > open) {
+    return fail(state, actor, deps, 'apply_credit', 'amount_invalid', 'Credit application must be within the credit and the open balance.', invoice.line_of_business, invoice.book, input.amount_cents, credit.id);
+  }
+  const payment = {
+    id: input.id,
+    invoice_id: invoice.id,
+    line_of_business: invoice.line_of_business,
+    book: invoice.book,
+    amount_cents: input.amount_cents,
+    credit_cents: 0,
+    at: deps.now(),
+    external_settlement: 'not_configured' as const,
+  };
+  const remainingCredit = credit.amount_cents - input.amount_cents;
+  const remaining = open - input.amount_cents;
+  const updated: FinanceInvoice = { ...invoice, status: remaining === 0 ? 'paid' : 'open' };
+  const next: FinanceState = {
+    ...state,
+    invoices: state.invoices.map((row) => (row.id === invoice.id ? updated : row)),
+    payments: [...state.payments, payment],
+    credits: state.credits.map((row) => (row.id === credit.id ? { ...row, amount_cents: remainingCredit } : row)),
+  };
+  return {
+    ok: true,
+    value: payment,
+    state: appendAudit(next, {
+      at: deps.now(),
+      actor_id: actor.id,
+      action: 'apply_credit',
       code: 'ok',
       line_of_business: invoice.line_of_business,
       book: invoice.book,
