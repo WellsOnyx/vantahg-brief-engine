@@ -128,13 +128,13 @@ export function StoplossLive({
               <p className="text-[11px] uppercase tracking-[0.18em] text-gold font-semibold">Demo, synthetic data</p>
               <h1 className="font-[family-name:var(--font-display)] text-3xl sm:text-4xl mt-2">Stop-loss partner</h1>
               <p className="text-sm text-white/70 mt-3 max-w-xl">
-                Aggregated, de-identified med-review cases. Role shown for this synthetic session: stoploss_partner.
+                Aggregated synthetic med-review cases. Not a live IDR feed. Role shown for this synthetic session: stoploss_partner.
               </p>
             </div>
             <div className="flex items-center gap-4">
               <p className="text-sm text-white" aria-live="polite">
                 <span className="mr-2 inline-block h-2.5 w-2.5 rounded-full bg-emerald-400 align-middle animate-pulse" />
-                Live · Updated {updated}
+                Synthetic · Updated {updated}
               </p>
               <Link href="/" className="text-sm text-gold hover:text-gold-light min-h-11 inline-flex items-center">
                 vantaum.com
@@ -247,7 +247,7 @@ export function StoplossLive({
             })}
           </nav>
           <p className="text-xs text-muted">
-            {data.client.display_name} · {current.from} to {current.to} · {data.live_count} live synthetic arrivals · Demo, synthetic data
+            {data.client.display_name} · {current.from} to {current.to} · {data.live_count} synthetic arrivals · Demo, synthetic data
           </p>
         </section>
 
