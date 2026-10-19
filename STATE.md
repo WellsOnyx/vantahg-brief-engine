@@ -5,6 +5,22 @@ Future Claude/Cole/Jonah sessions: read this first.
 
 ---
 
+## 2026-10-19 — Exclusive Med Review pivot (naming and docs)
+
+Jonah’s Oct 19 direction supersedes the platform sentence in the 2026-09-21 sections below. Those older sections stay as history. Do not treat “VantaHG is limited to IRO and IDR” as the current platform description.
+
+- **Sold product:** Vanta Med Review only. The Brief Engine is the shared engine under IDR, IRO, and Medical Review. It is included only under a paid Med Review contract. It is not a standalone UM product.
+- **Keys unchanged:** `vanta_med_review_contract`, `med_review_provider`. Denial codes unchanged. Guard still `lib/entitlements/um-brief-engine.ts`.
+- **Redirects:** `/um`, `/products/um`, `/brief-engine`, `/ai-um`, and `/utilization-management` go to `/signup-tpa`. `/sign-up` still goes to `/signup`.
+- **Not in this change:** line-firewall code (parallel IRO portal slice), IRO lifecycle, draft PR #83 (re-scope before any merge; do not merge as-is), IRO fee amounts, vendor choices. Decision (b) stays open.
+- **`/demo` and `/stoploss`:** still synthetic, still labelled. Not a live IDR feed. Legal review still open on IDR data use, IDRE conflict, InterQual, and the VHG trademark.
+- **Platform fee:** still not $0 under Med Review unless an explicit fat-TPA waiver. Do not guess.
+- **Docs:** [`docs/customer-ready/01-product-boundary.md`](docs/customer-ready/01-product-boundary.md), [`docs/customer-ready/17-med-review-pivot.md`](docs/customer-ready/17-med-review-pivot.md).
+
+---
+
+---
+
 ## 2026-10-19 — IRO portal slice 1 (synthetic skeleton)
 
 Jonah's Oct 19 direction: Clinical IRO Portal is build priority #1. Three firewalled lines (IDR, IRO, Medical Review). This slice is the skeleton only. Synthetic tokens. No live PHI. No vendor calls. No new HTTP route.
