@@ -5,6 +5,22 @@ Future Claude/Cole/Jonah sessions: read this first.
 
 ---
 
+## 2026-10-19 — IRO portal slice 1 (synthetic skeleton)
+
+Jonah's Oct 19 direction: Clinical IRO Portal is build priority #1. Three firewalled lines (IDR, IRO, Medical Review). This slice is the skeleton only. Synthetic tokens. No live PHI. No vendor calls. No new HTTP route.
+
+- **Firewall:** `lib/lines/` tags every record with company + line. Search, report, and export deny a cross-line request and audit the denial. Intake routes IDRE, IDR, UM, Medical Review, and internal review out of the IRO queue.
+- **Workflow:** `lib/iro/workflow.ts` is the 6-stage SOP v0.4 machine (intake through billing). Failed check steps back one step and seals a new version. STOP gates are hard blocks: misroute, unconfigured state, conflict clearance, Part A attestation, Vanta-only reviewer selection, credential expiry, panel activation.
+- **Deadlines:** URAC 72h / 45 calendar days is config. Ohio is the only go-live row (30 calendar days standard / 72h expedited, clock = carrier / health-plan receipt). The other nine states are inactive rows in the same registry. Open cases keep the pinned spec. Missing records do not move the due date.
+- **Fees:** preliminary effective-dated schedule in `lib/iro/config/fee-schedule.ts`. Display total includes a specialist add-on. Non-permitted lines are flagged and not posted. Illinois and North Carolina block patient billing. Billing events do not close the case.
+- **Adapters:** EMR, mailing (regular + certified), phone, storage, and credentialing status are interfaces plus in-memory stubs. `vendor: null`. Panel activation requires the four configured approvals. Portals read credential status only.
+- **Not merged:** draft PR #83 (IRO panel/credentialing) is still open and conflicting. This slice does not rebase it.
+- **Left intact:** IDR never-submit / DRAFT guards, Med Review packaging entitlement, Phase 7 onboarding.
+- **Proof:** `runSyntheticOhioWalkthrough()` and `__tests__/lib/iro/`.
+- **Doc:** [`docs/customer-ready/17-iro-portal-slice-1.md`](docs/customer-ready/17-iro-portal-slice-1.md).
+
+---
+
 ## 2026-10-13 — VHG Score synthetic demo (`/stoploss`)
 
 Clickable demo for Jonah. Synthetic data only. Flag `ENABLE_VHG_SCORE_DEMO` (default off in the repo; on for the published page). No price-card, billing, packaging-guard, or IRO credentialing edits.
