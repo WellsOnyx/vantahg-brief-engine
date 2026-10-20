@@ -854,7 +854,7 @@ export default function CaseStatusPortal() {
               Track your utilization review cases in real-time
             </p>
             <Link href="/portal" className="inline-block mt-2 text-xs text-navy underline underline-offset-2">
-              Synthetic Ohio IRO demo
+              IRO portal sign in
             </Link>
           </div>
           <div className="flex items-center gap-3">

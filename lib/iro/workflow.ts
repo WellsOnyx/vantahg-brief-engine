@@ -195,7 +195,7 @@ function asRecord(kase: IroCase): LineScopedRecord {
 }
 
 export function createIroCase(
-  input: { id: string; state_code: IroStateCode; receipts: Receipts },
+  input: { id: string; state_code: IroStateCode; receipts: Receipts; synthetic?: boolean },
   actor: IroActor,
   deps: IroDeps,
 ): IroOutcome {
@@ -203,12 +203,12 @@ export function createIroCase(
   return finish(kase, actor, deps, 'create', () => ({ ok: true as const, patch: {} }));
 }
 
-function blankCase(input: { id: string; state_code: IroStateCode; receipts: Receipts }): IroCase {
+function blankCase(input: { id: string; state_code: IroStateCode; receipts: Receipts; synthetic?: boolean }): IroCase {
   return {
     id: input.id,
     company: 'VANTA_HG',
     line_of_business: 'IRO',
-    synthetic: true,
+    synthetic: input.synthetic !== false,
     version: 1,
     step: 'intake',
     status: 'active',

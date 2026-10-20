@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { isDemoMode } from '@/lib/demo-mode';
-import { isIroPublicDemoPath } from '@/lib/routing/iro-public-demo';
+import { isIroPortalEntryPath } from '@/lib/routing/iro-public-demo';
 
 // Public marketing / auth-flow page prefixes. `startsWith` semantics are
 // intentional here because routes like `/signup-tpa` and `/demo-tour` are
@@ -43,9 +43,9 @@ const PUBLIC_API_PREFIXES = ['/api/intake/efax/phaxio'];
 
 function isPublicRoute(pathname: string): boolean {
   if (PUBLIC_EXACT.has(pathname)) return true;
-  // Exact /portal only. /portal/status keeps the Authorization Status Portal auth.
-  // /portal/tpa and /portal/provider stay signed-in.
-  if (isIroPublicDemoPath(pathname)) return true;
+  // Exact /portal is the IRO sign-in entry. /portal/status keeps its auth.
+  // /portal/iro, /portal/tpa, and /portal/provider stay signed-in.
+  if (isIroPortalEntryPath(pathname)) return true;
   if (PUBLIC_PAGE_PREFIXES.some((p) => pathname.startsWith(p))) return true;
   if (PUBLIC_API_PREFIXES.some((p) => pathname === p || pathname.startsWith(p + '/'))) return true;
   return false;

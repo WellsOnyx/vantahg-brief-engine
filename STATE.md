@@ -7,6 +7,18 @@ Future Claude/Cole/Jonah sessions: read this first.
 
 ---
 
+## 2026-10-20 — Production IRO portal
+
+Jonah, Oct 20: stop the public demo. The AWS account, BAA, RDS, S3, and KMS key are already up. No new infrastructure.
+
+- **Entry:** `/portal` is staff sign-in. `/portal/iro` is the case desk. `/portal/status` is unchanged and still authenticated. The synthetic Ohio page is gone.
+- **Access:** intake, case manager, reviewer, approver, admin. Reviewers see assigned cases. Reads and writes append `iro_case_audit`. MFA reads the existing Cognito `amr` claim. `IRO_PORTAL_MFA_REQUIRED` ships unset.
+- **Gate:** `LIVE_PHI_ENABLED` defaults off. Real intake also needs the existing `ENABLE_AWS_DB` and `ENABLE_AWS_STORAGE` flags. Unset `AWS_BAA_SIGNED` means the BAA already in place stands. `AWS_BAA_SIGNED=false` revokes intake.
+- **Persistence:** migration `033_iro_portal.sql` on the existing `vantaum` database. PDFs go to the existing `efax-documents` bucket (SSE-KMS bucket default, private, signed URLs). Assignment calls shared `lib/credentialing` (`evaluateAssignment`). No live mail. No prices on the desk. No seeded rows.
+- **Doc:** [`docs/customer-ready/20-iro-production-portal.md`](docs/customer-ready/20-iro-production-portal.md).
+
+---
+
 ## 2026-10-19 — Public synthetic IRO demo (`/portal`)
 
 Jonah can share a read-only link. Synthetic Ohio case only. No auth. No live feed. No PHI. Prices are not on the page. Pricing, credentialing, and billing logic were not edited.
