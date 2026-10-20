@@ -29,7 +29,7 @@ Internal file names (`um-price-card.ts`, `um-brief-engine.ts`) and ledger SKU st
 
 - **Line firewall.** Company + line-of-business checks, cross-line denial, and intake routing out of a line’s queue land in the parallel IRO portal slice. This PR will build on that later. Decision (b) — one system with locked-off lines versus separate systems — stays open. Copy here assumes one commercial story and does not lock deploy topology.
 - **IRO case lifecycle.** No intake-to-billing IRO workflow, no state-settings engine, no fee schedule.
-- **PR #83** (`cursor/iro-panel-credentialing-9b9e`). Draft, dirty against current main, and scoped as an IRO-only credentialing panel. Do not merge it as-is. Re-scope it as a shared credentialing read (IRO, Medical Review, and Sagility) with a separate IRO four-approver layer before it lands. This PR does not touch that branch.
+- **PR #83** (`cursor/iro-panel-credentialing-9b9e`). Draft, IRO-only, one clinical approver. Do not merge it. The shared record and the separate IRO four-approver layer are in [`19-shared-credentialing.md`](19-shared-credentialing.md).
 - **Med Review price card dollars.** Platform default $1.50 PMPM and clinical tiers stay. The open question stays open: Med Review does not waive the platform fee unless an explicit fat-TPA waiver. Do not guess.
 - **IRO fees.** No preliminary fee amounts are compiled into this repo.
 - **Vendors.** No EMR, mailing, phone, storage, or credentialing vendor is chosen.
@@ -44,6 +44,6 @@ Internal file names (`um-price-card.ts`, `um-brief-engine.ts`) and ledger SKU st
 | (c) | Mailing vendor (regular + certified) | `lib/adapters/email` sends determination mail. A certified-mail adapter would implement the same send/track shape, with a manual fallback. | No mailing vendor. |
 | (d) | 24/7 phone line | No telephony module. A later adapter would attach case-linked messages. The Tennessee requirement belongs to the IRO slice. | No phone vendor. |
 | (e) | File storage location + BAA signer | `lib/adapters/storage` and [`06-hipaa-baa-path.md`](06-hipaa-baa-path.md). Synthetic fixtures only until a BAA and a location are signed. | No BAA signer. No live PHI. |
-| (f) | Vendor vs delegated credentialing | Provenance (Vanta-verified vs vendor-attested) belongs on the re-scoped shared credentialing module, not on this pivot. PR #83 is the prototype to re-scope, not to merge. | No credentialing vendor. No delegation policy. |
+| (f) | Vendor vs delegated credentialing | Provenance (Vanta-verified vs vendor-attested) is stored per item on the shared credential record. See [`19-shared-credentialing.md`](19-shared-credentialing.md). The choice of model stays open. | No credentialing vendor. No delegation policy. |
 
 PDF questions that are not lettered (a)–(f) stay open too: billing inside the portal versus a fed ledger, and shared credentialing versus built-in. This slice does not answer them. The existing Med Review ledger (`lib/billing/`) is the Med Review price card only. It is not an IRO fee schedule and must not be copied into one.

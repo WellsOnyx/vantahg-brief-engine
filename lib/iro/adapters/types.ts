@@ -101,7 +101,9 @@ export interface IroStorageAdapter {
 /**
  * Credentialing read. Portals see status only.
  * HR files, license numbers, and screening packets are not on this interface.
- * Open decision (f) records provenance later; this slice does not verify a source.
+ * Provenance (Vanta-verified or vendor-attested) is stored on the shared
+ * record in lib/credentialing. Decision (f) stays open. This read does not
+ * pick a vendor and does not place a screening call.
  */
 export interface CredentialingService {
   readonly vendor: null;
