@@ -22,6 +22,7 @@ Older open PRs ([#44](https://github.com/WellsOnyx/vantahg-brief-engine/pull/44)
 
 - **Payer IDR case spine** (already shipped): `idr-attorney` role, `case_type = 'payer_idr'`, attorney queue + human determination. That path already requires a human to write the determination.
 - **This module:** [`lib/idr-assist/guards.ts`](../../lib/idr-assist/guards.ts) — never-submit, DRAFT stamp, private-bind, human-only fields, external-surface cleanliness. Tests in [`__tests__/lib/idr-assist/guards.test.ts`](../../__tests__/lib/idr-assist/guards.test.ts).
+- **Determination drafts:** [`lib/idr/determination/`](../../lib/idr/determination/) loads templates and the QA checklist from `config/idr/`. It prepares a four-paragraph draft and stops at `ready for review`. It reuses these guards. It does not sign or submit. See [`docs/customer-ready/21-idr-determination-workflow.md`](../customer-ready/21-idr-determination-workflow.md).
 
 ## Reviewer loop (when assist artifacts exist)
 

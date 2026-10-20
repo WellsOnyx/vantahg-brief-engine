@@ -1,0 +1,115 @@
+# Federal IDR determination QA checklist.
+# Reviewer edits land in this file. The loader validates the schema.
+# Hard-stop gates cannot be removed or set to blocking: false.
+
+version: "2026-10-20.1"
+schema: idr-qa-checklist
+
+factors:
+  - id: qpa
+    number: 1
+    label: "Qualifying payment amount"
+  - id: training_experience
+    number: 2
+    label: "Training, experience, and quality and outcomes measurements"
+  - id: market_share
+    number: 3
+    label: "Market share in the geographic region"
+  - id: acuity_complexity
+    number: 4
+    label: "Acuity of the individual or complexity of furnishing the item or service"
+  - id: teaching_case_mix
+    number: 5
+    label: "Teaching status, case mix, and scope of services"
+  - id: good_faith_efforts
+    number: 6
+    label: "Good faith efforts to enter network agreements and prior contracted rates"
+  - id: additional_information
+    number: 7
+    label: "Additional information relating to the offer"
+    never_credit_party: IP
+
+gates:
+  - id: template_match
+    blocking: true
+    label: "Selected template matches the prevailing-party variant, brief presence, and dispute shape."
+  - id: no_cpt_in_acuity
+    blocking: true
+    label: "Acuity and complexity text contains no CPT code and no clinical argument."
+    factor: acuity_complexity
+    forbid_pattern: "\\b\\d{5}\\b"
+    forbid_tokens:
+      - "CPT"
+      - "HCPCS"
+    argument_forbid:
+      - "warrants"
+      - "justifies"
+      - "because the patient"
+      - "higher acuity"
+      - "more complex than"
+  - id: cv_from_file
+    blocking: true
+    label: "Training and experience text is taken from the submitted curriculum vitae."
+    factor: training_experience
+    source_role: cv
+  - id: qpa_variant
+    blocking: true
+    label: "QPA wording matches the single-dispute or batched-dispute template."
+  - id: factor_7_rule
+    blocking: true
+    label: "Factor 7 is never credited to the initiating party."
+    factor: additional_information
+    never_credit_party: IP
+    credit_patterns:
+      - "supports the initiating party"
+      - "weighs in favor of the initiating party"
+      - "favors the initiating party"
+      - "credited to the initiating party"
+      - "initiating party prevails on this factor"
+  - id: neutral_tone
+    blocking: true
+    label: "The determination stays in a neutral tone."
+    forbid_phrases:
+      - "clearly"
+      - "obviously"
+      - "meritless"
+      - "unreasonable"
+      - "excessive"
+      - "outrageous"
+      - "frivolous"
+      - "fails to"
+      - "bad faith"
+  - id: numbers_match_source
+    blocking: true
+    label: "Offers and qualifying payment amounts match the sourced figures and are never estimated."
+
+variant_phrases:
+  IP: "The initiating party offer is selected."
+  NIP: "The non-initiating party offer is selected."
+  brief_present: "The non-initiating party submitted a written brief."
+  brief_absent: "The non-initiating party did not submit a written brief."
+  qpa_single: "The qualifying payment amount for this item or service is"
+  qpa_batch: "The qualifying payment amounts for the batched line items are"
+
+phrases:
+  training_from_cv: "On training, experience, and quality and outcomes measurements, the {{party}} curriculum vitae states \"{{excerpt}}\"."
+  training_absent: "On training, experience, and quality and outcomes measurements, the {{party}} submitted no curriculum vitae."
+  acuity_both: "On acuity and complexity, medical records and an operative report are attached."
+  acuity_records: "On acuity and complexity, medical records are attached."
+  acuity_report: "On acuity and complexity, an operative report is attached."
+  acuity_absent: "On acuity and complexity, no medical records or operative report were submitted."
+  party_submitted: "On {{factor}}, the {{party}} submitted materials."
+  party_absent: "On {{factor}}, the {{party}} did not submit materials."
+  factor_7: "On additional information relating to the offer, the initiating party {{ip_state}} additional information and the non-initiating party {{nip_state}} additional information. The additional information is noted and is not used as support for the initiating party offer."
+  qpa_factor: "The qualifying payment amount is the sourced figure stated above."
+
+ops_markup:
+  - "MISSING"
+  - "{{"
+  - "}}"
+  - "TODO"
+  - "FIXME"
+  - "HEURISTIC_MODE"
+  - "TEMPLATE_DEVIATION"
+  - "LOW_CONFIDENCE"
+  - "EXTRACTION_GAP"

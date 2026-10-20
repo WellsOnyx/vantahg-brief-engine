@@ -3,7 +3,27 @@
 **This is the single source of truth for "where the build is right now."**
 Future Claude/Cole/Jonah sessions: read this first.
 
-**Stacking:** #89, #90, and #91 each prepend a dated section at this same anchor. On a `STATE.md` conflict, keep every dated section, newest first. The sections do not overlap. Doc number 17 is two different files across that stack (`17-med-review-pivot.md` on the med-review PR, `17-iro-portal-slice-1.md` on the IRO slice). This suite is doc 18.
+**Stacking:** #89, #90, and #91 each prepend a dated section at this same anchor. On a `STATE.md` conflict, keep every dated section, newest first. The sections do not overlap. Doc number 17 is two different files across that stack (`17-med-review-pivot.md` on the med-review PR, `17-iro-portal-slice-1.md` on the IRO slice). The financial suite is doc 18. The federal IDR determination workflow is doc 21.
+
+---
+
+## 2026-10-20 — Federal IDR determination workflow
+
+Brief Engine draft path for federal IDR. Stays on the IDR line. IRO and Medical Review cannot read or write these records. Synthetic fixtures only. No new HTTP route. No live PHI.
+
+- **Content files:** `config/idr/templates/*.md` (eight variants: prevailing party × NIP brief × single/batch QPA wording) and `config/idr/qa-checklist.yaml`. The loader validates the schema. Each draft records the template version and the checklist version. Reviewer wording changes are file edits, not a code build.
+- **Intake:** line-item count selects single vs batched. A `nip_brief` document selects brief vs no brief. Line items are recorded. A contradictory assertion is a block. November 1 batching eligibility is not applied.
+- **Offers and QPA:** each figure needs a document id and a page. Missing, unparseable, or unsourced values are `MISSING` with a null amount. Nothing is copied from another figure.
+- **Factors:** the checklist names the seven statutory factors. Training text is a curriculum vitae excerpt. Acuity states only that records and/or an operative report are attached. Factor 7 is never credited to the initiating party. Party notes are not copied. Tone stays neutral.
+- **Draft:** four paragraphs from the selected template, including prevailing party and reason. The wrong template is a blocking error. The system does not choose the prevailing party.
+- **QA:** the seven checklist gates are hard stops before `ready for review`: template match, no CPT in acuity, CV from file, QPA variant, factor 7, neutral tone, numbers match source. A failing draft has no clean text. Clean text has no ops markup. The reviewer copy carries the existing DRAFT stamp.
+- **Board:** prevailing party, reason, date completed, note `ready for review`. `signed` and `submitted` stay false. `signDetermination` and `submitDetermination` refuse.
+- **Feedback:** `proposeContentEdit` returns a unified diff for a template or the checklist. It refuses `.ts` paths and schema-invalid edits. It does not change the loaded files.
+- **Stubs:** `november1BatchingRules` (`eligible: null`, effective 2026-11-01) and `stubIdrGateway` (`vendor: null`, `live_call: false`). A live port or a live rules object is refused.
+- **Proof:** `__tests__/lib/idr/determination/`.
+- **Doc:** [`docs/customer-ready/21-idr-determination-workflow.md`](docs/customer-ready/21-idr-determination-workflow.md).
+
+**CI:** `npm run test:ci` 728 passed (3 todo). `npx tsc --noEmit` clean.
 
 ---
 
