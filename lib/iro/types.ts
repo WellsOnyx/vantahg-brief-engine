@@ -297,7 +297,8 @@ export interface IroCase {
   id: string;
   company: 'VANTA_HG';
   line_of_business: 'IRO';
-  synthetic: true;
+  /** False on records opened through the production portal. */
+  synthetic: boolean;
   version: number;
   step: IroStep;
   status: 'active' | 'stopped' | 'routed_out';
