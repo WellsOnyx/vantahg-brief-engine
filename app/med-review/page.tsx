@@ -6,6 +6,7 @@ import { PageHero, PageList } from '@/components/layouts/PageLayouts';
 import { SectionCard } from '@/components/SectionCard';
 import { EmptyState } from '@/components/EmptyState';
 import type { CanonicalCase } from '@/lib/case-spine/types';
+import { escalationLevel } from '@/lib/med-review/pool';
 
 const PRIORITY_STYLES: Record<string, string> = {
   expedited: 'bg-red-50 text-red-800',
@@ -26,6 +27,7 @@ export default function MedReviewQueuePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [seeding, setSeeding] = useState(false);
+  const [query, setQuery] = useState('');
 
   const load = useCallback(async (seedEmpty = false) => {
     setLoading(true);
@@ -65,6 +67,15 @@ export default function MedReviewQueuePage() {
     }
   }
 
+  const needle = query.trim().toLowerCase();
+  const visible = needle
+    ? cases.filter((c) =>
+        `${c.case_number} ${c.state} ${c.priority} ${c.intake.service_or_rx ?? ''} ${c.sla_status}`
+          .toLowerCase()
+          .includes(needle),
+      )
+    : cases;
+
   return (
     <PageList
       hero={
@@ -93,7 +104,7 @@ export default function MedReviewQueuePage() {
       <PageList.Stats>
         <div className="card p-4">
           <div className="text-xs uppercase tracking-wider text-muted">In md_queue</div>
-          <div className="text-2xl font-semibold text-navy mt-1">{cases.length}</div>
+          <div className="text-2xl font-semibold text-navy mt-1">{visible.length}</div>
         </div>
         <div className="card p-4">
           <div className="text-xs uppercase tracking-wider text-muted">Sort</div>
@@ -101,7 +112,7 @@ export default function MedReviewQueuePage() {
         </div>
         <div className="card p-4">
           <div className="text-xs uppercase tracking-wider text-muted">Session</div>
-          <div className="text-sm font-medium text-navy mt-2">MFA · short timeout</div>
+          <div className="text-sm font-medium text-navy mt-2">Physician signs. No auto-decision.</div>
         </div>
       </PageList.Stats>
 
@@ -120,6 +131,19 @@ export default function MedReviewQueuePage() {
         </SectionCard>
       )}
 
+      {!loading && !error && cases.length > 0 && (
+        <div className="mb-4">
+          <label htmlFor="queue-search" className="sr-only">Search queue</label>
+          <input
+            id="queue-search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search case, service, or SLA"
+            className="w-full rounded-md border border-border bg-white px-3 py-2 text-sm"
+          />
+        </div>
+      )}
+
       {!loading && !error && cases.length === 0 && (
         <EmptyState
           title="The MD queue is clear."
@@ -128,7 +152,11 @@ export default function MedReviewQueuePage() {
         />
       )}
 
-      {!loading && !error && cases.length > 0 && (
+      {!loading && !error && cases.length > 0 && visible.length === 0 && (
+        <EmptyState title="No cases match that search." body="Clear the search to see the full queue." />
+      )}
+
+      {!loading && !error && visible.length > 0 && (
         <SectionCard eyebrow="Queue" title="Cases waiting for MD sign" padding="p-0">
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -144,7 +172,13 @@ export default function MedReviewQueuePage() {
                 </tr>
               </thead>
               <tbody>
-                {cases.map((c) => (
+                {visible.map((c) => { 
+                  const level = escalationLevel({
+                    receivedAt: c.received_at,
+                    dueAt: c.sla_due_at,
+                    now: new Date(),
+                  });
+                  return (
                   <tr key={c.case_id} className="border-b border-border last:border-b-0 hover:bg-muted/5">
                     <td className="px-4 py-3">
                       <div className="text-sm font-medium text-navy">{c.case_number}</div>
@@ -159,7 +193,7 @@ export default function MedReviewQueuePage() {
                     </td>
                     <td className="px-4 py-3 text-sm">
                       <div>{slaLabel(c.sla_due_at)}</div>
-                      <div className="text-xs text-muted">{c.sla_status}</div>
+                      <div className="text-xs text-muted">{c.sla_status}{level !== 'none' ? ` · ${level.toUpperCase()}` : ''}</div>
                     </td>
                     <td className="px-4 py-3 text-xs text-muted">
                       {c.brief_id ? `${c.brief_id.slice(0, 8)}…` : 'missing'}
@@ -170,7 +204,8 @@ export default function MedReviewQueuePage() {
                       </Link>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

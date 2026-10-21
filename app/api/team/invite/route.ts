@@ -8,12 +8,14 @@ import { apiError } from '@/lib/api-error';
 import { getRequestContext } from '@/lib/security';
 import { getAuthAdapter } from '@/lib/adapters/auth';
 import { isAwsAuthEnabled } from '@/lib/runtime-backend';
+import { inviteBinding } from '@/lib/auth/account-flow';
 
 export const dynamic = 'force-dynamic';
 
 const VALID_ROLES: ReadonlySet<UserRole> = new Set<UserRole>([
   'admin', 'reviewer', 'client', 'builder', 'ceo', 'practice-lead', 'slt',
-  'idr-attorney',   // External Payer IDR attorneys
+  'delivery-lead', 'concierge',
+  'idr-attorney',   // External Payer IDR attorneys — not a Med Review role
 ]);
 
 /**
@@ -53,6 +55,10 @@ export async function POST(request: NextRequest) {
     if (!role || !VALID_ROLES.has(role)) {
       return NextResponse.json({ error: 'Valid role required' }, { status: 400 });
     }
+    const binding = inviteBinding({ role, clientId: body?.client_id });
+    if (!binding.ok) {
+      return NextResponse.json({ error: binding.message }, { status: 400 });
+    }
 
     if (isDemoMode()) {
       return NextResponse.json({
@@ -72,6 +78,8 @@ export async function POST(request: NextRequest) {
         email,
         name,
         role,
+        clientId: binding.clientId,
+        productLine: binding.productLine,
       });
     }
 
@@ -101,7 +109,7 @@ export async function POST(request: NextRequest) {
       const newUserId = data.user.id;
       const { error: profileErr } = await supabase
         .from('user_profiles')
-        .update({ name, role })
+        .update({ name, role, ...(binding.clientId ? { client_id: binding.clientId } : {}) })
         .eq('id', newUserId);
 
       if (profileErr) {
@@ -161,8 +169,10 @@ async function inviteViaCognito(params: {
   email: string;
   name: string;
   role: UserRole;
+  clientId: string | null;
+  productLine: 'med_review' | null;
 }): Promise<NextResponse> {
-  const { request, supabase, actorEmail, email, name, role } = params;
+  const { request, supabase, actorEmail, email, name, role, clientId, productLine } = params;
   const appUrl = process.env.APP_URL || `https://${request.headers.get('host')}`;
   const adapter = getAuthAdapter();
   const result = await adapter.createUserWithMagicLink({
@@ -171,6 +181,8 @@ async function inviteViaCognito(params: {
     metadata: {
       org_role: role,
       provisioned_by: 'team_invite',
+      ...(clientId ? { client_id: clientId } : {}),
+      ...(productLine ? { product_line: productLine } : {}),
     },
     redirectUrl: `${appUrl.replace(/\/$/, '')}/login`,
   });
@@ -204,7 +216,7 @@ async function inviteViaCognito(params: {
   const { error: profileErr } = await supabase
     .from('user_profiles')
     .upsert(
-      { id: result.userId, name, role, email },
+      { id: result.userId, name, role, email, ...(clientId ? { client_id: clientId } : {}) },
       { onConflict: 'id' },
     );
 

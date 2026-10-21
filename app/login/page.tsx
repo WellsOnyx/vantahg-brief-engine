@@ -13,6 +13,7 @@ import {
 } from '@/components/layouts/AuthShell';
 import { pickLoginTagline } from '@/lib/login-taglines';
 import { landingPathForRole } from '@/lib/auth-landing';
+import { authMessage } from '@/lib/auth/account-flow';
 
 /**
  * Routes a freshly-signed-in hybrid (Supabase) user to the right landing
@@ -34,7 +35,7 @@ async function resolveLandingPage(supabase: SupabaseClient): Promise<string> {
   }
 }
 
-type Mode = 'password' | 'magic-link' | 'magic-link-sent';
+type Mode = 'password' | 'magic-link' | 'magic-link-sent' | 'forgot' | 'reset' | 'mfa' | 'new-password' | 'confirm-email';
 
 function LoginForm() {
   const searchParams = useSearchParams();
@@ -46,12 +47,20 @@ function LoginForm() {
   const [password, setPassword] = useState('');
   const [mode, setMode] = useState<Mode>('password');
   const [loading, setLoading] = useState(false);
+  const [code, setCode] = useState('');
+  const [challengeSession, setChallengeSession] = useState('');
+  const [challengeName, setChallengeName] = useState<'SOFTWARE_TOKEN_MFA' | 'SMS_MFA' | 'NEW_PASSWORD_REQUIRED'>('SOFTWARE_TOKEN_MFA');
+  const [notice, setNotice] = useState<string | null>(
+    reason === 'confirmed' ? 'Email confirmed. Sign in.' : null,
+  );
   const [error, setError] = useState<string | null>(
     reason === 'auth_unavailable'
       ? 'Authentication is temporarily unavailable. Try again in a moment.'
       : reason === 'portal_access_required'
         ? 'Sign in to reach the partner portal.'
-        : null,
+        : reason === 'session_expired'
+          ? authMessage('session_expired')
+          : null,
   );
 
   async function handleSubmit(e: React.FormEvent) {
@@ -108,10 +117,39 @@ function LoginForm() {
           }),
         });
 
+        const data = (await res.json().catch(() => ({}))) as {
+          next?: string;
+          error?: string;
+          message?: string;
+          backend?: string;
+          challenge?: 'SOFTWARE_TOKEN_MFA' | 'SMS_MFA' | 'NEW_PASSWORD_REQUIRED';
+          session?: string;
+        };
+
         if (res.ok) {
-          const data = (await res.json().catch(() => ({}))) as { next?: string };
           const destination = data.next ?? explicitRedirect ?? '/dashboard';
           window.location.href = destination;
+          return;
+        }
+
+        if (data.error === 'challenge' && data.session && data.challenge) {
+          setChallengeSession(data.session);
+          setChallengeName(data.challenge);
+          setNotice(data.message || null);
+          setMode(data.challenge === 'NEW_PASSWORD_REQUIRED' ? 'new-password' : 'mfa');
+          setLoading(false);
+          return;
+        }
+        if (data.error === 'unconfirmed') {
+          setNotice(data.message || authMessage('unconfirmed'));
+          setMode('confirm-email');
+          setLoading(false);
+          return;
+        }
+        if (data.error === 'password_reset_required') {
+          setNotice(data.message || authMessage('password_reset_required'));
+          setMode('forgot');
+          setLoading(false);
           return;
         }
 
@@ -134,9 +172,9 @@ function LoginForm() {
             }
           }
         } else if (res.status === 429) {
-          setError('Too many sign-in attempts. Wait a minute and try again.');
+          setError(data.message || 'Too many sign-in attempts. Wait a minute and try again.');
         } else {
-          setError("That email and password don't match our records.");
+          setError(data.message || "That email and password don't match our records.");
         }
       } catch {
         setError('Network error. Try again.');
@@ -196,6 +234,140 @@ function LoginForm() {
     );
   }
 
+  async function postJson(url: string, payload: Record<string, unknown>) {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = (await res.json().catch(() => ({}))) as { ok?: boolean; message?: string; error?: string; next?: string; session?: string; challenge?: typeof challengeName };
+    return { res, data };
+  }
+
+  if (mode === 'forgot' || mode === 'reset') {
+    return (
+      <AuthShell
+        eyebrow={mode === 'forgot' ? 'Reset' : 'New password'}
+        title={mode === 'forgot' ? <>We&apos;ll send a code.</> : <>Choose a new password.</>}
+        subtitle="The code goes to your work email. It does not reveal whether the account exists."
+        footer={
+          <button type="button" className="underline" onClick={() => { setMode('password'); setError(null); }}>
+            Back to sign in
+          </button>
+        }
+      >
+        <form
+          className="space-y-6"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            setLoading(true);
+            setError(null);
+            try {
+              if (mode === 'forgot') {
+                const { res, data } = await postJson('/api/auth/forgot-password', { email });
+                if (res.status === 503 && data.error === 'use_supabase') {
+                  setError('Password reset runs through your administrator on this deployment.');
+                } else if (!res.ok) {
+                  setError(data.message || 'Try again in a minute.');
+                } else {
+                  setNotice(data.message || null);
+                  setMode('reset');
+                }
+              } else {
+                const { res, data } = await postJson('/api/auth/reset-password', { email, code, password });
+                if (!res.ok) setError(data.message || 'That code did not work.');
+                else {
+                  setNotice(data.message || 'Password updated.');
+                  setMode('password');
+                  setPassword('');
+                }
+              }
+            } catch {
+              setError('Network error. Try again.');
+            }
+            setLoading(false);
+          }}
+        >
+          {notice && <p className="text-sm text-navy">{notice}</p>}
+          {error && <AuthError>{error}</AuthError>}
+          <AuthField id="email" label="Email" type="email" value={email} onChange={setEmail} required autoComplete="email" />
+          {mode === 'reset' && (
+            <>
+              <AuthField id="code" label="Reset code" value={code} onChange={setCode} required autoComplete="one-time-code" />
+              <AuthField id="password" label="New password" type="password" value={password} onChange={setPassword} required autoComplete="new-password" minLength={12} />
+            </>
+          )}
+          <AuthCTA type="submit" disabled={loading}>{loading ? 'Working…' : mode === 'forgot' ? 'Send code' : 'Update password'}</AuthCTA>
+        </form>
+      </AuthShell>
+    );
+  }
+
+  if (mode === 'mfa' || mode === 'new-password' || mode === 'confirm-email') {
+    return (
+      <AuthShell
+        eyebrow={mode === 'confirm-email' ? 'Confirm email' : 'Verify'}
+        title={mode === 'new-password' ? <>Set your password.</> : mode === 'confirm-email' ? <>Confirm your email.</> : <>Enter your code.</>}
+        subtitle={notice || 'This step finishes sign-in. It is not optional when your account requires it.'}
+        footer={
+          <button type="button" className="underline" onClick={() => { setMode('password'); setError(null); }}>
+            Back to sign in
+          </button>
+        }
+      >
+        <form
+          className="space-y-6"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            setLoading(true);
+            setError(null);
+            try {
+              if (mode === 'confirm-email') {
+                const { res, data } = await postJson('/api/auth/confirm', { email, code });
+                if (!res.ok) setError(data.message || 'That code did not work.');
+                else {
+                  setNotice(data.message || 'Email confirmed.');
+                  setMode('password');
+                }
+              } else {
+                const { res, data } = await postJson('/api/auth/challenge', {
+                  email,
+                  session: challengeSession,
+                  challenge: mode === 'new-password' ? 'NEW_PASSWORD_REQUIRED' : challengeName,
+                  code: mode === 'new-password' ? undefined : code,
+                  new_password: mode === 'new-password' ? password : undefined,
+                  next: explicitRedirect ?? undefined,
+                });
+                if (data.error === 'challenge' && data.session) {
+                  setChallengeSession(data.session);
+                  if (data.challenge) setChallengeName(data.challenge);
+                  setNotice(data.message || null);
+                  setMode(data.challenge === 'NEW_PASSWORD_REQUIRED' ? 'new-password' : 'mfa');
+                } else if (!res.ok) {
+                  setError(data.message || 'That code did not work.');
+                } else {
+                  window.location.href = data.next || explicitRedirect || '/dashboard';
+                  return;
+                }
+              }
+            } catch {
+              setError('Network error. Try again.');
+            }
+            setLoading(false);
+          }}
+        >
+          {error && <AuthError>{error}</AuthError>}
+          {mode === 'new-password' ? (
+            <AuthField id="password" label="New password" type="password" value={password} onChange={setPassword} required autoComplete="new-password" minLength={12} />
+          ) : (
+            <AuthField id="code" label="Code" value={code} onChange={setCode} required autoComplete="one-time-code" />
+          )}
+          <AuthCTA type="submit" disabled={loading}>{loading ? 'Checking…' : 'Continue'}</AuthCTA>
+        </form>
+      </AuthShell>
+    );
+  }
+
   // ── State: password or magic-link request ──────────────────────
   const eyebrow = fromSquarespace ? 'Welcome' : 'Sign in';
   const title = fromSquarespace ? (
@@ -215,10 +387,10 @@ function LoginForm() {
         <>
           <p>
             <Link
-              href="/client"
+              href="/signup"
               className="text-muted hover:text-navy underline decoration-dotted underline-offset-4"
             >
-              View my cases
+              Create a client account
             </Link>
           </p>
           <p className="text-[10px] text-muted/60 mt-3">A Wells Onyx Service</p>
@@ -226,6 +398,7 @@ function LoginForm() {
       }
     >
       <form onSubmit={handleSubmit} className="space-y-6">
+        {notice && <p className="text-sm text-navy">{notice}</p>}
         {error && <AuthError>{error}</AuthError>}
 
         <AuthField
@@ -250,6 +423,18 @@ function LoginForm() {
             required
             autoComplete="current-password"
           />
+        )}
+
+        {mode === 'password' && (
+          <p className="text-sm text-right">
+            <button
+              type="button"
+              className="text-gold-dark underline decoration-gold/30 underline-offset-4"
+              onClick={() => { setMode('forgot'); setError(null); }}
+            >
+              Forgot password?
+            </button>
+          </p>
         )}
 
         <div className="pt-2">

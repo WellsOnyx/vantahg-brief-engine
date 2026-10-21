@@ -43,6 +43,8 @@ export interface AuthUser {
   id: string;
   email: string;
   role: UserRole;
+  /** Organization bind for client users. Never taken from a query string. */
+  client_id?: string | null;
 }
 
 /**
@@ -108,8 +110,27 @@ export async function requireAuth(
       }
     }
 
+    if (!role) {
+      const ctx = getRequestContext(request);
+      await logSecurityEvent(
+        'permission_denied',
+        sessionUser.email,
+        { reason: 'role_unassigned' },
+        ctx,
+      );
+      return NextResponse.json(
+        { error: 'Account is not provisioned for a workspace', code: 'role_unassigned' },
+        { status: 403 },
+      );
+    }
+
     return {
-      user: { id: sessionUser.id, email: sessionUser.email, role: role ?? 'reviewer' },
+      user: {
+        id: sessionUser.id,
+        email: sessionUser.email,
+        role,
+        client_id: sessionUser.clientId ?? null,
+      },
     };
   } catch {
     return NextResponse.json({ error: 'Authentication error' }, { status: 401 });

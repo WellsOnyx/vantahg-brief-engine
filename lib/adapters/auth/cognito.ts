@@ -2,14 +2,31 @@ import {
   CognitoIdentityProviderClient,
   AdminCreateUserCommand,
   AdminInitiateAuthCommand,
+  AdminUpdateUserAttributesCommand,
+  ConfirmForgotPasswordCommand,
+  ConfirmSignUpCommand,
+  ForgotPasswordCommand,
+  GlobalSignOutCommand,
   ListUsersCommand,
+  ResendConfirmationCodeCommand,
   RespondToAuthChallengeCommand,
+  SignUpCommand,
   type AttributeType,
+  type ChallengeNameType,
 } from '@aws-sdk/client-cognito-identity-provider';
-import { createRemoteJWKSet, jwtVerify, type JWTPayload } from 'jose';
+import { createRemoteJWKSet, decodeJwt, jwtVerify, type JWTPayload } from 'jose';
 import { stashSession, consumeSession } from './session-stash';
+import {
+  challengePrompt,
+  classifyAccountException,
+  classifySignInException,
+  isAuthChallenge,
+  passwordPolicyError,
+  type AuthChallengeKind,
+} from '@/lib/auth/account-flow';
 import type {
   AuthAdminAdapter,
+  AccountStepResult,
   CreateUserParams,
   CreateUserResult,
   CreateUserError,
@@ -117,7 +134,7 @@ export function sessionCookieOptions(maxAgeSec: number = AUTH_SESSION_MAX_AGE_SE
   };
 }
 
-function readSessionCookie(requestOrHeaders: Request | Headers): SessionCookiePayload | null {
+export function peekSessionCookie(requestOrHeaders: Request | Headers): SessionCookiePayload | null {
   const cookieHeader =
     requestOrHeaders instanceof Headers
       ? requestOrHeaders.get('cookie') ?? ''
@@ -135,6 +152,10 @@ function readSessionCookie(requestOrHeaders: Request | Headers): SessionCookiePa
     }
   }
   return null;
+}
+
+function errorName(err: unknown): string {
+  return err && typeof err === 'object' && 'name' in err ? String((err as { name: unknown }).name) : '';
 }
 
 function classifyError(err: unknown): CreateUserError['code'] {
@@ -264,9 +285,11 @@ export class CognitoAuthAdapter implements AuthAdminAdapter {
 
   async getSessionUser(requestOrHeaders: Request | Headers): Promise<SessionUser | null> {
     if (!USER_POOL_ID || !CLIENT_ID) return null;
-    const session = readSessionCookie(requestOrHeaders);
+    const session = peekSessionCookie(requestOrHeaders);
     if (!session?.id_token) return null;
-    if (session.expires_at && Date.now() > session.expires_at) return null;
+    const now = Date.now();
+    if (session.absolute_expires_at && now >= session.absolute_expires_at) return null;
+    if (session.expires_at && now >= session.expires_at) return null;
 
     let payload: JWTPayload;
     try {
@@ -285,8 +308,11 @@ export class CognitoAuthAdapter implements AuthAdminAdapter {
     const email = typeof payload.email === 'string' ? payload.email.toLowerCase().trim() : '';
     if (!sub || !email) return null;
 
-    const role = roleFromCognitoClaims(payload as Record<string, unknown>);
-    return { id: sub, email, role };
+    const claims = payload as Record<string, unknown>;
+    const role = roleFromCognitoClaims(claims);
+    const clientRaw = claims['custom:client_id'];
+    const clientId = typeof clientRaw === 'string' && clientRaw.length > 0 ? clientRaw : undefined;
+    return { id: sub, email, role, clientId };
   }
 
   async signInWithPassword(params: {
@@ -313,37 +339,274 @@ export class CognitoAuthAdapter implements AuthAdminAdapter {
           },
         }),
       );
+      if (isAuthChallenge(auth.ChallengeName) && auth.Session) {
+        return {
+          ok: false,
+          code: 'challenge',
+          challenge: auth.ChallengeName,
+          session: auth.Session,
+          username: email,
+          message: challengePrompt(auth.ChallengeName),
+        };
+      }
       const tokens = auth.AuthenticationResult;
       if (!tokens?.IdToken || !tokens?.AccessToken) {
         return { ok: false, code: 'invalid_credentials', message: 'Cognito did not return tokens' };
       }
-      return {
-        ok: true,
-        cookie: {
-          id_token: tokens.IdToken,
-          access_token: tokens.AccessToken,
-          refresh_token: tokens.RefreshToken,
-          expires_at: Date.now() + (tokens.ExpiresIn ?? 3600) * 1000,
-        },
-      };
+      return this.tokensToSignIn(tokens);
     } catch (err) {
-      const name =
-        err && typeof err === 'object' && 'name' in err
-          ? String((err as { name: unknown }).name)
-          : '';
-      if (
-        name === 'NotAuthorizedException' ||
-        name === 'UserNotFoundException' ||
-        name === 'UserNotConfirmedException'
-      ) {
-        return { ok: false, code: 'invalid_credentials', message: name };
+      const name = errorName(err);
+      const code = classifySignInException(name);
+      return {
+        ok: false,
+        code,
+        message: code === 'unknown' && err instanceof Error ? err.message : name || 'sign_in_failed',
+      };
+    }
+  }
+
+  async signUp(params: { email: string; password: string; fullName?: string }): Promise<AccountStepResult> {
+    const policy = passwordPolicyError(params.password);
+    if (policy) return { ok: false, code: policy, message: 'weak_password' };
+    if (!CLIENT_ID) return { ok: false, code: 'unavailable', message: 'COGNITO_CLIENT_ID not configured' };
+    const email = params.email.toLowerCase().trim();
+    if (!email.includes('@')) return { ok: false, code: 'invalid_email', message: 'invalid_email' };
+    try {
+      const attributes: AttributeType[] = [{ Name: 'email', Value: email }];
+      if (params.fullName) attributes.push({ Name: 'name', Value: params.fullName });
+      await client().send(
+        new SignUpCommand({
+          ClientId: CLIENT_ID,
+          Username: email,
+          Password: params.password,
+          UserAttributes: attributes,
+        }),
+      );
+      return { ok: true, next: 'confirm_email' };
+    } catch (err) {
+      const name = errorName(err);
+      // Do not reveal whether the address is already registered.
+      if (name === 'UsernameExistsException') return { ok: true, next: 'confirm_email' };
+      const code = classifyAccountException(name);
+      return { ok: false, code, message: name || 'sign_up_failed' };
+    }
+  }
+
+  async confirmSignUp(params: { email: string; code: string }): Promise<AccountStepResult> {
+    if (!CLIENT_ID || !USER_POOL_ID) {
+      return { ok: false, code: 'unavailable', message: 'COGNITO_CLIENT_ID not configured' };
+    }
+    const email = params.email.toLowerCase().trim();
+    try {
+      await client().send(
+        new ConfirmSignUpCommand({
+          ClientId: CLIENT_ID,
+          Username: email,
+          ConfirmationCode: params.code.trim(),
+        }),
+      );
+    } catch (err) {
+      const name = errorName(err);
+      // Already confirmed: still stamp the client role below.
+      if (name !== 'NotAuthorizedException' && name !== 'AliasExistsException') {
+        const code = classifyAccountException(name);
+        return { ok: false, code, message: name || 'confirm_failed' };
       }
+    }
+    try {
+      await client().send(
+        new AdminUpdateUserAttributesCommand({
+          UserPoolId: USER_POOL_ID,
+          Username: email,
+          UserAttributes: [
+            { Name: 'custom:org_role', Value: 'client' },
+            { Name: 'custom:product_line', Value: 'med_review' },
+          ],
+        }),
+      );
+    } catch (err) {
       return {
         ok: false,
         code: 'unknown',
-        message: err instanceof Error ? err.message : 'Unknown error',
+        message: err instanceof Error ? err.message : 'role_stamp_failed',
       };
     }
+    return { ok: true, next: 'confirmed' };
+  }
+
+  async resendConfirmation(email: string): Promise<AccountStepResult> {
+    if (!CLIENT_ID) return { ok: false, code: 'unavailable', message: 'COGNITO_CLIENT_ID not configured' };
+    try {
+      await client().send(
+        new ResendConfirmationCodeCommand({
+          ClientId: CLIENT_ID,
+          Username: email.toLowerCase().trim(),
+        }),
+      );
+      return { ok: true, next: 'code_resent' };
+    } catch (err) {
+      const name = errorName(err);
+      if (name === 'UserNotFoundException') return { ok: true, next: 'code_resent' };
+      return { ok: false, code: classifyAccountException(name), message: name || 'resend_failed' };
+    }
+  }
+
+  async forgotPassword(email: string): Promise<AccountStepResult> {
+    if (!CLIENT_ID) return { ok: false, code: 'unavailable', message: 'COGNITO_CLIENT_ID not configured' };
+    try {
+      await client().send(
+        new ForgotPasswordCommand({
+          ClientId: CLIENT_ID,
+          Username: email.toLowerCase().trim(),
+        }),
+      );
+      return { ok: true, next: 'reset_sent' };
+    } catch (err) {
+      const name = errorName(err);
+      if (name === 'UserNotFoundException') return { ok: true, next: 'reset_sent' };
+      return { ok: false, code: classifyAccountException(name), message: name || 'forgot_failed' };
+    }
+  }
+
+  async confirmForgotPassword(params: {
+    email: string;
+    code: string;
+    password: string;
+  }): Promise<AccountStepResult> {
+    const policy = passwordPolicyError(params.password);
+    if (policy) return { ok: false, code: policy, message: 'weak_password' };
+    if (!CLIENT_ID) return { ok: false, code: 'unavailable', message: 'COGNITO_CLIENT_ID not configured' };
+    try {
+      await client().send(
+        new ConfirmForgotPasswordCommand({
+          ClientId: CLIENT_ID,
+          Username: params.email.toLowerCase().trim(),
+          ConfirmationCode: params.code.trim(),
+          Password: params.password,
+        }),
+      );
+      return { ok: true, next: 'password_reset' };
+    } catch (err) {
+      const name = errorName(err);
+      return { ok: false, code: classifyAccountException(name), message: name || 'reset_failed' };
+    }
+  }
+
+  async continueSignInChallenge(params: {
+    username: string;
+    session: string;
+    challenge: AuthChallengeKind;
+    code?: string;
+    newPassword?: string;
+  }): Promise<SignInResult> {
+    if (!CLIENT_ID) {
+      return { ok: false, code: 'unavailable', message: 'COGNITO_CLIENT_ID not configured' };
+    }
+    if (params.challenge === 'NEW_PASSWORD_REQUIRED') {
+      const policy = passwordPolicyError(params.newPassword ?? '');
+      if (policy) return { ok: false, code: 'unknown', message: 'weak_password' };
+    } else if (!params.code?.trim()) {
+      return { ok: false, code: 'invalid_credentials', message: 'code_required' };
+    }
+    const responses: Record<string, string> = { USERNAME: params.username };
+    if (params.challenge === 'SOFTWARE_TOKEN_MFA') responses.SOFTWARE_TOKEN_MFA_CODE = params.code!.trim();
+    if (params.challenge === 'SMS_MFA') responses.SMS_MFA_CODE = params.code!.trim();
+    if (params.challenge === 'NEW_PASSWORD_REQUIRED') responses.NEW_PASSWORD = params.newPassword ?? '';
+    try {
+      const res = await client().send(
+        new RespondToAuthChallengeCommand({
+          ClientId: CLIENT_ID,
+          ChallengeName: params.challenge as ChallengeNameType,
+          Session: params.session,
+          ChallengeResponses: responses,
+        }),
+      );
+      if (isAuthChallenge(res.ChallengeName) && res.Session) {
+        return {
+          ok: false,
+          code: 'challenge',
+          challenge: res.ChallengeName,
+          session: res.Session,
+          username: params.username,
+          message: challengePrompt(res.ChallengeName),
+        };
+      }
+      const tokens = res.AuthenticationResult;
+      if (!tokens?.IdToken || !tokens.AccessToken) {
+        return { ok: false, code: 'invalid_credentials', message: 'Cognito did not return tokens' };
+      }
+      return this.tokensToSignIn(tokens);
+    } catch (err) {
+      const name = errorName(err);
+      const code = name === 'CodeMismatchException' || name === 'ExpiredCodeException'
+        ? 'invalid_credentials'
+        : classifySignInException(name);
+      return { ok: false, code, message: name || 'challenge_failed' };
+    }
+  }
+
+  async refreshSession(refreshToken: string): Promise<SignInResult> {
+    if (!USER_POOL_ID || !CLIENT_ID) {
+      return { ok: false, code: 'unavailable', message: 'COGNITO_USER_POOL_ID not configured' };
+    }
+    try {
+      const auth = await client().send(
+        new AdminInitiateAuthCommand({
+          UserPoolId: USER_POOL_ID,
+          ClientId: CLIENT_ID,
+          AuthFlow: 'REFRESH_TOKEN_AUTH',
+          AuthParameters: { REFRESH_TOKEN: refreshToken },
+        }),
+      );
+      const tokens = auth.AuthenticationResult;
+      if (!tokens?.IdToken || !tokens.AccessToken) {
+        return { ok: false, code: 'invalid_credentials', message: 'refresh_failed' };
+      }
+      const signed = this.tokensToSignIn(tokens);
+      if (signed.ok && !signed.cookie.refresh_token) {
+        signed.cookie.refresh_token = refreshToken;
+      }
+      return signed;
+    } catch (err) {
+      return { ok: false, code: classifySignInException(errorName(err)), message: 'refresh_failed' };
+    }
+  }
+
+  async revokeSession(accessToken: string): Promise<void> {
+    if (!accessToken) return;
+    await client().send(new GlobalSignOutCommand({ AccessToken: accessToken }));
+  }
+
+  private tokensToSignIn(tokens: {
+    IdToken?: string;
+    AccessToken?: string;
+    RefreshToken?: string;
+    ExpiresIn?: number;
+  }): SignInResult {
+    if (!tokens.IdToken || !tokens.AccessToken) {
+      return { ok: false, code: 'invalid_credentials', message: 'Cognito did not return tokens' };
+    }
+    let role: string | undefined;
+    let clientId: string | undefined;
+    try {
+      const claims = decodeJwt(tokens.IdToken) as Record<string, unknown>;
+      role = roleFromCognitoClaims(claims);
+      const raw = claims['custom:client_id'];
+      if (typeof raw === 'string' && raw.length > 0) clientId = raw;
+    } catch {
+      role = undefined;
+    }
+    return {
+      ok: true,
+      role,
+      clientId,
+      cookie: {
+        id_token: tokens.IdToken,
+        access_token: tokens.AccessToken,
+        refresh_token: tokens.RefreshToken,
+        expires_at: Date.now() + (tokens.ExpiresIn ?? 3600) * 1000,
+      },
+    };
   }
 
   /**

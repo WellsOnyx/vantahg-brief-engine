@@ -7,6 +7,15 @@ Future Claude/Cole/Jonah sessions: read this first.
 
 ---
 
+## 2026-10-21 — Med Review production hardening
+
+Jonah, Oct 21: VantaUM sells Med Review. Cognito sign-in now continues through email confirm, MFA, new-password, and forgot/reset instead of a dead-end password error. Sessions refresh inside an 8-hour cap. Client invites require `client_id`. A signed determination still requires a physician — AI approve is refused. Reviewer assignment uses specialty, state license, shared credentialing, capacity, and SLA slack. Client A cannot read client B when `client_id` is bound.
+
+- **Cole:** `npm run db:migrate:rds` applies `infra-aws/rds-migrations/034_med_review_queue.sql` (`user_profiles.client_id` + queue indexes). `ENABLE_AWS_AUTH=true` on the deployment that should use these routes. No new AWS resources. No fee amounts. No live PHI.
+- **Doc:** [`docs/customer-ready/21-med-review-production.md`](docs/customer-ready/21-med-review-production.md).
+
+---
+
 ## 2026-10-20 — Production IRO portal
 
 Jonah, Oct 20: stop the public demo. The AWS account, BAA, RDS, S3, and KMS key are already up. No new infrastructure.

@@ -3,6 +3,7 @@ import { logAuditEvent } from '@/lib/audit';
 import { isDemoMode, getDemoReviewers, getDemoCase } from '@/lib/demo-mode';
 import type { Reviewer } from '@/lib/types';
 import { redactName } from '@/lib/security';
+import { pickMedReviewer, type PoolReviewer } from '@/lib/med-review/pool';
 
 export interface AssignmentResult {
   assigned: boolean;
@@ -88,15 +89,39 @@ export async function autoAssignReviewer(caseId: string): Promise<AssignmentResu
     return { assigned: false, reason: 'All matching reviewers at daily capacity' };
   }
 
-  // 4. Sort by avg_turnaround_hours ASC (fastest first), then cases_completed ASC (spread load)
-  eligible.sort((a, b) => {
-    const aHours = a.avg_turnaround_hours ?? 999;
-    const bHours = b.avg_turnaround_hours ?? 999;
-    if (aHours !== bHours) return aHours - bHours;
-    return (a.cases_completed ?? 0) - (b.cases_completed ?? 0);
+  // 4. Specialty is already filtered by the query. State license, credential
+  //    status, capacity, and SLA slack pick the reviewer. A human still signs.
+  const stateCode = typeof caseData.member_state === 'string' ? caseData.member_state : null;
+  const pool: PoolReviewer[] = eligible.map((reviewer) => ({
+    id: reviewer.id,
+    specialty_codes: reviewer.approved_service_categories ?? [],
+    licensed_states: [
+      ...(reviewer.license_states ?? []),
+      ...(reviewer.license_state ?? []),
+    ],
+    credential_status: reviewer.status === 'active' ? 'active' : 'lapsed',
+    credential_ok: reviewer.status === 'active',
+    active_count: reviewer.dailyCount,
+    avg_turnaround_hours: reviewer.avg_turnaround_hours,
+    max_cases_per_day: reviewer.max_cases_per_day,
+    client_ids: reviewer.client_ids,
+  }));
+  const picked = pickMedReviewer(pool, {
+    id: caseId,
+    client_id: String(caseData.client_id ?? ''),
+    specialty_code: String(serviceCategory ?? ''),
+    state_code: stateCode,
+    due_at: typeof caseData.turnaround_deadline === 'string' ? caseData.turnaround_deadline : null,
+    received_at: typeof caseData.created_at === 'string' ? caseData.created_at : null,
   });
-
-  const selected = eligible[0];
+  const selected = eligible.find((reviewer) => reviewer.id === picked.reviewer_id);
+  if (!selected) {
+    await logAuditEvent(caseId, 'auto_assign_failed', 'system', {
+      reason: picked.reason,
+      service_category: serviceCategory,
+    });
+    return { assigned: false, reason: `No reviewer passed pool gates (${picked.reason})` };
+  }
 
   // 5. Assign the reviewer
   const { error: updateError } = await supabase

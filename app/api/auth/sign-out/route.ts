@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getAuthAdapter } from '@/lib/adapters/auth';
 import {
+  peekSessionCookie,
   SESSION_COOKIE_NAME,
   sessionCookieOptions,
 } from '@/lib/adapters/auth/cognito';
@@ -15,7 +17,19 @@ export const dynamic = 'force-dynamic';
  * Supabase SSR is configured, also signs out the hybrid session so
  * leftover sb-* cookies do not keep the user "in".
  */
-export async function POST(_request: NextRequest) {
+export async function POST(request: NextRequest) {
+  if (isAwsAuthEnabled()) {
+    const peeked = peekSessionCookie(request);
+    if (peeked?.access_token) {
+      try {
+        await getAuthAdapter().revokeSession(peeked.access_token);
+      } catch {
+        // Cookie clear below is the logout. A Cognito revoke failure
+        // must not trap the user in a session.
+      }
+    }
+  }
+
   const res = NextResponse.json({ ok: true });
   res.cookies.set(SESSION_COOKIE_NAME, '', sessionCookieOptions(0));
 

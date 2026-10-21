@@ -55,6 +55,15 @@ export async function POST(
         { status: 400 },
       );
     }
+    if (body.actor_kind === 'ai') {
+      return NextResponse.json(
+        {
+          error: 'A physician must sign. The system does not auto-determine.',
+          code: 'md_sign_required',
+        },
+        { status: 409 },
+      );
+    }
 
     const ctx = getRequestContext(request);
     const result = await getCaseSpineService().signDetermination(
@@ -64,7 +73,7 @@ export async function POST(
         rationale: body.rationale,
         cm_flags: body.cm_flags as never,
         deny_reason_code: body.deny_reason_code as never,
-        actor_kind: body.actor_kind === 'ai' ? 'ai' : 'clinician',
+        actor_kind: 'clinician',
         session_refs: { ip: ctx.ip, request_id: ctx.requestId },
       },
       authResult.user.id,

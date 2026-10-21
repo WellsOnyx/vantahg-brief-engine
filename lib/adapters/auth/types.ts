@@ -76,6 +76,8 @@ export interface SessionUser {
   id: string;
   email: string;
   role?: string;
+  /** Cognito custom:client_id. Set for client-portal users. */
+  clientId?: string;
 }
 
 /**
@@ -86,14 +88,47 @@ export interface SessionCookiePayload {
   id_token: string;
   access_token: string;
   refresh_token?: string;
-  expires_at: number; // epoch ms
+  expires_at: number; // epoch ms — id token
+  /** Absolute session cap (epoch ms). Refresh cannot extend past this. */
+  absolute_expires_at?: number;
 }
 
+export type SignInFailureCode =
+  | 'invalid_credentials'
+  | 'unavailable'
+  | 'unknown'
+  | 'unconfirmed'
+  | 'password_reset_required'
+  | 'rate_limited';
+
 export type SignInResult =
-  | { ok: true; cookie: SessionCookiePayload }
+  | { ok: true; cookie: SessionCookiePayload; role?: string; clientId?: string }
   | {
       ok: false;
-      code: 'invalid_credentials' | 'unavailable' | 'unknown';
+      code: SignInFailureCode;
+      message: string;
+    }
+  | {
+      ok: false;
+      code: 'challenge';
+      message: string;
+      challenge: 'SOFTWARE_TOKEN_MFA' | 'SMS_MFA' | 'NEW_PASSWORD_REQUIRED';
+      session: string;
+      username: string;
+    };
+
+export type AccountStepResult =
+  | { ok: true; next: 'confirm_email' | 'confirmed' | 'reset_sent' | 'password_reset' | 'code_resent' }
+  | {
+      ok: false;
+      code:
+        | 'invalid_email'
+        | 'weak_password'
+        | 'invalid_code'
+        | 'expired_code'
+        | 'rate_limited'
+        | 'unavailable'
+        | 'unknown';
       message: string;
     };
 
@@ -135,4 +170,37 @@ export interface AuthAdminAdapter {
     email: string;
     password: string;
   }): Promise<SignInResult>;
+
+  /**
+   * Self-serve client account. Does not grant a staff role. Cognito
+   * emails a confirmation code. Supabase returns unavailable — hybrid
+   * signup stays on the request-access concierge path.
+   */
+  signUp(params: { email: string; password: string; fullName?: string }): Promise<AccountStepResult>;
+
+  confirmSignUp(params: { email: string; code: string }): Promise<AccountStepResult>;
+
+  resendConfirmation(email: string): Promise<AccountStepResult>;
+
+  forgotPassword(email: string): Promise<AccountStepResult>;
+
+  confirmForgotPassword(params: {
+    email: string;
+    code: string;
+    password: string;
+  }): Promise<AccountStepResult>;
+
+  /** MFA code or the invited-user new-password challenge. */
+  continueSignInChallenge(params: {
+    username: string;
+    session: string;
+    challenge: 'SOFTWARE_TOKEN_MFA' | 'SMS_MFA' | 'NEW_PASSWORD_REQUIRED';
+    code?: string;
+    newPassword?: string;
+  }): Promise<SignInResult>;
+
+  refreshSession(refreshToken: string): Promise<SignInResult>;
+
+  /** Best-effort. Logout still clears the cookie if this throws. */
+  revokeSession(accessToken: string): Promise<void>;
 }

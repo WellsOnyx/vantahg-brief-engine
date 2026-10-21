@@ -530,6 +530,13 @@ export class CaseSpineService {
       determination: input.determination,
       denyReason,
     });
+    if (input.actor_kind === 'ai') {
+      throw new IllegalSignError(
+        'md_sign_required',
+        'A physician must sign. The system does not auto-determine.',
+        caseId,
+      );
+    }
     const priced = await this.ensureCommercialReviewOnSign(current, actor);
     const legacyId = randomUUID();
     const legacyRows =
