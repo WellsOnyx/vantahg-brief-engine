@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { assertNeverSubmitSource } from '@/lib/idr-assist';
 import {
   advanceToReadyForReview,
+  buildDraftParagraphs,
   buildFactorEvidence,
   composeDraft,
   detectIntake,
@@ -12,7 +13,6 @@ import {
   gateFailed,
   loadIdrCatalog,
   prepareDetermination,
-  renderFactorBlock,
   signDetermination,
   submitDetermination,
   templateKey,
@@ -30,14 +30,28 @@ function readyDraft() {
   const factors = buildFactorEvidence(request, catalog.checklist);
   const template = catalog.byId.get(templateKey('IP', 'present', 'single'));
   if (!template) throw new Error('missing template');
+  const built = buildDraftParagraphs({
+    checklist: catalog.checklist,
+    intake: detected.intake,
+    figures,
+    factors,
+    prevailingParty: 'IP',
+    reason: request.reason ?? '',
+  });
+  if (!built.ok) throw new Error(built.message);
   const composed = composeDraft({
     template,
     checklist: catalog.checklist,
     intake: detected.intake,
     figures,
-    factorBlock: renderFactorBlock(factors),
+    factors,
     prevailingParty: 'IP',
     reason: request.reason ?? '',
+    nipBranch: null,
+    chartParagraph: built.chart,
+    ipParagraph: built.ip,
+    nipParagraph: built.nip,
+    winnerParagraph: built.winner,
   });
   if (!composed.ok) throw new Error(composed.message);
   return { catalog, request, detected: detected.intake, figures, factors, template, packet: composed.packet };
@@ -60,7 +74,11 @@ describe('QA hard-stop gates', () => {
     const base = readyDraft();
     const gates = gatesFor(base.packet, base);
     expect(gates.every((gate) => gate.pass)).toBe(true);
+    expect(base.packet.paragraph_roles).toEqual(['chart', 'ip', 'nip', 'winner']);
     expect(base.packet.paragraphs).toHaveLength(4);
+    expect(base.packet.paragraphs[0]).not.toBe(base.packet.paragraphs[1]);
+    expect(base.packet.paragraphs[1]).not.toBe(base.packet.paragraphs[2]);
+    expect(base.packet.paragraphs[3]).toContain('prevailing_party:IP');
     expect(base.packet.stamps.template_version).toBe(base.template.version);
     expect(base.packet.stamps.checklist_version).toBe(base.catalog.checklist.version);
   });
@@ -69,7 +87,7 @@ describe('QA hard-stop gates', () => {
     const base = readyDraft();
     const packet: DraftPacket = {
       ...base.packet,
-      stamps: { ...base.packet.stamps, template_id: 'nip-brief-single' },
+      stamps: { ...base.packet.stamps, template_id: 'nip-zero-offer' },
     };
     const gates = gatesFor(packet, base);
     expect(gateFailed(gates, 'template_match')).toBe(true);
@@ -84,7 +102,6 @@ describe('QA hard-stop gates', () => {
     const packet: DraftPacket = {
       ...base.packet,
       text: base.packet.text.replace(base.catalog.checklist.phrases.acuity_both, narrative),
-      factor_block: narrative,
     };
     const gates = evaluateGates({ ...context(base), factors, packet });
     expect(gateFailed(gates, 'no_cpt_in_acuity')).toBe(true);
@@ -103,24 +120,58 @@ describe('QA hard-stop gates', () => {
     const base = readyDraft();
     const factors = base.factors.map((factor) =>
       factor.factor_id === 'training_experience'
-        ? { ...factor, ip: { ...factor.ip, excerpt: 'Not in the file.', excerpt_in_file: false } }
+        ? {
+            ...factor,
+            ip: { ...factor.ip, board_certification: 'Not in the file.', excerpt_in_file: false },
+            ip_narrative: factor.ip_narrative.replace('board certification', 'Not in the file.'),
+          }
         : factor,
     );
     const packet: DraftPacket = {
       ...base.packet,
-      text: base.packet.text.replace(base.factors.find((factor) => factor.factor_id === 'training_experience')?.ip.excerpt ?? '', 'Not in the file.'),
+      text: base.packet.text.replace('board certification', 'Not in the file.'),
+      paragraphs: [
+        base.packet.paragraphs[0],
+        base.packet.paragraphs[1].replace('board certification', 'Not in the file.'),
+        base.packet.paragraphs[2],
+        base.packet.paragraphs[3],
+      ],
     };
     const gates = evaluateGates({ ...context(base), factors, packet });
     expect(gateFailed(gates, 'cv_from_file')).toBe(true);
+    expect(gates.find((gate) => gate.id === 'cv_from_file')?.detail).toMatch(/not in the curriculum vitae file/i);
   });
 
-  it('blocks the wrong QPA wording variant', () => {
+  it('hard-stops when board certification or specialty is empty', () => {
     const base = readyDraft();
-    const single = base.catalog.checklist.variant_phrases.qpa_single;
-    const batch = base.catalog.checklist.variant_phrases.qpa_batch;
+    for (const field of ['board_certification', 'specialty'] as const) {
+      const factors = base.factors.map((factor) =>
+        factor.factor_id === 'training_experience'
+          ? { ...factor, ip: { ...factor.ip, [field]: '' } }
+          : factor,
+      );
+      const gates = evaluateGates({ ...context(base), factors });
+      expect(gateFailed(gates, 'cv_from_file')).toBe(true);
+      expect(gates.find((gate) => gate.id === 'cv_from_file')?.detail).toMatch(/empty/i);
+    }
+  });
+
+  it('hard-stops when the no-acuity paragraph slot is empty', () => {
+    const base = readyDraft();
+    const documents = base.request.documents.filter((doc) => doc.role !== 'records' && doc.role !== 'op_report');
+    const checklist = structuredClone(base.catalog.checklist);
+    checklist.slots.no_acuity_paragraph = '   ';
+    const factors = buildFactorEvidence({ ...base.request, documents }, checklist);
+    const gates = evaluateGates({ ...context(base), checklist, documents, factors });
+    expect(gateFailed(gates, 'no_cpt_in_acuity')).toBe(true);
+    expect(gates.find((gate) => gate.id === 'no_cpt_in_acuity')?.detail).toMatch(/no-acuity paragraph is empty/i);
+  });
+
+  it('blocks a single dispute that uses a batch line link', () => {
+    const base = readyDraft();
     const packet: DraftPacket = {
       ...base.packet,
-      text: base.packet.text.replace(single, batch),
+      text: `${base.packet.text} same as LI-SYN-A`,
     };
     expect(gateFailed(gatesFor(packet, base), 'qpa_variant')).toBe(true);
   });
@@ -142,10 +193,30 @@ describe('QA hard-stop gates', () => {
     const base = readyDraft();
     const packet: DraftPacket = {
       ...base.packet,
-      text: base.packet.text.replace('The reason is ', 'The reason is clearly '),
-      reason: `clearly ${base.packet.reason}`,
+      text: `${base.packet.text} clearly`,
     };
     expect(gateFailed(gatesFor(packet, base), 'neutral_tone')).toBe(true);
+  });
+
+  it('hard-stops identical offers in the numbers gate', () => {
+    const base = readyDraft();
+    const figures = base.figures.map((figure) =>
+      figure.kind === 'nip_offer' ? { ...figure, amount_cents: 150000 } : figure,
+    );
+    const text = base.packet.text.replace('$1,000.00', '$1,500.00');
+    const packet: DraftPacket = {
+      ...base.packet,
+      text,
+      paragraphs: [
+        base.packet.paragraphs[0].replace('$1,000.00', '$1,500.00'),
+        base.packet.paragraphs[1],
+        base.packet.paragraphs[2],
+        base.packet.paragraphs[3],
+      ],
+    };
+    const gates = evaluateGates({ ...context(base), figures, packet });
+    expect(gateFailed(gates, 'numbers_match_source')).toBe(true);
+    expect(gates.find((gate) => gate.id === 'numbers_match_source')?.detail).toMatch(/identical/i);
   });
 
   it('blocks figures that do not match the sourced amounts', () => {

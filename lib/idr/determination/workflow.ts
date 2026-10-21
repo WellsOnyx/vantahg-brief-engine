@@ -4,12 +4,13 @@ import {
   assertExternalSurfaceClean,
 } from '@/lib/idr-assist';
 import { authorizeLineAccess, type FirewallAuditEvent, type LineActor, type LineScopedRecord } from '@/lib/lines';
-import { composeDraft } from './draft';
+import { completedDateInNewYork } from './date';
+import { buildDraftParagraphs, composeDraft } from './draft';
 import { extractFigures } from './extract';
-import { buildFactorEvidence, renderFactorBlock } from './factors';
+import { buildFactorEvidence } from './factors';
 import { detectIntake } from './intake';
-import { templateKey } from './load';
 import { evaluateGates, findOpsMarkup } from './qa';
+import { identicalOfferLineIds, selectTemplateId } from './select';
 import {
   assertBatchingStub,
   assertGatewayClosed,
@@ -147,10 +148,57 @@ export function prepareDetermination(
     );
   }
 
-  const templateId = templateKey(request.prevailing_party, detected.intake.nip_brief, detected.intake.shape);
-  const template = deps.catalog.byId.get(templateId);
+  const identical = identicalOfferLineIds(
+    detected.intake.line_items.map((item) => item.line_id),
+    figures,
+  );
+  if (identical.length > 0) {
+    return blocked(
+      actor,
+      request,
+      deps,
+      'identical_offers',
+      `Initiating party and non-initiating party offers are identical on ${identical.join(', ')}.`,
+      shared,
+    );
+  }
+
+  const selected = selectTemplateId({
+    party: request.prevailing_party,
+    brief: detected.intake.nip_brief,
+    shape: detected.intake.shape,
+    lineIds: detected.intake.line_items.map((item) => item.line_id),
+    figures,
+    factors,
+    documentIds: request.documents.map((doc) => doc.doc_id),
+    eligibility: request.eligibility,
+    briefQpa: request.brief_qpa,
+  });
+  if (!selected) {
+    return blocked(
+      actor,
+      request,
+      deps,
+      'nip_branch_unmatched',
+      'No NIP template branch matches this dispute.',
+      shared,
+    );
+  }
+  const template = deps.catalog.byId.get(selected.id);
   if (!template) {
-    return blocked(actor, request, deps, 'template_missing', `No template is loaded for ${templateId}.`, shared);
+    return blocked(actor, request, deps, 'template_missing', `No template is loaded for ${selected.id}.`, shared);
+  }
+
+  const paragraphs = buildDraftParagraphs({
+    checklist: deps.catalog.checklist,
+    intake: detected.intake,
+    figures,
+    factors,
+    prevailingParty: request.prevailing_party,
+    reason,
+  });
+  if (!paragraphs.ok) {
+    return blocked(actor, request, deps, 'draft_structure', paragraphs.message, shared);
   }
 
   const composed = composeDraft({
@@ -158,9 +206,14 @@ export function prepareDetermination(
     checklist: deps.catalog.checklist,
     intake: detected.intake,
     figures,
-    factorBlock: renderFactorBlock(factors),
+    factors,
     prevailingParty: request.prevailing_party,
     reason,
+    nipBranch: selected.branch,
+    chartParagraph: paragraphs.chart,
+    ipParagraph: paragraphs.ip,
+    nipParagraph: paragraphs.nip,
+    winnerParagraph: paragraphs.winner,
   });
   if (!composed.ok) {
     return blocked(actor, request, deps, composed.code, composed.message, shared);
@@ -258,6 +311,8 @@ function judgeDraft(
     factors: draft.factors,
     documents: request.documents,
     packet: draft.packet,
+    eligibility: request.eligibility,
+    briefQpa: request.brief_qpa,
   });
   const opsToken = findOpsMarkup(draft.packet.text, deps.catalog.checklist.ops_markup);
   if (opsToken) {
@@ -412,10 +467,7 @@ function recordFor(request: DeterminationRequest, status: 'blocked' | 'ready_for
 }
 
 function completedDate(nowIso: string): string {
-  if (!/^\d{4}-\d{2}-\d{2}/.test(nowIso)) {
-    throw new Error('now() must return an ISO timestamp.');
-  }
-  return nowIso.slice(0, 10);
+  return completedDateInNewYork(nowIso);
 }
 
 function audit(

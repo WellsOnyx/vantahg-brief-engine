@@ -18,6 +18,28 @@ export type BriefState = (typeof BRIEF_STATES)[number];
 export const QPA_WORDINGS = ['single', 'batch'] as const;
 export type QpaWording = (typeof QPA_WORDINGS)[number];
 
+/** NIP template branches. Precedence is applied in selectNipBranch. */
+export const NIP_BRANCHES = [
+  'ineligible',
+  'zero_offer',
+  'no_qpa',
+  'batch_qpa_discrepancy',
+  'qpa_higher_than_brief',
+  'qpa_lower_than_brief',
+  'no_substantive_factors',
+  'nip_offer_higher',
+] as const;
+export type NipBranch = (typeof NIP_BRANCHES)[number];
+
+export const PARAGRAPH_ROLES = ['chart', 'ip', 'nip', 'winner'] as const;
+export type ParagraphRole = (typeof PARAGRAPH_ROLES)[number];
+
+export const ELIGIBILITY = ['eligible', 'ineligible'] as const;
+export type Eligibility = (typeof ELIGIBILITY)[number];
+
+/** Marker kept in template files until reviewer live text replaces the shell. */
+export const LIVE_TEXT_MARKER = 'TODO-LIVE-TEXT';
+
 export const FIGURE_KINDS = ['ip_offer', 'nip_offer', 'qpa'] as const;
 export type FigureKind = (typeof FIGURE_KINDS)[number];
 
@@ -27,6 +49,7 @@ export const DOCUMENT_ROLES = [
   'cv',
   'records',
   'op_report',
+  'chart',
   'offer_sheet',
   'qpa_statement',
   'other',
@@ -100,6 +123,10 @@ export interface IdrDocumentInput {
    * Ignored unless it is contained in `text`.
    */
   excerpt?: string;
+  /** Must be a non-empty substring of `text` when this document is a CV. */
+  board_certification?: string;
+  /** Must be a non-empty substring of `text` when this document is a CV. */
+  specialty?: string;
 }
 
 export interface FactorMaterialInput {
@@ -122,6 +149,12 @@ export interface DeterminationRequest {
   asserted_nip_brief?: BriefState;
   prevailing_party: Party | null;
   reason: string | null;
+  /** Omitted means the ineligible branch is not selected. */
+  eligibility?: Eligibility;
+  /** QPA stated on the non-initiating brief. Compared only when it has a source. */
+  brief_qpa?: RawFigure | null;
+  /** Factor 7 may be credited to the NIP only when this is true and a chart document is on the request. */
+  chart_supports_factor_7_nip?: boolean;
 }
 
 export interface RecordedLineItem {
@@ -152,6 +185,8 @@ export interface PartyFactorEvidence {
   document_ids: readonly string[];
   excerpt: string | null;
   excerpt_in_file: boolean | null;
+  board_certification: string | null;
+  specialty: string | null;
 }
 
 export interface FactorEvidence {
@@ -160,17 +195,23 @@ export interface FactorEvidence {
   label: string;
   ip: PartyFactorEvidence;
   nip: PartyFactorEvidence;
+  /** Shared factor text scanned by QA. Party paragraphs use the party narratives. */
   narrative: string;
+  ip_narrative: string;
+  nip_narrative: string;
   credited_to: Party | null;
+  /** Factor 7 chart rule. Other factors stay `absent`. */
+  chart_support: 'credited' | 'absent' | 'unverified';
 }
 
 export interface TemplateMeta {
   id: string;
   version: string;
   party_variant: Party;
-  nip_brief: BriefState;
-  dispute_shape: DisputeShape;
-  qpa_wording: QpaWording;
+  nip_branch: NipBranch | 'none';
+  nip_brief: BriefState | 'any';
+  dispute_shape: DisputeShape | 'any';
+  qpa_wording: QpaWording | 'any';
   path: string;
 }
 
@@ -239,13 +280,11 @@ export interface ChecklistFactor {
   never_credit_party?: 'IP';
 }
 
-export interface VariantPhrases {
-  IP: string;
-  NIP: string;
-  brief_present: string;
-  brief_absent: string;
-  qpa_single: string;
-  qpa_batch: string;
+export interface ContentSlots {
+  live_text_marker: typeof LIVE_TEXT_MARKER;
+  batch_line_link: 'same as';
+  no_acuity_paragraph: string;
+  paragraph_roles: readonly ['chart', 'ip', 'nip', 'winner'];
 }
 
 export interface QaChecklist {
@@ -253,7 +292,7 @@ export interface QaChecklist {
   schema: 'idr-qa-checklist';
   factors: readonly ChecklistFactor[];
   gates: readonly GateDef[];
-  variant_phrases: VariantPhrases;
+  slots: ContentSlots;
   phrases: Record<PhraseKey, string>;
   ops_markup: readonly string[];
   path: string;
@@ -292,7 +331,8 @@ export interface BoardFields {
 export interface DraftPacket {
   text: string;
   paragraphs: readonly [string, string, string, string];
-  factor_block: string;
+  paragraph_roles: readonly ['chart', 'ip', 'nip', 'winner'];
+  nip_branch: NipBranch | null;
   stamps: DraftStamp;
   prevailing_party: Party;
   reason: string;

@@ -58,6 +58,8 @@ export function singleRequest(overrides: Partial<DeterminationRequest> = {}): De
         label: 'Curriculum vitae',
         text: CV_TEXT,
         excerpt: CV_EXCERPT,
+        board_certification: 'board certification',
+        specialty: 'demonstration specialty',
       },
       {
         doc_id: 'DOC-SYN-RECORDS',

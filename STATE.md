@@ -7,7 +7,24 @@ Future Claude/Cole/Jonah sessions: read this first.
 
 ---
 
+## 2026-10-21 — IDR determination wording QA
+
+Ops QA on the determination draft. Same in-memory IDR workflow. No new HTTP route. No live PHI. Template files are still placeholders.
+
+- **Paragraphs:** chart, initiating party, non-initiating party, winner. Factor text is split across the two party paragraphs. The winner paragraph carries the supplied prevailing party and reason.
+- **Templates:** four IP files (brief × shape) and eight NIP branches: ineligible, zero offer, no QPA, batch QPA discrepancy, QPA higher than the brief, QPA lower than the brief, no substantive factors, NIP offer higher. Every file under `config/idr/templates/` is marked `TODO-LIVE-TEXT` until live prose is supplied. Content version `2026-10-21.1`.
+- **Slots:** CV sentence is board certification plus specialty, both required substrings of the CV file. The no-acuity paragraph lives on the checklist. An empty board certification, specialty, or no-acuity slot is a hard stop. The shipped no-acuity slot is `TODO-LIVE-TEXT`, so that draft cannot become ready for review.
+- **Factor 7:** still never credited to the initiating party. Credited to the non-initiating party when the request says the chart supports it and a chart document is present.
+- **Offers:** identical IP and NIP offers stop the draft. Batch lines after the primary line say `same as` plus the primary line id.
+- **Date:** `date_completed` is the America/New_York calendar day.
+- **Proof:** `__tests__/lib/idr/determination/`. `npm run test:ci` 747 passed (3 todo). `npx tsc --noEmit` clean.
+- **Doc:** [`docs/customer-ready/21-idr-determination-workflow.md`](docs/customer-ready/21-idr-determination-workflow.md).
+
+---
+
 ## 2026-10-20 — Federal IDR determination workflow
+
+Paragraph order, NIP branches, and placeholder wording were corrected on 2026-10-21. This section is the original slice.
 
 Brief Engine draft path for federal IDR. Stays on the IDR line. IRO and Medical Review cannot read or write these records. Synthetic fixtures only. No new HTTP route. No live PHI.
 

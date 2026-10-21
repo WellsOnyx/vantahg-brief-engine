@@ -7,10 +7,11 @@ import {
   type ChecklistFactor,
   type Factor7Gate,
   type GateDef,
+  LIVE_TEXT_MARKER,
+  NIP_BRANCHES,
   type NeutralToneGate,
   type PhraseKey,
   type QaChecklist,
-  type VariantPhrases,
 } from './types';
 import { parseYaml, YamlParseError } from './yaml';
 
@@ -125,14 +126,12 @@ const PhraseSchema = z
   })
   .strict();
 
-const VariantSchema = z
+const SlotsSchema = z
   .object({
-    IP: z.string().min(1),
-    NIP: z.string().min(1),
-    brief_present: z.string().min(1),
-    brief_absent: z.string().min(1),
-    qpa_single: z.string().min(1),
-    qpa_batch: z.string().min(1),
+    live_text_marker: z.literal(LIVE_TEXT_MARKER),
+    batch_line_link: z.literal('same as'),
+    no_acuity_paragraph: z.string().min(1),
+    paragraph_roles: z.tuple([z.literal('chart'), z.literal('ip'), z.literal('nip'), z.literal('winner')]),
   })
   .strict();
 
@@ -142,7 +141,7 @@ const ChecklistSchema = z
     schema: z.literal('idr-qa-checklist'),
     factors: z.array(FactorSchema).length(FACTOR_IDS.length),
     gates: z.array(GateSchema).min(1),
-    variant_phrases: VariantSchema,
+    slots: SlotsSchema,
     phrases: PhraseSchema,
     ops_markup: z.array(z.string().min(1)).min(1),
   })
@@ -153,9 +152,10 @@ const TemplateMetaSchema = z
     id: z.string().regex(/^[a-z0-9-]+$/),
     version: VersionSchema,
     party_variant: z.enum(['IP', 'NIP']),
-    nip_brief: z.enum(['present', 'absent']),
-    dispute_shape: z.enum(['single', 'batched']),
-    qpa_wording: z.enum(['single', 'batch']),
+    nip_branch: z.enum(['none', ...NIP_BRANCHES]),
+    nip_brief: z.enum(['present', 'absent', 'any']),
+    dispute_shape: z.enum(['single', 'batched', 'any']),
+    qpa_wording: z.enum(['single', 'batch', 'any']),
   })
   .strict();
 
@@ -174,17 +174,21 @@ export function parseChecklistDocument(source: string, path: string): QaChecklis
   const factors = validateFactors(parsed.data.factors, path);
   const gates = validateGates(parsed.data.gates, path);
   validatePhrases(parsed.data.phrases, gates, path);
+  validateSlots(parsed.data.slots, gates, path);
   validateOps(parsed.data.ops_markup, path);
   const phrases = parsed.data.phrases as Record<PhraseKey, string>;
   for (const key of PHRASE_KEYS) {
     if (!phrases[key]) throw new IdrContentError(`${path}: missing phrase ${key}.`);
+  }
+  if (!phrases.training_from_cv.includes('{{board_certification}}') || !phrases.training_from_cv.includes('{{specialty}}')) {
+    throw new IdrContentError(`${path}: the CV sentence slot needs board certification and specialty.`);
   }
   return {
     version: parsed.data.version,
     schema: 'idr-qa-checklist',
     factors,
     gates,
-    variant_phrases: parsed.data.variant_phrases as VariantPhrases,
+    slots: parsed.data.slots,
     phrases,
     ops_markup: parsed.data.ops_markup,
     path,
@@ -203,10 +207,35 @@ export function parseTemplateMeta(source: string, path: string) {
   if (!parsed.success) {
     throw new IdrContentError(`${path}: ${formatZod(parsed.error)}`);
   }
-  if ((parsed.data.dispute_shape === 'single') !== (parsed.data.qpa_wording === 'single')) {
-    throw new IdrContentError(`${path}: qpa_wording does not match dispute_shape.`);
-  }
+  validateTemplateShape(parsed.data, path);
   return parsed.data;
+}
+
+function validateTemplateShape(meta: z.infer<typeof TemplateMetaSchema>, path: string): void {
+  if (meta.party_variant === 'IP') {
+    if (meta.nip_branch !== 'none') {
+      throw new IdrContentError(`${path}: an initiating-party template has no NIP branch.`);
+    }
+    if (meta.nip_brief === 'any' || meta.dispute_shape === 'any' || meta.qpa_wording === 'any') {
+      throw new IdrContentError(`${path}: an initiating-party template names a brief and a dispute shape.`);
+    }
+    if ((meta.dispute_shape === 'single') !== (meta.qpa_wording === 'single')) {
+      throw new IdrContentError(`${path}: qpa_wording does not match dispute_shape.`);
+    }
+    return;
+  }
+  if (meta.nip_branch === 'none') {
+    throw new IdrContentError(`${path}: a non-initiating-party template names a branch.`);
+  }
+  if (meta.nip_branch === 'batch_qpa_discrepancy') {
+    if (meta.dispute_shape !== 'batched' || meta.qpa_wording !== 'batch') {
+      throw new IdrContentError(`${path}: batch QPA discrepancy is a batched template.`);
+    }
+    return;
+  }
+  if (meta.dispute_shape !== 'any' || meta.qpa_wording !== 'any' || meta.nip_brief !== 'any') {
+    throw new IdrContentError(`${path}: this NIP branch is not tied to one brief or dispute shape.`);
+  }
 }
 
 function validateFactors(factors: readonly ChecklistFactor[], path: string): ChecklistFactor[] {
@@ -293,11 +322,34 @@ function validatePhrases(
   }
 }
 
+function validateSlots(
+  slots: z.infer<typeof SlotsSchema>,
+  gates: readonly GateDef[],
+  path: string,
+): void {
+  if (!slots.no_acuity_paragraph.trim()) {
+    throw new IdrContentError(`${path}: the no-acuity paragraph slot is empty.`);
+  }
+  const acuity = gates.find((gate): gate is AcuityGate => gate.id === 'no_cpt_in_acuity');
+  if (!acuity) return;
+  const pattern = new RegExp(acuity.forbid_pattern, 'i');
+  const sentence = slots.no_acuity_paragraph;
+  if (pattern.test(sentence) || acuity.forbid_tokens.some((token) => sentence.toLowerCase().includes(token.toLowerCase()))) {
+    throw new IdrContentError(`${path}: the no-acuity paragraph contains a CPT marker.`);
+  }
+  if (acuity.argument_forbid.some((phrase) => sentence.toLowerCase().includes(phrase.toLowerCase()))) {
+    throw new IdrContentError(`${path}: the no-acuity paragraph contains argument language.`);
+  }
+}
+
 function validateOps(tokens: readonly string[], path: string): void {
-  for (const required of ['MISSING', '{{', '}}']) {
+  for (const required of ['MISSING', '{{', '}}', LIVE_TEXT_MARKER]) {
     if (!tokens.includes(required)) {
       throw new IdrContentError(`${path}: ops_markup must include ${required}.`);
     }
+  }
+  if (tokens.includes('TODO')) {
+    throw new IdrContentError(`${path}: ops_markup lists TODO, which matches the live-text marker. List ${LIVE_TEXT_MARKER}.`);
   }
 }
 

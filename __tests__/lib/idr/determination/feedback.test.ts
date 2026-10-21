@@ -33,20 +33,23 @@ describe('reviewer feedback proposals', () => {
     });
   });
 
-  it('proposes a template wording diff', () => {
+  it('proposes a template version diff while the shell stays a placeholder', () => {
     const files = readIdrContentFiles();
     const path = 'config/idr/templates/ip-brief-single.md';
     const proposal = proposeContentEdit({
       reviewer_ref: 'nicole',
-      comment: 'Soften the opening line.',
+      comment: 'Stamp the next content version. Live prose is still unmarked.',
       path,
       files,
-      find: 'was reviewed.',
-      replace: 'was opened for review.',
+      find: 'version: "2026-10-21.1"',
+      replace: 'version: "2026-10-21.2"',
     });
     expect(proposal.ok).toBe(true);
     if (!proposal.ok) return;
-    expect(applyUnifiedDiff(files[path], proposal.diff)).toContain('was opened for review.');
+    const applied = applyUnifiedDiff(files[path], proposal.diff);
+    expect(applied).toContain('version: "2026-10-21.2"');
+    expect(applied).toContain('TODO-LIVE-TEXT');
+    expect(applied).toContain('{{winner_paragraph}}');
   });
 
   it('refuses runtime code edits and schema-breaking content edits', () => {
@@ -66,11 +69,11 @@ describe('reviewer feedback proposals', () => {
 
     const broken = proposeContentEdit({
       reviewer_ref: 'nicole',
-      comment: 'Remove the QPA sentence.',
+      comment: 'Remove the chart placeholder.',
       path: 'config/idr/templates/ip-brief-single.md',
       files,
-      find: 'The qualifying payment amount for this item or service is {{qpa}}.',
-      replace: 'The amount is stated elsewhere.',
+      find: '{{chart_paragraph}}',
+      replace: 'The chart is described here.',
     });
     expect(broken.ok).toBe(false);
     if (broken.ok) return;

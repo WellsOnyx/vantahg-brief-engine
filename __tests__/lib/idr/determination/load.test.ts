@@ -10,14 +10,23 @@ import {
 describe('IDR content loader', () => {
   it('loads the versioned template set and checklist from config/idr', () => {
     const catalog = loadIdrCatalog();
-    expect(catalog.templates).toHaveLength(8);
-    expect(catalog.checklist.version).toBe('2026-10-20.1');
+    expect(catalog.templates).toHaveLength(12);
+    expect(catalog.checklist.version).toBe('2026-10-21.1');
     expect(catalog.checklist.schema).toBe('idr-qa-checklist');
     expect(catalog.checklist.gates.map((gate) => gate.id)).toEqual([...REQUIRED_GATE_IDS]);
     expect(catalog.checklist.gates.every((gate) => gate.blocking)).toBe(true);
+    expect(catalog.checklist.slots.live_text_marker).toBe('TODO-LIVE-TEXT');
+    expect(catalog.checklist.slots.paragraph_roles).toEqual(['chart', 'ip', 'nip', 'winner']);
     for (const template of catalog.templates) {
-      expect(template.version).toBe('2026-10-20.1');
-      expect(template.paragraphs).toHaveLength(4);
+      expect(template.version).toBe('2026-10-21.1');
+      expect(template.paragraphs).toEqual([
+        'TODO-LIVE-TEXT\n{{chart_paragraph}}',
+        'TODO-LIVE-TEXT\n{{ip_paragraph}}',
+        'TODO-LIVE-TEXT\n{{nip_paragraph}}',
+        'TODO-LIVE-TEXT\n{{winner_paragraph}}',
+      ]);
+      expect(template.body).toContain('TODO-LIVE-TEXT');
+      expect(template.body).not.toContain('offer is selected');
       expect(template.path.startsWith('config/idr/templates/')).toBe(true);
     }
     const acuity = catalog.checklist.gates.find((gate) => gate.id === 'no_cpt_in_acuity');
@@ -27,7 +36,7 @@ describe('IDR content loader', () => {
   it('rejects a checklist that drops a hard-stop gate', () => {
     const files = readIdrContentFiles();
     files['config/idr/qa-checklist.yaml'] = files['config/idr/qa-checklist.yaml'].replace(
-      '  - id: factor_7_rule\n    blocking: true\n    label: "Factor 7 is never credited to the initiating party."\n    factor: additional_information\n    never_credit_party: IP\n    credit_patterns:\n      - "supports the initiating party"\n      - "weighs in favor of the initiating party"\n      - "favors the initiating party"\n      - "credited to the initiating party"\n      - "initiating party prevails on this factor"\n',
+      '  - id: factor_7_rule\n    blocking: true\n    label: "Factor 7 is never credited to the initiating party. Chart support may credit the non-initiating party."\n    factor: additional_information\n    never_credit_party: IP\n    credit_patterns:\n      - "supports the initiating party"\n      - "weighs in favor of the initiating party"\n      - "favors the initiating party"\n      - "credited to the initiating party"\n      - "initiating party prevails on this factor"\n',
       '',
     );
     expect(() => loadIdrCatalogFromFiles(files)).toThrow(IdrContentError);
@@ -64,8 +73,8 @@ describe('IDR content loader', () => {
 
   it('rejects a template set that is missing a variant', () => {
     const files = readIdrContentFiles();
-    delete files['config/idr/templates/nip-no-brief-batch.md'];
-    expect(() => loadIdrCatalogFromFiles(files)).toThrow(/nip-no-brief-batch/);
+    delete files['config/idr/templates/nip-zero-offer.md'];
+    expect(() => loadIdrCatalogFromFiles(files)).toThrow(/nip-zero-offer/);
   });
 
   it('rejects tabs in a content file', () => {

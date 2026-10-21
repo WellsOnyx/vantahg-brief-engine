@@ -1,8 +1,10 @@
 # Federal IDR determination QA checklist.
 # Reviewer edits land in this file. The loader validates the schema.
 # Hard-stop gates cannot be removed or set to blocking: false.
+# Template bodies stay marked TODO-LIVE-TEXT until live prose is supplied.
+# This file does not invent that prose.
 
-version: "2026-10-20.1"
+version: "2026-10-21.1"
 schema: idr-qa-checklist
 
 factors:
@@ -32,10 +34,10 @@ factors:
 gates:
   - id: template_match
     blocking: true
-    label: "Selected template matches the prevailing-party variant, brief presence, and dispute shape."
+    label: "Selected template matches the prevailing party, brief state, dispute shape, and NIP branch."
   - id: no_cpt_in_acuity
     blocking: true
-    label: "Acuity and complexity text contains no CPT code and no clinical argument."
+    label: "Acuity and complexity text contains no CPT code and no clinical argument. The no-acuity paragraph slot is filled when no records or operative report were filed."
     factor: acuity_complexity
     forbid_pattern: "\\b\\d{5}\\b"
     forbid_tokens:
@@ -49,15 +51,15 @@ gates:
       - "more complex than"
   - id: cv_from_file
     blocking: true
-    label: "Training and experience text is taken from the submitted curriculum vitae."
+    label: "The CV sentence slot carries board certification and specialty from the curriculum vitae file."
     factor: training_experience
     source_role: cv
   - id: qpa_variant
     blocking: true
-    label: "QPA wording matches the single-dispute or batched-dispute template."
+    label: "Batched lines link to the primary line. A single dispute has no batch link."
   - id: factor_7_rule
     blocking: true
-    label: "Factor 7 is never credited to the initiating party."
+    label: "Factor 7 is never credited to the initiating party. Chart support may credit the non-initiating party."
     factor: additional_information
     never_credit_party: IP
     credit_patterns:
@@ -81,33 +83,35 @@ gates:
       - "bad faith"
   - id: numbers_match_source
     blocking: true
-    label: "Offers and qualifying payment amounts match the sourced figures and are never estimated."
+    label: "Offers and qualifying payment amounts match the sourced figures, are never estimated, and are not identical across the parties."
 
-variant_phrases:
-  IP: "The initiating party offer is selected."
-  NIP: "The non-initiating party offer is selected."
-  brief_present: "The non-initiating party submitted a written brief."
-  brief_absent: "The non-initiating party did not submit a written brief."
-  qpa_single: "The qualifying payment amount for this item or service is"
-  qpa_batch: "The qualifying payment amounts for the batched line items are"
+slots:
+  live_text_marker: "TODO-LIVE-TEXT"
+  batch_line_link: "same as"
+  no_acuity_paragraph: "TODO-LIVE-TEXT"
+  paragraph_roles:
+    - chart
+    - ip
+    - nip
+    - winner
 
 phrases:
-  training_from_cv: "On training, experience, and quality and outcomes measurements, the {{party}} curriculum vitae states \"{{excerpt}}\"."
-  training_absent: "On training, experience, and quality and outcomes measurements, the {{party}} submitted no curriculum vitae."
-  acuity_both: "On acuity and complexity, medical records and an operative report are attached."
-  acuity_records: "On acuity and complexity, medical records are attached."
-  acuity_report: "On acuity and complexity, an operative report is attached."
-  acuity_absent: "On acuity and complexity, no medical records or operative report were submitted."
-  party_submitted: "On {{factor}}, the {{party}} submitted materials."
-  party_absent: "On {{factor}}, the {{party}} did not submit materials."
-  factor_7: "On additional information relating to the offer, the initiating party {{ip_state}} additional information and the non-initiating party {{nip_state}} additional information. The additional information is noted and is not used as support for the initiating party offer."
-  qpa_factor: "The qualifying payment amount is the sourced figure stated above."
+  training_from_cv: "cv board_certification:{{board_certification}} specialty:{{specialty}}"
+  training_absent: "training:absent {{party}}"
+  acuity_both: "acuity_attachments:records,op_report"
+  acuity_records: "acuity_attachments:records"
+  acuity_report: "acuity_attachments:op_report"
+  acuity_absent: "acuity:absent"
+  party_submitted: "factor:{{factor}} party:{{party}} submitted:yes"
+  party_absent: "factor:{{factor}} party:{{party}} submitted:no"
+  factor_7: "factor_7 party:{{party}} state:{{state}} credit:{{credit}}"
+  qpa_factor: "qpa:sourced"
 
 ops_markup:
   - "MISSING"
   - "{{"
   - "}}"
-  - "TODO"
+  - "TODO-LIVE-TEXT"
   - "FIXME"
   - "HEURISTIC_MODE"
   - "TEMPLATE_DEVIATION"

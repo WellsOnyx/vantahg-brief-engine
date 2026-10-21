@@ -11,7 +11,7 @@ import {
   type IdrGatewayPort,
   type November1BatchingRules,
 } from '@/lib/idr/determination';
-import { CV_EXCERPT, batchRequest, deps, idrActor, singleRequest } from './fixture';
+import { batchRequest, deps, idrActor, singleRequest } from './fixture';
 
 describe('federal IDR determination workflow', () => {
   it('reaches ready for review with board fields and a clean four-paragraph draft', () => {
@@ -28,12 +28,23 @@ describe('federal IDR determination workflow', () => {
     });
     expect(result.signed).toBe(false);
     expect(result.submitted).toBe(false);
-    expect(result.clean_text?.split(/\n\s*\n/)).toHaveLength(4);
-    expect(result.clean_text).toContain('The initiating party offer is selected.');
-    expect(result.clean_text).toContain('The non-initiating party submitted a written brief.');
-    expect(result.clean_text).toContain('The qualifying payment amount for this item or service is $900.00');
-    expect(result.clean_text).toContain(CV_EXCERPT);
-    expect(result.clean_text).toContain('medical records and an operative report are attached');
+    const parts = result.clean_text?.split(/\n\s*\n/) ?? [];
+    expect(parts).toHaveLength(4);
+    const [chart, ip, nip, winner] = parts;
+    expect(chart).toContain('line:LI-SYN-A');
+    expect(chart).toContain('ip_offer:$1,500.00');
+    expect(chart).toContain('qpa:$900.00');
+    expect(chart).toContain('nip_brief:present');
+    expect(chart).not.toContain('same as');
+    expect(ip).toContain('board_certification:board certification');
+    expect(ip).toContain('specialty:demonstration specialty');
+    expect(ip).toContain('acuity_attachments:records,op_report');
+    expect(ip).not.toContain('training:absent');
+    expect(nip).toContain('training:absent non-initiating party');
+    expect(nip).not.toContain('board_certification:');
+    expect(winner).toContain('prevailing_party:IP');
+    expect(winner).toContain('The selected offer is the offer recorded for the prevailing party on this dispute.');
+    expect(result.clean_text).not.toContain('TODO-LIVE-TEXT');
     expect(result.clean_text).not.toContain('CPT');
     expect(result.clean_text).not.toContain('99285');
     expect(result.clean_text).not.toContain('MISSING');
@@ -47,8 +58,8 @@ describe('federal IDR determination workflow', () => {
     expect(() => assertDraftStamped(result.reviewer_copy ?? '')).not.toThrow();
     expect(result.stamps).toMatchObject({
       template_id: 'ip-brief-single',
-      template_version: '2026-10-20.1',
-      checklist_version: '2026-10-20.1',
+      template_version: '2026-10-21.1',
+      checklist_version: '2026-10-21.1',
       template_path: 'config/idr/templates/ip-brief-single.md',
       checklist_path: 'config/idr/qa-checklist.yaml',
     });
@@ -58,18 +69,20 @@ describe('federal IDR determination workflow', () => {
     expect(result.figures?.every((figure) => figure.status === 'present' && figure.source)).toBe(true);
   });
 
-  it('selects the batch no-brief non-initiating template and keeps November 1 eligibility unset', () => {
+  it('links batch lines to the primary line and keeps November 1 eligibility unset', () => {
     const result = prepareDetermination(idrActor(), batchRequest(), deps());
     expect(result.ok).toBe(true);
     expect(result.intake?.shape).toBe('batched');
     expect(result.intake?.nip_brief).toBe('absent');
-    expect(result.stamps?.template_id).toBe('nip-no-brief-batch');
-    expect(result.clean_text).toContain('The non-initiating party offer is selected.');
-    expect(result.clean_text).toContain('The non-initiating party did not submit a written brief.');
-    expect(result.clean_text).toContain('The qualifying payment amounts for the batched line items are');
-    expect(result.clean_text).not.toContain('The qualifying payment amount for this item or service is');
+    expect(result.stamps?.template_id).toBe('nip-batch-qpa-discrepancy');
+    const chart = result.clean_text?.split(/\n\s*\n/)[0] ?? '';
+    expect(chart).toContain('same as LI-SYN-A');
+    expect(chart.split('LI-SYN-B')[0]).not.toContain('same as');
+    expect(chart).toContain('nip_brief:absent');
+    expect(result.clean_text).toContain('prevailing_party:NIP');
     expect(result.clean_text).toContain('$2,000.00');
     expect(result.clean_text).toContain('$1,100.00');
+    expect(result.clean_text).not.toContain('TODO-LIVE-TEXT');
     expect(result.batching?.eligible).toBeNull();
     expect(result.board?.prevailing_party).toBe('NIP');
   });
@@ -93,7 +106,7 @@ describe('federal IDR determination workflow', () => {
 
   it('blocks the wrong template before review', () => {
     const catalog = loadIdrCatalog();
-    const wrong = catalog.byId.get('nip-brief-single');
+    const wrong = catalog.byId.get('nip-zero-offer');
     const request = singleRequest();
     const detected = prepareDetermination(idrActor(), request, deps());
     expect(detected.intake?.shape).toBe('single');
@@ -103,9 +116,14 @@ describe('federal IDR determination workflow', () => {
       checklist: catalog.checklist,
       intake: detected.intake,
       figures: detected.figures,
-      factorBlock: 'unused',
+      factors: detected.factors,
       prevailingParty: 'IP',
       reason: request.reason ?? '',
+      nipBranch: null,
+      chartParagraph: 'line',
+      ipParagraph: 'ip',
+      nipParagraph: 'nip',
+      winnerParagraph: 'winner',
     });
     expect(composed.ok).toBe(false);
     if (composed.ok) return;
@@ -123,11 +141,11 @@ describe('federal IDR determination workflow', () => {
   it('records version stamps from the content files', () => {
     const files = readIdrContentFiles();
     files['config/idr/qa-checklist.yaml'] = files['config/idr/qa-checklist.yaml'].replace(
-      'version: "2026-10-20.1"',
+      'version: "2026-10-21.1"',
       'version: "2026-11-02.4"',
     );
     files['config/idr/templates/ip-brief-single.md'] = files['config/idr/templates/ip-brief-single.md'].replace(
-      'version: "2026-10-20.1"',
+      'version: "2026-10-21.1"',
       'version: "2026-11-02.9"',
     );
     const catalog = loadIdrCatalogFromFiles(files);
@@ -140,13 +158,13 @@ describe('federal IDR determination workflow', () => {
   it('uses an acuity sentence edited in the checklist file', () => {
     const files = readIdrContentFiles();
     files['config/idr/qa-checklist.yaml'] = files['config/idr/qa-checklist.yaml'].replace(
-      'On acuity and complexity, medical records and an operative report are attached.',
-      'On acuity and complexity, medical records and an operative report are on the submission.',
+      'acuity_attachments:records,op_report',
+      'acuity_attachments:records+op_report',
     );
     const result = prepareDetermination(idrActor(), singleRequest(), deps({ catalog: loadIdrCatalogFromFiles(files) }));
     expect(result.ok).toBe(true);
-    expect(result.clean_text).toContain('are on the submission');
-    expect(result.clean_text).not.toContain('are attached');
+    expect(result.clean_text).toContain('acuity_attachments:records+op_report');
+    expect(result.clean_text).not.toContain('acuity_attachments:records,op_report');
   });
 
   it('keeps IDR determinations off the IRO and Medical Review lines', () => {

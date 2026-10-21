@@ -1,10 +1,11 @@
-import { templateKey } from './load';
 import { currencyTokens, formatCents, sameMultiset } from './money';
 import { fillPhrase, partyName } from './phrases';
+import { identicalOfferLineIds, selectTemplateId } from './select';
 import { hitsPhrase } from './schema';
 import type {
   AcuityGate,
   DraftPacket,
+  Eligibility,
   Factor7Gate,
   FactorEvidence,
   Figure,
@@ -13,6 +14,7 @@ import type {
   IntakeRecord,
   NeutralToneGate,
   QaChecklist,
+  RawFigure,
   TemplateFile,
 } from './types';
 
@@ -24,6 +26,8 @@ export interface QaContext {
   factors: readonly FactorEvidence[];
   documents: readonly IdrDocumentInput[];
   packet: DraftPacket;
+  eligibility?: Eligibility;
+  briefQpa?: RawFigure | null;
 }
 
 export function evaluateGates(context: QaContext): GateResult[] {
@@ -47,16 +51,24 @@ export function findOpsMarkup(text: string, tokens: readonly string[]): string |
 
 function templateMatch(context: QaContext): GateResult {
   const gate = gateById(context, 'template_match');
-  const expected = templateKey(context.packet.prevailing_party, context.intake.nip_brief, context.intake.shape);
-  const phrases = context.checklist.variant_phrases;
-  const partyPhrase = context.packet.prevailing_party === 'IP' ? phrases.IP : phrases.NIP;
-  const otherParty = context.packet.prevailing_party === 'IP' ? phrases.NIP : phrases.IP;
-  const briefPhrase = context.intake.nip_brief === 'present' ? phrases.brief_present : phrases.brief_absent;
-  const otherBrief = context.intake.nip_brief === 'present' ? phrases.brief_absent : phrases.brief_present;
-  const text = context.packet.text;
+  const selected = selectTemplateId({
+    party: context.packet.prevailing_party,
+    brief: context.intake.nip_brief,
+    shape: context.intake.shape,
+    lineIds: context.intake.line_items.map((item) => item.line_id),
+    figures: context.figures,
+    factors: context.factors,
+    documentIds: context.documents.map((doc) => doc.doc_id),
+    eligibility: context.eligibility,
+    briefQpa: context.briefQpa,
+  });
   const problems: string[] = [];
-  if (context.template.id !== expected || context.packet.stamps.template_id !== expected) {
+  const expected = selected?.id ?? 'unmatched';
+  if (!selected || context.template.id !== expected || context.packet.stamps.template_id !== expected) {
     problems.push(`template ${context.packet.stamps.template_id} does not match ${expected}`);
+  }
+  if (context.packet.nip_branch !== (selected?.branch ?? null)) {
+    problems.push('NIP branch stamp does not match the dispute');
   }
   if (context.packet.stamps.template_version !== context.template.version) {
     problems.push('template version stamp does not match the file');
@@ -64,10 +76,22 @@ function templateMatch(context: QaContext): GateResult {
   if (context.packet.stamps.checklist_version !== context.checklist.version) {
     problems.push('checklist version stamp does not match the file');
   }
-  if (!text.includes(partyPhrase)) problems.push('prevailing-party sentence is missing');
-  if (text.includes(otherParty)) problems.push('the other prevailing-party sentence is present');
-  if (!text.includes(briefPhrase)) problems.push('brief sentence is missing');
-  if (text.includes(otherBrief)) problems.push('the other brief sentence is present');
+  const roles = context.packet.paragraph_roles;
+  if (roles[0] !== 'chart' || roles[1] !== 'ip' || roles[2] !== 'nip' || roles[3] !== 'winner') {
+    problems.push('paragraphs are not in chart, IP, NIP, winner order');
+  }
+  const [chart, , , winner] = context.packet.paragraphs;
+  const partyToken = `prevailing_party:${context.packet.prevailing_party}`;
+  const otherParty = context.packet.prevailing_party === 'IP' ? 'prevailing_party:NIP' : 'prevailing_party:IP';
+  const briefToken = `nip_brief:${context.intake.nip_brief}`;
+  const otherBrief = context.intake.nip_brief === 'present' ? 'nip_brief:absent' : 'nip_brief:present';
+  if (!winner.includes(partyToken)) problems.push('winner paragraph is missing the prevailing party');
+  if (context.packet.text.includes(otherParty)) problems.push('the other prevailing party is present');
+  if (!chart.includes(briefToken)) problems.push('chart paragraph is missing the brief state');
+  if (context.packet.text.includes(otherBrief)) problems.push('the other brief state is present');
+  if (context.packet.reason && !winner.includes(context.packet.reason)) {
+    problems.push('winner paragraph is missing the supplied reason');
+  }
   return result(gate.id, gate.label, problems);
 }
 
@@ -76,14 +100,22 @@ function acuityGate(context: QaContext): GateResult {
   const factor = context.factors.find((item) => item.factor_id === gate.factor);
   const narrative = factor?.narrative ?? '';
   const pattern = new RegExp(gate.forbid_pattern, 'i');
-  const allowed = [
-    context.checklist.phrases.acuity_both,
-    context.checklist.phrases.acuity_records,
-    context.checklist.phrases.acuity_report,
-    context.checklist.phrases.acuity_absent,
-  ];
+  const hasRecords = context.documents.some((doc) => doc.role === 'records');
+  const hasReport = context.documents.some((doc) => doc.role === 'op_report');
   const problems: string[] = [];
-  if (!allowed.includes(narrative)) problems.push('acuity text is not the attachment note');
+  if (!hasRecords && !hasReport) {
+    const slot = context.checklist.slots.no_acuity_paragraph.trim();
+    if (!slot) problems.push('no-acuity paragraph is empty');
+    else if (narrative.trim() !== slot) problems.push('no-acuity paragraph does not match the checklist slot');
+  } else {
+    const expected =
+      hasRecords && hasReport
+        ? context.checklist.phrases.acuity_both
+        : hasRecords
+          ? context.checklist.phrases.acuity_records
+          : context.checklist.phrases.acuity_report;
+    if (narrative !== expected) problems.push('acuity text is not the attachment note');
+  }
   if (pattern.test(narrative)) problems.push('acuity text contains a CPT code');
   if (gate.forbid_tokens.some((token) => narrative.toLowerCase().includes(token.toLowerCase()))) {
     problems.push('acuity text contains a code-set token');
@@ -104,20 +136,26 @@ function cvGate(context: QaContext): GateResult {
     const evidence = party === 'IP' ? factor?.ip : factor?.nip;
     const name = partyName(party);
     if (cv?.text) {
-      if (!evidence?.excerpt || !cv.text.includes(evidence.excerpt)) {
-        problems.push(`training text for the ${name} is not taken from the curriculum vitae file`);
-      } else if (!context.packet.text.includes(evidence.excerpt)) {
-        problems.push(`curriculum vitae excerpt for the ${name} is missing from the draft`);
-      } else {
+      const board = evidence?.board_certification?.trim() ?? '';
+      const specialty = evidence?.specialty?.trim() ?? '';
+      if (!board) problems.push(`board certification for the ${name} is empty`);
+      else if (!cv.text.includes(board)) {
+        problems.push(`board certification for the ${name} is not in the curriculum vitae file`);
+      }
+      if (!specialty) problems.push(`specialty for the ${name} is empty`);
+      else if (!cv.text.includes(specialty)) {
+        problems.push(`specialty for the ${name} is not in the curriculum vitae file`);
+      }
+      if (board && specialty && cv.text.includes(board) && cv.text.includes(specialty)) {
         const expected = fillPhrase(context.checklist.phrases.training_from_cv, {
-          party: name,
-          excerpt: evidence.excerpt,
+          board_certification: board,
+          specialty,
         });
         if (!context.packet.text.includes(expected)) {
-          problems.push(`training sentence for the ${name} was not rendered from the checklist`);
+          problems.push(`CV sentence for the ${name} is missing from the draft`);
         }
       }
-    } else if (evidence?.excerpt) {
+    } else if (evidence?.board_certification || evidence?.specialty || evidence?.excerpt) {
       problems.push(`training text for the ${name} has no curriculum vitae file`);
     } else {
       const expected = fillPhrase(context.checklist.phrases.training_absent, { party: name });
@@ -131,18 +169,23 @@ function cvGate(context: QaContext): GateResult {
 
 function qpaGate(context: QaContext): GateResult {
   const gate = gateById(context, 'qpa_variant');
-  const single = context.checklist.variant_phrases.qpa_single;
-  const batch = context.checklist.variant_phrases.qpa_batch;
-  const wantBatch = context.intake.shape === 'batched';
+  const link = context.checklist.slots.batch_line_link;
+  const primary = context.intake.line_items[0]?.line_id ?? '';
   const problems: string[] = [];
-  if (wantBatch) {
-    if (!context.packet.text.includes(batch)) problems.push('batched QPA wording is missing');
-    if (context.packet.text.includes(single)) problems.push('single-dispute QPA wording is present on a batch');
-    if (context.template.qpa_wording !== 'batch') problems.push('template QPA variant is not batch');
+  const chart = context.packet.paragraphs[0];
+  if (context.intake.shape === 'batched') {
+    const needle = `${link} ${primary}`;
+    const count = chart.split(needle).length - 1;
+    if (count !== context.intake.line_items.length - 1) {
+      problems.push('batch lines do not link to the primary line');
+    }
+    const second = context.intake.line_items[1]?.line_id;
+    const primarySegment = second ? chart.split(second)[0] : chart;
+    if (primarySegment.includes(link)) problems.push('primary line is linked as a secondary line');
+    if (context.template.qpa_wording === 'single') problems.push('template QPA variant is single on a batch');
   } else {
-    if (!context.packet.text.includes(single)) problems.push('single-dispute QPA wording is missing');
-    if (context.packet.text.includes(batch)) problems.push('batched QPA wording is present on a single dispute');
-    if (context.template.qpa_wording !== 'single') problems.push('template QPA variant is not single');
+    if (context.packet.text.includes(link)) problems.push('single dispute uses a batch line link');
+    if (context.template.qpa_wording === 'batch') problems.push('template QPA variant is batch on a single dispute');
   }
   return result(gate.id, gate.label, problems);
 }
@@ -157,7 +200,22 @@ function factor7Gate(context: QaContext): GateResult {
     problems.push('checklist factor 7 credit rule does not match the gate');
   }
   if (factor?.credited_to === gate.never_credit_party) {
-    problems.push(`factor 7 is credited to the ${gate.never_credit_party}`);
+    problems.push('factor 7 is credited to the initiating party');
+  }
+  if (factor?.chart_support === 'unverified') {
+    problems.push('factor 7 chart support is missing the chart');
+  }
+  if (factor?.chart_support === 'credited' && factor.credited_to !== 'NIP') {
+    problems.push('factor 7 chart support did not credit the non-initiating party');
+  }
+  if (factor?.chart_support === 'absent' && factor.credited_to !== null) {
+    problems.push('factor 7 is credited without chart support');
+  }
+  if (factor?.chart_support === 'credited' && factor.nip_narrative && !context.packet.paragraphs[2].includes(factor.nip_narrative)) {
+    problems.push('factor 7 credit to the non-initiating party is missing from the NIP paragraph');
+  }
+  if (factor?.ip_narrative.includes('credit:NIP') || factor?.ip_narrative.includes('credit:IP')) {
+    problems.push('factor 7 credit is on the initiating party narrative');
   }
   for (const pattern of gate.credit_patterns) {
     if (hitsPhrase(context.packet.text, pattern) || (factor && hitsPhrase(factor.narrative, pattern))) {
@@ -176,6 +234,13 @@ function neutralGate(context: QaContext): GateResult {
 function numbersGate(context: QaContext): GateResult {
   const gate = gateById(context, 'numbers_match_source');
   const problems: string[] = [];
+  const identical = identicalOfferLineIds(
+    context.intake.line_items.map((item) => item.line_id),
+    context.figures,
+  );
+  if (identical.length > 0) {
+    problems.push(`initiating party and non-initiating party offers are identical on ${identical.join(', ')}`);
+  }
   if (context.figures.some((figure) => figure.status !== 'present' || figure.amount_cents === null || !figure.source)) {
     problems.push('a sourced offer or qualifying payment amount is MISSING and was not estimated');
   } else {

@@ -13,9 +13,11 @@ const SUBMISSION_FACTORS: readonly FactorId[] = ['market_share', 'teaching_case_
 
 /**
  * Maps each statutory factor to what each party actually filed.
- * Training text is a curriculum vitae excerpt. Acuity states only that
- * records or an operative report are attached. Factor 7 is not credited
- * to the initiating party. Notes are not copied into the narrative.
+ * Training text is the CV board-certification and specialty slot.
+ * Acuity states attachment tokens, or the checklist no-acuity slot when none were filed.
+ * Factor 7 is never credited to the initiating party. It is credited to the
+ * non-initiating party only when the request says the chart supports it and a chart is on file.
+ * Notes are not copied into the narrative.
  */
 export function buildFactorEvidence(request: DeterminationRequest, checklist: QaChecklist): FactorEvidence[] {
   return checklist.factors.map((spec) => {
@@ -27,9 +29,10 @@ export function buildFactorEvidence(request: DeterminationRequest, checklist: Qa
   });
 }
 
-export function renderFactorBlock(factors: readonly FactorEvidence[]): string {
+export function renderPartyParagraph(factors: readonly FactorEvidence[], party: Party): string {
+  const key = party === 'IP' ? 'ip_narrative' : 'nip_narrative';
   return factors
-    .map((factor) => factor.narrative.trim())
+    .map((factor) => factor[key].trim())
     .filter((narrative) => narrative.length > 0)
     .join(' ')
     .replace(/\s+/g, ' ')
@@ -38,14 +41,18 @@ export function renderFactorBlock(factors: readonly FactorEvidence[]): string {
 
 function qpaFactor(request: DeterminationRequest, checklist: QaChecklist, number: number, label: string): FactorEvidence {
   const docs = request.documents.filter((doc) => doc.role === 'qpa_statement');
+  const sentence = checklist.phrases.qpa_factor;
   return {
     factor_id: 'qpa',
     number,
     label,
     ip: partyDocs('IP', docs),
     nip: partyDocs('NIP', docs),
-    narrative: checklist.phrases.qpa_factor,
+    narrative: sentence,
+    ip_narrative: sentence,
+    nip_narrative: sentence,
     credited_to: null,
+    chart_support: 'absent',
   };
 }
 
@@ -63,8 +70,11 @@ function trainingFactor(
     label,
     ip: ip.evidence,
     nip: nip.evidence,
-    narrative: `${ip.sentence} ${nip.sentence}`.trim(),
+    narrative: joinSentences(ip.sentence, nip.sentence),
+    ip_narrative: ip.sentence,
+    nip_narrative: nip.sentence,
     credited_to: null,
+    chart_support: 'absent',
   };
 }
 
@@ -77,39 +87,28 @@ function trainingParty(
   const name = partyName(party);
   if (!cv || !cv.text) {
     return {
-      evidence: { party, submitted: false, document_ids: [], excerpt: null, excerpt_in_file: null },
+      evidence: emptyParty(party, false, []),
       sentence: fillPhrase(checklist.phrases.training_absent, { party: name }),
     };
   }
-  const excerpt = cv.excerpt?.trim() ? cv.excerpt.trim() : safeWholeFile(cv.text);
-  if (!excerpt) {
-    return {
-      evidence: {
-        party,
-        submitted: true,
-        document_ids: [cv.doc_id],
-        excerpt: null,
-        excerpt_in_file: false,
-      },
-      sentence: '',
-    };
-  }
+  const board = cv.board_certification?.trim() ?? '';
+  const specialty = cv.specialty?.trim() ?? '';
+  const inFile = board.length > 0 && specialty.length > 0 && cv.text.includes(board) && cv.text.includes(specialty);
   return {
     evidence: {
       party,
       submitted: true,
       document_ids: [cv.doc_id],
-      excerpt,
-      excerpt_in_file: cv.text.includes(excerpt),
+      excerpt: board || specialty ? [board, specialty].filter(Boolean).join(' | ') : null,
+      excerpt_in_file: inFile,
+      board_certification: board || null,
+      specialty: specialty || null,
     },
-    sentence: fillPhrase(checklist.phrases.training_from_cv, { party: name, excerpt }),
+    sentence: fillPhrase(checklist.phrases.training_from_cv, {
+      board_certification: board,
+      specialty,
+    }),
   };
-}
-
-function safeWholeFile(text: string): string | null {
-  const trimmed = text.trim();
-  if (!trimmed || trimmed.includes('\n') || trimmed.includes('"') || trimmed.length > 240) return null;
-  return trimmed;
 }
 
 function acuityFactor(
@@ -127,7 +126,7 @@ function acuityFactor(
         ? checklist.phrases.acuity_records
         : reports.length > 0
           ? checklist.phrases.acuity_report
-          : checklist.phrases.acuity_absent;
+          : checklist.slots.no_acuity_paragraph.trim();
   return {
     factor_id: 'acuity_complexity',
     number,
@@ -135,7 +134,10 @@ function acuityFactor(
     ip: partyDocs('IP', [...records, ...reports]),
     nip: partyDocs('NIP', [...records, ...reports]),
     narrative: sentence,
+    ip_narrative: sentence,
+    nip_narrative: sentence,
     credited_to: null,
+    chart_support: 'absent',
   };
 }
 
@@ -147,17 +149,31 @@ function factorSeven(
 ): FactorEvidence {
   const ip = listedParty(request, 'additional_information', 'IP');
   const nip = listedParty(request, 'additional_information', 'NIP');
+  const hasChart = request.documents.some((doc) => doc.role === 'chart');
+  const wantsCredit = request.chart_supports_factor_7_nip === true;
+  const chartSupport = wantsCredit && hasChart ? 'credited' : wantsCredit ? 'unverified' : 'absent';
+  const creditedTo = chartSupport === 'credited' ? 'NIP' : null;
+  const ipNarrative = fillPhrase(checklist.phrases.factor_7, {
+    party: partyName('IP'),
+    state: ip.submitted ? 'submitted' : 'absent',
+    credit: 'none',
+  });
+  const nipNarrative = fillPhrase(checklist.phrases.factor_7, {
+    party: partyName('NIP'),
+    state: nip.submitted ? 'submitted' : 'absent',
+    credit: creditedTo === 'NIP' ? 'NIP' : 'none',
+  });
   return {
     factor_id: 'additional_information',
     number,
     label,
     ip,
     nip,
-    narrative: fillPhrase(checklist.phrases.factor_7, {
-      ip_state: ip.submitted ? 'submitted' : 'did not submit',
-      nip_state: nip.submitted ? 'submitted' : 'did not submit',
-    }),
-    credited_to: null,
+    narrative: joinSentences(ipNarrative, nipNarrative),
+    ip_narrative: ipNarrative,
+    nip_narrative: nipNarrative,
+    credited_to: creditedTo,
+    chart_support: chartSupport,
   };
 }
 
@@ -173,14 +189,19 @@ function submissionFactor(
   }
   const ip = listedParty(request, factorId, 'IP');
   const nip = listedParty(request, factorId, 'NIP');
+  const ipNarrative = partySentence(checklist, label, 'IP', ip.submitted);
+  const nipNarrative = partySentence(checklist, label, 'NIP', nip.submitted);
   return {
     factor_id: factorId,
     number,
     label,
     ip,
     nip,
-    narrative: `${partySentence(checklist, label, 'IP', ip.submitted)} ${partySentence(checklist, label, 'NIP', nip.submitted)}`,
+    narrative: joinSentences(ipNarrative, nipNarrative),
+    ip_narrative: ipNarrative,
+    nip_narrative: nipNarrative,
     credited_to: null,
+    chart_support: 'absent',
   };
 }
 
@@ -193,22 +214,26 @@ function listedParty(request: DeterminationRequest, factorId: FactorId, party: P
   const material = request.factor_materials.find((item) => item.factor_id === factorId && item.party === party);
   const known = new Set(request.documents.map((doc) => doc.doc_id));
   const documentIds = (material?.document_ids ?? []).filter((id) => known.has(id));
-  return {
-    party,
-    submitted: documentIds.length > 0,
-    document_ids: documentIds,
-    excerpt: null,
-    excerpt_in_file: null,
-  };
+  return emptyParty(party, documentIds.length > 0, documentIds);
 }
 
 function partyDocs(party: Party, docs: readonly IdrDocumentInput[]): PartyFactorEvidence {
   const mine = docs.filter((doc) => doc.party === party);
+  return emptyParty(party, mine.length > 0, mine.map((doc) => doc.doc_id));
+}
+
+function emptyParty(party: Party, submitted: boolean, documentIds: readonly string[]): PartyFactorEvidence {
   return {
     party,
-    submitted: mine.length > 0,
-    document_ids: mine.map((doc) => doc.doc_id),
+    submitted,
+    document_ids: documentIds,
     excerpt: null,
     excerpt_in_file: null,
+    board_certification: null,
+    specialty: null,
   };
+}
+
+function joinSentences(left: string, right: string): string {
+  return [left, right].filter((part) => part.trim().length > 0).join(' ');
 }

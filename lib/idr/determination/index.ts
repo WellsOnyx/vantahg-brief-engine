@@ -1,11 +1,13 @@
-export { composeDraft, templateMatchesCase } from './draft';
+export { buildDraftParagraphs, composeDraft, templateMatchesCase } from './draft';
 export type { ComposeOk, ComposeStop } from './draft';
+export { completedDateInNewYork } from './date';
 export { extractFigures } from './extract';
-export { buildFactorEvidence, renderFactorBlock } from './factors';
+export { buildFactorEvidence, renderPartyParagraph } from './factors';
 export { applyUnifiedDiff, proposeContentEdit, unifiedDiff } from './feedback';
 export { detectIntake } from './intake';
 export type { IntakeOk, IntakeStop } from './intake';
-export { defaultIdrContentRoot, loadIdrCatalog, loadIdrCatalogFromFiles, readIdrContentFiles, templateKey } from './load';
+export { defaultIdrContentRoot, loadIdrCatalog, loadIdrCatalogFromFiles, nipTemplateId, readIdrContentFiles, templateKey } from './load';
+export { identicalOfferLineIds, selectNipBranch, selectTemplateId } from './select';
 export { currencyTokens, formatCents, parseExactCents, sameMultiset } from './money';
 export { fillPhrase, partyName } from './phrases';
 export { evaluateGates, findOpsMarkup, gateFailed } from './qa';
@@ -29,6 +31,9 @@ export {
   DOCUMENT_ROLES,
   FACTOR_IDS,
   FIGURE_KINDS,
+  LIVE_TEXT_MARKER,
+  NIP_BRANCHES,
+  PARAGRAPH_ROLES,
   PHRASE_KEYS,
   REQUIRED_GATE_IDS,
 } from './types';
@@ -51,6 +56,7 @@ export type {
   IdrDocumentInput,
   IntakeRecord,
   LineItemInput,
+  NipBranch,
   Party,
   QaChecklist,
   TemplateFile,
