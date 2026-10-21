@@ -114,7 +114,10 @@ export default function ClientLensPage() {
           subtitle="One case object. This surface is SLA + determinations + statements — no internal CX notes, no other tenants, no raw briefs."
           actions={
             <div className="flex gap-2">
-              <Link href="/portal/tpa/determinations" className="btn btn-primary text-sm">
+              <Link href="/portal/tpa/submit" className="btn btn-primary text-sm">
+                Submit a case
+              </Link>
+              <Link href="/portal/tpa/determinations" className="text-sm text-white/80 underline">
                 Determinations
               </Link>
               <Link href="/portal/tpa/reports" className="text-sm text-white/80 underline">
@@ -154,7 +157,7 @@ export default function ClientLensPage() {
                   {lens.open_cases.length === 0 ? (
                     <EmptyState
                       title="No open cases."
-                      body="Synthetic intake lands here with a running clock."
+                      body="Submit a case for your organization. Other clients' cases never appear here."
                     />
                   ) : (
                     <ul className="divide-y divide-border">

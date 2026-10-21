@@ -27,4 +27,5 @@ export type {
   SessionUser,
   SessionCookiePayload,
   SignInResult,
+  AccountStepResult,
 } from './types';

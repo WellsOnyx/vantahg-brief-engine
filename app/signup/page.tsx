@@ -21,7 +21,7 @@ import {
  * TPA / health-plan prospects belong on /signup-tpa.
  */
 
-type State = 'form' | 'sent';
+type State = 'form' | 'sent' | 'create' | 'confirm';
 
 const ROLE_OPTIONS = [
   { value: 'reviewer', label: 'Physician Reviewer' },
@@ -37,8 +37,11 @@ export default function SignupPage() {
   const [organization, setOrganization] = useState('');
   const [role, setRole] = useState('reviewer');
   const [notes, setNotes] = useState('');
+  const [password, setPassword] = useState('');
+  const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -70,6 +73,104 @@ export default function SignupPage() {
     }
 
     setLoading(false);
+  }
+
+  async function handleCreate(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/auth/sign-up', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, full_name: fullName }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { message?: string; error?: string };
+      if (res.status === 503 && data.error === 'use_supabase') {
+        setError('Client accounts are created by your admin on this deployment. Use Request access.');
+      } else if (!res.ok) {
+        setError(data.message || 'Check the password rules and try again.');
+      } else {
+        setNotice(data.message || 'Check your email for a confirmation code.');
+        setState('confirm');
+      }
+    } catch {
+      setError('Network error. Try again.');
+    }
+    setLoading(false);
+  }
+
+  async function handleConfirm(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/auth/confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, code }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { message?: string };
+      if (!res.ok) {
+        setError(data.message || 'That code did not work.');
+      } else {
+        window.location.href = '/login?reason=confirmed';
+        return;
+      }
+    } catch {
+      setError('Network error. Try again.');
+    }
+    setLoading(false);
+  }
+
+  if (state === 'confirm') {
+    return (
+      <AuthShell
+        eyebrow="Confirm email"
+        title={<>Enter the code.</>}
+        subtitle="We sent it to your work email. After this, sign in. Cases appear once an admin links your organization."
+        footer={
+          <p>
+            <button type="button" className="underline" onClick={() => setState('create')}>
+              Back
+            </button>
+          </p>
+        }
+      >
+        <form onSubmit={handleConfirm} className="space-y-6">
+          {notice && <p className="text-sm text-navy">{notice}</p>}
+          {error && <AuthError>{error}</AuthError>}
+          <AuthField id="code" label="Confirmation code" value={code} onChange={setCode} required autoComplete="one-time-code" />
+          <AuthCTA type="submit" disabled={loading}>{loading ? 'Confirming…' : 'Confirm email'}</AuthCTA>
+        </form>
+      </AuthShell>
+    );
+  }
+
+  if (state === 'create') {
+    return (
+      <AuthShell
+        eyebrow="Client account"
+        title={<>Create your sign-in.</>}
+        subtitle="Med Review client portal. Email verification is required. This does not open another organization's cases."
+        footer={
+          <p>
+            <button type="button" className="underline" onClick={() => { setState('form'); setError(null); }}>
+              Request staff access instead
+            </button>
+          </p>
+        }
+      >
+        <form onSubmit={handleCreate} className="space-y-6">
+          {error && <AuthError>{error}</AuthError>}
+          <AuthField id="full_name" label="Full name" value={fullName} onChange={setFullName} required autoComplete="name" />
+          <AuthField id="email" label="Work email" type="email" value={email} onChange={setEmail} required autoComplete="email" />
+          <AuthField id="password" label="Password" type="password" value={password} onChange={setPassword} required autoComplete="new-password" minLength={12} />
+          <p className="text-[11px] text-muted">12+ characters, upper and lower case, a number, and a symbol.</p>
+          <AuthCTA type="submit" disabled={loading}>{loading ? 'Sending code…' : 'Send confirmation code'}</AuthCTA>
+        </form>
+      </AuthShell>
+    );
   }
 
   if (state === 'sent') {
@@ -205,6 +306,15 @@ export default function SignupPage() {
             {loading ? 'Sending…' : 'Request access'}
           </AuthCTA>
         </div>
+        <p className="text-sm text-center">
+          <button
+            type="button"
+            className="text-gold-dark underline decoration-gold/30 underline-offset-4"
+            onClick={() => { setState('create'); setError(null); }}
+          >
+            Create a client account instead
+          </button>
+        </p>
 
         <p className="text-[11px] text-muted/70 leading-relaxed">
           By requesting access you agree to the Wells Onyx BAA and acceptable-use

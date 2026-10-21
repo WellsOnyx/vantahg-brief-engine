@@ -16,13 +16,20 @@ export function landingPathForRole(role: string | null | undefined): string {
     case 'client':
       return '/client';
     case 'reviewer':
+    case 'med_review':
       return '/med-review';
     case 'practice-lead':
-      return '/cases';
+    case 'medical-director':
+    case 'qa':
+      return '/quality';
     case 'delivery-lead':
     case 'concierge':
       return '/cx';
+    case 'intake':
+      return '/intake';
+    case 'idr-attorney':
+      return '/attorney/review';
     default:
-      return '/cases';
+      return '/welcome';
   }
 }

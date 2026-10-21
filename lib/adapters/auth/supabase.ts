@@ -9,6 +9,7 @@ import type {
   UserSummary,
   SessionUser,
   SignInResult,
+  AccountStepResult,
 } from './types';
 
 /**
@@ -159,6 +160,54 @@ export class SupabaseAuthAdapter implements AuthAdminAdapter {
       ok: false,
       code: 'unavailable',
       message: 'Supabase password sign-in stays on the browser client.',
+    };
+  }
+
+  async signUp(): Promise<AccountStepResult> {
+    return this.accountUnavailable();
+  }
+
+  async confirmSignUp(): Promise<AccountStepResult> {
+    return this.accountUnavailable();
+  }
+
+  async resendConfirmation(): Promise<AccountStepResult> {
+    return this.accountUnavailable();
+  }
+
+  async forgotPassword(): Promise<AccountStepResult> {
+    return this.accountUnavailable();
+  }
+
+  async confirmForgotPassword(): Promise<AccountStepResult> {
+    return this.accountUnavailable();
+  }
+
+  async continueSignInChallenge(): Promise<SignInResult> {
+    return {
+      ok: false,
+      code: 'unavailable',
+      message: 'Supabase password sign-in stays on the browser client.',
+    };
+  }
+
+  async refreshSession(): Promise<SignInResult> {
+    return {
+      ok: false,
+      code: 'unavailable',
+      message: 'Supabase session refresh stays on the SSR client.',
+    };
+  }
+
+  async revokeSession(): Promise<void> {
+    // Hybrid sign-out uses supabase.auth.signOut in the route.
+  }
+
+  private accountUnavailable(): AccountStepResult {
+    return {
+      ok: false,
+      code: 'unavailable',
+      message: 'This step runs on Cognito. ENABLE_AWS_AUTH is off.',
     };
   }
 }

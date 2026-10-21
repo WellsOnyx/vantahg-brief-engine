@@ -66,14 +66,19 @@ export async function GET(request: NextRequest) {
     // Cognito.
     const supabase = getServiceClient();
 
-    // Resolve client_id from the authenticated email. Same logic the RLS
-    // policy was running implicitly.
-    const { data: clientRow } = await supabase
-      .from('clients')
-      .select('id')
-      .eq('contact_email', authResult.user.email)
-      .maybeSingle();
-    if (!clientRow?.id) {
+    // Prefer the session bind (Cognito custom:client_id / user_profiles).
+    // Fall back to the contact email only when the account is the
+    // organization's primary contact.
+    let tenantId = authResult.user.client_id ?? null;
+    if (!tenantId) {
+      const { data: clientRow } = await supabase
+        .from('clients')
+        .select('id')
+        .eq('contact_email', authResult.user.email)
+        .maybeSingle();
+      tenantId = clientRow?.id ?? null;
+    }
+    if (!tenantId) {
       return NextResponse.json({ error: 'No client tenant linked to this account' }, { status: 403 });
     }
 
@@ -82,7 +87,7 @@ export async function GET(request: NextRequest) {
       .select(
         'id, case_number, status, priority, patient_name, patient_member_id, procedure_codes, procedure_description, created_at, turnaround_deadline, determination, determination_at, review_type, authorization_number, service_category, ai_brief_generated_at',
       )
-      .eq('client_id', clientRow.id)
+      .eq('client_id', tenantId)
       .order('created_at', { ascending: false })
       .limit(200);
 

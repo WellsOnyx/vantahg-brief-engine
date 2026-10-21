@@ -2,6 +2,8 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { isDemoMode } from '@/lib/demo-mode';
 import { isIroPortalEntryPath } from '@/lib/routing/iro-public-demo';
+import { sessionClockDecision } from '@/lib/auth/account-flow';
+import { refreshCognitoPublic } from '@/lib/auth/cognito-public-refresh';
 
 // Public marketing / auth-flow page prefixes. `startsWith` semantics are
 // intentional here because routes like `/signup-tpa` and `/demo-tour` are
@@ -31,6 +33,12 @@ const PUBLIC_EXACT = new Set([
   '/api/auth/sign-in', // password sign-in — unauthenticated by definition; rate-limited internally
   '/api/auth/sign-out',
   '/api/auth/session',
+  '/api/auth/sign-up',
+  '/api/auth/confirm',
+  '/api/auth/forgot-password',
+  '/api/auth/reset-password',
+  '/api/auth/challenge',
+  '/api/auth/refresh',
   '/api/auth/request-access', // Concierge-mediated access request — unauthenticated by definition
   '/api/verify-demo-password', // password gate for demo preview
   '/api/stoploss/aggregate', // public synthetic stop-loss time aggregate
@@ -74,19 +82,92 @@ function isDemoProtectedRoute(pathname: string): boolean {
 // signature verification happens inside Node-runtime API routes via
 // CognitoAuthAdapter.getSessionUser. The middleware only needs to answer
 // "is this caller plausibly authenticated?"
-function hasValidCognitoSession(request: NextRequest): boolean {
+function readCognitoCookie(request: NextRequest): {
+  raw: string;
+  id_token?: string;
+  access_token?: string;
+  refresh_token?: string;
+  expires_at?: number;
+  absolute_expires_at?: number;
+} | null {
   const raw = request.cookies.get('vantaum_session')?.value;
-  if (!raw) return false;
+  if (!raw) return null;
   try {
-    const parsed = JSON.parse(raw) as { id_token?: string; expires_at?: number };
-    if (!parsed?.id_token) return false;
-    if (typeof parsed.expires_at === 'number' && parsed.expires_at < Date.now()) {
-      return false;
-    }
-    return true;
+    const parsed = JSON.parse(raw) as {
+      id_token?: string;
+      access_token?: string;
+      refresh_token?: string;
+      expires_at?: number;
+      absolute_expires_at?: number;
+    };
+    if (!parsed?.id_token) return null;
+    return { raw, ...parsed };
   } catch {
-    return false;
+    return null;
   }
+}
+
+function hasValidCognitoSession(request: NextRequest): boolean {
+  const parsed = readCognitoCookie(request);
+  if (!parsed) return false;
+  return sessionClockDecision({
+    expiresAt: parsed.expires_at,
+    absoluteExpiresAt: parsed.absolute_expires_at,
+    hasRefresh: Boolean(parsed.refresh_token),
+    now: Date.now(),
+  }) === 'valid';
+}
+
+const SESSION_COOKIE = 'vantaum_session';
+const SESSION_CAP_SEC = 60 * 60 * 8;
+
+async function refreshCognitoIfNeeded(request: NextRequest): Promise<NextResponse | null> {
+  if (process.env.ENABLE_AWS_AUTH !== 'true') return null;
+  const parsed = readCognitoCookie(request);
+  if (!parsed?.refresh_token) return null;
+  const decision = sessionClockDecision({
+    expiresAt: parsed.expires_at,
+    absoluteExpiresAt: parsed.absolute_expires_at,
+    hasRefresh: true,
+    now: Date.now(),
+  });
+  if (decision !== 'refresh') return null;
+  const region = process.env.COGNITO_REGION || process.env.AWS_REGION || 'us-east-1';
+  const clientId = process.env.COGNITO_CLIENT_ID || '';
+  const tokens = await refreshCognitoPublic({
+    region,
+    clientId,
+    refreshToken: parsed.refresh_token,
+  });
+  if (!tokens) return null;
+  const now = Date.now();
+  const absolute = parsed.absolute_expires_at ?? now + SESSION_CAP_SEC * 1000;
+  if (now >= absolute) return null;
+  const maxAge = Math.max(1, Math.floor((absolute - now) / 1000));
+  const nextCookie = JSON.stringify({
+    id_token: tokens.id_token,
+    access_token: tokens.access_token,
+    refresh_token: tokens.refresh_token ?? parsed.refresh_token,
+    expires_at: now + tokens.expires_in * 1000,
+    absolute_expires_at: absolute,
+  });
+  const headers = new Headers(request.headers);
+  const previous = headers.get('cookie') ?? '';
+  const replaced = previous
+    .split(';')
+    .map((part) => part.trim())
+    .filter((part) => part && !part.startsWith(`${SESSION_COOKIE}=`));
+  replaced.push(`${SESSION_COOKIE}=${encodeURIComponent(nextCookie)}`);
+  headers.set('cookie', replaced.join('; '));
+  const response = NextResponse.next({ request: { headers } });
+  response.cookies.set(SESSION_COOKIE, nextCookie, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+    maxAge,
+  });
+  return response;
 }
 
 export async function middleware(request: NextRequest) {
@@ -142,7 +223,12 @@ export async function middleware(request: NextRequest) {
   // Cognito session short-circuit: if the caller has a plausible
   // vantaum_session cookie, let them through. Per-route auth-guard
   // calls inside individual route handlers do full JWT verification
-  // when they need the user object.
+  // when they need the user object. An expired id token with a live
+  // refresh token is rotated here, inside the 8-hour absolute cap.
+  if (!isPublicRoute(pathname)) {
+    const refreshed = await refreshCognitoIfNeeded(request);
+    if (refreshed) return refreshed;
+  }
   if (hasValidCognitoSession(request)) {
     return NextResponse.next();
   }

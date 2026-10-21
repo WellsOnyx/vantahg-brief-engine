@@ -47,9 +47,13 @@ export async function assertCaseAccess(
   // Client role: contact_email must match. If the case has no client_id
   // at all, no client user owns it — deny.
   if (user.role === 'client') {
-    const ownerEmail = caseData.client?.contact_email?.toLowerCase().trim();
-    const userEmail = user.email?.toLowerCase().trim();
-    if (ownerEmail && userEmail && ownerEmail === userEmail) return null;
+    if (user.client_id) {
+      if (caseData.client_id && user.client_id === caseData.client_id) return null;
+    } else {
+      const ownerEmail = caseData.client?.contact_email?.toLowerCase().trim();
+      const userEmail = user.email?.toLowerCase().trim();
+      if (ownerEmail && userEmail && ownerEmail === userEmail) return null;
+    }
 
     const ctx: RequestContext = getRequestContext(request);
     await logSecurityEvent(
