@@ -1,0 +1,19 @@
+name: Repo guards
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  php-and-phi:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Reject PHP
+        run: node scripts/check-no-php.mjs
+      - name: Reject PHI patterns and case binaries
+        run: node scripts/check-idr-phi.mjs
