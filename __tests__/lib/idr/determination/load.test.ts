@@ -11,7 +11,7 @@ describe('IDR content loader', () => {
   it('loads the versioned template set and checklist from config/idr', () => {
     const catalog = loadIdrCatalog();
     expect(catalog.templates).toHaveLength(12);
-    expect(catalog.checklist.version).toBe('2026-10-22.1');
+    expect(catalog.checklist.version).toBe('2026-10-22.2');
     expect(catalog.checklist.schema).toBe('idr-qa-checklist');
     expect(catalog.checklist.approval).toEqual({
       status: 'draft_pending_human_approval',

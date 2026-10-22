@@ -1,14 +1,14 @@
 export { catalogApprovedForProduction } from './approval';
-export { buildDraftParagraphs, composeDraft, templateMatchesCase } from './draft';
+export { buildDraftParagraphs, composeDraft, lineMatchesPrimary, templateMatchesCase } from './draft';
 export type { ComposeOk, ComposeStop } from './draft';
 export { completedDateInNewYork } from './date';
 export { extractFigures } from './extract';
-export { FACTOR_7_CREDIT_BASIS, FACTOR_BASIS, buildFactorEvidence, renderPartyParagraph } from './factors';
+export { FACTOR_7_CREDIT_BASIS, FACTOR_BASIS, acuityTextForParty, buildFactorEvidence, renderPartyParagraph } from './factors';
 export { applyUnifiedDiff, proposeContentEdit, unifiedDiff } from './feedback';
 export { detectIntake } from './intake';
 export type { IntakeOk, IntakeStop } from './intake';
 export { defaultIdrContentRoot, loadIdrCatalog, loadIdrCatalogFromFiles, nipTemplateId, readIdrContentFiles, templateKey } from './load';
-export { NIP_BRANCH_BASIS, identicalOfferLineIds, selectNipBranch, selectTemplateId } from './select';
+export { NIP_BRANCH_BASIS, identicalOfferLineIds, nipHigherOfferLineIds, selectNipBranch, selectTemplateId } from './select';
 export { currencyTokens, formatCents, parseExactCents, sameMultiset } from './money';
 export { CV_SENTENCE_BASIS, fillPhrase, partyName } from './phrases';
 export {

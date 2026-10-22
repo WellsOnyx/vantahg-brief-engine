@@ -80,6 +80,29 @@ export function selectNipBranch(facts: SelectionFacts): NipBranch | null {
   return null;
 }
 
+/**
+ * Line ids where the non-initiating offer is higher than the initiating offer.
+ * When the initiating party still prevails, the draft does not choose wording.
+ * house_style. Offers are the submitted dollar amounts: 45 CFR 149.510(c)(5)(i).
+ */
+export function nipHigherOfferLineIds(lineIds: readonly string[], figures: readonly Figure[]): string[] {
+  const hits: string[] = [];
+  for (const lineId of lineIds) {
+    const ip = figureFor(figures, lineId, 'ip_offer');
+    const nip = figureFor(figures, lineId, 'nip_offer');
+    if (
+      ip?.status === 'present' &&
+      nip?.status === 'present' &&
+      ip.amount_cents !== null &&
+      nip.amount_cents !== null &&
+      nip.amount_cents > ip.amount_cents
+    ) {
+      hits.push(lineId);
+    }
+  }
+  return hits;
+}
+
 export function identicalOfferLineIds(lineIds: readonly string[], figures: readonly Figure[]): string[] {
   const hits: string[] = [];
   for (const lineId of lineIds) {

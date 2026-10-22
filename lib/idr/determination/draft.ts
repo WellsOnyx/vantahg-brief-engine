@@ -135,6 +135,25 @@ export function composeDraft(input: {
   };
 }
 
+/**
+ * A later batch line uses the "same as" link only when its initiating-party offer,
+ * non-initiating-party offer, qualifying payment amount, and service label match the primary line.
+ * Otherwise the line keeps its own text. house_style. Batched items: 45 CFR 149.510(c)(4).
+ */
+export function lineMatchesPrimary(
+  lineItems: readonly { line_id: string; label: string }[],
+  figures: readonly Figure[],
+  lineId: string,
+): boolean {
+  const primary = lineItems[0];
+  const line = lineItems.find((item) => item.line_id === lineId);
+  if (!primary || !line || line.line_id === primary.line_id) return false;
+  if (line.label !== primary.label) return false;
+  return (['ip_offer', 'nip_offer', 'qpa'] as const).every(
+    (kind) => figureKey(figures, primary.line_id, kind) === figureKey(figures, line.line_id, kind),
+  );
+}
+
 function chartParagraph(checklist: QaChecklist, intake: IntakeRecord, figures: readonly Figure[]): string {
   const primaryId = intake.line_items[0]?.line_id ?? '';
   const link = checklist.slots.batch_line_link;
@@ -143,11 +162,18 @@ function chartParagraph(checklist: QaChecklist, intake: IntakeRecord, figures: r
       const ip = figureText(figures, item.line_id, 'ip_offer');
       const nip = figureText(figures, item.line_id, 'nip_offer');
       const qpa = figureText(figures, item.line_id, 'qpa');
-      const same = index === 0 ? '' : ` ${link} ${primaryId}`;
+      const same =
+        index > 0 && lineMatchesPrimary(intake.line_items, figures, item.line_id) ? ` ${link} ${primaryId}` : '';
       const brief = index === 0 ? ` nip_brief:${intake.nip_brief}` : '';
       return `line:${item.line_id}${same} ip_offer:${ip} nip_offer:${nip} qpa:${qpa}${brief}`;
     })
     .join(' ');
+}
+
+function figureKey(figures: readonly Figure[], lineId: string, kind: Figure['kind']): string {
+  const figure = figures.find((item) => item.line_id === lineId && item.kind === kind);
+  if (!figure || figure.status !== 'present' || figure.amount_cents === null) return 'MISSING';
+  return String(figure.amount_cents);
 }
 
 function figureText(figures: readonly Figure[], lineId: string, kind: Figure['kind']): string {

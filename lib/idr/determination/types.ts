@@ -57,6 +57,7 @@ export const RULE_IDS = [
   'qpa_consideration',
   'statutory_factors',
   'offer_selection',
+  'ip_prevails_higher_nip_offer',
 ] as const;
 export type RuleId = (typeof RULE_IDS)[number];
 
@@ -108,6 +109,7 @@ export const PHRASE_KEYS = [
   'acuity_records',
   'acuity_report',
   'acuity_absent',
+  'acuity_party_absent',
   'party_submitted',
   'party_absent',
   'factor_7',

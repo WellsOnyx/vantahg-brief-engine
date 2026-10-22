@@ -123,6 +123,7 @@ const PhraseSchema = z
     acuity_records: z.string().min(1),
     acuity_report: z.string().min(1),
     acuity_absent: z.string().min(1),
+    acuity_party_absent: z.string().min(1),
     party_submitted: z.string().min(1),
     party_absent: z.string().min(1),
     factor_7: z.string().min(1),
@@ -382,7 +383,7 @@ function validatePhrases(
   const factor7 = gates.find((gate): gate is Factor7Gate => gate.id === 'factor_7_rule');
   if (!acuity || !neutral || !factor7) return;
   const pattern = new RegExp(acuity.forbid_pattern, 'i');
-  const acuityKeys: PhraseKey[] = ['acuity_both', 'acuity_records', 'acuity_report', 'acuity_absent'];
+  const acuityKeys: PhraseKey[] = ['acuity_both', 'acuity_records', 'acuity_report', 'acuity_absent', 'acuity_party_absent'];
   for (const key of acuityKeys) {
     const sentence = phrases[key];
     if (pattern.test(sentence) || acuity.forbid_tokens.some((token) => sentence.toLowerCase().includes(token.toLowerCase()))) {
@@ -391,6 +392,9 @@ function validatePhrases(
     if (acuity.argument_forbid.some((phrase) => sentence.toLowerCase().includes(phrase.toLowerCase()))) {
       throw new IdrContentError(`${path}: acuity phrase "${key}" contains argument language.`);
     }
+  }
+  if (!phrases.acuity_party_absent.includes('{{party}}')) {
+    throw new IdrContentError(`${path}: the party acuity absence sentence must name the party.`);
   }
   if (factor7.credit_patterns.some((phrase) => phrases.factor_7.toLowerCase().includes(phrase.toLowerCase()))) {
     throw new IdrContentError(`${path}: the factor 7 sentence matches a credit pattern.`);

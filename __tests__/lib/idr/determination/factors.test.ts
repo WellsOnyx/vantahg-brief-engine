@@ -36,7 +36,11 @@ describe('statutory factor evidence', () => {
     const request = singleRequest();
     const factors = buildFactorEvidence(request, checklist);
     const acuity = factors.find((factor) => factor.factor_id === 'acuity_complexity');
-    expect(acuity?.narrative).toBe(checklist.phrases.acuity_both);
+    expect(acuity?.ip_narrative).toBe(checklist.phrases.acuity_both);
+    expect(acuity?.nip_narrative).toBe('acuity:absent party:non-initiating party');
+    expect(acuity?.nip_narrative).not.toContain('acuity_attachments');
+    expect(acuity?.nip.submitted).toBe(false);
+    expect(acuity?.nip.document_ids).toEqual([]);
     expect(acuity?.narrative).not.toMatch(/\b\d{5}\b/);
     expect(acuity?.narrative).not.toContain('CPT');
     expect(acuity?.narrative).not.toContain('warrants');

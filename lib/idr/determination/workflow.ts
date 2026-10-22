@@ -11,7 +11,7 @@ import { extractFigures } from './extract';
 import { buildFactorEvidence } from './factors';
 import { detectIntake } from './intake';
 import { evaluateGates, findOpsMarkup } from './qa';
-import { identicalOfferLineIds, selectTemplateId } from './select';
+import { identicalOfferLineIds, nipHigherOfferLineIds, selectTemplateId } from './select';
 import {
   assertBatchingStub,
   assertGatewayClosed,
@@ -164,6 +164,23 @@ export function prepareDetermination(
       `Initiating party and non-initiating party offers are identical on ${identical.join(', ')}.`,
       shared,
     );
+  }
+
+  if (request.prevailing_party === 'IP') {
+    const higher = nipHigherOfferLineIds(
+      detected.intake.line_items.map((item) => item.line_id),
+      figures,
+    );
+    if (higher.length > 0) {
+      return blocked(
+        actor,
+        request,
+        deps,
+        'human_decision',
+        `The non-initiating party offer is higher on ${higher.join(', ')} and the initiating party prevails. A person decides the wording.`,
+        shared,
+      );
+    }
   }
 
   const selected = selectTemplateId({
@@ -351,6 +368,22 @@ function judgeDraft(
   };
   if (gates.some((gate) => !gate.pass)) {
     return blocked(actor, request, deps, 'qa_failed', 'QA gates failed. The draft cannot advance.', base);
+  }
+  if (draft.packet.prevailing_party === 'IP') {
+    const higher = nipHigherOfferLineIds(
+      draft.intake.line_items.map((item) => item.line_id),
+      draft.figures,
+    );
+    if (higher.length > 0) {
+      return blocked(
+        actor,
+        request,
+        deps,
+        'human_decision',
+        `The non-initiating party offer is higher on ${higher.join(', ')} and the initiating party prevails. A person decides the wording.`,
+        base,
+      );
+    }
   }
   if (!catalogApprovedForProduction(deps.catalog)) {
     return blocked(

@@ -1,3 +1,5 @@
+import { lineMatchesPrimary } from './draft';
+import { acuityTextForParty } from './factors';
 import { currencyTokens, formatCents, sameMultiset } from './money';
 import { fillPhrase, partyName } from './phrases';
 import { identicalOfferLineIds, selectTemplateId } from './select';
@@ -139,33 +141,32 @@ function templateMatch(context: QaContext): GateResult {
 function acuityGate(context: QaContext): GateResult {
   const gate = gateById(context, 'no_cpt_in_acuity') as AcuityGate;
   const factor = context.factors.find((item) => item.factor_id === gate.factor);
-  const narrative = factor?.narrative ?? '';
   const pattern = new RegExp(gate.forbid_pattern, 'i');
-  const hasRecords = context.documents.some((doc) => doc.role === 'records');
-  const hasReport = context.documents.some((doc) => doc.role === 'op_report');
   const problems: string[] = [];
-  if (!hasRecords && !hasReport) {
-    const slot = context.checklist.slots.no_acuity_paragraph.trim();
-    if (!slot) problems.push('no-acuity paragraph is empty');
-    else if (narrative.trim() !== slot) problems.push('no-acuity paragraph does not match the checklist slot');
-  } else {
-    const expected =
-      hasRecords && hasReport
-        ? context.checklist.phrases.acuity_both
-        : hasRecords
-          ? context.checklist.phrases.acuity_records
-          : context.checklist.phrases.acuity_report;
-    if (narrative !== expected) problems.push('acuity text is not the attachment note');
+  for (const party of ['IP', 'NIP'] as const) {
+    const expected = acuityTextForParty(context.documents, context.checklist, party);
+    const actual = party === 'IP' ? (factor?.ip_narrative ?? '') : (factor?.nip_narrative ?? '');
+    const paragraph = party === 'IP' ? context.packet.paragraphs[1] : context.packet.paragraphs[2];
+    const name = partyName(party);
+    if (!expected) problems.push('no-acuity paragraph is empty');
+    else if (actual !== expected) problems.push(`acuity text for the ${name} does not match that party's filings`);
+    if (expected && paragraph && !paragraph.includes(expected)) {
+      problems.push(`acuity note for the ${name} is missing from that party's paragraph`);
+    }
+    collectAcuityProblems(problems, actual, gate, pattern);
   }
-  if (pattern.test(narrative)) problems.push('acuity text contains a CPT code');
-  if (gate.forbid_tokens.some((token) => narrative.toLowerCase().includes(token.toLowerCase()))) {
+  collectAcuityProblems(problems, factor?.narrative ?? '', gate, pattern);
+  return result(gate.id, gate.label, problems);
+}
+
+function collectAcuityProblems(problems: string[], text: string, gate: AcuityGate, pattern: RegExp): void {
+  if (pattern.test(text)) problems.push('acuity text contains a CPT code');
+  if (gate.forbid_tokens.some((token) => text.toLowerCase().includes(token.toLowerCase()))) {
     problems.push('acuity text contains a code-set token');
   }
-  if (gate.argument_forbid.some((phrase) => hitsPhrase(narrative, phrase))) {
+  if (gate.argument_forbid.some((phrase) => hitsPhrase(text, phrase))) {
     problems.push('acuity text contains argument');
   }
-  if (narrative && !context.packet.text.includes(narrative)) problems.push('acuity note is missing from the draft');
-  return result(gate.id, gate.label, problems);
 }
 
 function cvGate(context: QaContext): GateResult {
@@ -215,20 +216,31 @@ function qpaGate(context: QaContext): GateResult {
   const problems: string[] = [];
   const chart = context.packet.paragraphs[0];
   if (context.intake.shape === 'batched') {
-    const needle = `${link} ${primary}`;
-    const count = chart.split(needle).length - 1;
-    if (count !== context.intake.line_items.length - 1) {
-      problems.push('batch lines do not link to the primary line');
-    }
-    const second = context.intake.line_items[1]?.line_id;
-    const primarySegment = second ? chart.split(second)[0] : chart;
+    const segments = chartSegments(chart);
+    const primarySegment = segments.get(primary) ?? '';
     if (primarySegment.includes(link)) problems.push('primary line is linked as a secondary line');
+    for (const item of context.intake.line_items.slice(1)) {
+      const segment = segments.get(item.line_id) ?? '';
+      const matches = lineMatchesPrimary(context.intake.line_items, context.figures, item.line_id);
+      const linked = segment.includes(`${link} ${primary}`);
+      if (matches && !linked) problems.push(`${item.line_id} matches the primary line and is not linked`);
+      if (!matches && segment.includes(link)) problems.push(`${item.line_id} does not match the primary line`);
+    }
     if (context.template.qpa_wording === 'single') problems.push('template QPA variant is single on a batch');
   } else {
     if (context.packet.text.includes(link)) problems.push('single dispute uses a batch line link');
     if (context.template.qpa_wording === 'batch') problems.push('template QPA variant is batch on a single dispute');
   }
   return result(gate.id, gate.label, problems);
+}
+
+function chartSegments(chart: string): Map<string, string> {
+  const segments = new Map<string, string>();
+  for (const part of chart.split(/(?=line:)/)) {
+    const id = /^line:(\S+)/.exec(part)?.[1];
+    if (id) segments.set(id, part);
+  }
+  return segments;
 }
 
 function factor7Gate(context: QaContext): GateResult {

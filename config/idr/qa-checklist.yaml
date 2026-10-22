@@ -6,7 +6,7 @@
 # and approved_for_production true. Partner wording is not in this file.
 # A rule is either basis public, with a citation, or basis house_style.
 
-version: "2026-10-22.1"
+version: "2026-10-22.2"
 schema: idr-qa-checklist
 
 approval:
@@ -46,7 +46,7 @@ rules:
     source_url: "https://www.ecfr.gov/current/title-45/section-149.510"
   - id: batch_same_as
     basis: house_style
-    note: "Linking later batch lines to the primary line id is an internal cross-reference. Batched items and one selected offer per determination are public."
+    note: "Linking a later batch line to the primary line is an internal cross-reference, and only when that line's offers, qualifying payment amount, and service label match the primary line. Batched items and one selected offer per determination are public."
     citation: "45 CFR 149.510(c)(4)"
     source_url: "https://www.ecfr.gov/current/title-45/section-149.510"
   - id: banned_words
@@ -83,6 +83,11 @@ rules:
     basis: public
     note: "The payment determination selects one of the offers submitted by the parties as the out-of-network rate."
     citation: "45 CFR 149.510(c)(5)(ii)(A)"
+    source_url: "https://www.ecfr.gov/current/title-45/section-149.510"
+  - id: ip_prevails_higher_nip_offer
+    basis: house_style
+    note: "When the initiating party prevails and the non-initiating party offer is higher, the draft does not choose wording. A person decides. The offers themselves are the submitted dollar amounts."
+    citation: "45 CFR 149.510(c)(5)(i)"
     source_url: "https://www.ecfr.gov/current/title-45/section-149.510"
 
 factors:
@@ -180,6 +185,7 @@ phrases:
   acuity_records: "acuity_attachments:records"
   acuity_report: "acuity_attachments:op_report"
   acuity_absent: "acuity:absent"
+  acuity_party_absent: "acuity:absent party:{{party}}"
   party_submitted: "factor:{{factor}} party:{{party}} submitted:yes"
   party_absent: "factor:{{factor}} party:{{party}} submitted:no"
   factor_7: "factor_7 party:{{party}} state:{{state}} credit:{{credit}}"

@@ -7,6 +7,14 @@ Future Claude/Cole/Jonah sessions: read this first.
 
 ---
 
+## 2026-10-22 — IDR ops QA on party filings and batch links
+
+- **Acuity:** each party paragraph summarizes that party's own records and operative report. When the other party filed and this party did not, the sentence says this party's acuity filing is absent. Checklist `2026-10-22.2`.
+- **Batch link:** a later line says `same as` the primary line only when its initiating-party offer, non-initiating-party offer, qualifying payment amount, and service label match. A differing line keeps its own text.
+- **Higher NIP offer:** if the initiating party prevails and a non-initiating offer is higher, the draft stops with `human_decision` and does not choose wording.
+
+---
+
 ## 2026-10-22 — IDR drafts use public sources only
 
 Jonah's rule: the IDR engine relies on public CMS sources. Partner wording is withdrawn and is not in the repo.

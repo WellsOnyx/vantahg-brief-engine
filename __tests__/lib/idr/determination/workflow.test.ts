@@ -42,6 +42,8 @@ describe('federal IDR determination workflow', () => {
     expect(ip).toContain('acuity_attachments:records,op_report');
     expect(ip).not.toContain('training:absent');
     expect(nip).toContain('training:absent non-initiating party');
+    expect(nip).toContain('acuity:absent party:non-initiating party');
+    expect(nip).not.toContain('acuity_attachments');
     expect(nip).not.toContain('board_certification:');
     expect(winner).toContain('prevailing_party:IP');
     expect(winner).toContain('The selected offer is the offer recorded for the prevailing party on this dispute.');
@@ -60,7 +62,7 @@ describe('federal IDR determination workflow', () => {
     expect(result.stamps).toMatchObject({
       template_id: 'ip-brief-single',
       template_version: '2026-10-22.1',
-      checklist_version: '2026-10-22.1',
+      checklist_version: '2026-10-22.2',
       template_path: 'config/idr/templates/ip-brief-single.md',
       checklist_path: 'config/idr/qa-checklist.yaml',
     });
@@ -70,15 +72,15 @@ describe('federal IDR determination workflow', () => {
     expect(result.figures?.every((figure) => figure.status === 'present' && figure.source)).toBe(true);
   });
 
-  it('links batch lines to the primary line and keeps November 1 eligibility unset', () => {
+  it('renders a differing batch line on its own and keeps November 1 eligibility unset', () => {
     const result = prepareDetermination(idrActor(), batchRequest(), approvedDeps());
     expect(result.ok).toBe(true);
     expect(result.intake?.shape).toBe('batched');
     expect(result.intake?.nip_brief).toBe('absent');
     expect(result.stamps?.template_id).toBe('nip-batch-qpa-discrepancy');
     const chart = result.clean_text?.split(/\n\s*\n/)[0] ?? '';
-    expect(chart).toContain('same as LI-SYN-A');
-    expect(chart.split('LI-SYN-B')[0]).not.toContain('same as');
+    expect(chart).not.toContain('same as');
+    expect(chart).toContain('line:LI-SYN-B ip_offer:$2,000.00 nip_offer:$1,200.00 qpa:$1,100.00');
     expect(chart).toContain('nip_brief:absent');
     expect(result.clean_text).toContain('prevailing_party:NIP');
     expect(result.clean_text).toContain('$2,000.00');
@@ -142,7 +144,7 @@ describe('federal IDR determination workflow', () => {
   it('records version stamps from the content files', () => {
     const files = readIdrContentFiles();
     files['config/idr/qa-checklist.yaml'] = files['config/idr/qa-checklist.yaml'].replace(
-      'version: "2026-10-22.1"',
+      'version: "2026-10-22.2"',
       'version: "2026-11-02.4"',
     );
     files['config/idr/templates/ip-brief-single.md'] = files['config/idr/templates/ip-brief-single.md'].replace(

@@ -53,13 +53,25 @@ describe('CMS public-use-file synthetic disputes', () => {
     const disputes = generateSyntheticDisputes(5000);
     const codes = new Map<string, number>();
     for (const dispute of disputes) {
-      const result = prepareDetermination(idrActor(), syntheticDisputeToRequest(dispute), used);
+      const request = syntheticDisputeToRequest(dispute);
+      const result = prepareDetermination(idrActor(), request, used);
       codes.set(result.code, (codes.get(result.code) ?? 0) + 1);
       expect(result.production_allowed).toBe(result.ok);
       expect(result.signed).toBe(false);
       expect(result.submitted).toBe(false);
+      const nipHigher =
+        request.prevailing_party === 'IP' &&
+        request.line_items.some((item) => Number(item.nip_offer.amount) > Number(item.ip_offer.amount));
+      if (nipHigher) {
+        expect(result.code).toBe('human_decision');
+        expect(result.clean_text).toBeNull();
+        expect(result.stamps).toBeNull();
+      } else {
+        expect(result.code).toBe('ready');
+      }
     }
-    expect(Object.fromEntries(codes)).toEqual({ ready: 5000 });
+    expect((codes.get('ready') ?? 0) + (codes.get('human_decision') ?? 0)).toBe(5000);
+    expect(codes.get('human_decision') ?? 0).toBeGreaterThan(0);
     const ineligible = disputes.find((dispute) => dispute.eligibility === 'ineligible');
     if (!ineligible) throw new Error('expected an ineligible synthetic dispute');
     const sample = prepareDetermination(idrActor(), syntheticDisputeToRequest(ineligible), used);

@@ -136,31 +136,45 @@ function trainingParty(
   };
 }
 
+/**
+ * Acuity text for one party, from that party's own records and operative report.
+ * When the other party filed and this party did not, the sentence names this party and says the filing is absent.
+ * When nobody filed, both parties use the checklist no-acuity paragraph.
+ * house_style for the per-party split. Acuity or complexity is public: 45 CFR 149.510(c)(5)(iii)(B)(3).
+ */
+export function acuityTextForParty(
+  documents: readonly IdrDocumentInput[],
+  checklist: QaChecklist,
+  party: Party,
+): string {
+  const records = documents.filter((doc) => doc.role === 'records' && doc.party === party);
+  const reports = documents.filter((doc) => doc.role === 'op_report' && doc.party === party);
+  if (records.length > 0 && reports.length > 0) return checklist.phrases.acuity_both;
+  if (records.length > 0) return checklist.phrases.acuity_records;
+  if (reports.length > 0) return checklist.phrases.acuity_report;
+  const anyoneFiled = documents.some((doc) => doc.role === 'records' || doc.role === 'op_report');
+  if (!anyoneFiled) return checklist.slots.no_acuity_paragraph.trim();
+  return fillPhrase(checklist.phrases.acuity_party_absent, { party: partyName(party) });
+}
+
 function acuityFactor(
   request: DeterminationRequest,
   checklist: QaChecklist,
   number: number,
   label: string,
 ): FactorEvidence {
-  const records = request.documents.filter((doc) => doc.role === 'records');
-  const reports = request.documents.filter((doc) => doc.role === 'op_report');
-  const sentence =
-    records.length > 0 && reports.length > 0
-      ? checklist.phrases.acuity_both
-      : records.length > 0
-        ? checklist.phrases.acuity_records
-        : reports.length > 0
-          ? checklist.phrases.acuity_report
-          : checklist.slots.no_acuity_paragraph.trim();
+  const ipSentence = acuityTextForParty(request.documents, checklist, 'IP');
+  const nipSentence = acuityTextForParty(request.documents, checklist, 'NIP');
+  const attachments = request.documents.filter((doc) => doc.role === 'records' || doc.role === 'op_report');
   return {
     factor_id: 'acuity_complexity',
     number,
     label,
-    ip: partyDocs('IP', [...records, ...reports]),
-    nip: partyDocs('NIP', [...records, ...reports]),
-    narrative: sentence,
-    ip_narrative: sentence,
-    nip_narrative: sentence,
+    ip: partyDocs('IP', attachments),
+    nip: partyDocs('NIP', attachments),
+    narrative: ipSentence === nipSentence ? ipSentence : joinSentences(ipSentence, nipSentence),
+    ip_narrative: ipSentence,
+    nip_narrative: nipSentence,
     credited_to: null,
     chart_support: 'absent',
   };
