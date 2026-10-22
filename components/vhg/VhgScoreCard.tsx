@@ -19,7 +19,8 @@ export function VhgScoreCard({ score }: { score: VhgScore }) {
       </span>
       <p className="text-[11px] uppercase tracking-wider text-[#0c2340]/50 mt-4">{LIKELY_IDR_CONTESTED_LABEL}</p>
       <p className="text-5xl text-[#0c2340] leading-none mt-1 font-semibold">{score.score}%</p>
-      <p className="text-xs text-[#0c2340]/60 mt-2">0–100% likelihood this synthetic case is later contested in IDR.</p>
+      <p className="text-xs text-[#0c2340]/60 mt-2">0–100% advisory index from public CMS dispute patterns. Not a filing rate.</p>
+      <p className="text-xs text-[#0c2340]/70 mt-1">Based on public CMS Federal IDR data.</p>
       <p className="text-sm text-[#0c2340] mt-4 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">{score.advisory}</p>
       <p className="text-[11px] uppercase tracking-wider text-[#0c2340]/50 mt-4">Top 3 drivers</p>
       <ol className="mt-2 space-y-2">
@@ -37,7 +38,7 @@ export function VhgScoreCard({ score }: { score: VhgScore }) {
         ))}
       </ol>
       <p className="text-[11px] text-[#0c2340]/50 mt-4">
-        {score.model_id} · {score.model_status.replaceAll('_', ' ')} · not a validated predictor
+        {score.data_source} · {score.model_status.replaceAll('_', ' ')} · not a validated predictor
       </p>
     </section>
   );

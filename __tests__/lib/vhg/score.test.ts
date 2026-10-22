@@ -21,7 +21,8 @@ describe('VHG score demo model', () => {
   it('marks the model as an unvalidated demo and keeps the physician in charge', () => {
     const score = scoreVhgCase(base);
     expect(score.model_status).toBe('demo_not_validated');
-    expect(score.model_id).toBe('vhg-score-demo-v1');
+    expect(score.model_id).toBe('vhg-score-cms-puf-v1');
+    expect(score.data_source).toBe('CMS public IDR PUF');
     expect(score.label).toBe(VHG_SCORE_LABEL);
     expect(score.label).toBe(`${VHG_BRAND} Score`);
     expect(score.label).not.toMatch(/VHG(?!\u2122)/);

@@ -21,7 +21,7 @@ Retired sales paths redirect to the Med Review application (`/signup-tpa`):
 | `/utilization-management` | `/signup-tpa` |
 | `/sign-up` | `/signup` (staff access request; unchanged) |
 
-`/demo` and `/stoploss` stay. Both are labelled synthetic. `/stoploss` is not a live IDR feed. Stop-loss legal review is still open (IDR data use, IDRE conflict, InterQual, VHG trademark). See [`16-vhg-score-demo.md`](16-vhg-score-demo.md).
+`/demo` and `/stoploss` stay. Both are labelled synthetic. `/stoploss` is not a live IDR feed. The score is based on public CMS Federal IDR data, not private case files. Named certified-entity comparison is not built. Stop-loss legal review is still open (IDRE conflict, InterQual, VHG trademark). See [`16-vhg-score-demo.md`](16-vhg-score-demo.md) and [`21-vhg-cms-public-calibration.md`](21-vhg-cms-public-calibration.md).
 
 Internal file names (`um-price-card.ts`, `um-brief-engine.ts`) and ledger SKU strings stay. Renaming them would break the contract keys this slice keeps.
 

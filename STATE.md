@@ -7,6 +7,18 @@ Future Claude/Cole/Jonah sessions: read this first.
 
 ---
 
+## 2026-10-22 — VHG™ score on public CMS IDR data
+
+Jonah, Oct 22: keep the Likely IDR Contested Score (0–100%, Low / Moderate / High, top 3 drivers) on `/demo` and `/stoploss`, and fit it only on public CMS Federal IDR data. Private case and arbitration rows are not a training input.
+
+- **Disconnected:** the scorer no longer reads the synthetic IDR generator or the redacted pattern file. Those files stay as the redaction proof. `npm run demo:vhg` still rewrites that proof. It does not train the score.
+- **Public files:** Federal IDR PUFs for 2024 Q3, 2024 Q4, and 2025 Q4, the data dictionary, and supplemental tables for 2024 Q4 through 2025 Q4. `npm run cms-idr:fetch` records the URL, as-of date, and sha256. Raw workbooks are gitignored. The committed table is `data/cms-idr/derived/feature-rates.json` (3,051,694 line items).
+- **Score:** `vhg-score-cms-puf-v1`, still `demo_not_validated`, `data_source` `CMS public IDR PUF`. Drivers cite service code, state initiation share, place of service, provider type, offer-to-QPA band, network status under 45 CFR 149.510, and unnamed outcome dispersion. The walkthrough packet is 60% Moderate.
+- **What it is not:** CMS publishes disputes, not the claims behind them, so this is a relative index, not a filing rate. Named certified-entity comparison is not built. One entity is left out of the dispersion spread; its name is not stored or shown.
+- **Doc:** [`docs/customer-ready/21-vhg-cms-public-calibration.md`](docs/customer-ready/21-vhg-cms-public-calibration.md).
+
+---
+
 ## 2026-10-20 — Production IRO portal
 
 Jonah, Oct 20: stop the public demo. The AWS account, BAA, RDS, S3, and KMS key are already up. No new infrastructure.

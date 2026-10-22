@@ -3,7 +3,8 @@
  *
  *   npm run demo:vhg
  *
- * Writes the redacted pattern file and prints the local and published URLs.
+ * Writes the redacted pattern file used only for the redaction proof.
+ * The score itself is calibrated on public CMS Federal IDR data.
  * Does not connect to a database and does not read live PHI.
  */
 import { mkdirSync, writeFileSync } from 'node:fs';

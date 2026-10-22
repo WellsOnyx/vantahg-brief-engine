@@ -1,0 +1,128 @@
+{
+  "catalog_version": "2026-10-22",
+  "data_source": "CMS public IDR PUF",
+  "page": "https://www.cms.gov/nosurprises/policies-and-resources/reports",
+  "files": [
+    {
+      "id": "puf-2024-q3",
+      "role": "puf",
+      "period": "2024-Q3",
+      "published_as_of": "2025-05-28",
+      "portal_generated": "2025-03-18",
+      "filename": "federal-idr-puf-2024-q3.xlsx",
+      "url": "https://www.cms.gov/files/document/federal-idr-puf-2024-q3.xlsx",
+      "sha256": "64c51fd4238562a006f8d6f5427f840fc85b9dc79c861dcd74a65ec5f9c7c3ac",
+      "bytes": 145504503
+    },
+    {
+      "id": "puf-2024-q4",
+      "role": "puf",
+      "period": "2024-Q4",
+      "published_as_of": "2025-05-28",
+      "portal_generated": "2025-03-18",
+      "filename": "federal-idr-puf-2024-q4.xlsx",
+      "url": "https://www.cms.gov/files/document/federal-idr-puf-2024-q4.xlsx",
+      "sha256": "a5bdfbc953bce1c25d3f6b3adb20378978c021ffb6187b5dc830b8d38a02fdf1",
+      "bytes": 206777550
+    },
+    {
+      "id": "puf-2025-q4",
+      "role": "puf",
+      "period": "2025-Q4",
+      "published_as_of": "2026-07-22",
+      "portal_generated": "2026-01-26",
+      "filename": "federal-idr-puf-2025-q4.zip",
+      "url": "https://downloads.cms.gov/files/federal-idr-puf-2025-q4.zip",
+      "sha256": "60cac5a2c8af73418312974be14f7e225d560b0d2faed2bf3e20688dc317ada9",
+      "bytes": 1411010831
+    },
+    {
+      "id": "data-dictionary",
+      "role": "data_dictionary",
+      "period": "2025-Q4",
+      "published_as_of": "2026-07-22",
+      "portal_generated": "2026-07-22",
+      "filename": "federal-idr-puf-data-dictionary.xlsx",
+      "url": "https://www.cms.gov/files/document/federal-idr-puf-data-dictionary.xlsx",
+      "sha256": "dcdb3c2082df311778589652e71bf3ff47d3d3a92650fbd0adebba0a3f96bf76",
+      "bytes": 32655
+    },
+    {
+      "id": "puf-general-information",
+      "role": "documentation",
+      "period": "2025-Q4",
+      "published_as_of": "2026-07-22",
+      "portal_generated": "2026-07-22",
+      "filename": "federal-idr-puf-general-information.pdf",
+      "url": "https://www.cms.gov/files/document/federal-idr-puf-general-information.pdf",
+      "sha256": "b5a794eb7845abfd77ba0d99ce4fb02863e99bee01298868c3b2cebafe944de9",
+      "bytes": 424029
+    },
+    {
+      "id": "supplemental-general-information",
+      "role": "documentation",
+      "period": "2025-Q4",
+      "published_as_of": "2026-07-22",
+      "portal_generated": "2026-07-22",
+      "filename": "federal-idr-supplemental-tables-general-information.pdf",
+      "url": "https://www.cms.gov/files/document/federal-idr-supplemental-tables-general-information.pdf",
+      "sha256": "8f7a1b032040ae0c9b8baee9ea5e1f84d6186049fc3d091318fcd640f86762ca",
+      "bytes": 420213
+    },
+    {
+      "id": "supplemental-2024-q4",
+      "role": "supplemental",
+      "period": "2024-Q4",
+      "published_as_of": "2025-05-28",
+      "portal_generated": "2025-03-18",
+      "filename": "federal-idr-supplemental-tables-2024-q4.xlsx",
+      "url": "https://www.cms.gov/files/document/federal-idr-supplemental-tables-2024-q4-may-28-2025.xlsx",
+      "sha256": "0f652b1d24c5d194ca0a5b3cdbcba3dc681ee704a0a1e20051932b893d0cd6ca",
+      "bytes": 31748
+    },
+    {
+      "id": "supplemental-2025-q1",
+      "role": "supplemental",
+      "period": "2025-Q1",
+      "published_as_of": "2026-01-21",
+      "portal_generated": "2025-08-07",
+      "filename": "federal-idr-supplemental-tables-2025-q1.xlsx",
+      "url": "https://www.cms.gov/files/document/federal-idr-supplemental-tables-2025-q1.xlsx",
+      "sha256": "6476de4fee9315847d832191f35fca1769fea2b13adb065788e8aebffed510f9",
+      "bytes": 23728
+    },
+    {
+      "id": "supplemental-2025-q2",
+      "role": "supplemental",
+      "period": "2025-Q2",
+      "published_as_of": "2026-01-21",
+      "portal_generated": "2025-08-07",
+      "filename": "federal-idr-supplemental-tables-2025-q2.xlsx",
+      "url": "https://www.cms.gov/files/document/federal-idr-supplemental-tables-2025-q2.xlsx",
+      "sha256": "27a78801aba74f2ff51befa1c25b84bddad2f3e58101d0ba444c19cb0dafc5d3",
+      "bytes": 32242
+    },
+    {
+      "id": "supplemental-2025-q3",
+      "role": "supplemental",
+      "period": "2025-Q3",
+      "published_as_of": "2026-07-22",
+      "portal_generated": "2026-01-26",
+      "filename": "federal-idr-supplemental-tables-2025-q3.xlsx",
+      "url": "https://www.cms.gov/priorities/innovation/data-and-reports/2026/federal-idr-supplemental-tables-2025-q3",
+      "sha256": "e24e8b9a884077c4ae2a5cf7ee8634a0e1d91ada19344a378e889cc57b6b456e",
+      "bytes": 25878
+    },
+    {
+      "id": "supplemental-2025-q4",
+      "role": "supplemental",
+      "period": "2025-Q4",
+      "published_as_of": "2026-07-22",
+      "portal_generated": "2026-01-26",
+      "filename": "federal-idr-supplemental-tables-2025-q4.xlsx",
+      "url": "https://www.cms.gov/priorities/innovation/data-and-reports/2026/federal-idr-supplemental-tables-2025-q4",
+      "sha256": "69a819c66ac30d9c46eaf1a8af41f8608e7616183e8c11bb8bad373999be1aa8",
+      "bytes": 26144
+    }
+  ]
+}

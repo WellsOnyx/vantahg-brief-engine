@@ -1,0 +1,6 @@
+Service Code,Place of Service Code,Location of Service,Practice/Facility Specialty or Type,Offer Selected from Provider or Issuer,Provider/Facility Offer as % of QPA,Payment Determination Outcome,Initiating Party,Certified IDR Entity,Dispute Number,Provider Email Domain,Provider/Facility NPI Number
+99285,23,TX,Emergency Medicine,In Favor of Provider/Facility/AA Provider,450,In Favor of Provider/Facility/AA Provider,Health care provider,North Entity,DISP-100001,hidden@example.com,1999999999
+99285,23,TX,Emergency Medicine,In Favor of Plan/Issuer,120,In Favor of Plan/Issuer,Health care provider,South Entity,DISP-100002,hidden@example.com,1888888888
+99285,23,TX,Emergency Medicine,In Favor of Provider/Facility/AA Provider,800,In Favor of Provider/Facility/AA Provider,Health care facility,iMPROve Health,DISP-100003,secret@example.com,1777777777
+72148,22,FL,Radiology,In Favor of Provider/Facility/AA Provider,220,In Favor of Provider/Facility/AA Provider,Health care provider,North Entity,DISP-100004,hidden@example.com,1666666666
+A0431,42,AZ,Air Ambulance,In Favor of Plan/Issuer,90,In Favor of Plan/Issuer,Provider of air ambulance services,South Entity,DISP-100005,hidden@example.com,1555555555
