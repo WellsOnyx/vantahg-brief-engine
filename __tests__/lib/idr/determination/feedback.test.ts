@@ -41,14 +41,15 @@ describe('reviewer feedback proposals', () => {
       comment: 'Stamp the next content version. Live prose is still unmarked.',
       path,
       files,
-      find: 'version: "2026-10-21.1"',
-      replace: 'version: "2026-10-21.2"',
+      find: 'version: "2026-10-22.1"',
+      replace: 'version: "2026-10-22.2"',
     });
     expect(proposal.ok).toBe(true);
     if (!proposal.ok) return;
     const applied = applyUnifiedDiff(files[path], proposal.diff);
-    expect(applied).toContain('version: "2026-10-21.2"');
-    expect(applied).toContain('TODO-LIVE-TEXT');
+    expect(applied).toContain('version: "2026-10-22.2"');
+    expect(applied).toContain('status: draft_pending_human_approval');
+    expect(applied).not.toContain('TODO-LIVE-TEXT');
     expect(applied).toContain('{{winner_paragraph}}');
   });
 

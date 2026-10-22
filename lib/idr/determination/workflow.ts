@@ -4,6 +4,7 @@ import {
   assertExternalSurfaceClean,
 } from '@/lib/idr-assist';
 import { authorizeLineAccess, type FirewallAuditEvent, type LineActor, type LineScopedRecord } from '@/lib/lines';
+import { catalogApprovedForProduction } from './approval';
 import { completedDateInNewYork } from './date';
 import { buildDraftParagraphs, composeDraft } from './draft';
 import { extractFigures } from './extract';
@@ -54,6 +55,8 @@ export interface DeterminationResult {
   message: string;
   signed: false;
   submitted: false;
+  /** True only after a person approves the content files and every QA gate passes. */
+  production_allowed: boolean;
   clean_text: string | null;
   reviewer_copy: string | null;
   board: BoardFields | null;
@@ -349,6 +352,16 @@ function judgeDraft(
   if (gates.some((gate) => !gate.pass)) {
     return blocked(actor, request, deps, 'qa_failed', 'QA gates failed. The draft cannot advance.', base);
   }
+  if (!catalogApprovedForProduction(deps.catalog)) {
+    return blocked(
+      actor,
+      request,
+      deps,
+      'draft_pending_human_approval',
+      'Neutral public-source drafts are pending human approval and are blocked from production use.',
+      base,
+    );
+  }
 
   const clean = draft.packet.text;
   const reviewer = applyDraftStamp(clean);
@@ -370,6 +383,7 @@ function judgeDraft(
     board,
     record: recordFor(request, 'ready_for_review'),
     ...base,
+    production_allowed: true,
     signed: false,
     submitted: false,
   });
@@ -404,6 +418,7 @@ function blocked(
     status: 'blocked',
     code,
     message,
+    production_allowed: false,
     signed: false,
     submitted: false,
     clean_text: null,
@@ -430,6 +445,7 @@ function emptyResult(code: string, message: string): DeterminationResult {
     message,
     signed: false,
     submitted: false,
+    production_allowed: false,
     clean_text: null,
     reviewer_copy: null,
     board: null,

@@ -1,16 +1,33 @@
+export { catalogApprovedForProduction } from './approval';
 export { buildDraftParagraphs, composeDraft, templateMatchesCase } from './draft';
 export type { ComposeOk, ComposeStop } from './draft';
 export { completedDateInNewYork } from './date';
 export { extractFigures } from './extract';
-export { buildFactorEvidence, renderPartyParagraph } from './factors';
+export { FACTOR_7_CREDIT_BASIS, FACTOR_BASIS, buildFactorEvidence, renderPartyParagraph } from './factors';
 export { applyUnifiedDiff, proposeContentEdit, unifiedDiff } from './feedback';
 export { detectIntake } from './intake';
 export type { IntakeOk, IntakeStop } from './intake';
 export { defaultIdrContentRoot, loadIdrCatalog, loadIdrCatalogFromFiles, nipTemplateId, readIdrContentFiles, templateKey } from './load';
-export { identicalOfferLineIds, selectNipBranch, selectTemplateId } from './select';
+export { NIP_BRANCH_BASIS, identicalOfferLineIds, selectNipBranch, selectTemplateId } from './select';
 export { currencyTokens, formatCents, parseExactCents, sameMultiset } from './money';
-export { fillPhrase, partyName } from './phrases';
-export { evaluateGates, findOpsMarkup, gateFailed } from './qa';
+export { CV_SENTENCE_BASIS, fillPhrase, partyName } from './phrases';
+export {
+  PUF_2024_SHARES,
+  PUF_GENERATOR_SEED,
+  PUF_LOAD_COUNT,
+  generateSyntheticDisputes,
+  syntheticDisputeToRequest,
+} from './puf-synthetic';
+export type { SyntheticDispute } from './puf-synthetic';
+export {
+  BATCH_LINK_BASIS,
+  BANNED_WORDS_BASIS,
+  NO_CPT_BASIS,
+  PARAGRAPH_ORDER_BASIS,
+  evaluateGates,
+  findOpsMarkup,
+  gateFailed,
+} from './qa';
 export type { QaContext } from './qa';
 export { hitsPhrase, IdrContentError } from './schema';
 export {
@@ -36,6 +53,7 @@ export {
   PARAGRAPH_ROLES,
   PHRASE_KEYS,
   REQUIRED_GATE_IDS,
+  RULE_IDS,
 } from './types';
 export type {
   BoardFields,

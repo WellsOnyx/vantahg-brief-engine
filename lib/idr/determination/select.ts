@@ -29,6 +29,26 @@ export interface TemplateSelection {
 }
 
 /**
+ * NIP branch names and first-match order are house_style.
+ * Eligibility for the Federal IDR process is public: 45 CFR 149.510(c)(2).
+ * Offers must be a dollar amount and a percentage of the QPA: 45 CFR 149.510(c)(5)(i).
+ * Batched items: 45 CFR 149.510(c)(4).
+ * QPA methodology: 45 CFR 149.140.
+ * https://www.ecfr.gov/current/title-45/section-149.510
+ * https://www.ecfr.gov/current/title-45/section-149.140
+ * CMS Federal Independent Dispute Resolution (IDR) Process Guidance for Certified IDR Entities:
+ * https://www.cms.gov/CCIIO/Resources/Regulations-and-Guidance/Downloads/Federal-Independent-Dispute-Resolution-Process-Guidance-for-Certified-IDR-Entities.pdf
+ * Federal Independent Dispute Resolution (IDR) Process Guidance for Disputing Parties is indexed at
+ * https://www.cms.gov/nosurprises/policies-and-resources/Reports
+ * Surprise billing final rules: 86 FR 36872 (July 13, 2021), 86 FR 55980 (October 7, 2021), 87 FR 52618 (August 26, 2022).
+ */
+export const NIP_BRANCH_BASIS = {
+  basis: 'house_style',
+  citation: '45 CFR 149.510(c)(2)',
+  source_url: 'https://www.ecfr.gov/current/title-45/section-149.510',
+} as const;
+
+/**
  * Picks the content-file id for this dispute.
  * NIP branches are first-match. An unmatched NIP dispute returns null.
  */

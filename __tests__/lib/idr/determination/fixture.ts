@@ -1,5 +1,10 @@
 import type { LineActor } from '@/lib/lines';
-import { loadIdrCatalog, type DeterminationDeps, type DeterminationRequest } from '@/lib/idr/determination';
+import {
+  loadIdrCatalog,
+  type DeterminationDeps,
+  type DeterminationRequest,
+  type IdrContentCatalog,
+} from '@/lib/idr/determination';
 
 export const CV_TEXT = 'Synthetic board certification in a demonstration specialty.';
 export const CV_EXCERPT = 'Synthetic board certification in a demonstration specialty.';
@@ -26,6 +31,28 @@ export function deps(overrides: Partial<DeterminationDeps> = {}): DeterminationD
     workflowAudit: [],
     ...overrides,
   };
+}
+
+/** Test-only flip. The files on disk stay pending human approval. */
+export function approveCatalog(catalog: IdrContentCatalog): IdrContentCatalog {
+  const templates = catalog.templates.map((template) => ({
+    ...template,
+    status: 'approved' as const,
+    approved_for_production: true,
+  }));
+  return {
+    checklist: {
+      ...catalog.checklist,
+      approval: { status: 'approved', approved_for_production: true },
+    },
+    templates,
+    byId: new Map(templates.map((template) => [template.id, template])),
+  };
+}
+
+export function approvedDeps(overrides: Partial<DeterminationDeps> = {}): DeterminationDeps {
+  const base = deps(overrides);
+  return { ...base, catalog: approveCatalog(base.catalog) };
 }
 
 export function figure(amount: string, docId: string, page = 1) {

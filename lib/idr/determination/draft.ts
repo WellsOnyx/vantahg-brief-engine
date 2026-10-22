@@ -1,5 +1,6 @@
 import { formatCents } from './money';
 import { renderPartyParagraph } from './factors';
+import { LIVE_TEXT_MARKER } from './types';
 import type {
   DraftPacket,
   FactorEvidence,
@@ -100,18 +101,18 @@ export function composeDraft(input: {
     };
   }
   const values = [input.chartParagraph, input.ipParagraph, input.nipParagraph, input.winnerParagraph];
-  const marker = checklist.slots.live_text_marker;
   const rendered: string[] = [];
   for (let index = 0; index < SLOT_KEYS.length; index += 1) {
-    const expected = `${marker}\n{{${SLOT_KEYS[index]}}}`;
-    if (template.paragraphs[index] !== expected) {
-      return { ok: false, code: 'draft_structure', message: 'Template shell is not the live-text placeholder.' };
+    const token = `{{${SLOT_KEYS[index]}}}`;
+    const shell = template.paragraphs[index];
+    if (shell.split(token).length !== 2 || shell.includes(LIVE_TEXT_MARKER)) {
+      return { ok: false, code: 'draft_structure', message: 'Template paragraph is not a neutral sentence around one slot.' };
     }
     const value = values[index];
     if (!value || /[\r\n]/.test(value) || value.includes('{{')) {
       return { ok: false, code: 'draft_structure', message: 'A determination paragraph still has an unresolved template marker.' };
     }
-    rendered.push(value);
+    rendered.push(shell.replace(token, value));
   }
   const paragraphs = rendered as [string, string, string, string];
   return {

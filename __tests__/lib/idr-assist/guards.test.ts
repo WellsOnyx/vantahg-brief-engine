@@ -121,7 +121,7 @@ describe('never-submit guards', () => {
 
 describe('DRAFT stamps', () => {
   it('applies the canonical stamp and is idempotent', () => {
-    const stamped = applyDraftStamp('Case DISP-880001 mirror');
+    const stamped = applyDraftStamp('Case DISP-SYN-001 mirror');
     expect(stamped.startsWith(IDR_DRAFT_STAMP)).toBe(true);
     expect(isDraftStamped(stamped)).toBe(true);
     expect(applyDraftStamp(stamped)).toBe(stamped);

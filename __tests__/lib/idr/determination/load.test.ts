@@ -11,21 +11,27 @@ describe('IDR content loader', () => {
   it('loads the versioned template set and checklist from config/idr', () => {
     const catalog = loadIdrCatalog();
     expect(catalog.templates).toHaveLength(12);
-    expect(catalog.checklist.version).toBe('2026-10-21.1');
+    expect(catalog.checklist.version).toBe('2026-10-22.1');
     expect(catalog.checklist.schema).toBe('idr-qa-checklist');
+    expect(catalog.checklist.approval).toEqual({
+      status: 'draft_pending_human_approval',
+      approved_for_production: false,
+    });
     expect(catalog.checklist.gates.map((gate) => gate.id)).toEqual([...REQUIRED_GATE_IDS]);
     expect(catalog.checklist.gates.every((gate) => gate.blocking)).toBe(true);
     expect(catalog.checklist.slots.live_text_marker).toBe('TODO-LIVE-TEXT');
+    expect(catalog.checklist.slots.no_acuity_paragraph).toContain('No medical records');
+    expect(catalog.checklist.slots.no_acuity_paragraph).not.toContain('TODO-LIVE-TEXT');
     expect(catalog.checklist.slots.paragraph_roles).toEqual(['chart', 'ip', 'nip', 'winner']);
     for (const template of catalog.templates) {
-      expect(template.version).toBe('2026-10-21.1');
-      expect(template.paragraphs).toEqual([
-        'TODO-LIVE-TEXT\n{{chart_paragraph}}',
-        'TODO-LIVE-TEXT\n{{ip_paragraph}}',
-        'TODO-LIVE-TEXT\n{{nip_paragraph}}',
-        'TODO-LIVE-TEXT\n{{winner_paragraph}}',
-      ]);
-      expect(template.body).toContain('TODO-LIVE-TEXT');
+      expect(template.version).toBe('2026-10-22.1');
+      expect(template.status).toBe('draft_pending_human_approval');
+      expect(template.approved_for_production).toBe(false);
+      expect(template.paragraphs[0]).toContain('{{chart_paragraph}}');
+      expect(template.paragraphs[1]).toContain('{{ip_paragraph}}');
+      expect(template.paragraphs[2]).toContain('{{nip_paragraph}}');
+      expect(template.paragraphs[3]).toContain('{{winner_paragraph}}');
+      expect(template.body).not.toContain('TODO-LIVE-TEXT');
       expect(template.body).not.toContain('offer is selected');
       expect(template.path.startsWith('config/idr/templates/')).toBe(true);
     }
@@ -75,6 +81,15 @@ describe('IDR content loader', () => {
     const files = readIdrContentFiles();
     delete files['config/idr/templates/nip-zero-offer.md'];
     expect(() => loadIdrCatalogFromFiles(files)).toThrow(/nip-zero-offer/);
+  });
+
+  it('rejects a production flag on a draft that a person has not approved', () => {
+    const files = readIdrContentFiles();
+    files['config/idr/qa-checklist.yaml'] = files['config/idr/qa-checklist.yaml'].replace(
+      'approved_for_production: false',
+      'approved_for_production: true',
+    );
+    expect(() => loadIdrCatalogFromFiles(files)).toThrow(/draft_pending_human_approval/);
   });
 
   it('rejects tabs in a content file', () => {

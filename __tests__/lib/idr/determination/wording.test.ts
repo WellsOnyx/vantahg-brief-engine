@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { loadIdrCatalogFromFiles, prepareDetermination, readIdrContentFiles, LIVE_TEXT_MARKER } from '@/lib/idr/determination';
-import { batchRequest, deps, figure, idrActor, singleRequest } from './fixture';
+import { approvedDeps, batchRequest, deps, figure, idrActor, singleRequest } from './fixture';
 
 function nip(request = singleRequest()) {
   return { ...request, prevailing_party: 'NIP' as const };
@@ -8,24 +8,26 @@ function nip(request = singleRequest()) {
 
 describe('IDR wording QA', () => {
   it('keeps chart, IP, NIP, and winner as separate paragraphs', () => {
-    const result = prepareDetermination(idrActor(), singleRequest(), deps());
+    const result = prepareDetermination(idrActor(), singleRequest(), approvedDeps());
     expect(result.ok).toBe(true);
     const parts = result.clean_text?.split(/\n\s*\n/) ?? [];
     expect(parts).toHaveLength(4);
-    expect(parts[0].startsWith('line:')).toBe(true);
+    expect(parts[0]).toContain('line:');
     expect(parts[1]).toContain('factor:');
     expect(parts[2]).toContain('factor:');
     expect(parts[1]).not.toContain('prevailing_party:');
-    expect(parts[3].startsWith('prevailing_party:IP')).toBe(true);
+    expect(parts[3]).toContain('prevailing_party:IP');
     expect(parts[1]).not.toBe(parts[2]);
   });
 
-  it('leaves every template file marked TODO-LIVE-TEXT', () => {
+  it('ships neutral public-source drafts that are not approved for production', () => {
     const files = readIdrContentFiles();
     const templates = Object.entries(files).filter(([path]) => path.startsWith('config/idr/templates/'));
     expect(templates).toHaveLength(12);
     for (const [path, source] of templates) {
-      expect(source, path).toContain(LIVE_TEXT_MARKER);
+      expect(source, path).toContain('status: draft_pending_human_approval');
+      expect(source, path).toContain('approved_for_production: false');
+      expect(source, path).not.toContain(LIVE_TEXT_MARKER);
       expect(source, path).not.toContain('offer is selected');
     }
   });
@@ -40,7 +42,7 @@ describe('IDR wording QA', () => {
     ['no_substantive_factors', 'nip-no-substantive-factors'],
     ['nip_offer_higher', 'nip-nip-offer-higher'],
   ] as const)('selects the %s NIP branch', (branch, templateId) => {
-    const result = prepareDetermination(idrActor(), requestFor(branch), deps());
+    const result = prepareDetermination(idrActor(), requestFor(branch), approvedDeps());
     expect(result.stamps?.template_id).toBe(templateId);
     expect(result.code).not.toBe('nip_branch_unmatched');
     if (branch === 'no_qpa') {
@@ -149,7 +151,7 @@ describe('IDR wording QA', () => {
         },
       ],
     });
-    const result = prepareDetermination(idrActor(), request, deps());
+    const result = prepareDetermination(idrActor(), request, approvedDeps());
     expect(result.ok).toBe(true);
     const parts = result.clean_text?.split(/\n\s*\n/) ?? [];
     expect(parts[2]).toContain('credit:NIP');
@@ -163,32 +165,39 @@ describe('IDR wording QA', () => {
     expect(unverified.gates.find((gate) => gate.id === 'factor_7_rule')?.detail).toMatch(/chart/i);
   });
 
-  it('inserts a supplied no-acuity paragraph and blocks the live-text marker', () => {
-    const files = readIdrContentFiles();
-    files['config/idr/qa-checklist.yaml'] = files['config/idr/qa-checklist.yaml'].replace(
-      'no_acuity_paragraph: "TODO-LIVE-TEXT"',
-      'no_acuity_paragraph: "acuity:none"',
-    );
+  it('uses the public no-acuity draft and blocks production until a person approves', () => {
     const withoutAcuity = singleRequest({
       documents: singleRequest().documents.filter((doc) => doc.role !== 'records' && doc.role !== 'op_report'),
     });
-    const filled = prepareDetermination(idrActor(), withoutAcuity, deps({ catalog: loadIdrCatalogFromFiles(files) }));
+    const pending = prepareDetermination(idrActor(), withoutAcuity, deps());
+    expect(pending.ok).toBe(false);
+    expect(pending.code).toBe('draft_pending_human_approval');
+    expect(pending.production_allowed).toBe(false);
+    expect(pending.clean_text).toBeNull();
+    expect(pending.gates.every((gate) => gate.pass)).toBe(true);
+
+    const files = readIdrContentFiles();
+    files['config/idr/qa-checklist.yaml'] = files['config/idr/qa-checklist.yaml'].replace(
+      /no_acuity_paragraph: ".*"/,
+      'no_acuity_paragraph: "acuity:none"',
+    );
+    const filled = prepareDetermination(
+      idrActor(),
+      withoutAcuity,
+      approvedDeps({ catalog: loadIdrCatalogFromFiles(files) }),
+    );
     expect(filled.ok).toBe(true);
+    expect(filled.production_allowed).toBe(true);
     expect(filled.clean_text).toContain('acuity:none');
     expect(filled.clean_text).not.toContain('are attached');
-
-    const marker = prepareDetermination(idrActor(), withoutAcuity, deps());
-    expect(marker.ok).toBe(false);
-    expect(marker.code).toBe('qa_failed');
-    expect(marker.clean_text).toBeNull();
-    expect(marker.gates.find((gate) => gate.id === 'ops_markup')?.detail).toContain(LIVE_TEXT_MARKER);
+    expect(filled.clean_text).not.toContain(LIVE_TEXT_MARKER);
   });
 
   it('records the completed date in America/New_York', () => {
     const evening = prepareDetermination(
       idrActor(),
       singleRequest(),
-      deps({ now: () => '2026-10-21T00:30:00.000Z' }),
+      approvedDeps({ now: () => '2026-10-21T00:30:00.000Z' }),
     );
     expect(evening.ok).toBe(true);
     expect(evening.board?.date_completed).toBe('2026-10-20');
@@ -196,7 +205,7 @@ describe('IDR wording QA', () => {
     const nextMorning = prepareDetermination(
       idrActor(),
       singleRequest(),
-      deps({ now: () => '2026-10-21T12:30:00.000Z' }),
+      approvedDeps({ now: () => '2026-10-21T12:30:00.000Z' }),
     );
     expect(nextMorning.board?.date_completed).toBe('2026-10-21');
   });

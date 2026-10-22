@@ -12,6 +12,31 @@ import type {
 const SUBMISSION_FACTORS: readonly FactorId[] = ['market_share', 'teaching_case_mix', 'good_faith_efforts'];
 
 /**
+ * The seven considerations are public: 45 CFR 149.510(c)(5)(iii)(A) through (D).
+ * https://www.ecfr.gov/current/title-45/section-149.510
+ * QPA methodology: 45 CFR 149.140. https://www.ecfr.gov/current/title-45/section-149.140
+ * Training, experience, and quality and outcomes: 45 CFR 149.510(c)(5)(iii)(B)(1).
+ * Acuity or complexity: 45 CFR 149.510(c)(5)(iii)(B)(3).
+ * Additional information relating to an offer: 45 CFR 149.510(c)(5)(iii)(D).
+ * Prohibited factors: 45 CFR 149.510(c)(5)(v).
+ * Never crediting factor 7 to the initiating party is house_style.
+ * CMS Federal Independent Dispute Resolution (IDR) Process Guidance for Certified IDR Entities (2023 guidance PDF on cms.gov)
+ * and the Federal Independent Dispute Resolution (IDR) Process Guidance for Disputing Parties
+ * (CMS No Surprises Act policies and resources index).
+ */
+export const FACTOR_BASIS = {
+  basis: 'public',
+  citation: '45 CFR 149.510(c)(5)(iii)',
+  source_url: 'https://www.ecfr.gov/current/title-45/section-149.510',
+} as const;
+
+export const FACTOR_7_CREDIT_BASIS = {
+  basis: 'house_style',
+  citation: '45 CFR 149.510(c)(5)(iii)(D)',
+  source_url: 'https://www.ecfr.gov/current/title-45/section-149.510',
+} as const;
+
+/**
  * Maps each statutory factor to what each party actually filed.
  * Training text is the CV board-certification and specialty slot.
  * Acuity states attachment tokens, or the checklist no-acuity slot when none were filed.

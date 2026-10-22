@@ -7,6 +7,20 @@ Future Claude/Cole/Jonah sessions: read this first.
 
 ---
 
+## 2026-10-22 — IDR drafts use public sources only
+
+Jonah's rule: the IDR engine relies on public CMS sources. Partner wording is withdrawn and is not in the repo.
+
+- **Drafts:** the 12 template files and the checklist no-acuity slot are neutral sentences written from public CMS, eCFR, and Federal Register guidance. Each file is `status: draft_pending_human_approval` with `approved_for_production: false`. A clean draft stays blocked with code `draft_pending_human_approval` until a person sets both fields to approved. `production_allowed` is true only on that approved path.
+- **Citations:** paragraph order, the CV sentence shape, the batch `same as` link, the banned-word list, the no-CPT acuity rule, the NIP branch names, and never crediting factor 7 to the initiating party are `house_style`. The qualifying payment amount, the statutory factors, and offer selection are `public`, with 45 CFR 149.510 and 149.140. The checklist lists the 2023 CMS certified-entity guidance, the disputing-party guidance by title, and the 2021 and 2022 Federal Register IDR rules.
+- **Ids:** the one realistic test dispute number is now `DISP-SYN-001`. New synthetic disputes use `DISP-SYN-` plus digits.
+- **Scan:** `scripts/check-idr-phi.mjs` blocks `DISP-` plus digits unless the id is `DISP-SYN-`, plus SSN, MRN, member-id values, and a name next to a date of birth. `.githooks/pre-commit` runs it. `npm run test:ci` runs it. `.github/workflows/idr-public-source.yml` runs it. `config/idr/phi-scan-allowlist.txt` lists older UM demo files only. IDR determination paths cannot be waived, and a realistic dispute number cannot be waived.
+- **Synthetic load:** 5,000 disputes are generated from the published 2024 CMS Federal IDR shares as read in CRS Report R48738. Rows are not copied. Dollar amounts are synthetic. The generator does not apply a batched rate.
+- **Proof:** `__tests__/lib/idr/determination/`. Content version `2026-10-22.1`.
+- **Doc:** [`docs/customer-ready/21-idr-determination-workflow.md`](docs/customer-ready/21-idr-determination-workflow.md).
+
+---
+
 ## 2026-10-21 — IDR determination wording QA
 
 Ops QA on the determination draft. Same in-memory IDR workflow. No new HTTP route. No live PHI. Template files are still placeholders.

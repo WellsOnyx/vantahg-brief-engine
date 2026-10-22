@@ -11,13 +11,14 @@ import {
   type IdrGatewayPort,
   type November1BatchingRules,
 } from '@/lib/idr/determination';
-import { batchRequest, deps, idrActor, singleRequest } from './fixture';
+import { approvedDeps, batchRequest, deps, idrActor, singleRequest } from './fixture';
 
 describe('federal IDR determination workflow', () => {
   it('reaches ready for review with board fields and a clean four-paragraph draft', () => {
-    const used = deps();
+    const used = approvedDeps();
     const result = prepareDetermination(idrActor(), singleRequest(), used);
     expect(result.ok).toBe(true);
+    expect(result.production_allowed).toBe(true);
     expect(result.status).toBe('ready_for_review');
     expect(result.board).toEqual({
       prevailing_party: 'IP',
@@ -58,8 +59,8 @@ describe('federal IDR determination workflow', () => {
     expect(() => assertDraftStamped(result.reviewer_copy ?? '')).not.toThrow();
     expect(result.stamps).toMatchObject({
       template_id: 'ip-brief-single',
-      template_version: '2026-10-21.1',
-      checklist_version: '2026-10-21.1',
+      template_version: '2026-10-22.1',
+      checklist_version: '2026-10-22.1',
       template_path: 'config/idr/templates/ip-brief-single.md',
       checklist_path: 'config/idr/qa-checklist.yaml',
     });
@@ -70,7 +71,7 @@ describe('federal IDR determination workflow', () => {
   });
 
   it('links batch lines to the primary line and keeps November 1 eligibility unset', () => {
-    const result = prepareDetermination(idrActor(), batchRequest(), deps());
+    const result = prepareDetermination(idrActor(), batchRequest(), approvedDeps());
     expect(result.ok).toBe(true);
     expect(result.intake?.shape).toBe('batched');
     expect(result.intake?.nip_brief).toBe('absent');
@@ -141,15 +142,14 @@ describe('federal IDR determination workflow', () => {
   it('records version stamps from the content files', () => {
     const files = readIdrContentFiles();
     files['config/idr/qa-checklist.yaml'] = files['config/idr/qa-checklist.yaml'].replace(
-      'version: "2026-10-21.1"',
+      'version: "2026-10-22.1"',
       'version: "2026-11-02.4"',
     );
     files['config/idr/templates/ip-brief-single.md'] = files['config/idr/templates/ip-brief-single.md'].replace(
-      'version: "2026-10-21.1"',
+      'version: "2026-10-22.1"',
       'version: "2026-11-02.9"',
     );
-    const catalog = loadIdrCatalogFromFiles(files);
-    const result = prepareDetermination(idrActor(), singleRequest(), deps({ catalog }));
+    const result = prepareDetermination(idrActor(), singleRequest(), approvedDeps({ catalog: loadIdrCatalogFromFiles(files) }));
     expect(result.ok).toBe(true);
     expect(result.stamps?.checklist_version).toBe('2026-11-02.4');
     expect(result.stamps?.template_version).toBe('2026-11-02.9');
@@ -161,7 +161,11 @@ describe('federal IDR determination workflow', () => {
       'acuity_attachments:records,op_report',
       'acuity_attachments:records+op_report',
     );
-    const result = prepareDetermination(idrActor(), singleRequest(), deps({ catalog: loadIdrCatalogFromFiles(files) }));
+    const result = prepareDetermination(
+      idrActor(),
+      singleRequest(),
+      approvedDeps({ catalog: loadIdrCatalogFromFiles(files) }),
+    );
     expect(result.ok).toBe(true);
     expect(result.clean_text).toContain('acuity_attachments:records+op_report');
     expect(result.clean_text).not.toContain('acuity_attachments:records,op_report');

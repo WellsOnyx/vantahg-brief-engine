@@ -3,14 +3,18 @@ import {
   FACTOR_IDS,
   PHRASE_KEYS,
   REQUIRED_GATE_IDS,
+  RULE_IDS,
   type AcuityGate,
   type ChecklistFactor,
+  type ChecklistRule,
+  type ContentApproval,
   type Factor7Gate,
   type GateDef,
   LIVE_TEXT_MARKER,
   NIP_BRANCHES,
   type NeutralToneGate,
   type PhraseKey,
+  type PublicSource,
   type QaChecklist,
 } from './types';
 import { parseYaml, YamlParseError } from './yaml';
@@ -126,6 +130,30 @@ const PhraseSchema = z
   })
   .strict();
 
+const ApprovalSchema = z
+  .object({
+    status: z.enum(['draft_pending_human_approval', 'approved']),
+    approved_for_production: z.boolean(),
+  })
+  .strict();
+
+const RuleSchema = z
+  .object({
+    id: z.enum(RULE_IDS),
+    basis: z.enum(['public', 'house_style']),
+    note: z.string().min(1),
+    citation: z.string().min(1).optional(),
+    source_url: z.string().min(1).optional(),
+  })
+  .strict();
+
+const PublicSourceSchema = z
+  .object({
+    title: z.string().min(1),
+    url: z.string().regex(/^https:\/\//),
+  })
+  .strict();
+
 const SlotsSchema = z
   .object({
     live_text_marker: z.literal(LIVE_TEXT_MARKER),
@@ -139,6 +167,9 @@ const ChecklistSchema = z
   .object({
     version: VersionSchema,
     schema: z.literal('idr-qa-checklist'),
+    approval: ApprovalSchema,
+    public_sources: z.array(PublicSourceSchema).min(1),
+    rules: z.array(RuleSchema).min(1),
     factors: z.array(FactorSchema).length(FACTOR_IDS.length),
     gates: z.array(GateSchema).min(1),
     slots: SlotsSchema,
@@ -156,6 +187,8 @@ const TemplateMetaSchema = z
     nip_brief: z.enum(['present', 'absent', 'any']),
     dispute_shape: z.enum(['single', 'batched', 'any']),
     qpa_wording: z.enum(['single', 'batch', 'any']),
+    status: z.enum(['draft_pending_human_approval', 'approved']),
+    approved_for_production: z.boolean(),
   })
   .strict();
 
@@ -171,6 +204,8 @@ export function parseChecklistDocument(source: string, path: string): QaChecklis
   if (!parsed.success) {
     throw new IdrContentError(`${path}: ${formatZod(parsed.error)}`);
   }
+  const approval = validateApproval(parsed.data.approval, path, 'checklist');
+  const rules = validateRules(parsed.data.rules, path);
   const factors = validateFactors(parsed.data.factors, path);
   const gates = validateGates(parsed.data.gates, path);
   validatePhrases(parsed.data.phrases, gates, path);
@@ -186,6 +221,9 @@ export function parseChecklistDocument(source: string, path: string): QaChecklis
   return {
     version: parsed.data.version,
     schema: 'idr-qa-checklist',
+    approval,
+    public_sources: parsed.data.public_sources as PublicSource[],
+    rules,
     factors,
     gates,
     slots: parsed.data.slots,
@@ -208,6 +246,7 @@ export function parseTemplateMeta(source: string, path: string) {
     throw new IdrContentError(`${path}: ${formatZod(parsed.error)}`);
   }
   validateTemplateShape(parsed.data, path);
+  validateApproval(parsed.data, path, 'template');
   return parsed.data;
 }
 
@@ -236,6 +275,45 @@ function validateTemplateShape(meta: z.infer<typeof TemplateMetaSchema>, path: s
   if (meta.dispute_shape !== 'any' || meta.qpa_wording !== 'any' || meta.nip_brief !== 'any') {
     throw new IdrContentError(`${path}: this NIP branch is not tied to one brief or dispute shape.`);
   }
+}
+
+function validateApproval(approval: ContentApproval, path: string, label: string): ContentApproval {
+  if (approval.status === 'draft_pending_human_approval' && approval.approved_for_production) {
+    throw new IdrContentError(
+      `${path}: ${label} cannot be approved for production while status is draft_pending_human_approval.`,
+    );
+  }
+  if (approval.approved_for_production && approval.status !== 'approved') {
+    throw new IdrContentError(`${path}: ${label} production approval requires status approved.`);
+  }
+  if (approval.status === 'approved' && !approval.approved_for_production) {
+    throw new IdrContentError(`${path}: ${label} status approved requires approved_for_production true.`);
+  }
+  return approval;
+}
+
+function validateRules(rules: readonly ChecklistRule[], path: string): ChecklistRule[] {
+  const seen = new Set<string>();
+  for (const rule of rules) {
+    if (seen.has(rule.id)) throw new IdrContentError(`${path}: duplicate rule ${rule.id}.`);
+    seen.add(rule.id);
+    if (rule.basis === 'public') {
+      if (!rule.citation || !rule.source_url?.startsWith('https://')) {
+        throw new IdrContentError(`${path}: public rule ${rule.id} needs a citation and an https source.`);
+      }
+    }
+    if (rule.basis === 'house_style' && !rule.note.trim()) {
+      throw new IdrContentError(`${path}: house_style rule ${rule.id} needs a note.`);
+    }
+  }
+  for (const id of RULE_IDS) {
+    if (!seen.has(id)) throw new IdrContentError(`${path}: missing rule ${id}.`);
+  }
+  return RULE_IDS.map((id) => {
+    const rule = rules.find((item) => item.id === id);
+    if (!rule) throw new IdrContentError(`${path}: missing rule ${id}.`);
+    return rule;
+  });
 }
 
 function validateFactors(factors: readonly ChecklistFactor[], path: string): ChecklistFactor[] {
@@ -339,6 +417,13 @@ function validateSlots(
   }
   if (acuity.argument_forbid.some((phrase) => sentence.toLowerCase().includes(phrase.toLowerCase()))) {
     throw new IdrContentError(`${path}: the no-acuity paragraph contains argument language.`);
+  }
+  if (sentence.includes(LIVE_TEXT_MARKER)) {
+    throw new IdrContentError(`${path}: the no-acuity paragraph still has the withdrawn live-text marker.`);
+  }
+  const neutral = gates.find((gate): gate is NeutralToneGate => gate.id === 'neutral_tone');
+  if (neutral && neutral.forbid_phrases.some((phrase) => hitsPhrase(sentence, phrase))) {
+    throw new IdrContentError(`${path}: the no-acuity paragraph is not neutral.`);
   }
 }
 

@@ -37,8 +37,31 @@ export type ParagraphRole = (typeof PARAGRAPH_ROLES)[number];
 export const ELIGIBILITY = ['eligible', 'ineligible'] as const;
 export type Eligibility = (typeof ELIGIBILITY)[number];
 
-/** Marker kept in template files until reviewer live text replaces the shell. */
+/**
+ * Ops token. It must not appear in a determination.
+ * Partner live text was withdrawn. Drafts use neutral public-source sentences instead.
+ */
 export const LIVE_TEXT_MARKER = 'TODO-LIVE-TEXT';
+
+export const CONTENT_STATUSES = ['draft_pending_human_approval', 'approved'] as const;
+export type ContentStatus = (typeof CONTENT_STATUSES)[number];
+
+export const RULE_IDS = [
+  'paragraph_order',
+  'cv_sentence',
+  'batch_same_as',
+  'banned_words',
+  'no_cpt',
+  'nip_branches',
+  'factor_7',
+  'qpa_consideration',
+  'statutory_factors',
+  'offer_selection',
+] as const;
+export type RuleId = (typeof RULE_IDS)[number];
+
+export const RULE_BASES = ['public', 'house_style'] as const;
+export type RuleBasis = (typeof RULE_BASES)[number];
 
 export const FIGURE_KINDS = ['ip_offer', 'nip_offer', 'qpa'] as const;
 export type FigureKind = (typeof FIGURE_KINDS)[number];
@@ -204,6 +227,24 @@ export interface FactorEvidence {
   chart_support: 'credited' | 'absent' | 'unverified';
 }
 
+export interface ContentApproval {
+  status: ContentStatus;
+  approved_for_production: boolean;
+}
+
+export interface ChecklistRule {
+  id: RuleId;
+  basis: RuleBasis;
+  note: string;
+  citation?: string;
+  source_url?: string;
+}
+
+export interface PublicSource {
+  title: string;
+  url: string;
+}
+
 export interface TemplateMeta {
   id: string;
   version: string;
@@ -212,6 +253,8 @@ export interface TemplateMeta {
   nip_brief: BriefState | 'any';
   dispute_shape: DisputeShape | 'any';
   qpa_wording: QpaWording | 'any';
+  status: ContentStatus;
+  approved_for_production: boolean;
   path: string;
 }
 
@@ -290,6 +333,9 @@ export interface ContentSlots {
 export interface QaChecklist {
   version: string;
   schema: 'idr-qa-checklist';
+  approval: ContentApproval;
+  public_sources: readonly PublicSource[];
+  rules: readonly ChecklistRule[];
   factors: readonly ChecklistFactor[];
   gates: readonly GateDef[];
   slots: ContentSlots;

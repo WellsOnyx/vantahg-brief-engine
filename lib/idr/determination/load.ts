@@ -120,10 +120,25 @@ function assertBody(
     throw new IdrContentError(`${filePath}: live text marker is ${LIVE_TEXT_MARKER}.`);
   }
   paragraphs.forEach((paragraph, index) => {
-    const slot = PARAGRAPH_SLOTS[index];
-    const expected = `${marker}\n{{${slot}}}`;
-    if (paragraph !== expected) {
-      throw new IdrContentError(`${filePath}: paragraph ${index + 1} must be the ${slot} placeholder marked ${marker}.`);
+    const slot = `{{${PARAGRAPH_SLOTS[index]}}}`;
+    if (paragraph.split(slot).length !== 2) {
+      throw new IdrContentError(`${filePath}: paragraph ${index + 1} must contain ${slot} once.`);
+    }
+    if (paragraph.includes(marker)) {
+      throw new IdrContentError(`${filePath}: paragraph ${index + 1} still has the withdrawn live-text marker.`);
+    }
+    const prose = paragraph.replace(slot, '').replace(/\s+/g, ' ').trim();
+    if (prose.length < 40) {
+      throw new IdrContentError(`${filePath}: paragraph ${index + 1} needs a neutral public-source sentence.`);
+    }
+    if (paragraph.toLowerCase().includes(checklist.slots.batch_line_link)) {
+      throw new IdrContentError(
+        `${filePath}: paragraph ${index + 1} must not contain the batch link. The link is inserted in the chart slot.`,
+      );
+    }
+    const leftover = paragraph.replace(slot, '');
+    if (paragraph.includes('MISSING') || leftover.includes('{{') || leftover.includes('}}')) {
+      throw new IdrContentError(`${filePath}: paragraph ${index + 1} has an unresolved marker.`);
     }
   });
 }

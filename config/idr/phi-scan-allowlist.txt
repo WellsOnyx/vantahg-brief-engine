@@ -1,0 +1,19 @@
+# Pre-existing UM demo and intake fixtures.
+# Dispute numbers (DISP- followed by digits, unless prefixed SYN) are never waived.
+# The IDR determination tree is not listed here: config/idr/, lib/idr/, __tests__/lib/idr/, docs/customer-ready/21-idr-determination-workflow.md, docs/idr-assist/.
+__tests__/lib/fact-checker.test.ts
+__tests__/lib/intake/efax-storage.test.ts
+__tests__/lib/muse/phi-gate.test.ts
+__tests__/lib/security.test.ts
+app/api/intake/efax/queue/route.ts
+app/cases/page.tsx
+app/demo-record/page.tsx
+app/portal/status/page.tsx
+components/demo/DemoWalkthrough.tsx
+lib/chat/demo-chat.ts
+lib/demo-data.ts
+lib/demo-mode.ts
+lib/intake/efax/ai-extractor.ts
+lib/intake/efax/ocr.ts
+lib/vhg/synthetic-idr.ts
+scripts/seed-demo.ts

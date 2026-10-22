@@ -18,6 +18,47 @@ import type {
   TemplateFile,
 } from './types';
 
+/**
+ * Paragraph order (chart, initiating party, non-initiating party, winner) is house_style.
+ * The written decision duty is public: 45 CFR 149.510(c)(5)(vi).
+ * https://www.ecfr.gov/current/title-45/section-149.510
+ */
+export const PARAGRAPH_ORDER_BASIS = {
+  basis: 'house_style',
+  citation: '45 CFR 149.510(c)(5)(vi)',
+  source_url: 'https://www.ecfr.gov/current/title-45/section-149.510',
+} as const;
+
+/**
+ * The batch words "same as" plus the primary line id are house_style.
+ * Batched items are public: 45 CFR 149.510(c)(4).
+ * Selecting an offer for each item is public: 45 CFR 149.510(c)(5)(ii)(A).
+ */
+export const BATCH_LINK_BASIS = {
+  basis: 'house_style',
+  citation: '45 CFR 149.510(c)(4)',
+  source_url: 'https://www.ecfr.gov/current/title-45/section-149.510',
+} as const;
+
+/** The neutral-tone word list is house_style. */
+export const BANNED_WORDS_BASIS = {
+  basis: 'house_style',
+  citation: '45 CFR 149.510(c)(5)(vi)',
+  source_url: 'https://www.ecfr.gov/current/title-45/section-149.510',
+} as const;
+
+/**
+ * Barring CPT and HCPCS tokens from the acuity sentence is house_style.
+ * Acuity of the individual or complexity of furnishing is public: 45 CFR 149.510(c)(5)(iii)(B)(3).
+ * Prohibited factors, including usual and customary charges and public payor rates: 45 CFR 149.510(c)(5)(v).
+ * Surprise billing rules: 86 FR 36872, 86 FR 55980, and 87 FR 52618.
+ */
+export const NO_CPT_BASIS = {
+  basis: 'house_style',
+  citation: '45 CFR 149.510(c)(5)(iii)(B)(3)',
+  source_url: 'https://www.ecfr.gov/current/title-45/section-149.510',
+} as const;
+
 export interface QaContext {
   checklist: QaChecklist;
   template: TemplateFile;
