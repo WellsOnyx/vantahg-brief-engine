@@ -7,6 +7,12 @@ Future Claude/Cole/Jonah sessions: read this first.
 
 ---
 
+## 2026-10-22 — PHP ban and repo-wide PHI guard
+
+No PHP is in this repository on any branch or in any commit. `scripts/check-no-php.mjs` fails CI and the pre-commit hook when a PHP file, Composer manifest, PHP open tag, or PHP base image appears. `scripts/check-idr-phi.mjs` is the repo-wide PHI guard, extended from the open IDR determination PR. Dispute numbers must be `DISP-SYN-…`. Case binaries (`.pdf`, `.tif`, `.tiff`, `.dcm`) belong only in `synthetic-fixtures/`. Existing demo rows are listed in `config/idr/phi-scan-allowlist.txt`. IDR trees stay off that list. Dispute numbers, phone numbers outside the fictional 555 range, personal mailbox domains, and Social Security numbers other than the well-known test placeholders still fail on a listed file.
+
+---
+
 ## 2026-10-20 — Production IRO portal
 
 Jonah, Oct 20: stop the public demo. The AWS account, BAA, RDS, S3, and KMS key are already up. No new infrastructure.

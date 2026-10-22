@@ -1,0 +1,5 @@
+#!/bin/sh
+# Blocks PHP source and repo-wide PHI patterns before a commit is created.
+cd "$(git rev-parse --show-toplevel)" || exit 1
+node scripts/check-no-php.mjs || exit 1
+node scripts/check-idr-phi.mjs || exit 1

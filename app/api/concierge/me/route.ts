@@ -44,7 +44,7 @@ const DEMO_PROFILE = {
   id: 'demo-concierge-1',
   name: 'Alex Rivera',
   email: 'alex@vantaum.demo',
-  ringcentral_phone: '(786) 490-2384',
+  ringcentral_phone: '(786) 555-0104',
   ringcentral_extension: null,
   intake_email: 'alex@intake.vantaum.com',
   intake_efax: '(786) 555-0182',
