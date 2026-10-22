@@ -1,0 +1,4 @@
+#!/bin/sh
+# Blocks realistic IDR dispute numbers and common PHI patterns.
+cd "$(git rev-parse --show-toplevel)" || exit 1
+node scripts/check-idr-phi.mjs

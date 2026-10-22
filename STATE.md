@@ -3,7 +3,66 @@
 **This is the single source of truth for "where the build is right now."**
 Future Claude/Cole/Jonah sessions: read this first.
 
-**Stacking:** #89, #90, and #91 each prepend a dated section at this same anchor. On a `STATE.md` conflict, keep every dated section, newest first. The sections do not overlap. Doc number 17 is two different files across that stack (`17-med-review-pivot.md` on the med-review PR, `17-iro-portal-slice-1.md` on the IRO slice). This suite is doc 18.
+**Stacking:** #89, #90, and #91 each prepend a dated section at this same anchor. On a `STATE.md` conflict, keep every dated section, newest first. The sections do not overlap. Doc number 17 is two different files across that stack (`17-med-review-pivot.md` on the med-review PR, `17-iro-portal-slice-1.md` on the IRO slice). The financial suite is doc 18. The federal IDR determination workflow is doc 21.
+
+---
+
+## 2026-10-22 — IDR ops QA on party filings and batch links
+
+- **Acuity:** each party paragraph summarizes that party's own records and operative report. When the other party filed and this party did not, the sentence says this party's acuity filing is absent. Checklist `2026-10-22.2`.
+- **Batch link:** a later line says `same as` the primary line only when its initiating-party offer, non-initiating-party offer, qualifying payment amount, and service label match. A differing line keeps its own text.
+- **Higher NIP offer:** if the initiating party prevails and a non-initiating offer is higher, the draft stops with `human_decision` and does not choose wording.
+
+---
+
+## 2026-10-22 — IDR drafts use public sources only
+
+Jonah's rule: the IDR engine relies on public CMS sources. Partner wording is withdrawn and is not in the repo.
+
+- **Drafts:** the 12 template files and the checklist no-acuity slot are neutral sentences written from public CMS, eCFR, and Federal Register guidance. Each file is `status: draft_pending_human_approval` with `approved_for_production: false`. A clean draft stays blocked with code `draft_pending_human_approval` until a person sets both fields to approved. `production_allowed` is true only on that approved path.
+- **Citations:** paragraph order, the CV sentence shape, the batch `same as` link, the banned-word list, the no-CPT acuity rule, the NIP branch names, and never crediting factor 7 to the initiating party are `house_style`. The qualifying payment amount, the statutory factors, and offer selection are `public`, with 45 CFR 149.510 and 149.140. The checklist lists the 2023 CMS certified-entity guidance, the disputing-party guidance by title, and the 2021 and 2022 Federal Register IDR rules.
+- **Ids:** the one realistic test dispute number is now `DISP-SYN-001`. New synthetic disputes use `DISP-SYN-` plus digits.
+- **Scan:** `scripts/check-idr-phi.mjs` blocks `DISP-` plus digits unless the id is `DISP-SYN-`, plus SSN, MRN, member-id values, and a name next to a date of birth. `.githooks/pre-commit` runs it. `npm run test:ci` runs it. `.github/workflows/idr-public-source.yml` runs it. `config/idr/phi-scan-allowlist.txt` lists older UM demo files only. IDR determination paths cannot be waived, and a realistic dispute number cannot be waived.
+- **Synthetic load:** 5,000 disputes are generated from the published 2024 CMS Federal IDR shares as read in CRS Report R48738. Rows are not copied. Dollar amounts are synthetic. The generator does not apply a batched rate.
+- **Proof:** `__tests__/lib/idr/determination/`. Content version `2026-10-22.1`.
+- **Doc:** [`docs/customer-ready/21-idr-determination-workflow.md`](docs/customer-ready/21-idr-determination-workflow.md).
+
+---
+
+## 2026-10-21 — IDR determination wording QA
+
+Ops QA on the determination draft. Same in-memory IDR workflow. No new HTTP route. No live PHI. Template files are still placeholders.
+
+- **Paragraphs:** chart, initiating party, non-initiating party, winner. Factor text is split across the two party paragraphs. The winner paragraph carries the supplied prevailing party and reason.
+- **Templates:** four IP files (brief × shape) and eight NIP branches: ineligible, zero offer, no QPA, batch QPA discrepancy, QPA higher than the brief, QPA lower than the brief, no substantive factors, NIP offer higher. Every file under `config/idr/templates/` is marked `TODO-LIVE-TEXT` until live prose is supplied. Content version `2026-10-21.1`.
+- **Slots:** CV sentence is board certification plus specialty, both required substrings of the CV file. The no-acuity paragraph lives on the checklist. An empty board certification, specialty, or no-acuity slot is a hard stop. The shipped no-acuity slot is `TODO-LIVE-TEXT`, so that draft cannot become ready for review.
+- **Factor 7:** still never credited to the initiating party. Credited to the non-initiating party when the request says the chart supports it and a chart document is present.
+- **Offers:** identical IP and NIP offers stop the draft. Batch lines after the primary line say `same as` plus the primary line id.
+- **Date:** `date_completed` is the America/New_York calendar day.
+- **Proof:** `__tests__/lib/idr/determination/`. `npm run test:ci` 747 passed (3 todo). `npx tsc --noEmit` clean.
+- **Doc:** [`docs/customer-ready/21-idr-determination-workflow.md`](docs/customer-ready/21-idr-determination-workflow.md).
+
+---
+
+## 2026-10-20 — Federal IDR determination workflow
+
+Paragraph order, NIP branches, and placeholder wording were corrected on 2026-10-21. This section is the original slice.
+
+Brief Engine draft path for federal IDR. Stays on the IDR line. IRO and Medical Review cannot read or write these records. Synthetic fixtures only. No new HTTP route. No live PHI.
+
+- **Content files:** `config/idr/templates/*.md` (eight variants: prevailing party × NIP brief × single/batch QPA wording) and `config/idr/qa-checklist.yaml`. The loader validates the schema. Each draft records the template version and the checklist version. Reviewer wording changes are file edits, not a code build.
+- **Intake:** line-item count selects single vs batched. A `nip_brief` document selects brief vs no brief. Line items are recorded. A contradictory assertion is a block. November 1 batching eligibility is not applied.
+- **Offers and QPA:** each figure needs a document id and a page. Missing, unparseable, or unsourced values are `MISSING` with a null amount. Nothing is copied from another figure.
+- **Factors:** the checklist names the seven statutory factors. Training text is a curriculum vitae excerpt. Acuity states only that records and/or an operative report are attached. Factor 7 is never credited to the initiating party. Party notes are not copied. Tone stays neutral.
+- **Draft:** four paragraphs from the selected template, including prevailing party and reason. The wrong template is a blocking error. The system does not choose the prevailing party.
+- **QA:** the seven checklist gates are hard stops before `ready for review`: template match, no CPT in acuity, CV from file, QPA variant, factor 7, neutral tone, numbers match source. A failing draft has no clean text. Clean text has no ops markup. The reviewer copy carries the existing DRAFT stamp.
+- **Board:** prevailing party, reason, date completed, note `ready for review`. `signed` and `submitted` stay false. `signDetermination` and `submitDetermination` refuse.
+- **Feedback:** `proposeContentEdit` returns a unified diff for a template or the checklist. It refuses `.ts` paths and schema-invalid edits. It does not change the loaded files.
+- **Stubs:** `november1BatchingRules` (`eligible: null`, effective 2026-11-01) and `stubIdrGateway` (`vendor: null`, `live_call: false`). A live port or a live rules object is refused.
+- **Proof:** `__tests__/lib/idr/determination/`.
+- **Doc:** [`docs/customer-ready/21-idr-determination-workflow.md`](docs/customer-ready/21-idr-determination-workflow.md).
+
+**CI:** `npm run test:ci` 728 passed (3 todo). `npx tsc --noEmit` clean.
 
 ---
 

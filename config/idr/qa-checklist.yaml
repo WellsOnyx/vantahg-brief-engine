@@ -1,0 +1,203 @@
+# Federal IDR determination QA checklist.
+# Reviewer edits land in this file. The loader validates the schema.
+# Hard-stop gates cannot be removed or set to blocking: false.
+# Draft sentences are neutral text written from public CMS, eCFR, and Federal Register sources.
+# They stay draft_pending_human_approval until a person sets status approved
+# and approved_for_production true. Partner wording is not in this file.
+# A rule is either basis public, with a citation, or basis house_style.
+
+version: "2026-10-22.2"
+schema: idr-qa-checklist
+
+approval:
+  status: draft_pending_human_approval
+  approved_for_production: false
+
+public_sources:
+  - title: "45 CFR 149.510 Federal independent dispute resolution process"
+    url: "https://www.ecfr.gov/current/title-45/section-149.510"
+  - title: "45 CFR 149.140 Qualifying payment amount"
+    url: "https://www.ecfr.gov/current/title-45/section-149.140"
+  - title: "Federal Independent Dispute Resolution (IDR) Process Guidance for Certified IDR Entities"
+    url: "https://www.cms.gov/CCIIO/Resources/Regulations-and-Guidance/Downloads/Federal-Independent-Dispute-Resolution-Process-Guidance-for-Certified-IDR-Entities.pdf"
+  - title: "Federal Independent Dispute Resolution (IDR) Process Guidance for Disputing Parties"
+    url: "https://www.cms.gov/nosurprises/policies-and-resources/Reports"
+  - title: "CMS Federal IDR public reports and data"
+    url: "https://www.cms.gov/nosurprises/policies-and-resources/Reports"
+  - title: "Requirements Related to Surprise Billing; Part I, 86 FR 36872 (July 13, 2021)"
+    url: "https://www.federalregister.gov/documents/2021/07/13/2021-14379/requirements-related-to-surprise-billing-part-i"
+  - title: "Requirements Related to Surprise Billing; Part II, 86 FR 55980 (October 7, 2021)"
+    url: "https://www.federalregister.gov/documents/2021/10/07/2021-21441/requirements-related-to-surprise-billing-part-ii"
+  - title: "Requirements Related to Surprise Billing, 87 FR 52618 (August 26, 2022)"
+    url: "https://www.federalregister.gov/documents/2022/08/26/2022-18202/requirements-related-to-surprise-billing"
+  - title: "CRS Report R48738, reading of the 2024 CMS Federal IDR public use files"
+    url: "https://www.congress.gov/crs-product/R48738"
+
+rules:
+  - id: paragraph_order
+    basis: house_style
+    note: "Chart, initiating party, non-initiating party, then winner is an internal paragraph order. The written decision duty is public."
+    citation: "45 CFR 149.510(c)(5)(vi)"
+    source_url: "https://www.ecfr.gov/current/title-45/section-149.510"
+  - id: cv_sentence
+    basis: house_style
+    note: "The sentence shape is board certification plus specialty, both copied from the curriculum vitae file. The training and experience factor is public."
+    citation: "45 CFR 149.510(c)(5)(iii)(B)(1)"
+    source_url: "https://www.ecfr.gov/current/title-45/section-149.510"
+  - id: batch_same_as
+    basis: house_style
+    note: "Linking a later batch line to the primary line is an internal cross-reference, and only when that line's offers, qualifying payment amount, and service label match the primary line. Batched items and one selected offer per determination are public."
+    citation: "45 CFR 149.510(c)(4)"
+    source_url: "https://www.ecfr.gov/current/title-45/section-149.510"
+  - id: banned_words
+    basis: house_style
+    note: "The neutral-tone word list is an internal writing rule. The determination is still a written decision."
+    citation: "45 CFR 149.510(c)(5)(vi)"
+    source_url: "https://www.ecfr.gov/current/title-45/section-149.510"
+  - id: no_cpt
+    basis: house_style
+    note: "Barring billing-code tokens from the acuity sentence is an internal writing rule. Acuity or complexity is a public factor. Usual and customary charges, billed charges, and public payor rates are prohibited factors."
+    citation: "45 CFR 149.510(c)(5)(iii)(B)(3)"
+    source_url: "https://www.ecfr.gov/current/title-45/section-149.510"
+  - id: nip_branches
+    basis: house_style
+    note: "Branch names and first-match order are an internal filing convention. Eligibility for the Federal IDR process and the offer requirement are public."
+    citation: "45 CFR 149.510(c)(2)"
+    source_url: "https://www.ecfr.gov/current/title-45/section-149.510"
+  - id: factor_7
+    basis: house_style
+    note: "Never crediting additional information to the initiating party is an internal rule. Considering additional information submitted by a party relating to its offer is public."
+    citation: "45 CFR 149.510(c)(5)(iii)(D)"
+    source_url: "https://www.ecfr.gov/current/title-45/section-149.510"
+  - id: qpa_consideration
+    basis: public
+    note: "The certified IDR entity must consider the qualifying payment amount for the applicable year for the same or similar item or service."
+    citation: "45 CFR 149.510(c)(5)(iii)(A); 45 CFR 149.140"
+    source_url: "https://www.ecfr.gov/current/title-45/section-149.510"
+  - id: statutory_factors
+    basis: public
+    note: "Additional considerations include training and experience, market share, acuity or complexity, teaching status and case mix, and good faith efforts to enter network agreements."
+    citation: "45 CFR 149.510(c)(5)(iii)(B)"
+    source_url: "https://www.ecfr.gov/current/title-45/section-149.510"
+  - id: offer_selection
+    basis: public
+    note: "The payment determination selects one of the offers submitted by the parties as the out-of-network rate."
+    citation: "45 CFR 149.510(c)(5)(ii)(A)"
+    source_url: "https://www.ecfr.gov/current/title-45/section-149.510"
+  - id: ip_prevails_higher_nip_offer
+    basis: house_style
+    note: "When the initiating party prevails and the non-initiating party offer is higher, the draft does not choose wording. A person decides. The offers themselves are the submitted dollar amounts."
+    citation: "45 CFR 149.510(c)(5)(i)"
+    source_url: "https://www.ecfr.gov/current/title-45/section-149.510"
+
+factors:
+  - id: qpa
+    number: 1
+    label: "Qualifying payment amount"
+  - id: training_experience
+    number: 2
+    label: "Training, experience, and quality and outcomes measurements"
+  - id: market_share
+    number: 3
+    label: "Market share in the geographic region"
+  - id: acuity_complexity
+    number: 4
+    label: "Acuity of the individual or complexity of furnishing the item or service"
+  - id: teaching_case_mix
+    number: 5
+    label: "Teaching status, case mix, and scope of services"
+  - id: good_faith_efforts
+    number: 6
+    label: "Good faith efforts to enter network agreements and prior contracted rates"
+  - id: additional_information
+    number: 7
+    label: "Additional information relating to the offer"
+    never_credit_party: IP
+
+gates:
+  - id: template_match
+    blocking: true
+    label: "Selected template matches the prevailing party, brief state, dispute shape, and NIP branch."
+  - id: no_cpt_in_acuity
+    blocking: true
+    label: "Acuity and complexity text contains no CPT code and no clinical argument. The no-acuity paragraph slot is filled when no records or operative report were filed."
+    factor: acuity_complexity
+    forbid_pattern: "\\b\\d{5}\\b"
+    forbid_tokens:
+      - "CPT"
+      - "HCPCS"
+    argument_forbid:
+      - "warrants"
+      - "justifies"
+      - "because the patient"
+      - "higher acuity"
+      - "more complex than"
+  - id: cv_from_file
+    blocking: true
+    label: "The CV sentence slot carries board certification and specialty from the curriculum vitae file."
+    factor: training_experience
+    source_role: cv
+  - id: qpa_variant
+    blocking: true
+    label: "Batched lines link to the primary line. A single dispute has no batch link."
+  - id: factor_7_rule
+    blocking: true
+    label: "Factor 7 is never credited to the initiating party. Chart support may credit the non-initiating party."
+    factor: additional_information
+    never_credit_party: IP
+    credit_patterns:
+      - "supports the initiating party"
+      - "weighs in favor of the initiating party"
+      - "favors the initiating party"
+      - "credited to the initiating party"
+      - "initiating party prevails on this factor"
+  - id: neutral_tone
+    blocking: true
+    label: "The determination stays in a neutral tone."
+    forbid_phrases:
+      - "clearly"
+      - "obviously"
+      - "meritless"
+      - "unreasonable"
+      - "excessive"
+      - "outrageous"
+      - "frivolous"
+      - "fails to"
+      - "bad faith"
+  - id: numbers_match_source
+    blocking: true
+    label: "Offers and qualifying payment amounts match the sourced figures, are never estimated, and are not identical across the parties."
+
+slots:
+  live_text_marker: "TODO-LIVE-TEXT"
+  batch_line_link: "same as"
+  no_acuity_paragraph: "No medical records and no operative report were filed on acuity of the individual or on complexity of furnishing the item or service. This draft does not supply an acuity conclusion from a billing code."
+  paragraph_roles:
+    - chart
+    - ip
+    - nip
+    - winner
+
+phrases:
+  training_from_cv: "cv board_certification:{{board_certification}} specialty:{{specialty}}"
+  training_absent: "training:absent {{party}}"
+  acuity_both: "acuity_attachments:records,op_report"
+  acuity_records: "acuity_attachments:records"
+  acuity_report: "acuity_attachments:op_report"
+  acuity_absent: "acuity:absent"
+  acuity_party_absent: "acuity:absent party:{{party}}"
+  party_submitted: "factor:{{factor}} party:{{party}} submitted:yes"
+  party_absent: "factor:{{factor}} party:{{party}} submitted:no"
+  factor_7: "factor_7 party:{{party}} state:{{state}} credit:{{credit}}"
+  qpa_factor: "qpa:sourced"
+
+ops_markup:
+  - "MISSING"
+  - "{{"
+  - "}}"
+  - "TODO-LIVE-TEXT"
+  - "FIXME"
+  - "HEURISTIC_MODE"
+  - "TEMPLATE_DEVIATION"
+  - "LOW_CONFIDENCE"
+  - "EXTRACTION_GAP"
