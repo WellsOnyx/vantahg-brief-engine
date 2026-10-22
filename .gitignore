@@ -45,3 +45,6 @@ next-env.d.ts
 .claude/
 .design/
 infra-aws/.next/
+
+# CMS Federal IDR raw public files (large). Manifest + derived rates are committed.
+/data/cms-idr/raw/

@@ -85,12 +85,20 @@ export interface VhgScoreDriver {
 }
 
 export interface VhgPatternLookup {
-  match_level: 'service_line_state_network_encounter' | 'service_line_network' | 'none';
+  match_level: 'cms_service_code' | 'cms_provider_type' | 'none';
   sample_size: number;
   provider_wins: number;
   payer_wins: number;
+  /** Line-item PUFs are closed payment determinations. Settlements are not in that file. */
   settled: number;
   provider_win_rate: number | null;
+}
+
+export interface VhgSourceFile {
+  id: string;
+  period: string;
+  published_as_of: string;
+  sha256: string;
 }
 
 export interface VhgScore {
@@ -98,8 +106,11 @@ export interface VhgScore {
   band: VhgBand;
   drivers: VhgScoreDriver[];
   pattern_lookup: VhgPatternLookup;
-  model_id: 'vhg-score-demo-v1';
+  model_id: 'vhg-score-cms-puf-v1';
   model_status: 'demo_not_validated';
+  /** Training and calibration source. Always the CMS public files. */
+  data_source: 'CMS public IDR PUF';
+  source_files: VhgSourceFile[];
   /** Display brand, always `VHG™ Score` from `VHG_SCORE_LABEL`. */
   label: string;
   trademark: 'TM';

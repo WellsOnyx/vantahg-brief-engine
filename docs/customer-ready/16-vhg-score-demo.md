@@ -4,7 +4,7 @@ Synthetic walkthrough only. No live PHI. Default off until `ENABLE_VHG_SCORE_DEM
 
 Published path: [https://vantaum.com/stoploss](https://vantaum.com/stoploss)
 
-The price card, billing wire, and packaging guard are unchanged. Vanta Med Review is still the paid product. This demo does not add a fee and does not open IRO or IDR. It is synthetic data only. It is not a live IDR exposure product. Legal review is still open on IDR data use, IDRE conflict, InterQual, and the VHG trademark. Draft PR #83 (IRO credentialing panel) is not part of this demo and is not merged.
+The price card, billing wire, and packaging guard are unchanged. Vanta Med Review is still the paid product. This demo does not add a fee and does not open IRO or IDR. The cases on the page are synthetic. The Likely IDR Contested Score is calibrated only on public CMS Federal IDR data. It is not a live IDR feed. Legal review is still open on IDRE conflict, InterQual, and the VHG trademark. Named certified-entity comparison is not built. Draft PR #83 (IRO credentialing panel) is not part of this demo and is not merged.
 
 ## What Jonah can click
 
@@ -28,24 +28,26 @@ ENABLE_VHG_SCORE_DEMO=true npm run dev
 
 Open `http://localhost:3000/stoploss`.
 
-`npm run demo:vhg` rewrites `fixtures/vhg/idr-patterns.redacted.json` from the generator. It does not connect to a database.
+`npm run demo:vhg` rewrites `fixtures/vhg/idr-patterns.redacted.json` from the generator. That file is the redaction proof. It is not a score input. The command does not connect to a database.
 
 ## Data flow
 
 ```
-synthetic IDR filings (identifiable, in-memory only)
-        │  lib/vhg/redact.ts
+CMS Federal IDR public use files (2024 Q3, 2024 Q4, 2025 Q4)
++ data dictionary + supplemental tables (2024 Q4 through 2025 Q4)
+        │  scripts/cms-idr/fetch_public_idr.py
         ▼
-redacted IDR patterns (~200)  →  fixtures/vhg/idr-patterns.redacted.json
-        │  lookup
+data/cms-idr/manifest.json  (URL, as-of date, sha256)
+data/cms-idr/derived/feature-rates.json
+        │
         ▼
-lib/vhg/score.ts  (hand-set logistic weights, demo_not_validated)
+lib/vhg/score.ts  (public log-lifts, demo_not_validated)
         │
         ├─ med review case  →  criteria result (demo) + VHG™ ranking + Likely IDR Contested Score + top 3 drivers
         └─ stop-loss dashboard  →  counts, exposure, stop-sign list, trend
 ```
 
-The Likely IDR Contested Score is the likelihood, 0–100%, that a case later becomes an IDR dispute. Ranking labels are Low under 40, Moderate from 40, and High from 70. The panel shows the top 3 drivers. Drivers can include network status, emergency vs scheduled, billed-to-QPA ratio, facility type, service line / CPT, state, and the historical win/loss mix on matching redacted patterns.
+The Likely IDR Contested Score is a 0–100% advisory index. Ranking labels are Low under 40, Moderate from 40, and High from 70. It is not a filing rate: CMS publishes disputes, not the claim universe those disputes came from. The panel shows the top 3 drivers. Drivers cite public CMS features: network status under 45 CFR 149.510, service code, state initiation share, place of service, provider type, offer-to-QPA band, and unnamed outcome dispersion. See [`21-vhg-cms-public-calibration.md`](21-vhg-cms-public-calibration.md).
 
 Visible copy uses `VHG_BRAND` (`VHG™`) from `lib/vhg/brand.ts`. The mark is not part of routes or code identifiers.
 
@@ -77,7 +79,7 @@ Banner on every dashboard state: **Included at no charge with Vanta Med Review**
 Do not treat this demo as a go-live clearance.
 
 1. **HIPAA de-identification.** Live IDR extracts need a documented Safe Harbor process or an expert determination. Month/year dates, state, and rare CPT combinations can still be quasi-identifiers. This repo only proves the strip on synthetic rows.
-2. **IDR data-use restrictions.** Federal IDR filings and QPA data have their own use limits. A training or lookup set built from real filings needs a written use basis before it leaves the IDR workflow.
+2. **IDR data-use restrictions.** The score uses the CMS Federal IDR public use files and supplemental tables only. It does not train on private filings, corrected determinations, or partner templates. Those public files still have CMS use terms. Read them before treating the score as anything other than an advisory demo.
 3. **BAA with stop-loss partners.** A partner dashboard that can be tied back to a plan or a case needs a BAA (and a minimum necessary story) before any real row is shown. The published page is synthetic on purpose.
 4. **InterQual license.** The case view says **criteria result (demo)** and uses invented placeholder lines. It is not InterQual, MCG, or any other licensed criteria product. Do not paste licensed criteria into this module.
 5. **Trademark.** Pages render the brand as **VHG™** through `VHG_BRAND`. Filing the mark is still an open legal step before treating it as a registered product name.
@@ -85,5 +87,5 @@ Do not treat this demo as a go-live clearance.
 ## Not in this demo
 
 - No change to `lib/billing/um-price-card.ts`, statement math, or packaging guards.
-- No live IDR feed, no model training on real filings, and no claim that the weights are validated.
+- No live IDR feed. The weights are fit on public CMS files and are not a validated predictor. Private case rows are not a training input.
 - No Optum outreach.

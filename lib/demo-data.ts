@@ -1509,7 +1509,7 @@ export const demoCases: Case[] = [
     client: demoClients[1],
   },
 
-  // IDR / Payer IDR cases (for IDR chassis testing & model training data)
+  // IDR chassis demo rows for the attorney queue. Not an input to the VHG score.
   // Cast to any to satisfy full Case interface for demo purposes (many UM fields not relevant)
   {
     id: DEMO_CASE_IDS.idrAirAmbulance,

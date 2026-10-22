@@ -47,12 +47,13 @@ A TPA or self-insured employer can:
 | 12 | Muse connector (Phase 8 stub) | CX-only relationship surface. No PHI. Not live-keyed |
 | 13 | Go-live ops punch list | Ordered env, RDS `027`, bootstrap, A–E, BAA. No live PHI until the BAA path is confirmed |
 | 14 | Billing wire | How Cole mints the platform line, runs a statement, and reads the scoreboard. Synthetic only. No live PHI |
-| 16 | [16-vhg-score-demo.md](16-vhg-score-demo.md) | Synthetic VHG™ score + public stop-loss demo at `/stoploss` and the `/demo` physician step. Flagged. No live PHI. Not a live IDR feed |
+| 16 | [16-vhg-score-demo.md](16-vhg-score-demo.md) | Synthetic VHG™ score + public stop-loss demo at `/stoploss` and the `/demo` physician step. Flagged. No live PHI. Not a live IDR feed. Score uses public CMS files only |
 | 17 | [17-med-review-pivot.md](17-med-review-pivot.md) | Oct 19 exclusive Med Review pivot: naming, redirects, what the parallel IRO slice still owns, open decisions (a)–(f) |
 | 17 | [17-iro-portal-slice-1.md](17-iro-portal-slice-1.md) | IRO portal slice 1: line firewall, 6-stage skeleton, Ohio deadlines, preliminary fees, adapter stubs. Synthetic only. No live PHI |
 | 18 | [18-financial-billing-suite.md](18-financial-billing-suite.md) | Financial suite: IRO fees and payouts, IDR fees/escrow, Med Review contracts, AR/AP, CFO reconciliation. Synthetic only. No live rails. Doc 17 on the med-review PR is a different file |
 | 19 | [19-shared-credentialing.md](19-shared-credentialing.md) | One credential record per reviewer. IRO, Medical Review, and Sagility read it. Decision (f) stays open |
 | 20 | [20-iro-production-portal.md](20-iro-production-portal.md) | Authenticated IRO portal on the existing RDS, S3, KMS, and Cognito. Live intake is `LIVE_PHI_ENABLED` |
+| 21 | [21-vhg-cms-public-calibration.md](21-vhg-cms-public-calibration.md) | VHG™ score calibrated on CMS Federal IDR public files only. Relative index, not a filing rate. No named entity comparison |
 | — | [pricing-strategy-memo-2026-09-23.md](pricing-strategy-memo-2026-09-23.md) | Working decision memo (Jonah Manning, 23 Sep 2026). Do not publish internal margins. |
 | — | [um-unit-economics-rate-card.md](um-unit-economics-rate-card.md) | Two-line card aligned to that memo. Platform PMPM + clinical review. External slides illustrative. |
 | — | [um-pricing-rules.md](um-pricing-rules.md) | R1–R20 (R10–R13 restored), B1–B10, D1–D8, memo §11. Platform-vs-Med-Review open question stays open. |

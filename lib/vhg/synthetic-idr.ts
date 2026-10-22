@@ -89,7 +89,10 @@ function buildOne(rng: () => number, index: number): SyntheticIdrRecord {
 
 let cached: SyntheticIdrRecord[] | null = null;
 
-/** ~200 identifiable synthetic IDR rows. Redact before any lookup or display. */
+/**
+ * ~200 identifiable synthetic rows used only to prove redaction.
+ * Not a training input for the Likely IDR Contested Score.
+ */
 export function getSyntheticIdrRecords(): SyntheticIdrRecord[] {
   if (cached) return cached;
   const rng = mulberry32(20260513);

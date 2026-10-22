@@ -4,7 +4,10 @@ import type { RedactedIdrPattern } from './types';
 
 let cached: RedactedIdrPattern[] | null = null;
 
-/** Aggregated, redacted IDR pattern set built from the synthetic filings. */
+/**
+ * Redacted synthetic rows for the redaction proof only.
+ * The Likely IDR Contested Score does not read this set.
+ */
 export function getRedactedIdrPatterns(): RedactedIdrPattern[] {
   if (cached) return cached;
   cached = getSyntheticIdrRecords().map((row, index) => redactIdrRecord(row, index));
